@@ -1,0 +1,52 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/auth/login_screen.dart';
+import '../features/history/history_screen.dart';
+import '../features/home/home_screen.dart';
+import '../features/measure/measuring_screen.dart';
+import '../features/measure/start_screen.dart';
+import '../features/result/result_screen.dart';
+import '../features/settings/settings_screen.dart';
+import 'theme.dart';
+
+/// 화면 6개 + 시트 2개 구조 (2026-07 확정)
+/// /login      S1 로그인
+/// /home       S2 홈·현장정보 입력
+/// /start      S3 측정 시작(시간 선택, 거치 안내는 bottom sheet)
+/// /measuring  S4 측정 중 라이브
+/// /result/:id 결과 통합(요약 카드 + 차트 스크롤) - 신규/저장 공용
+/// /history    S5 저장 결과 목록
+/// /settings   S6 설정
+final appRouter = GoRouter(
+  initialLocation: '/login',
+  routes: [
+    GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+    GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+    GoRoute(path: '/start', builder: (_, __) => const StartScreen()),
+    GoRoute(path: '/measuring', builder: (_, __) => const MeasuringScreen()),
+    GoRoute(
+      path: '/result/:id',
+      builder: (_, s) => ResultScreen(id: s.pathParameters['id'] ?? 'demo'),
+    ),
+    GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
+    GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+  ],
+);
+
+/// 아직 구현 전 화면의 임시 표시. 실제 화면 구현 시 교체한다.
+// ignore: unused_element
+class _Todo extends StatelessWidget {
+  const _Todo(this.name);
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(name)),
+      body: Center(
+        child: Text('$name 화면 (구현 예정)', style: AppText.body),
+      ),
+    );
+  }
+}

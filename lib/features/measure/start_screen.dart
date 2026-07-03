@@ -1,0 +1,215 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/theme.dart';
+import 'placement_sheet.dart';
+
+/// S3 측정 시작 화면
+/// - 카운트다운 대기 시간을 고르고 측정을 시작
+/// - 어르신 UX: 고정 높이 72dp 선택 카드, 64dp 시작 버튼, 색+아이콘+텍스트 3중 상태
+class StartScreen extends StatefulWidget {
+  const StartScreen({super.key});
+
+  @override
+  State<StartScreen> createState() => _StartScreenState();
+}
+
+class _StartScreenState extends State<StartScreen> {
+  // TODO: SharedPreferences 영구 저장으로 변경
+  static bool _hasSeenPlacementSheet = false;
+
+  int _selectedSeconds = 5;
+  final List<int> _timeOptions = const [0, 5, 10, 15];
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_hasSeenPlacementSheet) {
+      _hasSeenPlacementSheet = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showPlacementSheet();
+        }
+      });
+    }
+  }
+
+  void _showPlacementSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDims.radius),
+        ),
+      ),
+      builder: (_) => const PlacementSheet(),
+    );
+  }
+
+  Widget _buildTimeCard(int seconds) {
+    final isSelected = _selectedSeconds == seconds;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: '$seconds초',
+        child: InkWell(
+          onTap: () => setState(() => _selectedSeconds = seconds),
+          borderRadius: BorderRadius.circular(AppDims.radius),
+          child: Container(
+            height: 72,
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.blue : AppColors.surface,
+              borderRadius: BorderRadius.circular(AppDims.radius),
+              border: Border.all(
+                color: isSelected ? AppColors.blue : AppColors.border,
+                width: 1.5,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSelected
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  color: isSelected ? Colors.white : AppColors.textSub,
+                  size: 28,
+                ),
+                const SizedBox(width: AppDims.gap),
+                Text(
+                  '$seconds초',
+                  style: AppText.subhead.copyWith(
+                    color: isSelected ? Colors.white : AppColors.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('측정 시작'),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppDims.screenPad),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: AppDims.gap),
+                // 리마인더 카드
+                Container(
+                  padding: const EdgeInsets.all(AppDims.gap2),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppDims.radius),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.smartphone,
+                            color: AppColors.navy,
+                            size: 28,
+                          ),
+                          const SizedBox(width: AppDims.gap),
+                          Expanded(
+                            child: Text(
+                              '휴대폰을 카 바닥 중앙에 놓으세요',
+                              style: AppText.bodyBold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppDims.gap),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Semantics(
+                          button: true,
+                          label: '거치 방법 보기',
+                          child: SizedBox(
+                            height: AppDims.touchMin,
+                            child: TextButton.icon(
+                              onPressed: _showPlacementSheet,
+                              icon: const Icon(
+                                Icons.help_outline,
+                                color: AppColors.blue,
+                                size: 22,
+                              ),
+                              label: Text(
+                                '거치 방법 보기',
+                                style: AppText.body.copyWith(
+                                  color: AppColors.blue,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppDims.gap3),
+
+                // 질문 텍스트
+                Text('언제 측정을 시작할까요?', style: AppText.subhead),
+                const SizedBox(height: AppDims.gap2),
+
+                // 대기 시간 선택 (2x2 그리드 형태의 Column + Row)
+                Row(
+                  children: [
+                    _buildTimeCard(_timeOptions[0]),
+                    const SizedBox(width: AppDims.gap2),
+                    _buildTimeCard(_timeOptions[1]),
+                  ],
+                ),
+                const SizedBox(height: AppDims.gap2),
+                Row(
+                  children: [
+                    _buildTimeCard(_timeOptions[2]),
+                    const SizedBox(width: AppDims.gap2),
+                    _buildTimeCard(_timeOptions[3]),
+                  ],
+                ),
+                const SizedBox(height: AppDims.gap2),
+
+                // 선택 요약 텍스트
+                Text(
+                  '버튼을 누르면 $_selectedSeconds초 후 측정이 시작됩니다',
+                  textAlign: TextAlign.center,
+                  style: AppText.caption,
+                ),
+                const SizedBox(height: 48),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDims.screenPad),
+          child: ElevatedButton(
+            onPressed: () => context.push('/measuring'),
+            child: const Text('카운트다운 시작'),
+          ),
+        ),
+      ),
+    );
+  }
+}
