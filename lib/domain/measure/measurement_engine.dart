@@ -113,6 +113,7 @@ class MeasurementEngine {
         SignalFilters.estimateSampleRate(_buffer);
 
     // 3. 성분 분리 (Motion vs Vibration) - Aptp 경로는 기준선 보정 미적용 (원신호 _buffer 직접 분리)
+    // Aptp 경로는 baseline 보정 미적용: P2P는 DC 불변 + 이동평균 LPF의 edge effect와 상호작용해 Z 과소산출 유발. 적분 경로만 baseline 적용.
     final sep = SignalFilters.separateMotionAndVibration(
       _buffer,
       sampleRate: sampleRate,

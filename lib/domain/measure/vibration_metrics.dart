@@ -63,6 +63,7 @@ class VibrationMetrics {
     if (vibrationSeries.length < 2) return 0.0;
 
     final int windowSize = math.max(2, (windowSec * sampleRate).round());
+    // 슬라이딩 윈도우 사용: 텀블링은 구간 경계 0.1초 이동에 Z Aptp가 22.6→16.8mg로 요동(위상 민감)해 폐기. 슬라이딩 1.0초는 위상 무관 안정.
     // 슬라이딩 윈도우 stride: 윈도우의 1/10 (예: 1.0초 윈도우 기준 0.1초)
     final int stride = math.max(1, (windowSize / 10).round());
     final List<double> windowP2pValues = [];

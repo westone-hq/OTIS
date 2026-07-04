@@ -87,6 +87,7 @@ class MotionIntegrator {
     }
 
     // 3. 속도(m/s) 적분: v[i] = v[i-1] + a[i] * dt (부호 유지, 클램프 없음)
+    // 부호 유지 적분: abs 클램프 시 하강 운행에서 속도·거리가 0 고착.
     double maxSpd = 0.0;
     signedSpeed[0] = 0.0;
     displaySpeed[0] = 0.0;

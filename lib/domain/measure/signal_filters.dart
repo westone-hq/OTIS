@@ -114,6 +114,7 @@ class SignalFilters {
       );
     }
 
+    // 컷오프 0.1Hz: Z축 저주파 진동 보존. 0.8Hz는 진동까지 모션으로 흡수해 Z를 과소산출(16.97 vs 목표 22.2).
     // 이동평균 윈도우 크기 산출: N = round(sampleRate / cutoffHz)
     // 예: 256Hz / 0.8Hz = 320 샘플
     int windowSize = (sampleRate / cutoffHz).round();
