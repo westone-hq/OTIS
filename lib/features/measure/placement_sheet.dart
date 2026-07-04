@@ -86,7 +86,7 @@ class PlacementSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // TODO: OI-1 확정 후 방향 검증
+                    // OI-1: 확정 후 방향 검증
                     _buildDiagram(),
                     const SizedBox(height: AppDims.gap3),
 
@@ -143,7 +143,7 @@ class PlacementSheet extends StatelessWidget {
     );
   }
 
-  // TODO: OI-1 확정 후 방향 검증
+  // OI-1: 확정 후 방향 검증
   Widget _buildDiagram() {
     return Container(
       height: 200,

@@ -116,7 +116,7 @@ void main() {
 
   // 참고: 기존 위젯 테스트는 kDebugMode=true 환경이라 mock 폴백이 살아있어 그대로 통과한다.
   // 3초 무수신 릴리즈 경로는 위젯 테스트로 검증 불가(kDebugMode가 컴파일 타임 상수로 true 고정)하므로,
-  // 해당 릴리즈 격리 로직 및 중단 경로는 실기기 릴리즈 빌드에서 검증한다.
+  // PENDING(실기기): 해당 릴리즈 격리 로직 및 중단 경로는 릴리즈 빌드에서 검증한다.
   testWidgets('S4 측정 중 라이브 화면 UI 및 중단 다이얼로그 테스트', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(

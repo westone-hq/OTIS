@@ -67,7 +67,7 @@ class LocalAuthRepository implements AuthRepository {
 
   @override
   Future<bool> isEnabled(String id) async {
-    // TODO(OI-2): 서버 연동 확정 시 실제 API 또는 관리자 DB 조회로 교체.
+    // OI-2: 서버 연동 확정 시 실제 API 또는 관리자 DB 조회로 교체.
     // 현재 LocalAuthRepository 는 항상 enabled(true) 반환.
     return true;
   }

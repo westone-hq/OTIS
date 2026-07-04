@@ -36,7 +36,7 @@ abstract final class AppDims {
 }
 
 abstract final class AppText {
-  // TODO: Pretendard 적용 시 복원
+  // TODO(Phase 7): Pretendard 적용 시 복원
   static const family = 'Pretendard';
 
   // 어르신 UX: 본문 18 미만 금지, 캡션 최소 16
@@ -58,7 +58,7 @@ abstract final class AppText {
 ThemeData buildAppTheme() {
   final base = ThemeData(
     useMaterial3: true,
-    // fontFamily: AppText.family, // TODO: Pretendard 적용 시 복원
+    // fontFamily: AppText.family, // TODO(Phase 7): Pretendard 적용 시 복원
     scaffoldBackgroundColor: AppColors.bg,
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.navy,
@@ -76,7 +76,7 @@ ThemeData buildAppTheme() {
       elevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
-        // fontFamily: AppText.family, // TODO: Pretendard 적용 시 복원
+        // fontFamily: AppText.family, // TODO(Phase 7): Pretendard 적용 시 복원
         fontSize: 22,
         fontWeight: FontWeight.w700,
         color: AppColors.text,

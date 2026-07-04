@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/domain/auth_repository.dart';
 
@@ -9,7 +8,6 @@ import '../features/measure/measuring_screen.dart';
 import '../features/measure/start_screen.dart';
 import '../features/result/result_screen.dart';
 import '../features/settings/settings_screen.dart';
-import 'theme.dart';
 
 /// 화면 6개 + 시트 2개 구조 (2026-07 확정)
 /// /login      S1 로그인
@@ -41,20 +39,3 @@ final appRouter = GoRouter(
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
   ],
 );
-
-/// 아직 구현 전 화면의 임시 표시. 실제 화면 구현 시 교체한다.
-// ignore: unused_element
-class _Todo extends StatelessWidget {
-  const _Todo(this.name);
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(name)),
-      body: Center(
-        child: Text('$name 화면 (구현 예정)', style: AppText.body),
-      ),
-    );
-  }
-}

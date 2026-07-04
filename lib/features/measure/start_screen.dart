@@ -27,7 +27,7 @@ class _StartScreenState extends State<StartScreen> {
       widget.sensorManager ?? SensorChannelManager();
   bool _sensorsAvailable = true;
 
-  // TODO: SharedPreferences 영구 저장으로 변경
+  // TODO(Phase 7): SharedPreferences 영구 저장으로 변경
   static bool _hasSeenPlacementSheet = false;
 
   int _selectedSeconds = 5;
