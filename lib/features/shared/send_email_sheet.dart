@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../domain/prefs_store.dart';
 import 'package:vibration_checker/domain/auth_repository.dart';
 import 'package:vibration_checker/domain/models/measurement_result.dart';
 import 'package:vibration_checker/domain/report_generator.dart';
@@ -62,8 +62,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     String email = '설정에서 이메일을 등록하세요';
     bool isSet = false;
     if (id != null) {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString('email_$id');
+      final saved = await PrefsStore.instance.loadEmail(id);
       if (saved != null && saved.trim().isNotEmpty) {
         email = saved;
         isSet = true;

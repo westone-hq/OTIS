@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'prefs_store.dart';
 
 /// P5 · 인증 레포지토리 인터페이스 및 구현
 /// - 사번 6자리 (숫자 6자리) 또는 T사번 (T + 숫자 5자리, 대소문자 무관) 검증
@@ -24,7 +24,6 @@ abstract class AuthRepository {
 
 class LocalAuthRepository implements AuthRepository {
   static final _idPattern = RegExp(r'^(\d{6}|[Tt]\d{5})$');
-  static const _kAutoLoginKey = 'auto_login_id';
 
   String? _currentUserId;
 
@@ -33,8 +32,7 @@ class LocalAuthRepository implements AuthRepository {
 
   @override
   Future<String?> getAutoLoginId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedId = prefs.getString(_kAutoLoginKey);
+    final savedId = await PrefsStore.instance.loadAutoLoginId();
     if (savedId != null && _idPattern.hasMatch(savedId)) {
       _currentUserId = savedId;
       return _currentUserId;
@@ -60,8 +58,7 @@ class LocalAuthRepository implements AuthRepository {
     }
 
     _currentUserId = trimmedId;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kAutoLoginKey, _currentUserId!);
+    await PrefsStore.instance.saveAutoLoginId(_currentUserId!);
     return true;
   }
 
@@ -75,7 +72,6 @@ class LocalAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     _currentUserId = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kAutoLoginKey);
+    await PrefsStore.instance.removeAutoLoginId();
   }
 }
