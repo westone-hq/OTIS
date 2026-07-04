@@ -19,7 +19,7 @@ class MetricsConfig {
   /// 정속 구간 판단 속도 비율: 주행 구간 내 최대 속도 대비 90% (0.9) 이상인 연속 구간
   final double constantSpeedRatio;
 
-  /// Aptp(A95 P2P) 산출용 텀블링 윈도우 크기 (초): 기본 0.5초 (축별 오버라이드 가능)
+  /// Aptp(A95 P2P) 산출용 슬라이딩 윈도우 크기 (초): 기본 1.0초 (축별 오버라이드 가능)
   final double aptpWindowSec;
   final double aptpWindowSecX;
   final double aptpWindowSecY;
@@ -44,7 +44,7 @@ class MetricsConfig {
     this.rideActivityPaddingSec = 0.8,
     this.minRideDurationSec = 3.0,
     this.constantSpeedRatio = 0.9,
-    this.aptpWindowSec = 0.5,
+    this.aptpWindowSec = 1.0,
     double? aptpWindowSecX,
     double? aptpWindowSecY,
     double? aptpWindowSecZ,

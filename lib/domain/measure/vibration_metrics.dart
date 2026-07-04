@@ -51,30 +51,33 @@ class ThresholdEvaluation {
 /// 승강기 진동·소음 연산 및 지표 도출 모듈 (ISO 18738 / Otis TUNE 규격)
 class VibrationMetrics {
   /// Aptp (A95 Peak-to-Peak) 산출
-  /// - 정속 구간(또는 지정 구간)의 진동 성분을 [windowSec] (기본 0.5초) 텀블링 윈도우로 분할
+  /// - 정속 구간(또는 지정 구간)의 진동 성분을 [windowSec] (기본 1.0초) 슬라이딩 윈도우(stride <= 1/5)로 분할
   /// - 각 윈도우별 P2P(max - min)를 도출하고 그 중 95백분위수(ceil((n-1)*p)) 선택
   static double calculateAptp(
     List<double> vibrationSeries, {
     double sampleRate = 256.0,
-    double windowSec = 0.5,
+    double windowSec = 1.0,
     double percentile = 0.95,
   }) {
     if (vibrationSeries.isEmpty) return 0.0;
     if (vibrationSeries.length < 2) return 0.0;
 
     final int windowSize = math.max(2, (windowSec * sampleRate).round());
+    // 슬라이딩 윈도우 stride: 윈도우의 1/10 (예: 1.0초 윈도우 기준 0.1초)
+    final int stride = math.max(1, (windowSize / 10).round());
     final List<double> windowP2pValues = [];
 
-    for (int start = 0; start < vibrationSeries.length; start += windowSize) {
-      final int end = math.min(start + windowSize, vibrationSeries.length);
-      final window = vibrationSeries.sublist(start, end);
-      if (window.length >= 2) {
+    if (vibrationSeries.length <= windowSize) {
+      windowP2pValues.add(_calculateRawP2P(vibrationSeries));
+    } else {
+      for (int start = 0; start <= vibrationSeries.length - windowSize; start += stride) {
+        final window = vibrationSeries.sublist(start, start + windowSize);
         windowP2pValues.add(_calculateRawP2P(window));
       }
-    }
-
-    if (windowP2pValues.isEmpty) {
-      windowP2pValues.add(_calculateRawP2P(vibrationSeries));
+      final int lastStart = vibrationSeries.length - windowSize;
+      if (lastStart % stride != 0) {
+        windowP2pValues.add(_calculateRawP2P(vibrationSeries.sublist(lastStart)));
+      }
     }
 
     windowP2pValues.sort();
