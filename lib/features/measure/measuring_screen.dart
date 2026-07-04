@@ -23,11 +23,14 @@ class MeasuringScreen extends StatefulWidget {
   State<MeasuringScreen> createState() => _MeasuringScreenState();
 }
 
-class _MeasuringScreenState extends State<MeasuringScreen> {
+class _MeasuringScreenState extends State<MeasuringScreen>
+    with WidgetsBindingObserver {
   late final SensorChannelManager _sensorManager =
       widget.sensorManager ?? SensorChannelManager();
   Timer? _timeTimer;
   Timer? _uiTimer;
+  Timer? _mockFallbackTimer;
+  Timer? _releaseTimeoutTimer;
   StreamSubscription<double>? _speedSub;
   StreamSubscription<SensorSample>? _sensorSub;
 
@@ -45,9 +48,13 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
   bool _isCountingDown = false;
   Timer? _countdownTimer;
 
+  bool _measurementAborted = false;
+  bool _isFinished = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final delay = MeasurementSession.instance.delaySec;
     if (delay > 0) {
       _countdownSec = delay;
@@ -145,7 +152,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
 
       // 1초 후에도 실제 콜백이 전혀 없다면 mock 스트림으로 폴백 (디버그 모드 전용)
       if (kDebugMode) {
-        Future.delayed(const Duration(seconds: 1), () {
+        _mockFallbackTimer = Timer(const Duration(seconds: 1), () {
           if (mounted && !_receivedRealSample && _speedSub == null) {
             _subscribeMockStream();
           }
@@ -159,8 +166,9 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
 
     // 릴리즈 경로: 3초간 수신 없으면 측정 중단 및 복귀 (저장 없음)
     if (!kDebugMode) {
-      Future.delayed(const Duration(seconds: 3), () async {
+      _releaseTimeoutTimer = Timer(const Duration(seconds: 3), () async {
         if (mounted && !_receivedRealSample) {
+          _isFinished = true;
           _cleanup();
           await showDialog(
             context: context,
@@ -210,6 +218,8 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
     _timeTimer?.cancel();
     _uiTimer?.cancel();
     _countdownTimer?.cancel();
+    _mockFallbackTimer?.cancel();
+    _releaseTimeoutTimer?.cancel();
     _speedSub?.cancel();
     _sensorSub?.cancel();
     _sensorManager.stopCapture();
@@ -220,11 +230,47 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cleanup();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused && !_isFinished && !_measurementAborted) {
+      _cleanup();
+      _measurementAborted = true;
+    } else if (state == AppLifecycleState.resumed && _measurementAborted) {
+      _showAbortedDialog();
+    }
+  }
+
+  Future<void> _showAbortedDialog() async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('측정이 중단되었습니다'),
+        content: const Text(
+          '측정 중 앱이 백그라운드로 전환되어(전화 수신 등) 측정을 중단했습니다. 처음부터 다시 측정해 주세요.',
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              if (mounted) context.go('/start');
+            },
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _finishMeasurement() async {
+    _isFinished = true;
     _cleanup();
 
     final site = MeasurementSession.instance.currentSite;
@@ -431,6 +477,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
         if (didPop) return;
         final confirm = await _showExitDialog();
         if (confirm == true && context.mounted) {
+          _isFinished = true;
           _cleanup();
           context.pop();
         }
@@ -456,6 +503,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
                 onPressed: () async {
                   final confirm = await _showExitDialog();
                   if (confirm == true && context.mounted) {
+                    _isFinished = true;
                     _cleanup();
                     context.pop();
                   }

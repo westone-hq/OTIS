@@ -174,6 +174,37 @@ void main() {
     expect(MeasurementSession.instance.lastResult, isNull);
   });
 
+  testWidgets('S4 측정 중 백그라운드 전환(paused -> resumed) 시 중단 다이얼로그 노출 및 save 미호출', (WidgetTester tester) async {
+    MeasurementSession.instance.clear();
+    MeasurementSession.instance.currentSite = const SiteInfo(
+      jobNo: '2024F 1447R01',
+      siteName: '럭키종합건설/송정동근생',
+      bottomFloor: '1',
+      topFloor: '8',
+      direction: '하부 → 상부',
+      model: 'Gen2',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MeasuringScreen(sensorManager: FakeSensorChannelManager()),
+      ),
+    );
+    await tester.pump();
+
+    // 백그라운드 전환 (paused)
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    // 다시 포그라운드 전환 (resumed)
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(find.text('측정이 중단되었습니다'), findsOneWidget);
+    expect(find.textContaining('백그라운드로 전환되어'), findsOneWidget);
+    expect(MeasurementSession.instance.lastResult, isNull);
+  });
+
   testWidgets('S4 측정 완료 시 정상 샘플 -> 자동 저장 및 결과 화면 이동', (WidgetTester tester) async {
     MeasurementSession.instance.clear();
     MeasurementSession.instance.currentSite = const SiteInfo(
