@@ -51,8 +51,10 @@ class SensorChannelManager {
           await _methodChannel.invokeMethod<bool>('checkAvailable');
       return available ?? false;
     } catch (_) {
-      // 네이티브 모듈 구현 전 fallback (테스트/목업용)
-      return true;
+      // fail-safe: 네이티브 확인 불가 시 불가용으로 간주.
+      // 테스트 환경(MissingPluginException)도 false가 되며,
+      // 측정 화면의 mock 폴백(디버그 한정)이 이를 흡수한다.
+      return false;
     }
   }
 
