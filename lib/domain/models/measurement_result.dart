@@ -124,9 +124,9 @@ class MeasurementResult {
   bool get zExceeded => zPtp > 15.0;
   bool get noiseExceeded => noiseMax > 50.0;
 
-  /// 실제 예시 값 기반 Mock 인스턴스
+  /// 화면 예시용 Mock 인스턴스 (문서 요구사항 예시값, OI-1 엔진 실측치와는 다름)
   /// 제번 `2024F 1447R01`, 현장 `럭키종합건설/송정동근생`, 1층→8층
-  /// X 12.9mg / Y 8.2mg / Z 22.2mg / 소음 71.7dBA / 21.0m / 1.50m/s
+  /// X 8.2mg / Y 12.9mg / Z 22.2mg / 소음 71.7dBA / 21.0m / 1.50m/s
   static MeasurementResult get mock {
     const count = 40;
     final List<double> xList = [];
