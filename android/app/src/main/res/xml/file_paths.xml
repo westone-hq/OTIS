@@ -5,4 +5,9 @@
     <external-files-path name="external_files" path="." />
     <external-path name="external" path="." />
     <external-cache-path name="external_cache" path="." />
+    <!-- root-path: getApplicationDocumentsDirectory(app_flutter/)가
+         files-path에 포함되지 않아 첨부 실패하는 문제의 표준 해법.
+         위젯 테스트는 FileProvider를 실행하지 않으므로 이 버그는
+         테스트로 검출 불가 — 실기기 첨부 확인은 이월 항목 유지. -->
+    <root-path name="root" path="." />
 </paths>
