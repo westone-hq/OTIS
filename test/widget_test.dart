@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/features/auth/login_screen.dart';
 import 'package:vibration_checker/features/home/home_screen.dart';
 import 'package:vibration_checker/features/history/history_screen.dart';
@@ -12,6 +13,10 @@ import 'package:vibration_checker/features/shared/send_email_sheet.dart';
 import 'package:vibration_checker/main.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('앱 시작 시 /login 라우트에서 로그인 화면이 표시되는지 확인', (WidgetTester tester) async {
     await tester.pumpWidget(const VibrationCheckerApp());
     await tester.pumpAndSettle();
@@ -164,7 +169,7 @@ void main() {
     await tester.tap(find.widgetWithText(ElevatedButton, '이메일로 보내기'));
     await tester.pumpAndSettle(); // 바텀 시트 애니메이션 대기
     expect(find.text('이메일 발송'), findsOneWidget);
-    expect(find.text('soonkyu.lee@otis.com'), findsOneWidget);
+    expect(find.text('설정에서 이메일을 등록하세요'), findsOneWidget);
   });
 
   testWidgets('S5 저장 결과 목록 화면 행 구성 요소 및 빈 상태 테스트', (WidgetTester tester) async {
@@ -223,10 +228,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('이메일 발송'), findsOneWidget);
-    expect(find.text('soonkyu.lee@otis.com'), findsOneWidget);
+    expect(find.text('설정에서 이메일을 등록하세요'), findsOneWidget);
     expect(find.text('PDF 리포트'), findsOneWidget);
     expect(find.text('RAW 데이터 파일'), findsOneWidget);
-    expect(find.text('음향 녹음 파일'), findsOneWidget);
     expect(find.text('지표 요약(메일 본문)'), findsOneWidget);
 
     // 기본적으로 PDF와 RAW가 선택됨. 둘 다 해제 시 0개 선택 상태 확인

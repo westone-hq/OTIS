@@ -62,6 +62,62 @@ class MeasurementResult {
     this.rawSamples,
   });
 
+  MeasurementResult copyWith({
+    String? id,
+    String? jobNo,
+    String? siteName,
+    int? bottomFloor,
+    int? topFloor,
+    String? direction,
+    DateTime? dateTime,
+    double? xPtp,
+    double? yPtp,
+    double? zPtp,
+    double? noiseMax,
+    double? distance,
+    double? maxSpeed,
+    List<double>? xSeries,
+    List<double>? ySeries,
+    List<double>? zSeries,
+    List<double>? noiseSeries,
+    List<double>? positionSeries,
+    List<double>? speedSeries,
+    List<double>? accelSeries,
+    List<double>? jerkSeries,
+    double? sampleRate,
+    bool? usedDetectedRideSegment,
+    String? constantSpeedRange,
+    List<SensorSample>? rawSamples,
+  }) {
+    return MeasurementResult(
+      id: id ?? this.id,
+      jobNo: jobNo ?? this.jobNo,
+      siteName: siteName ?? this.siteName,
+      bottomFloor: bottomFloor ?? this.bottomFloor,
+      topFloor: topFloor ?? this.topFloor,
+      direction: direction ?? this.direction,
+      dateTime: dateTime ?? this.dateTime,
+      xPtp: xPtp ?? this.xPtp,
+      yPtp: yPtp ?? this.yPtp,
+      zPtp: zPtp ?? this.zPtp,
+      noiseMax: noiseMax ?? this.noiseMax,
+      distance: distance ?? this.distance,
+      maxSpeed: maxSpeed ?? this.maxSpeed,
+      xSeries: xSeries ?? this.xSeries,
+      ySeries: ySeries ?? this.ySeries,
+      zSeries: zSeries ?? this.zSeries,
+      noiseSeries: noiseSeries ?? this.noiseSeries,
+      positionSeries: positionSeries ?? this.positionSeries,
+      speedSeries: speedSeries ?? this.speedSeries,
+      accelSeries: accelSeries ?? this.accelSeries,
+      jerkSeries: jerkSeries ?? this.jerkSeries,
+      sampleRate: sampleRate ?? this.sampleRate,
+      usedDetectedRideSegment: usedDetectedRideSegment ?? this.usedDetectedRideSegment,
+      constantSpeedRange: constantSpeedRange ?? this.constantSpeedRange,
+      rawSamples: rawSamples ?? this.rawSamples,
+    );
+  }
+
   // 임계 판정 getter (X·Y>10mg, Z>15mg, 소음>50dB -> 초과 시 true)
   bool get xExceeded => xPtp > 10.0;
   bool get yExceeded => yPtp > 10.0;
@@ -84,8 +140,8 @@ class MeasurementResult {
 
     for (int i = 0; i < count; i++) {
       final t = i / count;
-      xList.add(12.9 * (0.5 + 0.5 * ((i % 5) - 2) / 2));
-      yList.add(8.2 * (0.6 + 0.4 * (((i + 2) % 4) - 1)));
+      xList.add(8.2 * (0.5 + 0.5 * ((i % 5) - 2) / 2));
+      yList.add(12.9 * (0.6 + 0.4 * (((i + 2) % 4) - 1)));
       zList.add(22.2 * (0.7 + 0.3 * (((i + 1) % 6) - 2) / 2));
       noiseList.add(50.0 + 21.7 * (t < 0.5 ? t * 2 : (1 - t) * 2));
       posList.add(21.0 * t);
@@ -104,8 +160,8 @@ class MeasurementResult {
       topFloor: 8,
       direction: '하부 → 상부',
       dateTime: DateTime(2024, 7, 3, 14, 30),
-      xPtp: 12.9,
-      yPtp: 8.2,
+      xPtp: 8.2,
+      yPtp: 12.9,
       zPtp: 22.2,
       noiseMax: 71.7,
       distance: 21.0,
@@ -131,7 +187,7 @@ class MeasurementResult {
         id: '2024F1448R02',
         jobNo: '2024F 1448R02',
         siteName: '현대그린빌/아산건설',
-        bottomFloor: b1Floor(1),
+        bottomFloor: -1,
         topFloor: 15,
         direction: '상부 → 하부',
         dateTime: DateTime(2024, 7, 2, 10, 15),
@@ -176,6 +232,4 @@ class MeasurementResult {
       ),
     ];
   }
-
-  static int b1Floor(int val) => -val; // 지하 표현용 간단 헬퍼
 }

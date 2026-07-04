@@ -1,4 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../../core/theme.dart';
 import '../../domain/models/measurement_result.dart';
 import '../../domain/parse_raw.dart';
+import '../shared/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
 import 'metric_card.dart';
 
@@ -30,9 +32,17 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   void initState() {
     super.initState();
-    _result = MeasurementResult.mock;
-    if (widget.id == 'sample' || widget.id == 'raw' || widget.id == '2024F1447R01') {
+    if (widget.id == MeasurementSession.instance.lastResultId &&
+        MeasurementSession.instance.lastResult != null) {
+      _result = MeasurementSession.instance.lastResult!;
+      _isRealSample = true;
+    } else if (widget.id == 'sample' ||
+        widget.id == 'raw' ||
+        widget.id == '2024F1447R01') {
+      _result = MeasurementResult.mock;
       _loadRawSample();
+    } else {
+      _result = MeasurementResult.mock;
     }
   }
 
@@ -180,31 +190,40 @@ class _ResultScreenState extends State<ResultScreen> {
     String unit;
     List<double> series;
     double? threshold;
+    bool isOver = false;
+    String? noteText;
 
     switch (index) {
       case 0:
         title = '1. X축 진동';
         unit = 'mg';
         series = _result.xSeries;
-        threshold = 10.0;
+        threshold = null;
+        isOver = _result.xExceeded;
+        noteText = 'Aptp: ${_result.xPtp.toStringAsFixed(1)} mg (임계: 10mg)';
         break;
       case 1:
         title = '2. Y축 진동';
         unit = 'mg';
         series = _result.ySeries;
-        threshold = 10.0;
+        threshold = null;
+        isOver = _result.yExceeded;
+        noteText = 'Aptp: ${_result.yPtp.toStringAsFixed(1)} mg (임계: 10mg)';
         break;
       case 2:
         title = '3. Z축 진동';
         unit = 'mg';
         series = _result.zSeries;
-        threshold = 15.0;
+        threshold = null;
+        isOver = _result.zExceeded;
+        noteText = 'Aptp: ${_result.zPtp.toStringAsFixed(1)} mg (임계: 15mg)';
         break;
       case 3:
         title = '4. 소음';
         unit = 'dBA';
         series = _result.noiseSeries;
         threshold = 50.0;
+        isOver = _result.noiseExceeded;
         break;
       case 4:
         title = '5. 위치';
@@ -233,7 +252,23 @@ class _ResultScreenState extends State<ResultScreen> {
         break;
     }
 
-    final bool isOver = threshold != null && series.any((v) => v > threshold!);
+    final double sampleRate = _result.sampleRate > 0 ? _result.sampleRate : 256.0;
+    List<FlSpot> spots;
+    if (series.length > 800) {
+      final int stride = (series.length / 800).ceil();
+      spots = [];
+      for (int i = 0; i < series.length; i += stride) {
+        spots.add(FlSpot(i / sampleRate, series[i]));
+      }
+    } else {
+      spots = series
+          .asMap()
+          .entries
+          .map((e) => FlSpot(e.key / sampleRate, e.value))
+          .toList();
+    }
+    final double maxTime = series.length / sampleRate;
+    final double interval = maxTime > 5 ? (maxTime / 5).floorToDouble() : 1.0;
 
     return Container(
       key: _chartKeys[index],
@@ -267,6 +302,14 @@ class _ResultScreenState extends State<ResultScreen> {
                     color: isOver ? AppColors.red : AppColors.textSub,
                     fontWeight: FontWeight.w700,
                   ),
+                )
+              else if (noteText != null)
+                Text(
+                  noteText,
+                  style: AppText.caption.copyWith(
+                    color: isOver ? AppColors.red : AppColors.textSub,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
             ],
           ),
@@ -292,12 +335,12 @@ class _ResultScreenState extends State<ResultScreen> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 24,
-                      interval: series.length > 5 ? (series.length / 5).floorToDouble() : 1,
+                      interval: interval > 0 ? interval : 1.0,
                       getTitlesWidget: (val, meta) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            val.toInt().toString(),
+                            '${val.toInt()}s',
                             style: AppText.caption.copyWith(fontSize: 12),
                           ),
                         );
@@ -323,11 +366,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: series
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value))
-                        .toList(),
+                    spots: spots,
                     isCurved: true,
                     color: isOver ? AppColors.red : AppColors.blue,
                     barWidth: 2.5,
@@ -374,14 +413,15 @@ class _ResultScreenState extends State<ResultScreen> {
       appBar: AppBar(
         title: const Text('측정 결과'),
         actions: [
-          IconButton(
-            icon: Icon(
-              _isRealSample ? Icons.dataset : Icons.dataset_outlined,
-              color: _isRealSample ? AppColors.blue : null,
+          if (kDebugMode)
+            IconButton(
+              icon: Icon(
+                _isRealSample ? Icons.dataset : Icons.dataset_outlined,
+                color: _isRealSample ? AppColors.blue : null,
+              ),
+              tooltip: _isRealSample ? '기본 예시로 전환' : '실제 샘플 데이터 로드',
+              onPressed: _toggleDataSource,
             ),
-            tooltip: _isRealSample ? '기본 예시로 전환' : '실제 샘플 데이터 로드',
-            onPressed: _toggleDataSource,
-          ),
         ],
       ),
       body: SafeArea(

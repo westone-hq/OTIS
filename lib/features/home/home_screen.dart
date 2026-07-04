@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../shared/measurement_session.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// S2 홈 / 현장정보 입력
 /// - 이번 측정의 현장 정보를 입력하고 측정을 시작하는 홈 화면
@@ -16,7 +18,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // TODO: 마지막 입력값을 다음 진입 시 복원 (SharedPreferences 또는 상태 관리 도입 시 적용)
   final _jobNoCtl = TextEditingController();
   final _siteNameCtl = TextEditingController();
   final _bottomFloorCtl = TextEditingController();
@@ -37,6 +38,32 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _jobNoError;
   String? _siteNameError;
   String? _floorError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedInputs();
+  }
+
+  Future<void> _loadSavedInputs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final jobNo = prefs.getString('pref_jobNo');
+    final siteName = prefs.getString('pref_siteName');
+    final bottomFloor = prefs.getString('pref_bottomFloor');
+    final topFloor = prefs.getString('pref_topFloor');
+    final direction = prefs.getString('pref_direction');
+    final model = prefs.getString('pref_model');
+
+    setState(() {
+      if (jobNo != null) _jobNoCtl.text = jobNo;
+      if (siteName != null) _siteNameCtl.text = siteName;
+      if (bottomFloor != null) _bottomFloorCtl.text = bottomFloor;
+      if (topFloor != null) _topFloorCtl.text = topFloor;
+      if (direction != null) _direction = direction;
+      if (model != null) _model = model;
+    });
+  }
 
   @override
   void dispose() {
@@ -115,6 +142,25 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return;
     }
+
+    final siteInfo = SiteInfo(
+      jobNo: jobNo,
+      siteName: siteName,
+      bottomFloor: bottomFloorStr,
+      topFloor: topFloorStr,
+      direction: _direction,
+      model: _model,
+    );
+    MeasurementSession.instance.currentSite = siteInfo;
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('pref_jobNo', jobNo);
+      prefs.setString('pref_siteName', siteName);
+      prefs.setString('pref_bottomFloor', bottomFloorStr);
+      prefs.setString('pref_topFloor', topFloorStr);
+      prefs.setString('pref_direction', _direction);
+      prefs.setString('pref_model', _model);
+    });
 
     context.push('/start');
   }

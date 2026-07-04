@@ -6,7 +6,10 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme.dart';
 import '../../domain/measure/metrics_config.dart';
+import '../../domain/measure/measurement_engine.dart';
+import '../../domain/models/measurement_result.dart';
 import '../../domain/sensor_channel.dart';
+import '../shared/measurement_session.dart';
 
 /// S4 측정 중 (라이브)
 /// - 실시간 속도 및 경과 시간 표시. 멀리서도 읽히게 초대형 UI
@@ -36,10 +39,41 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
   double _baselineZ = 0.0;
   int _lastTsUs = 0;
 
+  final MeasurementEngine _engine = MeasurementEngine();
+  int _countdownSec = 0;
+  bool _isCountingDown = false;
+  Timer? _countdownTimer;
+
   @override
   void initState() {
     super.initState();
-    _initCaptureAndTimers();
+    final delay = MeasurementSession.instance.delaySec;
+    if (delay > 0) {
+      _countdownSec = delay;
+      _isCountingDown = true;
+      _startCountdown();
+    } else {
+      _initCaptureAndTimers();
+    }
+  }
+
+  void _startCountdown() {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_countdownSec > 1) {
+          _countdownSec--;
+        } else {
+          _countdownSec = 0;
+          _isCountingDown = false;
+          timer.cancel();
+          _initCaptureAndTimers();
+        }
+      });
+    });
   }
 
   Future<void> _initCaptureAndTimers() async {
@@ -90,6 +124,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
       _sensorSub = _sensorManager.sensorStream.listen((sample) {
         if (sample.tsUs > 0) {
           _receivedRealSample = true;
+          _engine.addSamples([sample]);
           // 첫 1초간 Z축 baseline 보정 수집
           if (_elapsedSeconds < 1) {
             _baselineSumZ += sample.z;
@@ -140,17 +175,56 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
     });
   }
 
-  @override
-  void dispose() {
+  void _cleanup() {
     _timeTimer?.cancel();
     _uiTimer?.cancel();
+    _countdownTimer?.cancel();
     _speedSub?.cancel();
     _sensorSub?.cancel();
     _sensorManager.stopCapture();
     try {
       WakelockPlus.disable();
     } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _cleanup();
     super.dispose();
+  }
+
+  void _finishMeasurement() {
+    _cleanup();
+
+    final site = MeasurementSession.instance.currentSite;
+    MeasurementResult result;
+    if (_engine.sampleCount >= 2) {
+      result = _engine.analyze(
+        jobNo: site?.jobNo ?? '2024F 1447R01',
+        siteName: site?.siteName ?? '럭키종합건설/송정동근생',
+        bottomFloor: int.tryParse(site?.bottomFloor ?? '1') ?? 1,
+        topFloor: int.tryParse(site?.topFloor ?? '8') ?? 8,
+        direction: site?.direction ?? '하부 → 상부',
+        dateTime: DateTime.now(),
+      );
+    } else {
+      result = MeasurementResult.mock.copyWith(
+        id: 'RES-${DateTime.now().millisecondsSinceEpoch}',
+        jobNo: site?.jobNo ?? '2024F 1447R01',
+        siteName: site?.siteName ?? '럭키종합건설/송정동근생',
+        bottomFloor: int.tryParse(site?.bottomFloor ?? '1') ?? 1,
+        topFloor: int.tryParse(site?.topFloor ?? '8') ?? 8,
+        direction: site?.direction ?? '하부 → 상부',
+        dateTime: DateTime.now(),
+      );
+    }
+
+    MeasurementSession.instance.lastResult = result;
+    MeasurementSession.instance.lastResultId = result.id;
+
+    if (mounted) {
+      context.pushReplacement('/result/${result.id}');
+    }
   }
 
   Future<bool?> _showExitDialog() {
@@ -202,6 +276,51 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isCountingDown) {
+      return Scaffold(
+        backgroundColor: AppColors.navy,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '$_countdownSec',
+                  style: AppText.bigNumber.copyWith(
+                    color: AppColors.blue,
+                    fontSize: 120,
+                  ),
+                ),
+                const SizedBox(height: AppDims.gap3),
+                Text(
+                  '잠시 후 측정이 시작됩니다...',
+                  style: AppText.subhead.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 48),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.surface,
+                    foregroundColor: AppColors.text,
+                    minimumSize: const Size(200, 64),
+                  ),
+                  onPressed: () {
+                    _countdownTimer?.cancel();
+                    if (mounted) {
+                      setState(() {
+                        _isCountingDown = false;
+                      });
+                      _initCaptureAndTimers();
+                    }
+                  },
+                  child: const Text('건너뛰기 / 즉시 시작'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final minutes = _elapsedSeconds ~/ 60;
     final seconds = _elapsedSeconds % 60;
     final timeFormatted = '$minutes:${seconds.toString().padLeft(2, '0')}';
@@ -212,6 +331,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
         if (didPop) return;
         final confirm = await _showExitDialog();
         if (confirm == true && context.mounted) {
+          _cleanup();
           context.pop();
         }
       },
@@ -236,6 +356,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
                 onPressed: () async {
                   final confirm = await _showExitDialog();
                   if (confirm == true && context.mounted) {
+                    _cleanup();
                     context.pop();
                   }
                 },
@@ -342,7 +463,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
           child: Padding(
             padding: const EdgeInsets.all(AppDims.screenPad),
             child: ElevatedButton(
-              onPressed: () => context.pushReplacement('/result/demo'),
+              onPressed: () => _finishMeasurement(),
               child: const Text('테스트 완료'),
             ),
           ),

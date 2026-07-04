@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../shared/measurement_session.dart';
 import 'placement_sheet.dart';
 
 /// S3 측정 시작 화면
@@ -205,8 +206,11 @@ class _StartScreenState extends State<StartScreen> {
         child: Padding(
           padding: const EdgeInsets.all(AppDims.screenPad),
           child: ElevatedButton(
-            onPressed: () => context.push('/measuring'),
-            child: const Text('카운트다운 시작'),
+            onPressed: () {
+              MeasurementSession.instance.delaySec = _selectedSeconds;
+              context.push('/measuring');
+            },
+            child: Text(_selectedSeconds == 0 ? '측정 시작' : '카운트다운 시작'),
           ),
         ),
       ),

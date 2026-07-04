@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme.dart';
 
@@ -31,13 +32,26 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 class _SendEmailSheetState extends State<SendEmailSheet> {
-  // 초기 발송 항목: PDF 리포트와 RAW 데이터 파일 선택됨
   bool _sendPdf = true;
   bool _sendRaw = true;
-  bool _sendAudio = false;
   bool _sendSummary = false;
 
   bool _loading = false;
+  String _recipientEmail = '설정에서 이메일을 등록하세요';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecipient();
+  }
+
+  Future<void> _loadRecipient() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _recipientEmail = prefs.getString('pref_recipient_email') ?? '설정에서 이메일을 등록하세요';
+    });
+  }
 
   Future<void> _send() async {
     setState(() => _loading = true);
@@ -106,7 +120,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bool noneSelected = !_sendPdf && !_sendRaw && !_sendAudio && !_sendSummary;
+    final bool noneSelected = !_sendPdf && !_sendRaw && !_sendSummary;
     final double sheetHeight = MediaQuery.of(context).size.height * 0.7;
 
     return SizedBox(
@@ -158,7 +172,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'soonkyu.lee@otis.com',
+                          _recipientEmail,
                           style: AppText.bodyBold,
                         ),
                       ],
@@ -197,12 +211,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       title: 'RAW 데이터 파일',
                       value: _sendRaw,
                       onChanged: (val) => setState(() => _sendRaw = val ?? false),
-                    ),
-                    const Divider(height: 1, color: AppColors.border),
-                    _buildCheckboxItem(
-                      title: '음향 녹음 파일',
-                      value: _sendAudio,
-                      onChanged: (val) => setState(() => _sendAudio = val ?? false),
                     ),
                     const Divider(height: 1, color: AppColors.border),
                     _buildCheckboxItem(
