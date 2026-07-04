@@ -21,16 +21,16 @@ import 'theme.dart';
 final appRouter = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-    GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-    GoRoute(path: '/start', builder: (_, __) => const StartScreen()),
-    GoRoute(path: '/measuring', builder: (_, __) => const MeasuringScreen()),
+    GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+    GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+    GoRoute(path: '/start', builder: (_, _) => const StartScreen()),
+    GoRoute(path: '/measuring', builder: (_, _) => const MeasuringScreen()),
     GoRoute(
       path: '/result/:id',
       builder: (_, s) => ResultScreen(id: s.pathParameters['id'] ?? 'demo'),
     ),
-    GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
-    GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+    GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
+    GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
   ],
 );
 
