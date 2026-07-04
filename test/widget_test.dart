@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration_checker/domain/auth_repository.dart';
+import 'package:vibration_checker/domain/repository/measurement_repository.dart';
 import 'package:vibration_checker/features/auth/login_screen.dart';
 import 'package:vibration_checker/features/home/home_screen.dart';
 import 'package:vibration_checker/features/history/history_screen.dart';
@@ -13,8 +17,11 @@ import 'package:vibration_checker/features/shared/send_email_sheet.dart';
 import 'package:vibration_checker/main.dart';
 
 void main() {
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    AuthRepository.instance = LocalAuthRepository();
+    final tempDir = await Directory.systemTemp.createTemp('otis_test_w7_');
+    MeasurementRepository.instance.overrideBaseDir = tempDir.path;
   });
 
   testWidgets('앱 시작 시 /login 라우트에서 로그인 화면이 표시되는지 확인', (WidgetTester tester) async {
@@ -210,6 +217,11 @@ void main() {
   });
 
   testWidgets('P7 이메일 발송 바텀 시트 구성 요소, 항목 선택 및 발송 테스트', (WidgetTester tester) async {
+    await AuthRepository.instance.login('123456', '123456');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('email_123456', 'test@otis.com');
+    SendEmailSheet.overrideEmailSender = (email) async {};
+
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -228,7 +240,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('이메일 발송'), findsOneWidget);
-    expect(find.text('설정에서 이메일을 등록하세요'), findsOneWidget);
+    expect(find.text('test@otis.com'), findsOneWidget);
     expect(find.text('PDF 리포트'), findsOneWidget);
     expect(find.text('RAW 데이터 파일'), findsOneWidget);
     expect(find.text('지표 요약(메일 본문)'), findsOneWidget);
@@ -245,15 +257,17 @@ void main() {
     await tester.tap(find.text('PDF 리포트'));
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(ElevatedButton, '보내기'));
-    await tester.pump(); // 로딩 시작
-    await tester.pump(const Duration(milliseconds: 800)); // 800ms 대기
-    await tester.pumpAndSettle(); // 시트 닫힘 애니메이션
+    await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(ElevatedButton, '보내기'));
+      await Future.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pump();
 
-    expect(find.text('이메일이 발송되었습니다'), findsOneWidget);
+    expect(find.text('메일 작성창이 호출되었습니다 (첨부 구성 완료)'), findsOneWidget);
   });
 
   testWidgets('P8 S6 설정 화면 정보 조회, 이메일 검증 및 로그아웃 다이얼로그 테스트', (WidgetTester tester) async {
+    await AuthRepository.instance.login('123456', '123456');
     await tester.pumpWidget(
       const MaterialApp(
         home: SettingsScreen(),

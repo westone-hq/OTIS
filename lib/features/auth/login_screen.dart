@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vibration_checker/domain/auth_repository.dart';
 
 import '../../core/theme.dart';
 
@@ -24,8 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
 
-  static final _idPattern = RegExp(r'^(\d{6}|[Tt]\d{5})$');
-
   @override
   void dispose() {
     _idCtl.dispose();
@@ -36,29 +35,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    final id = _idCtl.text.trim();
-    final pw = _pwCtl.text.trim();
-
-    if (!_idPattern.hasMatch(id)) {
-      setState(() => _error = '아이디 형식을 확인하세요.\n사번 6자리 또는 T+숫자 5자리입니다.');
-      return;
-    }
-    if (pw != id) {
-      setState(() => _error = '아이디 또는 비밀번호를 확인하세요.');
-      return;
-    }
+    final id = _idCtl.text;
+    final pw = _pwCtl.text;
 
     setState(() {
       _error = null;
       _loading = true;
     });
 
-    // TODO: 서버 인증으로 교체. 현재는 mock (PW == ID면 통과).
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
-    setState(() => _loading = false);
-    context.go('/home');
+    try {
+      await AuthRepository.instance.login(id, pw);
+      if (!mounted) return;
+      setState(() => _loading = false);
+      context.go('/home');
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = '로그인 중 오류가 발생했습니다.';
+      });
+    }
   }
 
   @override

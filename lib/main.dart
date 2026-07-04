@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:vibration_checker/domain/auth_repository.dart';
 
 import 'core/router.dart';
 import 'core/theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthRepository.instance.getAutoLoginId();
   runApp(const VibrationCheckerApp());
 }
 

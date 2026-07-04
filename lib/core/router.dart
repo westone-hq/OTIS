@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vibration_checker/domain/auth_repository.dart';
 
 import '../features/auth/login_screen.dart';
 import '../features/history/history_screen.dart';
@@ -20,6 +21,13 @@ import 'theme.dart';
 /// /settings   S6 설정
 final appRouter = GoRouter(
   initialLocation: '/login',
+  redirect: (context, state) {
+    final loggedIn = AuthRepository.instance.currentUserId != null;
+    final isLoggingIn = state.matchedLocation == '/login';
+    if (!loggedIn && !isLoggingIn) return '/login';
+    if (loggedIn && isLoggingIn) return '/home';
+    return null;
+  },
   routes: [
     GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),

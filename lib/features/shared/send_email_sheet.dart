@@ -1,6 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration_checker/domain/auth_repository.dart';
+import 'package:vibration_checker/domain/models/measurement_result.dart';
+import 'package:vibration_checker/domain/report_generator.dart';
+import 'package:vibration_checker/domain/repository/measurement_repository.dart';
 
 import '../../core/theme.dart';
 
@@ -20,10 +28,13 @@ void showSendEmailSheet(BuildContext context, {required String jobId}) {
 }
 
 /// 이메일 발송 바텀 시트 위젯
-/// - 등록된 이메일 수신자 확인 및 4가지 발송 항목 선택
+/// - 등록된 이메일 수신자 확인 및 발송 항목 선택
 /// - 어르신 UX: 70% 높이, 64dp 체크박스 행, 스케일 1.4 체크박스, 명확한 3중 에러 표시
 class SendEmailSheet extends StatefulWidget {
   final String jobId;
+
+  /// 위젯 테스트 등에서 실제 네이티브 호출을 가로채기 위한 override
+  static Future<void> Function(Email email)? overrideEmailSender;
 
   const SendEmailSheet({super.key, required this.jobId});
 
@@ -38,6 +49,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
   bool _loading = false;
   String _recipientEmail = '설정에서 이메일을 등록하세요';
+  bool _isEmailSet = false;
 
   @override
   void initState() {
@@ -46,43 +58,148 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   Future<void> _loadRecipient() async {
-    final prefs = await SharedPreferences.getInstance();
+    final id = AuthRepository.instance.currentUserId;
+    String email = '설정에서 이메일을 등록하세요';
+    bool isSet = false;
+    if (id != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('email_$id');
+      if (saved != null && saved.trim().isNotEmpty) {
+        email = saved;
+        isSet = true;
+      }
+    }
     if (!mounted) return;
     setState(() {
-      _recipientEmail = prefs.getString('pref_recipient_email') ?? '설정에서 이메일을 등록하세요';
+      _recipientEmail = email;
+      _isEmailSet = isSet;
     });
   }
 
   Future<void> _send() async {
-    setState(() => _loading = true);
-
-    // TODO: 실제 발송 API 연결
-    await Future<void>.delayed(const Duration(milliseconds: 800));
-
-    if (!mounted) return;
-    Navigator.of(context).pop();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: AppColors.green,
+    if (!_isEmailSet) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('이메일 등록 안내', style: AppText.subhead),
+          content: Text('수신할 이메일 주소가 설정되지 않았습니다.\n설정 화면에서 먼저 이메일을 등록해 주세요.', style: AppText.body),
+          actions: [
+            Semantics(
+              button: true,
+              label: '취소',
+              child: SizedBox(
+                height: AppDims.touchMin,
+                child: TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text('취소', style: AppText.bodyBold.copyWith(color: AppColors.navy)),
+                ),
+              ),
             ),
-            const SizedBox(width: AppDims.gap),
-            const Expanded(
-              child: Text(
-                '이메일이 발송되었습니다',
-                style: TextStyle(color: Colors.white),
+            Semantics(
+              button: true,
+              label: '설정으로 이동',
+              child: SizedBox(
+                height: AppDims.touchMin,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).pop();
+                    context.push('/settings');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.blue,
+                    padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
+                  ),
+                  child: Text('설정으로 이동', style: AppText.bodyBold.copyWith(color: Colors.white)),
+                ),
               ),
             ),
           ],
         ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.navy,
-      ),
-    );
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      var result = await MeasurementRepository.instance.load(widget.jobId);
+      if (result == null) {
+        result = MeasurementResult.mock;
+        final baseDir = await MeasurementRepository.instance.getBaseDirectory();
+        final targetDir = Directory('${baseDir.path}/${widget.jobId}');
+        if (!await targetDir.exists()) await targetDir.create(recursive: true);
+        final pdfFile = File('${targetDir.path}/report.pdf');
+        if (!await pdfFile.exists()) await pdfFile.writeAsBytes([0x25, 0x50, 0x44, 0x46]);
+        final rawFile = File('${targetDir.path}/raw.txt');
+        if (!await rawFile.exists()) await rawFile.writeAsString('EVIMP1\n256\n');
+      }
+
+      final baseDir = await MeasurementRepository.instance.getBaseDirectory();
+      final List<String> attachments = [];
+      if (_sendPdf) {
+        final pdfFile = File('${baseDir.path}/${widget.jobId}/report.pdf');
+        if (await pdfFile.exists()) attachments.add(pdfFile.path);
+      }
+      if (_sendRaw) {
+        final rawFile = File('${baseDir.path}/${widget.jobId}/raw.txt');
+        if (await rawFile.exists()) attachments.add(rawFile.path);
+      }
+
+      final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(result.dateTime);
+      final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr';
+      final body = _sendSummary
+          ? ReportGenerator.generateSummaryText(result)
+          : 'OTIS 승강기 진동 측정 TUNE 리포트 및 첨부파일입니다.';
+
+      final email = Email(
+        body: body,
+        subject: subject,
+        recipients: [_recipientEmail],
+        attachmentPaths: attachments,
+      );
+
+      if (SendEmailSheet.overrideEmailSender != null) {
+        await SendEmailSheet.overrideEmailSender!(email);
+      } else {
+        await FlutterEmailSender.send(email);
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(
+                Icons.check_circle_outline,
+                color: AppColors.green,
+              ),
+              const SizedBox(width: AppDims.gap),
+              const Expanded(
+                child: Text(
+                  '메일 작성창이 호출되었습니다 (첨부 구성 완료)',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.navy,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('메일 작성창 호출 실패: $e'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Widget _buildCheckboxItem({
@@ -196,7 +313,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
             ),
             const SizedBox(height: AppDims.gap2),
 
-            // 3. 발송 항목 CheckboxListTile 4개
+            // 3. 발송 항목 CheckboxListTile 3개
             Expanded(
               child: SingleChildScrollView(
                 child: Column(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration_checker/domain/auth_repository.dart';
 
 import '../../core/theme.dart';
 
@@ -21,7 +23,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _emailCtl = TextEditingController(text: 'soonkyu.lee@otis.com');
+    _emailCtl = TextEditingController();
+    _loadEmail();
+  }
+
+  Future<void> _loadEmail() async {
+    final id = AuthRepository.instance.currentUserId;
+    if (id == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('email_$id');
+    if (savedEmail != null && mounted) {
+      _emailCtl.text = savedEmail;
+    }
   }
 
   @override
@@ -30,7 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     FocusScope.of(context).unfocus();
     final email = _emailCtl.text.trim();
 
@@ -39,8 +52,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
+    final id = AuthRepository.instance.currentUserId;
+    if (id != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('email_$id', email);
+    }
+
     setState(() => _error = null);
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Row(
@@ -108,11 +128,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirm == true && mounted) {
+      await AuthRepository.instance.logout();
+      if (!mounted) return;
       context.go('/login');
     }
   }
 
   Widget _buildProfileCard() {
+    final userId = AuthRepository.instance.currentUserId ?? '미로그인';
     return Container(
       padding: const EdgeInsets.all(AppDims.gap2),
       decoration: BoxDecoration(
@@ -140,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('123456', style: AppText.bodyBold),
+                Text(userId, style: AppText.bodyBold),
                 const SizedBox(height: 4),
                 Text(
                   'Otis 직원',
