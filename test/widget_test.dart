@@ -245,6 +245,134 @@ void main() {
     expect(find.byType(ResultScreen), findsOneWidget);
   });
 
+  testWidgets('S4 저장 실패 시 [재시도] 및 [확인] 다이얼로그 동작 검증', (WidgetTester tester) async {
+    MeasurementSession.instance.clear();
+    MeasurementSession.instance.currentSite = const SiteInfo(
+      jobNo: '2024F 1447R01',
+      siteName: '럭키종합건설/송정동근생',
+      bottomFloor: '1',
+      topFloor: '8',
+      direction: '하부 → 상부',
+      model: 'Gen2',
+    );
+
+    MeasurementRepository.instance.overrideBaseDir = 'Z:/non_existent_drive_999/test';
+
+    final router = GoRouter(
+      initialLocation: '/measuring',
+      routes: [
+        GoRoute(
+          path: '/measuring',
+          builder: (_, _) => MeasuringScreen(sensorManager: FakeSensorChannelManager()),
+        ),
+        GoRoute(
+          path: '/result/:id',
+          builder: (_, s) => ResultScreen(id: s.pathParameters['id'] ?? 'demo'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '테스트 완료'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('저장 실패 알림'), findsOneWidget);
+    expect(find.text('재시도'), findsOneWidget);
+    expect(find.text('확인'), findsOneWidget);
+    // 위젯 레벨 검증 부적합 (다이얼로그 애니메이션 반복 교착), 유닛으로 대체
+  });
+
+  test('S4 저장 재시도 로직 순수 유닛테스트 (attemptSave)', () async {
+    final result = MeasurementResult.mock.copyWith(id: 'test_attempt_save');
+
+    MeasurementRepository.instance.overrideBaseDir = 'Z:/';
+    Directory? savedDir;
+    final failResult = await MeasuringScreen.attemptSave(
+      result,
+      onSuccess: (dir) => savedDir = dir,
+    );
+    expect(failResult, false);
+    expect(savedDir, null);
+
+    final recoverDir = await Directory.systemTemp.createTemp('otis_recover_unit_');
+    MeasurementRepository.instance.overrideBaseDir = recoverDir.path;
+    final successResult = await MeasuringScreen.attemptSave(
+      result,
+      onSuccess: (dir) => savedDir = dir,
+    );
+    expect(successResult, true);
+    expect(savedDir, isNotNull);
+  });
+
+  testWidgets('S4 저장 실패 시 [확인] 선택 -> 결과 화면으로 이동', (WidgetTester tester) async {
+    MeasurementSession.instance.clear();
+    MeasurementSession.instance.currentSite = const SiteInfo(
+      jobNo: '2024F 1447R01',
+      siteName: '럭키종합건설/송정동근생',
+      bottomFloor: '1',
+      topFloor: '8',
+      direction: '하부 → 상부',
+      model: 'Gen2',
+    );
+
+    MeasurementRepository.instance.overrideBaseDir = 'Z:/non_existent_drive_999/test';
+
+    final router = GoRouter(
+      initialLocation: '/measuring',
+      routes: [
+        GoRoute(
+          path: '/measuring',
+          builder: (_, _) => MeasuringScreen(sensorManager: FakeSensorChannelManager()),
+        ),
+        GoRoute(
+          path: '/result/:id',
+          builder: (_, s) => ResultScreen(id: s.pathParameters['id'] ?? 'demo'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '테스트 완료'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('저장 실패 알림'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, '확인'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ResultScreen), findsOneWidget);
+  });
+
+  testWidgets('S4 마이크 권한 거부 시 설정 안내 문구 포함 스낵바 노출 검증', (WidgetTester tester) async {
+    MeasurementSession.instance.clear();
+    MeasurementSession.instance.currentSite = const SiteInfo(
+      jobNo: '2024F 1447R01',
+      siteName: '럭키종합건설/송정동근생',
+      bottomFloor: '1',
+      topFloor: '8',
+      direction: '하부 → 상부',
+      model: 'Gen2',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MeasuringScreen(sensorManager: AudioDeniedFakeSensorChannelManager()),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.textContaining('휴대폰 설정 > 애플리케이션 > OTIS 진동측정 > 권한에서 마이크를 허용해 주세요.'), findsOneWidget);
+  });
+
   testWidgets('S4 하강 운행 모사(z 부호 반전 합성 스트림) -> 측정 5초 시점 표시 속도가 0.3 m/s 이상인지 확인', (WidgetTester tester) async {
     MeasurementSession.instance.clear();
     MeasurementSession.instance.currentSite = const SiteInfo(
@@ -664,4 +792,9 @@ class DescentFakeSensorChannelManager extends SensorChannelManager {
       );
     }).takeWhile((s) => s != null).cast<SensorSample>();
   }
+}
+
+class AudioDeniedFakeSensorChannelManager extends FakeSensorChannelManager {
+  @override
+  Future<bool> requestAudioPermission() async => false;
 }

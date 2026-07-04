@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import '../../domain/measure/metrics_config.dart';
 import '../../domain/measure/measurement_engine.dart';
 import '../../domain/sensor_channel.dart';
 import '../../domain/repository/measurement_repository.dart';
+import '../../domain/models/measurement_result.dart';
 import '../shared/measurement_session.dart';
 
 /// S4 측정 중 (라이브)
@@ -18,6 +20,20 @@ import '../shared/measurement_session.dart';
 class MeasuringScreen extends StatefulWidget {
   final SensorChannelManager? sensorManager;
   const MeasuringScreen({super.key, this.sensorManager});
+
+  @visibleForTesting
+  static Future<bool> attemptSave(
+    MeasurementResult result, {
+    void Function(Directory)? onSuccess,
+  }) async {
+    try {
+      final dir = await MeasurementRepository.instance.save(result);
+      onSuccess?.call(dir);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   State<MeasuringScreen> createState() => _MeasuringScreenState();
@@ -96,7 +112,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '소음 제외 측정: 마이크 권한이 거부되어 진동만 측정합니다. (결과에 소음 N/A 표기)',
+            '소음 제외 측정: 마이크 권한이 거부되어 진동만 측정합니다. (결과에 소음 N/A 표기)\n권한 요청 창이 다시 나타나지 않으면 휴대폰 설정 > 애플리케이션 > OTIS 진동측정 > 권한에서 마이크를 허용해 주세요.',
             style: AppText.body.copyWith(color: Colors.white),
           ),
           backgroundColor: AppColors.red,
@@ -384,37 +400,68 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     MeasurementSession.instance.lastResult = finalResult;
     MeasurementSession.instance.lastResultId = finalResult.id;
 
-    try {
-      final dir = await MeasurementRepository.instance.save(finalResult);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '저장되었습니다 (경로: ${dir.path})',
-              style: AppText.body.copyWith(color: Colors.white),
-            ),
-            backgroundColor: AppColors.green,
-          ),
-        );
-        context.pushReplacement('/result/${finalResult.id}');
-      }
-    } catch (e) {
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Text('저장 실패 알림'),
-            content: Text('측정 결과 파일 저장에 실패했습니다: $e\n결과 화면으로 이동합니다.'),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('확인'),
+    Directory? savedDir;
+    final bool initialSuccess = await MeasuringScreen.attemptSave(
+      finalResult,
+      onSuccess: (dir) => savedDir = dir,
+    );
+    if (!initialSuccess) {
+      if (!mounted) return;
+      await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('저장 실패 알림'),
+          content: const Text('측정 결과 파일 저장에 실패했습니다\n결과 화면으로 이동합니다.'),
+          actions: [
+            Semantics(
+              button: true,
+              label: '확인',
+              child: SizedBox(
+                height: AppDims.touchMin,
+                child: TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: Text(
+                    '확인',
+                    style: AppText.bodyBold.copyWith(color: AppColors.navy),
+                  ),
+                ),
               ),
-            ],
+            ),
+            Semantics(
+              button: true,
+              label: '재시도',
+              child: SizedBox(
+                height: AppDims.touchMin,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final success = await MeasuringScreen.attemptSave(
+                      finalResult,
+                      onSuccess: (dir) => savedDir = dir,
+                    );
+                    if (success && ctx.mounted) {
+                      Navigator.of(ctx).pop(true);
+                    }
+                  },
+                  child: const Text('재시도'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (savedDir != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '저장되었습니다 (경로: ${savedDir!.path})',
+            style: AppText.body.copyWith(color: Colors.white),
           ),
-        );
-      }
+          backgroundColor: AppColors.green,
+        ),
+      );
     }
 
     if (mounted) {

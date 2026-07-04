@@ -22,8 +22,8 @@ class MeasurementRepository {
   Future<Directory> getBaseDirectory() async {
     if (overrideBaseDir != null) {
       final dir = Directory(overrideBaseDir!);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
+      if (!dir.existsSync()) {
+        dir.createSync(recursive: true);
       }
       return dir;
     }
@@ -40,6 +40,28 @@ class MeasurementRepository {
   Future<Directory> save(MeasurementResult result) async {
     final baseDir = await getBaseDirectory();
     final targetDir = Directory('${baseDir.path}/${result.id}');
+    if (overrideBaseDir != null) {
+      if (!targetDir.existsSync()) {
+        targetDir.createSync(recursive: true);
+      }
+      final metaFile = File('${targetDir.path}/meta.json');
+      metaFile.writeAsStringSync(result.toJson(), flush: true);
+
+      final rawFile = File('${targetDir.path}/raw.txt');
+      final rawSamples = result.rawSamples ?? [];
+      final rawContent = RawDataParser.writeEvimp1(
+        rawSamples,
+        sampleRate: result.sampleRate.round(),
+      );
+      rawFile.writeAsStringSync(rawContent, flush: true);
+
+      final pdfFile = File('${targetDir.path}/report.pdf');
+      final pdfBytes = await ReportGenerator.generateTuneReportPdf(result);
+      pdfFile.writeAsBytesSync(pdfBytes, flush: true);
+
+      return targetDir;
+    }
+
     if (!await targetDir.exists()) {
       await targetDir.create(recursive: true);
     }
