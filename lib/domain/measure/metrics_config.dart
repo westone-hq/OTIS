@@ -41,6 +41,11 @@ class MetricsConfig {
   // OI-4: 실측 캘리브레이션 전 임시 추정치. 기준 소음계 대비 기기별 보정 필요(Phase 7)
   final double micDbfsToDbaOffset;
 
+  // 타당성 게이트: 미만이면 "움직임 미감지" 안내. 수치는 여기 단일 정의.
+  final double minMeasureDurationSec; // 8.0
+  final double minValidMaxSpeed; // 0.1 (m/s)
+  final double minValidDistance; // 0.5 (m)
+
   const MetricsConfig({
     this.baselineSec = 1.0,
     this.motionLowpassCutoffHz = 0.1,
@@ -57,6 +62,9 @@ class MetricsConfig {
     this.zThresholdMg = 15.0,
     this.noiseThresholdDba = 50.0,
     this.micDbfsToDbaOffset = 85.0,
+    this.minMeasureDurationSec = 8.0,
+    this.minValidMaxSpeed = 0.1,
+    this.minValidDistance = 0.5,
   })  : aptpWindowSecX = aptpWindowSecX ?? aptpWindowSec,
         aptpWindowSecY = aptpWindowSecY ?? aptpWindowSec,
         aptpWindowSecZ = aptpWindowSecZ ?? aptpWindowSec;

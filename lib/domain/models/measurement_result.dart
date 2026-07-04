@@ -34,6 +34,7 @@ class MeasurementResult {
   final bool usedDetectedRideSegment; // 주행 자동 검출 성공 여부
   final String constantSpeedRange; // 정속 구간 시간 범위 요약
   final List<SensorSample>? rawSamples; // RAW 데이터 보관 (EVIMP1 저장용)
+  final bool lowMotionWarning; // 움직임 미감지 경고 플래그
 
   const MeasurementResult({
     required this.id,
@@ -61,6 +62,7 @@ class MeasurementResult {
     this.usedDetectedRideSegment = true,
     this.constantSpeedRange = '전체 구간',
     this.rawSamples,
+    this.lowMotionWarning = false,
   });
 
   MeasurementResult copyWith({
@@ -89,6 +91,7 @@ class MeasurementResult {
     bool? usedDetectedRideSegment,
     String? constantSpeedRange,
     List<SensorSample>? rawSamples,
+    bool? lowMotionWarning,
   }) {
     return MeasurementResult(
       id: id ?? this.id,
@@ -116,6 +119,7 @@ class MeasurementResult {
       usedDetectedRideSegment: usedDetectedRideSegment ?? this.usedDetectedRideSegment,
       constantSpeedRange: constantSpeedRange ?? this.constantSpeedRange,
       rawSamples: rawSamples ?? this.rawSamples,
+      lowMotionWarning: lowMotionWarning ?? this.lowMotionWarning,
     );
   }
 
@@ -137,6 +141,7 @@ class MeasurementResult {
       'sampleRate': sampleRate,
       'usedDetectedRideSegment': usedDetectedRideSegment,
       'constantSpeedRange': constantSpeedRange,
+      'lowMotionWarning': lowMotionWarning,
       'xSeries': xSeries,
       'ySeries': ySeries,
       'zSeries': zSeries,
@@ -173,6 +178,7 @@ class MeasurementResult {
       sampleRate: (map['sampleRate'] as num?)?.toDouble() ?? 256.0,
       usedDetectedRideSegment: map['usedDetectedRideSegment'] as bool? ?? true,
       constantSpeedRange: map['constantSpeedRange'] as String? ?? '전체 구간',
+      lowMotionWarning: map['lowMotionWarning'] as bool? ?? false,
       xSeries: toDoubleList(map['xSeries']),
       ySeries: toDoubleList(map['ySeries']),
       zSeries: toDoubleList(map['zSeries']),

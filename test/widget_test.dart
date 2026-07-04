@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/domain/auth_repository.dart';
+import 'package:vibration_checker/domain/models/measurement_result.dart';
 import 'package:vibration_checker/domain/repository/measurement_repository.dart';
 import 'package:vibration_checker/domain/sensor_channel.dart';
 import 'package:vibration_checker/features/auth/login_screen.dart';
@@ -232,7 +233,7 @@ void main() {
 
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 10));
 
     await tester.runAsync(() async {
       await tester.tap(find.widgetWithText(ElevatedButton, '테스트 완료'));
@@ -242,6 +243,148 @@ void main() {
 
     expect(MeasurementSession.instance.lastResult, isNotNull);
     expect(find.byType(ResultScreen), findsOneWidget);
+  });
+
+  testWidgets('S4 하강 운행 모사(z 부호 반전 합성 스트림) -> 측정 5초 시점 표시 속도가 0.3 m/s 이상인지 확인', (WidgetTester tester) async {
+    MeasurementSession.instance.clear();
+    MeasurementSession.instance.currentSite = const SiteInfo(
+      jobNo: '2024F 1447R01',
+      siteName: '럭키종합건설/송정동근생',
+      bottomFloor: '8',
+      topFloor: '1',
+      direction: '상부 → 하부',
+      model: 'Gen2',
+    );
+
+    final router = GoRouter(
+      initialLocation: '/measuring',
+      routes: [
+        GoRoute(
+          path: '/measuring',
+          builder: (_, _) => MeasuringScreen(sensorManager: DescentFakeSensorChannelManager()),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 5));
+
+    final speedWidgetFinder = find.byWidgetPredicate((w) {
+      if (w is Text && w.data != null) {
+        final val = double.tryParse(w.data!);
+        if (val != null && val >= 0.3) return true;
+      }
+      return false;
+    });
+    expect(speedWidgetFinder, findsWidgets);
+  });
+
+  testWidgets('S4 측정 완료 시 움직임 없음(합성 샘플 z 0) -> 게이트 다이얼로그 노출 및 [다시 측정] 시 save 미호출', (WidgetTester tester) async {
+    MeasurementSession.instance.clear();
+    MeasurementSession.instance.currentSite = const SiteInfo(
+      jobNo: '2024F 1447R01',
+      siteName: '럭키종합건설/송정동근생',
+      bottomFloor: '1',
+      topFloor: '8',
+      direction: '하부 → 상부',
+      model: 'Gen2',
+    );
+
+    final router = GoRouter(
+      initialLocation: '/measuring',
+      routes: [
+        GoRoute(
+          path: '/measuring',
+          builder: (_, _) => MeasuringScreen(sensorManager: ZeroMotionFakeSensorChannelManager()),
+        ),
+        GoRoute(
+          path: '/start',
+          builder: (_, _) => const Scaffold(body: Text('StartScreen')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '테스트 완료'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('승강기 움직임이 감지되지 않았습니다'), findsOneWidget);
+    expect(find.textContaining('측정 시간이 짧거나 이동이 거의 없습니다.'), findsOneWidget);
+    expect(MeasurementSession.instance.lastResult, isNull);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '다시 측정'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('StartScreen'), findsOneWidget);
+    expect(MeasurementSession.instance.lastResult, isNull);
+  });
+
+  testWidgets('S4 측정 완료 시 움직임 없음 -> [그래도 저장] 선택 시 lowMotionWarning=true 로 저장 및 결과 화면 이동', (WidgetTester tester) async {
+    MeasurementSession.instance.clear();
+    MeasurementSession.instance.currentSite = const SiteInfo(
+      jobNo: '2024F 1447R01',
+      siteName: '럭키종합건설/송정동근생',
+      bottomFloor: '1',
+      topFloor: '8',
+      direction: '하부 → 상부',
+      model: 'Gen2',
+    );
+
+    final router = GoRouter(
+      initialLocation: '/measuring',
+      routes: [
+        GoRoute(
+          path: '/measuring',
+          builder: (_, _) => MeasuringScreen(sensorManager: ZeroMotionFakeSensorChannelManager()),
+        ),
+        GoRoute(
+          path: '/result/:id',
+          builder: (_, s) => ResultScreen(id: s.pathParameters['id'] ?? 'demo'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 10));
+
+    await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(ElevatedButton, '테스트 완료'));
+      await Future.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('승강기 움직임이 감지되지 않았습니다'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(TextButton, '그래도 저장'));
+      await Future.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+
+    expect(MeasurementSession.instance.lastResult, isNotNull);
+    expect(MeasurementSession.instance.lastResult!.lowMotionWarning, isTrue);
+    expect(find.byType(ResultScreen), findsOneWidget);
+    expect(find.text('참고: 움직임 미감지 상태로 저장된 결과입니다'), findsOneWidget);
+  });
+
+  testWidgets('S5 결과 통합 화면 usedDetectedRideSegment false 시 안내 문구 노출 검증', (WidgetTester tester) async {
+    final res = MeasurementResult.mock.copyWith(usedDetectedRideSegment: false);
+    MeasurementSession.instance.lastResultId = 'test_fallback';
+    MeasurementSession.instance.lastResult = res;
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ResultScreen(id: 'test_fallback'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('참고: 주행 구간 자동검출 실패 — 전체 구간 기준 산출'), findsOneWidget);
   });
 
   testWidgets('S5 결과 통합 화면 요약 카드 및 차트 구성 요소 검증 테스트', (WidgetTester tester) async {
@@ -444,5 +587,81 @@ class FakeSensorChannelManager extends SensorChannelManager {
         noiseDba: 55.0,
       );
     }));
+  }
+}
+
+class ZeroMotionFakeSensorChannelManager extends SensorChannelManager {
+  ZeroMotionFakeSensorChannelManager() : super(useMock: false);
+
+  @override
+  Future<bool> checkSensorsAvailable() async => true;
+
+  @override
+  Future<bool> requestAudioPermission() async => true;
+
+  @override
+  Future<void> startCapture({
+    int targetSampleRate = 256,
+    double calibrationOffsetDba = 0.0,
+    double micDbfsToDbaOffset = 85.0,
+  }) async {}
+
+  @override
+  Future<void> stopCapture() async {}
+
+  @override
+  Stream<SensorSample> get sensorStream {
+    return Stream.fromIterable(List.generate(2560, (index) {
+      final tsUs = (index + 1) * 3906;
+      return SensorSample(
+        tsUs: tsUs,
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+        noiseDba: 55.0,
+      );
+    }));
+  }
+}
+
+class DescentFakeSensorChannelManager extends SensorChannelManager {
+  DescentFakeSensorChannelManager() : super(useMock: false);
+
+  @override
+  Future<bool> checkSensorsAvailable() async => true;
+
+  @override
+  Future<bool> requestAudioPermission() async => true;
+
+  @override
+  Future<void> startCapture({
+    int targetSampleRate = 256,
+    double calibrationOffsetDba = 0.0,
+    double micDbfsToDbaOffset = 85.0,
+  }) async {}
+
+  @override
+  Future<void> stopCapture() async {}
+
+  @override
+  Stream<SensorSample> get sensorStream {
+    return Stream.periodic(const Duration(milliseconds: 4), (index) {
+      if (index >= 2560) return null;
+      final tsUs = (index + 1) * 3906;
+      final sec = index / 256.0;
+      double z = 0.0;
+      if (sec >= 1.0 && sec < 3.0) {
+        z = -40.0;
+      } else if (sec >= 7.0 && sec < 9.0) {
+        z = 40.0;
+      }
+      return SensorSample(
+        tsUs: tsUs,
+        x: 0.0,
+        y: 0.0,
+        z: z,
+        noiseDba: 55.0,
+      );
+    }).takeWhile((s) => s != null).cast<SensorSample>();
   }
 }

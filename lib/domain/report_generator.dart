@@ -101,6 +101,22 @@ class ReportGenerator {
             ],
           ),
         ),
+        if (!result.usedDetectedRideSegment) ...[
+          pw.SizedBox(height: 8),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Text(
+              '참고: 주행 구간 자동검출 실패 — 전체 구간 기준 산출',
+              style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+        ],
       ],
     );
   }

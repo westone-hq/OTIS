@@ -127,6 +127,42 @@ class _ResultScreenState extends State<ResultScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_result.lowMotionWarning) ...[
+          Container(
+            padding: const EdgeInsets.all(AppDims.gap),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppDims.radius),
+            ),
+            child: Text(
+              '참고: 움직임 미감지 상태로 저장된 결과입니다',
+              style: AppText.caption.copyWith(
+                color: AppColors.textSub,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDims.gap),
+        ],
+        if (!_result.usedDetectedRideSegment) ...[
+          Container(
+            padding: const EdgeInsets.all(AppDims.gap),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppDims.radius),
+            ),
+            child: Text(
+              '참고: 주행 구간 자동검출 실패 — 전체 구간 기준 산출',
+              style: AppText.caption.copyWith(
+                color: AppColors.textSub,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDims.gap),
+        ],
         // 현장 요약 한 줄
         Text(
           '${_result.jobNo} · ${_result.siteName} · ${_result.bottomFloor}층 → ${_result.topFloor}층',

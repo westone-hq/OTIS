@@ -37,7 +37,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   int _elapsedSeconds = 0;
   double _currentSpeed = 0.00;
   bool _receivedRealSample = false;
-  double _integratedVelocity = 0.0;
+  double _signedVelocity = 0.0;
   double _baselineSumZ = 0.0;
   int _baselineCount = 0;
   double _baselineZ = 0.0;
@@ -117,7 +117,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       if (!mounted) return;
       if (_receivedRealSample) {
         setState(() {
-          _currentSpeed = _elapsedSeconds < 1 ? 0.00 : _integratedVelocity;
+          _currentSpeed = _elapsedSeconds < 1 ? 0.00 : _signedVelocity.abs();
         });
       }
     });
@@ -138,13 +138,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
             _baselineSumZ += sample.z;
             _baselineCount++;
             _baselineZ = _baselineCount > 0 ? _baselineSumZ / _baselineCount : 0.0;
-            _integratedVelocity = 0.0;
+            _signedVelocity = 0.0;
           } else {
             final double dt = (_lastTsUs > 0 && sample.tsUs > _lastTsUs)
                 ? (sample.tsUs - _lastTsUs) / 1000000.0
                 : (1.0 / 256.0);
             final double aZ = (sample.z - _baselineZ) * SensorSample.mgToMetersPerSecondSquared;
-            _integratedVelocity = (_integratedVelocity + aZ * dt).abs().clamp(0.0, 3.0);
+            _signedVelocity = (_signedVelocity + aZ * dt).clamp(-3.0, 3.0);
           }
           _lastTsUs = sample.tsUs;
         }
@@ -332,11 +332,60 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       dateTime: DateTime.now(),
     );
 
-    MeasurementSession.instance.lastResult = result;
-    MeasurementSession.instance.lastResultId = result.id;
+    var finalResult = result;
+    if (_elapsedSeconds < MetricsConfig.defaultConfig.minMeasureDurationSec ||
+        result.maxSpeed < MetricsConfig.defaultConfig.minValidMaxSpeed ||
+        result.distance < MetricsConfig.defaultConfig.minValidDistance) {
+      if (!mounted) return;
+      final proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('승강기 움직임이 감지되지 않았습니다'),
+          content: const Text(
+            '측정 시간이 짧거나 이동이 거의 없습니다. 폰을 카 바닥에 두고 승강기를 운행한 뒤 완료를 눌러 주세요.',
+          ),
+          actions: [
+            Semantics(
+              button: true,
+              label: '그래도 저장',
+              child: SizedBox(
+                height: AppDims.touchMin,
+                child: TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: Text(
+                    '그래도 저장',
+                    style: AppText.bodyBold.copyWith(color: AppColors.navy),
+                  ),
+                ),
+              ),
+            ),
+            Semantics(
+              button: true,
+              label: '다시 측정',
+              child: SizedBox(
+                height: AppDims.touchMin,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('다시 측정'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) {
+        if (mounted) context.go('/start');
+        return;
+      }
+      finalResult = result.copyWith(lowMotionWarning: true);
+    }
+
+    MeasurementSession.instance.lastResult = finalResult;
+    MeasurementSession.instance.lastResultId = finalResult.id;
 
     try {
-      final dir = await MeasurementRepository.instance.save(result);
+      final dir = await MeasurementRepository.instance.save(finalResult);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -347,7 +396,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
             backgroundColor: AppColors.green,
           ),
         );
-        context.pushReplacement('/result/${result.id}');
+        context.pushReplacement('/result/${finalResult.id}');
       }
     } catch (e) {
       if (mounted) {
@@ -369,7 +418,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
 
     if (mounted) {
-      context.pushReplacement('/result/${result.id}');
+      context.pushReplacement('/result/${finalResult.id}');
     }
   }
 

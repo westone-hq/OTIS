@@ -93,5 +93,11 @@ void main() {
       expect(summary.contains('12.90 mg'), isTrue);
       expect(summary.contains('71.7 dBA'), isTrue);
     });
+
+    test('generateTuneReportPdf - usedDetectedRideSegment false 시 안내 문구 포함 PDF 정상 생성 검증', () async {
+      final res = MeasurementResult.mock.copyWith(usedDetectedRideSegment: false);
+      final pdfBytes = await ReportGenerator.generateTuneReportPdf(res);
+      expect(pdfBytes.isNotEmpty, isTrue);
+    });
   });
 }
