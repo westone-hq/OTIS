@@ -13,6 +13,7 @@ import '../../domain/sensor_channel.dart';
 import '../../domain/repository/measurement_repository.dart';
 import '../../domain/models/measurement_result.dart';
 import '../shared/measurement_session.dart';
+import '../../core/widgets/app_dialog.dart';
 
 /// S4 측정 중 (라이브)
 /// - 실시간 속도 및 경과 시간 표시. 멀리서도 읽히게 초대형 UI
@@ -193,12 +194,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
               title: const Text('측정 실패'),
               content: const Text('센서 응답이 없습니다. 측정을 중단합니다.'),
               actions: [
-                ElevatedButton(
+                AppDialogButton(
+                  label: '확인',
                   onPressed: () {
                     Navigator.of(ctx).pop();
                     if (mounted) context.go('/start');
                   },
-                  child: const Text('확인'),
                 ),
               ],
             ),
@@ -273,12 +274,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           '측정 중 앱이 백그라운드로 전환되어(전화 수신 등) 측정을 중단했습니다. 처음부터 다시 측정해 주세요.',
         ),
         actions: [
-          ElevatedButton(
+          AppDialogButton(
+            label: '확인',
             onPressed: () {
               Navigator.of(ctx).pop();
               if (mounted) context.go('/start');
             },
-            child: const Text('확인'),
           ),
         ],
       ),
@@ -302,12 +303,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
             title: const Text('측정 실패'),
             content: const Text('현장 정보가 없습니다. 홈에서 다시 시작해 주세요.'),
             actions: [
-              ElevatedButton(
+              AppDialogButton(
+                label: '확인',
                 onPressed: () {
                   Navigator.of(ctx).pop();
                   if (mounted) context.go('/start');
                 },
-                child: const Text('확인'),
               ),
             ],
           ),
@@ -325,12 +326,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
             title: const Text('측정 실패'),
             content: const Text('센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.'),
             actions: [
-              ElevatedButton(
+              AppDialogButton(
+                label: '확인',
                 onPressed: () {
                   Navigator.of(ctx).pop();
                   if (mounted) context.go('/start');
                 },
-                child: const Text('확인'),
               ),
             ],
           ),
@@ -362,30 +363,14 @@ class _MeasuringScreenState extends State<MeasuringScreen>
             '측정 시간이 짧거나 이동이 거의 없습니다. 폰을 카 바닥에 두고 승강기를 운행한 뒤 완료를 눌러 주세요.',
           ),
           actions: [
-            Semantics(
-              button: true,
+            AppDialogButton(
               label: '그래도 저장',
-              child: SizedBox(
-                height: AppDims.touchMin,
-                child: TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: Text(
-                    '그래도 저장',
-                    style: AppText.bodyBold.copyWith(color: AppColors.navy),
-                  ),
-                ),
-              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              primary: false,
             ),
-            Semantics(
-              button: true,
+            AppDialogButton(
               label: '다시 측정',
-              child: SizedBox(
-                height: AppDims.touchMin,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('다시 측정'),
-                ),
-              ),
+              onPressed: () => Navigator.of(ctx).pop(false),
             ),
           ],
         ),
@@ -414,38 +399,22 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           title: const Text('저장 실패 알림'),
           content: const Text('측정 결과 파일 저장에 실패했습니다\n결과 화면으로 이동합니다.'),
           actions: [
-            Semantics(
-              button: true,
+            AppDialogButton(
               label: '확인',
-              child: SizedBox(
-                height: AppDims.touchMin,
-                child: TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text(
-                    '확인',
-                    style: AppText.bodyBold.copyWith(color: AppColors.navy),
-                  ),
-                ),
-              ),
+              onPressed: () => Navigator.of(ctx).pop(false),
+              primary: false,
             ),
-            Semantics(
-              button: true,
+            AppDialogButton(
               label: '재시도',
-              child: SizedBox(
-                height: AppDims.touchMin,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final success = await MeasuringScreen.attemptSave(
-                      finalResult,
-                      onSuccess: (dir) => savedDir = dir,
-                    );
-                    if (success && ctx.mounted) {
-                      Navigator.of(ctx).pop(true);
-                    }
-                  },
-                  child: const Text('재시도'),
-                ),
-              ),
+              onPressed: () async {
+                final success = await MeasuringScreen.attemptSave(
+                  finalResult,
+                  onSuccess: (dir) => savedDir = dir,
+                );
+                if (success && ctx.mounted) {
+                  Navigator.of(ctx).pop(true);
+                }
+              },
             ),
           ],
         ),
@@ -479,37 +448,15 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           style: AppText.body,
         ),
         actions: [
-          Semantics(
-            button: true,
+          AppDialogButton(
             label: '계속 측정',
-            child: SizedBox(
-              height: AppDims.touchMin,
-              child: TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(
-                  '계속 측정',
-                  style: AppText.bodyBold.copyWith(color: AppColors.navy),
-                ),
-              ),
-            ),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            primary: false,
           ),
-          Semantics(
-            button: true,
+          AppDialogButton(
             label: '중단하기',
-            child: SizedBox(
-              height: AppDims.touchMin,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.red,
-                  padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
-                ),
-                child: Text(
-                  '중단하기',
-                  style: AppText.bodyBold.copyWith(color: Colors.white),
-                ),
-              ),
-            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            isDestructive: true,
           ),
         ],
       ),

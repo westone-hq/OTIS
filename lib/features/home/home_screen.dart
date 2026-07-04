@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../shared/measurement_session.dart';
 import '../../domain/prefs_store.dart';
 
@@ -202,29 +203,17 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required String label,
   }) {
-    return Semantics(
-      button: true,
+    return AppDialogButton(
       label: label,
-      child: SizedBox(
-        height: AppDims.touchMin,
-        child: TextButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, size: 24, color: AppColors.navy),
-          label: Text(
-            label,
-            style: AppText.caption.copyWith(
-              color: AppColors.navy,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppDims.radius),
-            ),
-          ),
-        ),
+      onPressed: onPressed,
+      primary: false,
+      icon: icon,
+      iconSize: 24,
+      textStyle: AppText.caption.copyWith(
+        color: AppColors.navy,
+        fontWeight: FontWeight.w700,
       ),
+      padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
     );
   }
 

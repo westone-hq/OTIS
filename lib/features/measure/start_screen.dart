@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../domain/sensor_channel.dart';
 import '../shared/measurement_session.dart';
 import 'placement_sheet.dart';
@@ -195,26 +196,16 @@ class _StartScreenState extends State<StartScreen> {
                       const SizedBox(height: AppDims.gap),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: Semantics(
-                          button: true,
+                        child: AppDialogButton(
                           label: '거치 방법 보기',
-                          child: SizedBox(
-                            height: AppDims.touchMin,
-                            child: TextButton.icon(
-                              onPressed: _showPlacementSheet,
-                              icon: const Icon(
-                                Icons.help_outline,
-                                color: AppColors.blue,
-                                size: 22,
-                              ),
-                              label: Text(
-                                '거치 방법 보기',
-                                style: AppText.body.copyWith(
-                                  color: AppColors.blue,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
+                          onPressed: _showPlacementSheet,
+                          primary: false,
+                          icon: Icons.help_outline,
+                          iconColor: AppColors.blue,
+                          iconSize: 22,
+                          textStyle: AppText.body.copyWith(
+                            color: AppColors.blue,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),

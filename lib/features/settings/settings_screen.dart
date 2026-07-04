@@ -4,6 +4,7 @@ import '../../domain/prefs_store.dart';
 import 'package:vibration_checker/domain/auth_repository.dart';
 
 import '../../core/theme.dart';
+import '../../core/widgets/app_dialog.dart';
 
 /// S6 설정 화면
 /// - 사용자 프로필 정보 및 결과 수신 이메일 설정, 앱 정보 조회 및 로그아웃
@@ -95,31 +96,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text('로그아웃', style: AppText.subhead),
         content: Text('정말 로그아웃 하시겠습니까?', style: AppText.body),
         actions: [
-          Semantics(
-            button: true,
+          AppDialogButton(
             label: '취소',
-            child: SizedBox(
-              height: AppDims.touchMin,
-              child: TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text('취소', style: AppText.bodyBold.copyWith(color: AppColors.navy)),
-              ),
-            ),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            primary: false,
           ),
-          Semantics(
-            button: true,
+          AppDialogButton(
             label: '로그아웃',
-            child: SizedBox(
-              height: AppDims.touchMin,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.red,
-                  padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
-                ),
-                child: Text('로그아웃', style: AppText.bodyBold.copyWith(color: Colors.white)),
-              ),
-            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            isDestructive: true,
           ),
         ],
       ),

@@ -11,6 +11,7 @@ import 'package:vibration_checker/domain/report_generator.dart';
 import 'package:vibration_checker/domain/repository/measurement_repository.dart';
 
 import '../../core/theme.dart';
+import '../../core/widgets/app_dialog.dart';
 
 /// S5/S6 공용 이메일 발송 바텀 시트 표시 함수
 void showSendEmailSheet(BuildContext context, {required String jobId}) {
@@ -83,35 +84,18 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
           title: Text('이메일 등록 안내', style: AppText.subhead),
           content: Text('수신할 이메일 주소가 설정되지 않았습니다.\n설정 화면에서 먼저 이메일을 등록해 주세요.', style: AppText.body),
           actions: [
-            Semantics(
-              button: true,
+            AppDialogButton(
               label: '취소',
-              child: SizedBox(
-                height: AppDims.touchMin,
-                child: TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text('취소', style: AppText.bodyBold.copyWith(color: AppColors.navy)),
-                ),
-              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              primary: false,
             ),
-            Semantics(
-              button: true,
+            AppDialogButton(
               label: '설정으로 이동',
-              child: SizedBox(
-                height: AppDims.touchMin,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).pop();
-                    context.push('/settings');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blue,
-                    padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
-                  ),
-                  child: Text('설정으로 이동', style: AppText.bodyBold.copyWith(color: Colors.white)),
-                ),
-              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).pop();
+                context.push('/settings');
+              },
             ),
           ],
         ),
@@ -251,18 +235,10 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('이메일 발송', style: AppText.subhead),
-                Semantics(
-                  button: true,
+                AppDialogIconButton(
+                  icon: Icons.close,
                   label: '닫기',
-                  child: SizedBox(
-                    width: AppDims.touchMin,
-                    height: AppDims.touchMin,
-                    child: IconButton(
-                      icon: const Icon(Icons.close, size: 28),
-                      tooltip: '닫기',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -294,18 +270,14 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       ],
                     ),
                   ),
-                  SizedBox(
-                    height: AppDims.touchMin,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        context.push('/settings');
-                      },
-                      child: Text(
-                        '변경',
-                        style: AppText.bodyBold.copyWith(color: AppColors.blue),
-                      ),
-                    ),
+                  AppDialogButton(
+                    label: '변경',
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.push('/settings');
+                    },
+                    primary: false,
+                    textColor: AppColors.blue,
                   ),
                 ],
               ),

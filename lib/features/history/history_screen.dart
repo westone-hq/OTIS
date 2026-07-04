@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../domain/models/measurement_result.dart';
 import '../../domain/repository/measurement_repository.dart';
 import '../shared/send_email_sheet.dart';
+import '../../core/widgets/app_dialog.dart';
 
 /// S5 저장 결과 목록 화면
 /// - 폰에 저장된 과거 측정 결과 목록 표시 및 관리 (Phase 4-C 연동)
@@ -54,14 +55,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
         title: const Text('측정 결과 삭제'),
         content: Text('${item.jobNo} (${_formatDate(item.dateTime)}) 결과를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
         actions: [
-          TextButton(
+          AppDialogButton(
+            label: '취소',
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('취소', style: TextStyle(color: AppColors.textSub)),
+            primary: false,
+            textColor: AppColors.textSub,
           ),
-          ElevatedButton(
+          AppDialogButton(
+            label: '삭제',
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
-            child: const Text('삭제', style: TextStyle(color: AppColors.bg)),
+            isDestructive: true,
           ),
         ],
       ),
@@ -246,37 +249,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const SizedBox(width: AppDims.gap),
 
               // 3. 오른쪽 공유 버튼 (56dp) + 삭제 버튼 (56dp) + chevron
-              Semantics(
-                button: true,
+              AppDialogIconButton(
+                icon: Icons.mail_outline,
                 label: '이메일 발송 시트 열기',
-                child: SizedBox(
-                  width: AppDims.touchMin,
-                  height: AppDims.touchMin,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.mail_outline,
-                      size: 26,
-                      color: AppColors.navy,
-                    ),
-                    onPressed: () => _showSendEmailSheet(item.id),
-                  ),
-                ),
+                size: 26,
+                color: AppColors.navy,
+                onPressed: () => _showSendEmailSheet(item.id),
               ),
-              Semantics(
-                button: true,
+              AppDialogIconButton(
+                icon: Icons.delete_outline,
                 label: '측정 결과 삭제',
-                child: SizedBox(
-                  width: AppDims.touchMin,
-                  height: AppDims.touchMin,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 26,
-                      color: AppColors.red,
-                    ),
-                    onPressed: () => _confirmDelete(item),
-                  ),
-                ),
+                size: 26,
+                color: AppColors.red,
+                onPressed: () => _confirmDelete(item),
               ),
               const Icon(
                 Icons.chevron_right,

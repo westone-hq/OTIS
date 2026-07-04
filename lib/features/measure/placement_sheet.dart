@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/app_dialog.dart';
 
 /// S3 측정 거치 안내 바텀 시트
 /// - 휴대폰을 카 바닥 중앙에 Y축 방향으로 정렬하라는 안내
@@ -58,21 +59,11 @@ class PlacementSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('휴대폰 거치 방법', style: AppText.subhead),
-                  Semantics(
-                    button: true,
+                  AppDialogIconButton(
+                    icon: Icons.close,
                     label: '닫기',
-                    child: SizedBox(
-                      width: AppDims.touchMin,
-                      height: AppDims.touchMin,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.close,
-                          size: 28,
-                          color: AppColors.text,
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ),
+                    color: AppColors.text,
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
