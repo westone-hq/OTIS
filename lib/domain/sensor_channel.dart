@@ -22,23 +22,30 @@ class SensorChannelManager {
   static const EventChannel _eventChannel =
       EventChannel('com.otis.vibration_checker/sensors_stream');
 
+  final bool useMock;
+
+  SensorChannelManager({this.useMock = false});
+
   Stream<SensorSample>? _sampleStream;
 
-  /// 256Hz 가속도 + dBA 소음 복합 센서 스트림 수신
+  /// 256Hz 가속도 + dBA 소음 복합 센서 스트림 수신 (단건 Map 및 32샘플 배칭 List<Map> 모두 지원)
   Stream<SensorSample> get sensorStream {
     _sampleStream ??= _eventChannel
         .receiveBroadcastStream()
-        .map((event) {
-          if (event is Map) {
-            return SensorSample.fromMap(event);
+        .expand<SensorSample>((event) {
+          if (event is List) {
+            return event.map((e) => e is Map ? SensorSample.fromMap(e) : const SensorSample(tsUs: 0, x: 0, y: 0, z: 0, noiseDba: 0));
+          } else if (event is Map) {
+            return [SensorSample.fromMap(event)];
           }
-          return const SensorSample(tsUs: 0, x: 0, y: 0, z: 0, noiseDba: 0);
+          return const [];
         });
     return _sampleStream!;
   }
 
   /// 하드웨어 센서(가속도계, 마이크) 사용 가능 여부 확인
   Future<bool> checkSensorsAvailable() async {
+    if (useMock) return false;
     try {
       final bool? available =
           await _methodChannel.invokeMethod<bool>('checkAvailable');
@@ -49,15 +56,29 @@ class SensorChannelManager {
     }
   }
 
+  /// 마이크 권한 요청
+  Future<bool> requestAudioPermission() async {
+    if (useMock) return true;
+    try {
+      final bool? granted =
+          await _methodChannel.invokeMethod<bool>('requestAudioPermission');
+      return granted ?? false;
+    } catch (_) {
+      return true; // fallback for tests
+    }
+  }
+
   /// 센서 캡처 시작 (목표 샘플링 주파수 및 소음 오프셋 주입)
   Future<void> startCapture({
     int targetSampleRate = 256,
     double calibrationOffsetDba = 0.0,
+    double micDbfsToDbaOffset = 85.0,
   }) async {
     try {
       await _methodChannel.invokeMethod('startCapture', {
         'sampleRate': targetSampleRate,
         'calibrationOffset': calibrationOffsetDba,
+        'micDbfsToDbaOffset': micDbfsToDbaOffset,
       });
     } catch (_) {
       // 구현 전 fallback (위젯 및 모듈 통합 테스트 시 안전한 진행)

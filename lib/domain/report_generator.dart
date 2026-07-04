@@ -37,7 +37,10 @@ class ReportGenerator {
     buffer.writeln('1. X축 진동 (P2P): ${result.xPtp.toStringAsFixed(2)} mg ${_checkBadge(result.xPtp > 10.0)}');
     buffer.writeln('2. Y축 진동 (P2P): ${result.yPtp.toStringAsFixed(2)} mg ${_checkBadge(result.yPtp > 10.0)}');
     buffer.writeln('3. Z축 진동 (P2P): ${result.zPtp.toStringAsFixed(2)} mg ${_checkBadge(result.zPtp > 15.0)}');
-    buffer.writeln('4. 최대 소음      : ${result.noiseMax.toStringAsFixed(1)} dBA ${_checkBadge(result.noiseMax > 50.0)}');
+    final noiseStr = result.noiseMax <= 0.0
+        ? 'N/A (소음 제외 측정)'
+        : '${result.noiseMax.toStringAsFixed(1)} dBA ${_checkBadge(result.noiseMax > 50.0)}';
+    buffer.writeln('4. 최대 소음      : $noiseStr');
     buffer.writeln('5. 운행 거리      : ${result.distance.toStringAsFixed(1)} m');
     buffer.writeln('6. 최대 속도      : ${result.maxSpeed.toStringAsFixed(2)} m/s');
     buffer.writeln('----------------------------------------');

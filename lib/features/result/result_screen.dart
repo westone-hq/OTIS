@@ -145,9 +145,9 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
             MetricCard(
               label: '최대 소음',
-              valueStr: _result.noiseMax.toStringAsFixed(1),
-              unit: 'dBA',
-              isExceeded: _result.noiseExceeded,
+              valueStr: _result.noiseMax <= 0.0 ? 'N/A' : _result.noiseMax.toStringAsFixed(1),
+              unit: _result.noiseMax <= 0.0 ? '' : 'dBA',
+              isExceeded: _result.noiseMax <= 0.0 ? null : _result.noiseExceeded,
               onTap: () => _scrollToChart(3),
             ),
             MetricCard(

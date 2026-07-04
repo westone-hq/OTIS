@@ -33,6 +33,15 @@ void main() {
       await expectLater(manager.startCapture(targetSampleRate: 256), completes);
       await expectLater(manager.stopCapture(), completes);
     });
+
+    test('SensorChannelManager - useMock 주입 시 checkSensorsAvailable false 및 안전한 처리 검증', () async {
+      final manager = SensorChannelManager(useMock: true);
+      final available = await manager.checkSensorsAvailable();
+      expect(available, isFalse);
+
+      final audioGranted = await manager.requestAudioPermission();
+      expect(audioGranted, isTrue);
+    });
   });
 
   group('P12 · TUNE 리포트 생성기 인터페이스 및 텍스트 요약 문서 검증', () {

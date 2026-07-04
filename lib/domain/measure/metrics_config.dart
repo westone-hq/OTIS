@@ -37,6 +37,10 @@ class MetricsConfig {
   /// 임계 규격 (D3): 소음 주의 임계값 (dBA)
   final double noiseThresholdDba;
 
+  /// 마이크 dBFS → dBA 환산 오프셋: dBA = dBFS + micDbfsToDbaOffset + calibrationOffsetDba
+  // OI-4: 실측 캘리브레이션 전 임시 추정치. 기준 소음계 대비 기기별 보정 필요(Phase 7)
+  final double micDbfsToDbaOffset;
+
   const MetricsConfig({
     this.baselineSec = 1.0,
     this.motionLowpassCutoffHz = 0.1,
@@ -52,6 +56,7 @@ class MetricsConfig {
     this.xyThresholdMg = 10.0,
     this.zThresholdMg = 15.0,
     this.noiseThresholdDba = 50.0,
+    this.micDbfsToDbaOffset = 85.0,
   })  : aptpWindowSecX = aptpWindowSecX ?? aptpWindowSec,
         aptpWindowSecY = aptpWindowSecY ?? aptpWindowSec,
         aptpWindowSecZ = aptpWindowSecZ ?? aptpWindowSec;

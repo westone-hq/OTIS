@@ -2,55 +2,126 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme.dart';
+import '../../domain/measure/metrics_config.dart';
 import '../../domain/sensor_channel.dart';
 
 /// S4 측정 중 (라이브)
 /// - 실시간 속도 및 경과 시간 표시. 멀리서도 읽히게 초대형 UI
 /// - 어르신 UX: 대비 높은 Navy 어두운 배경, 72sp 속도 표시, 56dp+ 확인 버튼
 class MeasuringScreen extends StatefulWidget {
-  const MeasuringScreen({super.key});
+  final SensorChannelManager? sensorManager;
+  const MeasuringScreen({super.key, this.sensorManager});
 
   @override
   State<MeasuringScreen> createState() => _MeasuringScreenState();
 }
 
 class _MeasuringScreenState extends State<MeasuringScreen> {
-  final _sensorManager = SensorChannelManager();
+  late final SensorChannelManager _sensorManager =
+      widget.sensorManager ?? SensorChannelManager();
   Timer? _timeTimer;
+  Timer? _uiTimer;
   StreamSubscription<double>? _speedSub;
   StreamSubscription<SensorSample>? _sensorSub;
 
   int _elapsedSeconds = 0;
   double _currentSpeed = 0.00;
+  bool _receivedRealSample = false;
+  double _integratedVelocity = 0.0;
+  double _baselineSumZ = 0.0;
+  int _baselineCount = 0;
+  double _baselineZ = 0.0;
+  int _lastTsUs = 0;
 
   @override
   void initState() {
     super.initState();
-    _startTimers();
+    _initCaptureAndTimers();
   }
 
-  void _startTimers() {
-    // 경과 시간 카운트 (1초 간격)
+  Future<void> _initCaptureAndTimers() async {
+    // 1. wakelock 활성화 (D2, Phase 2)
+    try {
+      await WakelockPlus.enable();
+    } catch (_) {}
+
+    // 2. 오디오 권한 요청 (거부 시 소음 N/A 처리용 안내)
+    final bool audioGranted = await _sensorManager.requestAudioPermission();
+    if (!audioGranted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '소음 제외 측정: 마이크 권한이 거부되어 진동만 측정합니다. (결과에 소음 N/A 표기)',
+            style: AppText.body.copyWith(color: Colors.white),
+          ),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+
+    // 3. 경과 시간 카운트 (1초 간격)
     _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() => _elapsedSeconds++);
       }
     });
 
-    // P11 안드로이드 센서 채널 연결 (startCapture 호출 및 스트림 구독)
-    _sensorManager.startCapture(targetSampleRate: 256);
-    _sensorSub = _sensorManager.sensorStream.listen((sample) {
-      if (sample.timestamp > 0 && mounted) {
-        // 실제 센서 데이터 수신 시 가속도(z)를 기반으로 속도 갱신
-        setState(() => _currentSpeed = (sample.z * 0.0098).abs().clamp(0.0, 3.0));
+    // 4. UI 갱신 스로틀링 (150ms 주기 setState - 50Hz 과부하 해소)
+    _uiTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
+      if (!mounted) return;
+      if (_receivedRealSample) {
+        setState(() {
+          _currentSpeed = _elapsedSeconds < 1 ? 0.00 : _integratedVelocity;
+        });
       }
     });
 
-    // fallback: 네이티브 센서 콜백이 없는 환경(에뮬레이터/위젯테스트)에서는 mock 스트림으로 라이브 표시 유지
+    // 5. 센서 가용성 검증 및 단일 스트림 명시적 구독
+    final bool available = await _sensorManager.checkSensorsAvailable();
+    if (available && !_sensorManager.useMock) {
+      await _sensorManager.startCapture(
+        targetSampleRate: 256,
+        micDbfsToDbaOffset: MetricsConfig.defaultConfig.micDbfsToDbaOffset,
+      );
+      _sensorSub = _sensorManager.sensorStream.listen((sample) {
+        if (sample.tsUs > 0) {
+          _receivedRealSample = true;
+          // 첫 1초간 Z축 baseline 보정 수집
+          if (_elapsedSeconds < 1) {
+            _baselineSumZ += sample.z;
+            _baselineCount++;
+            _baselineZ = _baselineCount > 0 ? _baselineSumZ / _baselineCount : 0.0;
+            _integratedVelocity = 0.0;
+          } else {
+            final double dt = (_lastTsUs > 0 && sample.tsUs > _lastTsUs)
+                ? (sample.tsUs - _lastTsUs) / 1000000.0
+                : (1.0 / 256.0);
+            final double aZ = (sample.z - _baselineZ) * SensorSample.mgToMetersPerSecondSquared;
+            _integratedVelocity = (_integratedVelocity + aZ * dt).abs().clamp(0.0, 3.0);
+          }
+          _lastTsUs = sample.tsUs;
+        }
+      });
+
+      // 1초 후에도 실제 콜백이 전혀 없다면 mock 스트림으로 폴백
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted && !_receivedRealSample && _speedSub == null) {
+          _subscribeMockStream();
+        }
+      });
+    } else {
+      _subscribeMockStream();
+    }
+  }
+
+  void _subscribeMockStream() {
+    _speedSub?.cancel();
     _speedSub = _mockSpeedStream().listen((speed) {
-      if (mounted && _sensorSub?.isPaused != false) {
+      if (mounted && !_receivedRealSample) {
         setState(() => _currentSpeed = speed);
       }
     });
@@ -72,9 +143,13 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
   @override
   void dispose() {
     _timeTimer?.cancel();
+    _uiTimer?.cancel();
     _speedSub?.cancel();
     _sensorSub?.cancel();
     _sensorManager.stopCapture();
+    try {
+      WakelockPlus.disable();
+    } catch (_) {}
     super.dispose();
   }
 
