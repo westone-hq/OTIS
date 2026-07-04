@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/domain/metrics.dart';
+import 'package:vibration_checker/domain/measure/vibration_metrics.dart';
 
 void main() {
   group('P10 · A95 산출 및 임계 판정 모듈 유닛 테스트', () {
