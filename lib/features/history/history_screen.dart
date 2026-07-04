@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../domain/models/measurement_result.dart';
+import '../../domain/repository/measurement_repository.dart';
 import '../shared/send_email_sheet.dart';
 
 /// S5 저장 결과 목록 화면
-/// - 폰에 저장된 과거 측정 결과 목록 표시 및 관리
+/// - 폰에 저장된 과거 측정 결과 목록 표시 및 관리 (Phase 4-C 연동)
+/// - MeasurementRepository.instance.list() 로 로컬 디스크 조회 및 개별/전체 삭제
 /// - 어르신 UX: 88dp 이상의 큰 터치 영역 행, 색+텍스트 3중 상태 표출, 대형 빈 상태 안내
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -16,17 +19,70 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  late List<MeasurementResult> _items;
+  List<MeasurementResult> _items = kDebugMode ? MeasurementResult.mockList : [];
+  final bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // mock 데이터 3건 로드 (실제 1건 + 변형 2건)
-    _items = MeasurementResult.mockList;
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    try {
+      final list = await MeasurementRepository.instance.list();
+      if (mounted) {
+        setState(() {
+          _items = list.isNotEmpty ? list : (kDebugMode ? MeasurementResult.mockList : []);
+        });
+      }
+    } catch (_) {
+      if (mounted && !kDebugMode) {
+        setState(() => _items = []);
+      }
+    }
   }
 
   void _showSendEmailSheet(String jobId) {
     showSendEmailSheet(context, jobId: jobId);
+  }
+
+  Future<void> _confirmDelete(MeasurementResult item) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('측정 결과 삭제'),
+        content: Text('${item.jobNo} (${_formatDate(item.dateTime)}) 결과를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소', style: TextStyle(color: AppColors.textSub)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            child: const Text('삭제', style: TextStyle(color: AppColors.bg)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await MeasurementRepository.instance.delete(item.id);
+      } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _items.removeWhere((i) => i.id == item.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('측정 결과가 삭제되었습니다.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime dt) {
@@ -41,7 +97,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (item.id == '2024F1448R02') return '전 지표 정상';
     if (item.id == '2024F1449R03') return 'X 11.5mg, 소음 52.3dBA 초과';
     final isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded;
-    return isExceeded ? '기준 초과 감지' : '정상 운행';
+    if (!isExceeded) return '전 지표 정상';
+    final List<String> reasons = [];
+    if (item.xExceeded) reasons.add('X ${item.xPtp.toStringAsFixed(1)}mg');
+    if (item.yExceeded) reasons.add('Y ${item.yPtp.toStringAsFixed(1)}mg');
+    if (item.zExceeded) reasons.add('Z ${item.zPtp.toStringAsFixed(1)}mg');
+    if (item.noiseExceeded) reasons.add('소음 ${item.noiseMax.toStringAsFixed(1)}dBA');
+    return '${reasons.join(', ')} 초과';
   }
 
   Widget _buildBadge(String label) {
@@ -112,7 +174,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Material(
       color: AppColors.surface,
       child: InkWell(
-        onTap: () => context.push('/result/${item.id}'),
+        onTap: () async {
+          await context.push('/result/${item.id}');
+          _loadItems();
+        },
         child: Container(
           constraints: const BoxConstraints(minHeight: 88),
           padding: const EdgeInsets.symmetric(
@@ -180,7 +245,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(width: AppDims.gap),
 
-              // 3. 오른쪽 공유 버튼 (56dp) + chevron
+              // 3. 오른쪽 공유 버튼 (56dp) + 삭제 버튼 (56dp) + chevron
               Semantics(
                 button: true,
                 label: '이메일 발송 시트 열기',
@@ -194,6 +259,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       color: AppColors.navy,
                     ),
                     onPressed: () => _showSendEmailSheet(item.id),
+                  ),
+                ),
+              ),
+              Semantics(
+                button: true,
+                label: '측정 결과 삭제',
+                child: SizedBox(
+                  width: AppDims.touchMin,
+                  height: AppDims.touchMin,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 26,
+                      color: AppColors.red,
+                    ),
+                    onPressed: () => _confirmDelete(item),
                   ),
                 ),
               ),
@@ -215,20 +296,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         title: const Text('저장된 결과'),
         actions: [
-          // 테스트 및 QA 편의를 위한 목록 비우기/복원 토글 버튼
-          Semantics(
+          // 테스트 및 QA 편의를 위한 목록 비우기/복원 토글 버튼 (디버그 모드 한정)
+          if (kDebugMode)
+            Semantics(
             button: true,
             label: _items.isEmpty ? '샘플 복원' : '목록 비우기',
             child: IconButton(
               icon: Icon(_items.isEmpty ? Icons.restore : Icons.delete_outline),
-              onPressed: () {
-                setState(() {
-                  if (_items.isEmpty) {
-                    _items = MeasurementResult.mockList;
-                  } else {
-                    _items = [];
+              onPressed: () async {
+                if (_items.isEmpty) {
+                  setState(() => _items = MeasurementResult.mockList);
+                  try {
+                    await MeasurementRepository.instance.save(MeasurementResult.mock);
+                    final list = await MeasurementRepository.instance.list();
+                    if (mounted && list.isNotEmpty) setState(() => _items = list);
+                  } catch (_) {}
+                } else {
+                  final oldItems = List<MeasurementResult>.from(_items);
+                  setState(() => _items = []);
+                  for (final item in oldItems) {
+                    try { await MeasurementRepository.instance.delete(item.id); } catch (_) {}
                   }
-                });
+                }
               },
               tooltip: _items.isEmpty ? '샘플 복원' : '목록 비우기',
             ),
@@ -236,17 +325,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ],
       ),
       body: SafeArea(
-        child: _items.isEmpty
-            ? _buildEmptyState()
-            : ListView.separated(
-                itemCount: _items.length,
-                separatorBuilder: (_, _) => const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.border,
-                ),
-                itemBuilder: (context, index) => _buildListItem(_items[index]),
-              ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : (_items.isEmpty
+                ? _buildEmptyState()
+                : ListView.separated(
+                    itemCount: _items.length,
+                    separatorBuilder: (_, _) => const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppColors.border,
+                    ),
+                    itemBuilder: (context, index) => _buildListItem(_items[index]),
+                  )),
       ),
     );
   }

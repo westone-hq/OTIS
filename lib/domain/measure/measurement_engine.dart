@@ -60,7 +60,14 @@ class MeasurementEngine {
     DateTime? dateTime,
   }) {
     final now = dateTime ?? DateTime.now();
-    final resultId = id ?? 'RES-${now.millisecondsSinceEpoch}';
+    final compressedJobNo = jobNo.replaceAll(RegExp(r'\s+'), '');
+    final y = now.year.toString().padLeft(4, '0');
+    final m = now.month.toString().padLeft(2, '0');
+    final d = now.day.toString().padLeft(2, '0');
+    final h = now.hour.toString().padLeft(2, '0');
+    final min = now.minute.toString().padLeft(2, '0');
+    final sec = now.second.toString().padLeft(2, '0');
+    final resultId = id ?? '${compressedJobNo}_$y$m${d}_$h$min$sec';
 
     if (_buffer.length < 2) {
       final s = _buffer.isNotEmpty

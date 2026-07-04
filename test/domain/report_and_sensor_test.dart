@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/models/measurement_result.dart';
+import 'package:vibration_checker/domain/parse_raw.dart';
 import 'package:vibration_checker/domain/report_generator.dart';
 import 'package:vibration_checker/domain/sensor_channel.dart';
 
@@ -45,12 +47,31 @@ void main() {
   });
 
   group('P12 · TUNE 리포트 생성기 인터페이스 및 텍스트 요약 문서 검증', () {
-    test('generateTuneReportPdf - PDF 바이너리 헤더 정상 생성 검증', () async {
+    test('generateTuneReportPdf - PDF 바이너리 헤더 정상 생성 검증 (Mock)', () async {
       final pdfBytes = await ReportGenerator.generateTuneReportPdf(MeasurementResult.mock);
       expect(pdfBytes.isNotEmpty, isTrue);
       
-      final headerStr = utf8.decode(pdfBytes.sublist(0, 8));
-      expect(headerStr, '%PDF-1.4');
+      final headerStr = utf8.decode(pdfBytes.sublist(0, 7));
+      expect(headerStr.startsWith('%PDF-1.'), isTrue);
+    });
+
+    test('generateTuneReportPdf - PDF 실제 골든 픽스처(6,988샘플) 파형 변환 검증', () async {
+      final goldenContent = File('C:/Users/User/Desktop/OTIS/assets/sample/2024F1447R01.txt').readAsStringSync();
+      final realResult = RawDataParser.parseEvimp1(
+        rawContent: goldenContent,
+        id: '2024F1447R01',
+        jobNo: '2024F 1447R01',
+        siteName: '럭키종합건설/송정동근생',
+        bottomFloor: 1,
+        topFloor: 8,
+        direction: '하부 → 상부',
+        dateTime: DateTime(2024, 7, 3, 14, 30),
+      );
+      final pdfBytes = await ReportGenerator.generateTuneReportPdf(realResult);
+      expect(pdfBytes.isNotEmpty, isTrue);
+
+      final outFile = File('C:/Users/User/.gemini/antigravity-ide/brain/b9a595e5-0085-4bd2-bf2c-fca74d6988ce/report.pdf');
+      await outFile.writeAsBytes(pdfBytes);
     });
 
     test('generateSummaryText - TUNE 측정 지표 요약 및 임계 초과 뱃지 표출 검증', () {

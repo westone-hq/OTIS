@@ -9,6 +9,7 @@ import '../../domain/measure/metrics_config.dart';
 import '../../domain/measure/measurement_engine.dart';
 import '../../domain/models/measurement_result.dart';
 import '../../domain/sensor_channel.dart';
+import '../../domain/repository/measurement_repository.dart';
 import '../shared/measurement_session.dart';
 
 /// S4 측정 중 (라이브)
@@ -193,7 +194,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
     super.dispose();
   }
 
-  void _finishMeasurement() {
+  void _finishMeasurement() async {
     _cleanup();
 
     final site = MeasurementSession.instance.currentSite;
@@ -208,19 +209,58 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
         dateTime: DateTime.now(),
       );
     } else {
+      final now = DateTime.now();
+      final jobNoStr = site?.jobNo ?? '2024F 1447R01';
+      final compressed = jobNoStr.replaceAll(RegExp(r'\s+'), '');
+      final y = now.year.toString().padLeft(4, '0');
+      final m = now.month.toString().padLeft(2, '0');
+      final d = now.day.toString().padLeft(2, '0');
+      final h = now.hour.toString().padLeft(2, '0');
+      final min = now.minute.toString().padLeft(2, '0');
+      final sec = now.second.toString().padLeft(2, '0');
       result = MeasurementResult.mock.copyWith(
-        id: 'RES-${DateTime.now().millisecondsSinceEpoch}',
-        jobNo: site?.jobNo ?? '2024F 1447R01',
+        id: '${compressed}_$y$m${d}_$h$min$sec',
+        jobNo: jobNoStr,
         siteName: site?.siteName ?? '럭키종합건설/송정동근생',
         bottomFloor: int.tryParse(site?.bottomFloor ?? '1') ?? 1,
         topFloor: int.tryParse(site?.topFloor ?? '8') ?? 8,
         direction: site?.direction ?? '하부 → 상부',
-        dateTime: DateTime.now(),
+        dateTime: now,
       );
     }
 
     MeasurementSession.instance.lastResult = result;
     MeasurementSession.instance.lastResultId = result.id;
+
+    try {
+      final dir = await MeasurementRepository.instance.save(result);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('측정 결과 저장 완료: ${dir.path}', style: AppText.caption.copyWith(color: AppColors.bg)),
+            backgroundColor: AppColors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('저장 실패 알림'),
+            content: Text('측정 결과 파일 저장에 실패했습니다: $e\n결과 화면으로 이동합니다.'),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
 
     if (mounted) {
       context.pushReplacement('/result/${result.id}');

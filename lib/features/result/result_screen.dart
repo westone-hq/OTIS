@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../../core/theme.dart';
 import '../../domain/models/measurement_result.dart';
 import '../../domain/parse_raw.dart';
+import '../../domain/repository/measurement_repository.dart';
 import '../shared/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
 import 'metric_card.dart';
@@ -42,9 +43,21 @@ class _ResultScreenState extends State<ResultScreen> {
       _result = MeasurementResult.mock;
       _loadRawSample();
     } else {
-      // TODO(Phase 4): lastResultId 불일치 시 MeasurementRepository.load(id) 로 과거 결과 로드. 현재는 Repository 미구현으로 방금 측정 결과만 조회 가능
       _result = MeasurementResult.mock;
+      _loadFromRepository(widget.id);
     }
+  }
+
+  Future<void> _loadFromRepository(String id) async {
+    try {
+      final loaded = await MeasurementRepository.instance.load(id);
+      if (loaded != null && mounted) {
+        setState(() {
+          _result = loaded;
+          _isRealSample = true;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadRawSample() async {

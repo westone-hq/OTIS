@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../measure/sensor_sample.dart';
 
 /// 측정 결과 데이터 모델
@@ -117,6 +118,76 @@ class MeasurementResult {
       rawSamples: rawSamples ?? this.rawSamples,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'jobNo': jobNo,
+      'siteName': siteName,
+      'bottomFloor': bottomFloor,
+      'topFloor': topFloor,
+      'direction': direction,
+      'dateTime': dateTime.toIso8601String(),
+      'xPtp': xPtp,
+      'yPtp': yPtp,
+      'zPtp': zPtp,
+      'noiseMax': noiseMax,
+      'distance': distance,
+      'maxSpeed': maxSpeed,
+      'sampleRate': sampleRate,
+      'usedDetectedRideSegment': usedDetectedRideSegment,
+      'constantSpeedRange': constantSpeedRange,
+      'xSeries': xSeries,
+      'ySeries': ySeries,
+      'zSeries': zSeries,
+      'noiseSeries': noiseSeries,
+      'positionSeries': positionSeries,
+      'speedSeries': speedSeries,
+      'accelSeries': accelSeries,
+      'jerkSeries': jerkSeries,
+    };
+  }
+
+  factory MeasurementResult.fromMap(Map<String, dynamic> map) {
+    List<double> toDoubleList(dynamic list) {
+      if (list == null) return [];
+      return (list as List).map((e) => (e as num).toDouble()).toList();
+    }
+
+    return MeasurementResult(
+      id: map['id'] as String? ?? '',
+      jobNo: map['jobNo'] as String? ?? '',
+      siteName: map['siteName'] as String? ?? '',
+      bottomFloor: map['bottomFloor'] as int? ?? 1,
+      topFloor: map['topFloor'] as int? ?? 1,
+      direction: map['direction'] as String? ?? '',
+      dateTime: map['dateTime'] != null
+          ? DateTime.tryParse(map['dateTime'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      xPtp: (map['xPtp'] as num?)?.toDouble() ?? 0.0,
+      yPtp: (map['yPtp'] as num?)?.toDouble() ?? 0.0,
+      zPtp: (map['zPtp'] as num?)?.toDouble() ?? 0.0,
+      noiseMax: (map['noiseMax'] as num?)?.toDouble() ?? 0.0,
+      distance: (map['distance'] as num?)?.toDouble() ?? 0.0,
+      maxSpeed: (map['maxSpeed'] as num?)?.toDouble() ?? 0.0,
+      sampleRate: (map['sampleRate'] as num?)?.toDouble() ?? 256.0,
+      usedDetectedRideSegment: map['usedDetectedRideSegment'] as bool? ?? true,
+      constantSpeedRange: map['constantSpeedRange'] as String? ?? '전체 구간',
+      xSeries: toDoubleList(map['xSeries']),
+      ySeries: toDoubleList(map['ySeries']),
+      zSeries: toDoubleList(map['zSeries']),
+      noiseSeries: toDoubleList(map['noiseSeries']),
+      positionSeries: toDoubleList(map['positionSeries']),
+      speedSeries: toDoubleList(map['speedSeries']),
+      accelSeries: toDoubleList(map['accelSeries']),
+      jerkSeries: toDoubleList(map['jerkSeries']),
+    );
+  }
+
+  String toJson() => jsonEncode(toMap());
+
+  factory MeasurementResult.fromJson(String source) =>
+      MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
   // 임계 판정 getter (X·Y>10mg, Z>15mg, 소음>50dB -> 초과 시 true)
   bool get xExceeded => xPtp > 10.0;
