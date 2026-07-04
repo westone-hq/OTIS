@@ -17,7 +17,7 @@ class SiteInfo {
     required this.direction,
     required this.model,
   });
-
+  /// 현장 정보를 직렬화 가능한 Map 형태로 변환합니다.
   Map<String, dynamic> toMap() => {
         'jobNo': jobNo,
         'siteName': siteName,
@@ -26,7 +26,7 @@ class SiteInfo {
         'direction': direction,
         'model': model,
       };
-
+  /// Map 데이터로부터 현장 정보 인스턴스를 생성합니다.
   factory SiteInfo.fromMap(Map<String, dynamic> map) => SiteInfo(
         jobNo: map['jobNo']?.toString() ?? '',
         siteName: map['siteName']?.toString() ?? '',
@@ -47,7 +47,7 @@ class MeasurementSession {
   int delaySec = 0;
   String? lastResultId;
   MeasurementResult? lastResult;
-
+  /// 세션에 보관된 현재 현장 정보 및 마지막 측정 결과를 초기화합니다.
   void clear() {
     currentSite = null;
     delaySec = 0;

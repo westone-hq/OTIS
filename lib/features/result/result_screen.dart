@@ -24,6 +24,7 @@ class ResultScreen extends StatefulWidget {
   State<ResultScreen> createState() => _ResultScreenState();
 }
 
+/// 측정 결과 지표 조회, RAW 데이터 비동기 파싱, 차트 렌더링 및 스크롤 이동을 관리합니다.
 class _ResultScreenState extends State<ResultScreen> {
   // P9 RAW 데이터 파싱 모듈(RawDataParser) 연동 준비 완료
   late MeasurementResult _result;

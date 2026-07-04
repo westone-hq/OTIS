@@ -15,6 +15,7 @@ class StartScreen extends StatefulWidget {
   final SensorChannelManager? sensorManager;
   const StartScreen({super.key, this.sensorManager});
 
+  /// 센서 가용 여부 및 디버그 모드에 따른 측정 시작 가능 여부를 판정합니다.
   @visibleForTesting
   static bool canStartMeasure({required bool available, required bool isDebug}) =>
       available || isDebug;
@@ -23,6 +24,7 @@ class StartScreen extends StatefulWidget {
   State<StartScreen> createState() => _StartScreenState();
 }
 
+/// 측정 준비 화면의 상태, 지연 시간 선택, 센서 가용성 확인 및 거치 방법 바텀 시트 호출을 관리합니다.
 class _StartScreenState extends State<StartScreen> {
   late final SensorChannelManager _sensorManager =
       widget.sensorManager ?? SensorChannelManager();

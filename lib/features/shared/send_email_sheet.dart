@@ -43,6 +43,7 @@ class SendEmailSheet extends StatefulWidget {
   State<SendEmailSheet> createState() => _SendEmailSheetState();
 }
 
+/// 이메일 발송 바텀 시트의 상태, 첨부파일 선택 체크박스 및 외부 이메일 클라이언트 호출을 관리합니다.
 class _SendEmailSheetState extends State<SendEmailSheet> {
   bool _sendPdf = true;
   bool _sendRaw = true;

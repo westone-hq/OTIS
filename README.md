@@ -1,120 +1,157 @@
-# OTIS 승강기 진동·소음 측정 앱 (Vibration Checker)
+# OTIS 승강기 진동·소음 측정 앱 (vibration_checker)
 
-OTIS 승강기 설치 및 유지보수 현장에서 승강기 운행 중 발생하는 진동(X, Y, Z축)과 소음(dBA)을 실시간으로 측정하고, OTIS TUNE 규격에 따라 임계를 자동 판정하여 리포트를 생성·공유하는 Flutter 모바일 애플리케이션입니다.
+일반 안드로이드 스마트폰으로 승강기의 승차감(진동·소음·속도·거리)을 측정하고,
+OTIS TUNE 규격의 PDF 리포트를 생성·발송하는 앱. 기존에 전용 장비로만 하던 측정을
+현장 설치 기사의 폰으로 대체하는 것이 목표다.
 
----
-
-## 📱 주요 특징 및 사용자 경험 (Elder UX)
-
-이 애플리케이션은 현장에서 장갑을 끼고 작업하거나 **나이가 있는 현장 작업자(어르신 작업자)**를 위해 설계되었습니다.
-* **초대형 터치 타깃 및 시인성**: 최소 터치 영역 56dp(`AppDims.touchMin`), 주 행동 버튼 높이 64dp 풀위드 적용, 본문 폰트 18sp 이상 엄수.
-* **원거리 시인성 라이브 뷰**: 측정 중 라이브 화면에서 72sp 크기의 초대형 폰트로 실시간 속도를 표시하여 기기를 바닥에 내려놓고도 서서 확인 가능.
-* **3중 상태 표시 (Color + Icon + Text)**: 색약자 및 현장 조도 환경을 고려하여, 임계 초과 상태를 절대 색상만으로 표시하지 않고 **[색상(빨강) + 경고 아이콘(⚠️) + 텍스트("기준 초과")]** 3중으로 동시 표출.
-* **한 화면 한 행동 (One Primary Action per Screen)**: 사용자 혼선을 막기 위해 각 화면당 가장 중요한 주 버튼을 1개로 제한.
+> 상태: 코드 통합 완료(Phase 0~5) + 안전장치 보강 완료. 실기기 검증 3건 대기 중.
+> 대상 사용자: 나이가 있는 현장 설치 기사 → UI는 큰 글씨·큰 버튼·단순함 우선.
 
 ---
 
-## 🗺️ 화면 구성 및 라우팅 (`lib/features/`)
+## 무엇을 하는가
 
-`go_router` 기반으로 명확하고 안전한 화면 전환을 제공합니다.
+1. 폰을 카(car) 바닥에 놓고 승강기를 한 층에서 다른 층으로 운행
+2. 폰 센서로 X/Y/Z 진동, 소음, 속도, 거리를 측정
+3. 기준 초과 항목을 빨간색으로 표시한 리포트 생성 (X·Y>10mg, Z>15mg, 소음>50dBA)
+4. PDF + 원본 데이터를 폰에 저장하고 이메일로 발송
 
-| 화면명 | 라우트 경로 | 핵심 기능 및 구성 |
-| :--- | :--- | :--- |
-| **로그인 Screen** | `/login` | 사번(`OTIS-XXXX` 등) 및 비밀번호 입력, 유효성 검증 |
-| **홈 (메인) Screen** | `/` | 제번(`2024F 1447R01`), 현장명(`럭키종합건설/송정동근생`) 등 실데이터 요약 및 [측정 시작] 대형 버튼 |
-| **측정 설정 Screen** | `/measure/start` | 5/10/30/60초 측정 타이머 선택 및 스마트폰 바닥 거치 안내 바텀 시트 제공 |
-| **측정 라이브 Screen** | `/measure/live` | 실시간 속도(m/s) 72sp 표출, 경과 시간 카운트트, 안전한 측정 중단 다이얼로그 |
-| **결과 통합 Screen** | `/result` | 6대 지표(P2P X/Y/Z, 소음, 거리, 속도) 요약 카드 & 8종 시계열 차트 스크롤 뷰 (`fl_chart` 연동) |
-| **저장 목록 Screen** | `/history` | 과거 저장된 측정 결과 목록(날짜, 층수, 결과 상태) 조회 및 행 탭 시 상세 결과 이동 |
-| **이메일 발송 Sheet** | (Bottom Sheet) | PDF 보고서, RAW 데이터, 차트 이미지, 메일 본문 요약 체크박스 선택 및 발송 |
-| **설정 Screen** | `/settings` | 사용자 프로필, 기본 수신 이메일 검증 및 변경, 앱 버전 정보, 로그아웃 확인 다이얼로그 |
+측정 지표: X/Y/Z 진동 Aptp(A95 peak-to-peak, mg), 소음 최대(dBA), 운행거리(m),
+최대속도(m/s), 그리고 8종 차트(진동 3축·소음·위치·속도·가속도·저크).
 
 ---
 
-## 🏗️ 도메인 로직 및 아키텍처 (`lib/domain/`)
+## 기술 스택
 
-UI와 수치 연산 로직을 철저히 분리하여 **계약 주도 설계(Contract-First Design)**로 구축되었습니다.
-
-### 1. 수치 해석 및 임계 판정 모듈 (`metrics.dart`)
-* **P2P (Peak-to-Peak) 산출**: 진동 파형의 최대값과 최소값 차이를 도출.
-* **A95 산출**: ISO 18738 기준에 따른 상위 5%(95백분위수) 최대 절대 피크치 도출.
-* **임계 자동 판정 (`ThresholdEvaluation`)**: OTIS TUNE 규격 기준(X·Y축 > 10mg, Z축 > 15mg, 소음 > 50dBA) 초과 시 즉각 경고 판정.
-* **수치 적분/미분 연산**: 가속도(mg) $\rightarrow$ 속도(m/s) $\rightarrow$ 이동 거리(m) 수치 적분 및 저크(da/dt) 산출.
-
-### 2. EVIMP1 RAW 파서 (`parse_raw.dart`)
-* 실제 계측기 데이터 형식(`assets/sample/2024F1447R01.txt`, 256Hz 4컬럼 6,988개 샘플) 파싱 및 시계열 배열 변환.
-* **[실데이터 전환 스위치]**: `ResultScreen` 상단 바의 데이터 토글 버튼(🔀)을 통해 기본 예시(Mock) 데이터와 실제 6,988개 파싱 실데이터를 원클릭으로 상호 전환 가능.
-
-### 3. 안드로이드 Kotlin 센서 연동 인터페이스 (`sensor_channel.dart`)
-* **이중 안전망(Fallback) 구조**: 네이티브 `EventChannel('com.otis.vibration_checker/sensors_stream')`로부터 실시간 센서 데이터를 수신하되, 센서가 없는 에뮬레이터나 위젯 테스트 환경에서는 자동으로 가상(Mock) 가속 애니메이션 스트림으로 전환되어 크래시를 방지.
-* 기기별 샘플링 주파수 불균일성을 보완하기 위한 선형 보간(Linear Interpolation) 및 소음 보정 오프셋(`calibrationOffsetDba`) 아키텍처 반영.
-
-### 4. TUNE 리포트 생성기 (`report_generator.dart`)
-* PDF 문서 생성 및 이메일 전송용 ASCII 표 양식 요약문(`generateSummaryText`) 생성 공용 인터페이스.
-* 한글 폰트(`Pretendard.ttf`) 임베딩 설계를 적용하여 문서 깨짐 방지 준비 완비.
+- **Flutter** (Dart SDK ^3.12.0), Android 우선
+- 라우팅 `go_router`, 차트 `fl_chart`, PDF `pdf`, 저장 `path_provider` +
+  `shared_preferences`, 이메일 `flutter_email_sender`, 화면유지 `wakelock_plus`
+- 센서·마이크는 **네이티브 Kotlin**(Platform Channel)로 직접 수집, 256Hz 리샘플
+- 상태관리 패키지 없음 — 전역 싱글턴(`MeasurementSession`)으로 화면 간 데이터 전달
 
 ---
 
-## 🎨 디자인 시스템 및 토큰 (`lib/core/theme.dart`)
+## 프로젝트 구조
 
-디자인 일관성과 실무 유지보수성을 위해 **모든 색상, 치수, 타이포그래피는 하드코딩이 엄격히 금지**되며 `AppColors`, `AppDims`, `AppText` 토큰만 사용합니다.
-* **색상 토큰 (`AppColors`)**: `navy`(0xFF0A192F, 메인 브랜드), `steel`(0xFF4A5568), `red`(0xFFD9381E, 경고/초과), `green`(0xFF10B981, 정상), `bg`(0xFFF8FAFC)
-* **치수 토큰 (`AppDims`)**: 터치 타깃 `touchMin`(56), 주 버튼 높이 `btnHeight`(64), 카드 라운드 `radius`(12), 화면 여백 `screenPad`(20)
+```
+lib/
+├── main.dart                     앱 진입점 (자동로그인 복원 후 실행)
+├── core/
+│   ├── router.dart               화면 라우팅 + 로그인 가드
+│   └── theme.dart                디자인 토큰 (AppColors/AppDims/AppText)
+├── domain/                       계산·저장 로직 (측정 엔진은 순수 Dart)
+│   ├── measure/                  ★ 측정 엔진 (앱의 심장)
+│   │   ├── measurement_engine.dart   분석 총괄
+│   │   ├── signal_filters.dart       기준선 보정·성분 분리(모션/진동)
+│   │   ├── ride_detector.dart        주행·정속 구간 검출
+│   │   ├── motion_integrator.dart    속도·거리·저크 적분
+│   │   ├── vibration_metrics.dart    Aptp·소음·임계 판정
+│   │   ├── metrics_config.dart       ★ 모든 수치 파라미터 단일 정의처
+│   │   └── sensor_sample.dart        표준 샘플 모델(mg, μs)
+│   ├── models/measurement_result.dart  측정 결과 모델
+│   ├── repository/measurement_repository.dart  파일 저장(raw/meta/pdf)
+│   ├── report_generator.dart     TUNE PDF 리포트 생성
+│   ├── sensor_channel.dart       네이티브 센서 채널 연동
+│   ├── parse_raw.dart            EVIMP1 raw 파서/라이터
+│   └── auth_repository.dart      로그인·자동로그인
+├── features/                     화면 (feature 단위)
+│   ├── auth/        로그인
+│   ├── home/        현장정보 입력
+│   ├── measure/     측정 시작·라이브·거치안내
+│   ├── result/      결과(카드+차트)
+│   ├── history/     저장 목록
+│   ├── settings/    설정(이메일)
+│   └── shared/      세션·이메일 시트
+android/app/src/main/kotlin/com/otis/vibration_checker/  네이티브 센서·소음
+assets/sample/2024F1447R01.txt   ★ 골든 픽스처(검증 기준, 수정 금지)
+assets/fonts/Pretendard-*.ttf    PDF 한글 폰트
+```
+
+전체 코드가 어떻게 이어지는지는 **`code_flow_walkthrough.md`** 참조.
 
 ---
 
-## 🚀 로컬 실행 및 테스트 방법
+## 화면 흐름
 
-### 1. 의존성 패키지 설치
+```
+로그인 → 홈(현장정보) → 측정시작(지연·거치안내) → 측정중(라이브)
+   → 결과(카드+차트) → 이메일 발송
+                          ↘ 저장 → 히스토리(과거 결과 조회)
+```
+
+화면끼리 직접 데이터를 주고받지 않고 전역 세션(`MeasurementSession`)을 거친다.
+
+---
+
+## 시작하기
+
 ```bash
 flutter pub get
+flutter run              # 실기기 연결 권장 (센서·마이크 필요)
+flutter test             # 유닛·위젯 테스트
+flutter analyze          # 정적 분석
+flutter build apk --release
 ```
 
-### 2. 정적 코드 분석 (Lint & Static Analysis)
-전체 프로젝트의 코드 무결성과 규칙 위반 여부를 검사합니다.
-```bash
-dart analyze --fatal-infos --fatal-warnings
-```
-
-### 3. 자동화 유닛 및 위젯 테스트 실행
-도메인 수치 연산, 파서, 센서 채널 예외 처리, 화면별 UI 렌더링 및 제스처를 검증하는 **전체 19개 자동화 테스트**를 실행합니다.
-```bash
-flutter test
-```
-*(기대 결과: `All tests passed!` - 100% 통과)*
-
-### 4. 앱 실행
-```bash
-flutter run
-```
+**실기기 필요**: 에뮬레이터는 가속도 센서·마이크가 없어 디버그 모드의 mock
+스트림으로만 동작한다. 실제 측정은 선형가속도 센서(TYPE_LINEAR_ACCELERATION)가
+있는 폰이 필요하며, 없는 기기는 측정 시작 화면에서 "지원 안 됨"으로 차단된다.
 
 ---
 
-## 📁 디렉토리 구조 요약
-```text
-lib/
-├── core/
-│   ├── router.dart         # go_router 라우팅 명세 및 페이지 전환 설정
-│   └── theme.dart          # 디자인 시스템 토큰 (AppColors, AppDims, AppText)
-├── domain/
-│   ├── models/             # MeasurementResult, ResultItem 등 도메인 엔티티
-│   ├── metrics.dart        # P10 수치 해석, A95, P2P, 임계 판정, 미적분 연산 모듈
-│   ├── parse_raw.dart      # P9 EVIMP1 256Hz RAW 텍스트 데이터 파싱 유틸
-│   ├── sensor_channel.dart # P11 안드로이드 Kotlin 센서 채널 매니저 및 Fallback 구조
-│   └── report_generator.dart # P12 TUNE 리포트 PDF 및 요약 텍스트 문서화 모듈
-├── features/
-│   ├── auth/               # S1 로그인 화면
-│   ├── home/               # S2 홈 (메인) 화면
-│   ├── measure/            # S3 측정 시작 설정 & S4 실시간 라이브 화면
-│   ├── result/             # S5 결과 통합 화면 (카드 + 차트) & MetricCard
-│   ├── history/            # S5 저장된 측정 이력 목록 화면
-│   ├── settings/           # S6 설정 및 이메일 검증 화면
-│   └── shared/             # P7 이메일 발송 바텀 시트 등 공용 위젯
-└── main.dart               # 앱 엔트리포인트 및 테마 설정
-test/
-├── domain/
-│   ├── metrics_test.dart           # 수치 연산 알고리즘 5개 유닛 테스트
-│   ├── parse_raw_test.dart         # RAW 파일 파싱 정확도 2개 유닛 테스트
-│   └── report_and_sensor_test.dart # 센서 모델, 채널 Fallback, 리포트 4개 유닛 테스트
-└── widget_test.dart                # S1~S6/P7/P8 전 화면 UI 및 인터랙션 8개 위젯 테스트
+## 검증 방식 (중요)
+
+이 앱의 정확성은 **골든 픽스처**로 검증한다. `assets/sample/2024F1447R01.txt`는
+실제 OTIS 장비로 측정한 데이터이고, 정답이 알려져 있다:
+
+| 지표 | 정답값 |
+|---|---|
+| 소음 최대 | 71.7 dBA |
+| 최대 속도 | 1.50 m/s |
+| 운행 거리 | 20.0 m |
+| Z 진동 Aptp | 22.2 mg |
+| X / Y 진동 Aptp | 8.2 / 12.9 mg (※ OI-1 캘리브레이션 전이라 현재 과대산출) |
+
+엔진 결과를 이 정답과 대조하는 골든 테스트가 `test/domain/measure/`에 있다.
+**측정 로직을 수정하면 반드시 골든 테스트로 회귀를 확인할 것.**
+
+---
+
+## 개발 규칙 (요약)
+
+전체 규칙은 **`AGENTS.md`**, 통합 기준은 **`integration_plan.md`** 참조.
+
+- **골든 픽스처 불변**: `assets/sample/2024F1447R01.txt` 수정·삭제 금지
+- **수치 단일 정의**: 필터·윈도우·임계값은 `metrics_config.dart` 한 곳에만.
+  다른 파일에 숫자 하드코딩 금지
+- **임계 판정 고정**: X>10, Y>10, Z>15 mg, 소음>50 dBA
+- **디자인 토큰 전용**: 색·치수·글꼴은 `theme.dart`의 AppColors/AppDims/AppText만
+- **어르신 UX**: 터치 56dp↑, 주 버튼 64dp, 본문 18sp↑, 상태는 색+아이콘+텍스트 3중
+- **단순 우선**: 요구사항에 없는 기능 추가 금지
+
+---
+
+## 현재 상태 & 남은 작업
+
+**완료**: Phase 0~5 통합(측정 엔진·화면·저장·PDF·로그인·이메일), 안전장치 보강
+(미지원 기기 차단, 가짜 결과 저장 방지, 백그라운드 중단, 타당성 게이트 등).
+
+**실기기 대기 (코드로는 불가)**:
+1. 실기기 샘플레이트 256Hz + 마이크 dBA 반응 실측 (Phase 2)
+2. 실기기 이메일 첨부 실제 렌더링 확인 (Phase 5, FileProvider)
+3. EVA 장비 병행측정으로 X/Y Aptp 캘리브레이션(OI-1) + 소음 오프셋(OI-4) (Phase 7)
+
+---
+
+## 문서 안내
+
+| 문서 | 내용 |
+|---|---|
+| `integration_plan.md` | 통합 기준 문서 (모든 판단의 근거) |
+| `AGENTS.md` | 코드 작성 규칙 |
+| `code_flow_walkthrough.md` | 전체 코드 흐름 (파일·함수 단위) |
+| `research_notes_phase0-5.md` | 연구노트 — 시도/실패/해결 과정 ("왜" 담당) |
+| `refactor_diagnosis.md` | 리팩토링 진단 |
+| `docs/domain_knowledge.md` | 도메인 지식·골든 규격 |
+| `phase*_easy.md` | 단계별 비전문가용 설명 |
 ```

@@ -19,6 +19,7 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
+/// 저장된 측정 결과 목록의 비동기 로드, 이메일 발송 연결 및 개별 삭제 상태를 관리합니다.
 class _HistoryScreenState extends State<HistoryScreen> {
   List<MeasurementResult> _items = kDebugMode ? MeasurementResult.mockList : [];
   final bool _isLoading = false;

@@ -18,6 +18,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// 홈 화면의 상태 및 현장 정보(제번, 현장명, 층수, 운행 방향, 기종) 입력 검증을 관리합니다.
 class _HomeScreenState extends State<HomeScreen> {
   final _jobNoCtl = TextEditingController();
   final _siteNameCtl = TextEditingController();

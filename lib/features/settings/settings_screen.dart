@@ -16,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+/// 설정 화면의 상태, 사용자 사번 기반 이메일 설정 영구 저장 및 로그아웃 로직을 관리합니다.
 class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _emailCtl;
   final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');

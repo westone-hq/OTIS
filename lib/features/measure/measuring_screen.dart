@@ -22,6 +22,7 @@ class MeasuringScreen extends StatefulWidget {
   final SensorChannelManager? sensorManager;
   const MeasuringScreen({super.key, this.sensorManager});
 
+  /// 측정 결과 파일을 로컬 디스크(repository)에 저장하고 성공 여부를 반환합니다.
   @visibleForTesting
   static Future<bool> attemptSave(
     MeasurementResult result, {
@@ -40,6 +41,15 @@ class MeasuringScreen extends StatefulWidget {
   State<MeasuringScreen> createState() => _MeasuringScreenState();
 }
 
+/// S4 측정 저장 전 검증 게이트 판정 결과
+enum _SaveGateResult {
+  ok,
+  siteInvalid,
+  noSamples,
+  lowMotion,
+}
+
+/// 라이브 측정 화면의 상태 및 생명주기(센서 수집, 타이머, 백그라운드 전환 등)를 관리합니다.
 class _MeasuringScreenState extends State<MeasuringScreen>
     with WidgetsBindingObserver {
   late final SensorChannelManager _sensorManager =
@@ -187,23 +197,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         if (mounted && !_receivedRealSample) {
           _isFinished = true;
           _cleanup();
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => AlertDialog(
-              title: const Text('측정 실패'),
-              content: const Text('센서 응답이 없습니다. 측정을 중단합니다.'),
-              actions: [
-                AppDialogButton(
-                  label: '확인',
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    if (mounted) context.go('/start');
-                  },
-                ),
-              ],
-            ),
-          );
+          await _showMeasureFailDialog('센서 응답이 없습니다. 측정을 중단합니다.');
         }
       });
     }
@@ -263,6 +257,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
   }
 
+  /// 백그라운드 전환으로 인한 측정 중단 시 안내 다이얼로그 표시 후 /start 이동
   Future<void> _showAbortedDialog() async {
     if (!mounted) return;
     await showDialog(
@@ -286,95 +281,148 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
+  /// 현장 정보 및 층수 파싱 유효성 검증
+  ({SiteInfo site, int bottomFloor, int topFloor})? _validateSite() {
+    final site = MeasurementSession.instance.currentSite;
+    if (site == null) return null;
+    final bottomFloor = int.tryParse(site.bottomFloor);
+    final topFloor = int.tryParse(site.topFloor);
+    if (bottomFloor == null || topFloor == null) return null;
+    return (site: site, bottomFloor: bottomFloor, topFloor: topFloor);
+  }
+
+  /// 타당성 게이트 (측정 시간, 최대 속도, 운행 거리) 및 샘플/현장 정보 유효성 평가
+  _SaveGateResult _evaluateSaveGate(MeasurementResult? result) {
+    if (_validateSite() == null) {
+      return _SaveGateResult.siteInvalid;
+    }
+    if (_engine.sampleCount < 2) {
+      return _SaveGateResult.noSamples;
+    }
+    if (result == null) {
+      return _SaveGateResult.ok;
+    }
+    if (_elapsedSeconds < MetricsConfig.defaultConfig.minMeasureDurationSec ||
+        result.maxSpeed < MetricsConfig.defaultConfig.minValidMaxSpeed ||
+        result.distance < MetricsConfig.defaultConfig.minValidDistance) {
+      return _SaveGateResult.lowMotion;
+    }
+    return _SaveGateResult.ok;
+  }
+
+  /// 현장 정보 누락 또는 센서 샘플 부족 시 실패 안내 다이얼로그 표시 후 /start 이동
+  Future<void> _showMeasureFailDialog(String message) async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('측정 실패'),
+        content: Text(message),
+        actions: [
+          AppDialogButton(
+            label: '확인',
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              if (mounted) context.go('/start');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 승강기 움직임 미감지 시 사용자 선택 다이얼로그 표시
+  /// - 반환값: true([그래도 저장]), false/null([다시 측정] 또는 닫기)
+  Future<bool?> _showLowMotionDialog() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('승강기 움직임이 감지되지 않았습니다'),
+        content: const Text(
+          '측정 시간이 짧거나 이동이 거의 없습니다. 폰을 카 바닥에 두고 승강기를 운행한 뒤 완료를 눌러 주세요.',
+        ),
+        actions: [
+          AppDialogButton(
+            label: '그래도 저장',
+            onPressed: () => Navigator.of(ctx).pop(true),
+            primary: false,
+          ),
+          AppDialogButton(
+            label: '다시 측정',
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 파일 저장 실패 시 재시도 다이얼로그 표시
+  Future<void> _showSaveRetryDialog(
+    MeasurementResult finalResult, {
+    required void Function(Directory) onSuccess,
+  }) async {
+    if (!mounted) return;
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('저장 실패 알림'),
+        content: const Text('측정 결과 파일 저장에 실패했습니다\n결과 화면으로 이동합니다.'),
+        actions: [
+          AppDialogButton(
+            label: '확인',
+            onPressed: () => Navigator.of(ctx).pop(false),
+            primary: false,
+          ),
+          AppDialogButton(
+            label: '재시도',
+            onPressed: () async {
+              final success = await MeasuringScreen.attemptSave(
+                finalResult,
+                onSuccess: onSuccess,
+              );
+              if (success && ctx.mounted) {
+                Navigator.of(ctx).pop(true);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 측정 종료 시 안전장치 게이트 평가, 분기, 저장, 화면 이동을 수행합니다.
   void _finishMeasurement() async {
     _isFinished = true;
     _cleanup();
 
-    final site = MeasurementSession.instance.currentSite;
-    final bottomFloor = site != null ? int.tryParse(site.bottomFloor) : null;
-    final topFloor = site != null ? int.tryParse(site.topFloor) : null;
-
-    if (site == null || bottomFloor == null || topFloor == null) {
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Text('측정 실패'),
-            content: const Text('현장 정보가 없습니다. 홈에서 다시 시작해 주세요.'),
-            actions: [
-              AppDialogButton(
-                label: '확인',
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  if (mounted) context.go('/start');
-                },
-              ),
-            ],
-          ),
-        );
-      }
+    final preGate = _evaluateSaveGate(null);
+    if (preGate == _SaveGateResult.siteInvalid) {
+      await _showMeasureFailDialog('현장 정보가 없습니다. 홈에서 다시 시작해 주세요.');
+      return;
+    }
+    if (preGate == _SaveGateResult.noSamples) {
+      await _showMeasureFailDialog('센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.');
       return;
     }
 
-    if (_engine.sampleCount < 2) {
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Text('측정 실패'),
-            content: const Text('센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.'),
-            actions: [
-              AppDialogButton(
-                label: '확인',
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  if (mounted) context.go('/start');
-                },
-              ),
-            ],
-          ),
-        );
-      }
-      return;
-    }
+    final siteData = _validateSite()!;
 
     final result = _engine.analyze(
-      jobNo: site.jobNo,
-      siteName: site.siteName,
-      bottomFloor: bottomFloor,
-      topFloor: topFloor,
-      direction: site.direction,
+      jobNo: siteData.site.jobNo,
+      siteName: siteData.site.siteName,
+      bottomFloor: siteData.bottomFloor,
+      topFloor: siteData.topFloor,
+      direction: siteData.site.direction,
       dateTime: DateTime.now(),
     );
 
     var finalResult = result;
-    if (_elapsedSeconds < MetricsConfig.defaultConfig.minMeasureDurationSec ||
-        result.maxSpeed < MetricsConfig.defaultConfig.minValidMaxSpeed ||
-        result.distance < MetricsConfig.defaultConfig.minValidDistance) {
+    if (_evaluateSaveGate(result) == _SaveGateResult.lowMotion) {
       if (!mounted) return;
-      final proceed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('승강기 움직임이 감지되지 않았습니다'),
-          content: const Text(
-            '측정 시간이 짧거나 이동이 거의 없습니다. 폰을 카 바닥에 두고 승강기를 운행한 뒤 완료를 눌러 주세요.',
-          ),
-          actions: [
-            AppDialogButton(
-              label: '그래도 저장',
-              onPressed: () => Navigator.of(ctx).pop(true),
-              primary: false,
-            ),
-            AppDialogButton(
-              label: '다시 측정',
-              onPressed: () => Navigator.of(ctx).pop(false),
-            ),
-          ],
-        ),
-      );
+      final proceed = await _showLowMotionDialog();
       if (proceed != true) {
         if (mounted) context.go('/start');
         return;
@@ -391,34 +439,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       onSuccess: (dir) => savedDir = dir,
     );
     if (!initialSuccess) {
-      if (!mounted) return;
-      await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('저장 실패 알림'),
-          content: const Text('측정 결과 파일 저장에 실패했습니다\n결과 화면으로 이동합니다.'),
-          actions: [
-            AppDialogButton(
-              label: '확인',
-              onPressed: () => Navigator.of(ctx).pop(false),
-              primary: false,
-            ),
-            AppDialogButton(
-              label: '재시도',
-              onPressed: () async {
-                final success = await MeasuringScreen.attemptSave(
-                  finalResult,
-                  onSuccess: (dir) => savedDir = dir,
-                );
-                if (success && ctx.mounted) {
-                  Navigator.of(ctx).pop(true);
-                }
-              },
-            ),
-          ],
-        ),
-      );
+      await _showSaveRetryDialog(finalResult, onSuccess: (dir) => savedDir = dir);
     }
 
     if (savedDir != null && mounted) {
@@ -438,6 +459,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
   }
 
+  /// 사용자 뒤로가기/종료 요청 시 확인 다이얼로그 표시
   Future<bool?> _showExitDialog() {
     return showDialog<bool>(
       context: context,

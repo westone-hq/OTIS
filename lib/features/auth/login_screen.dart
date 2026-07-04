@@ -16,6 +16,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
+/// 로그인 화면의 상태 및 사용자 인증 입력/제출 로직을 관리합니다.
 class _LoginScreenState extends State<LoginScreen> {
   final _idCtl = TextEditingController();
   final _pwCtl = TextEditingController();
