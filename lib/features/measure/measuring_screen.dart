@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -7,7 +8,6 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../core/theme.dart';
 import '../../domain/measure/metrics_config.dart';
 import '../../domain/measure/measurement_engine.dart';
-import '../../domain/models/measurement_result.dart';
 import '../../domain/sensor_channel.dart';
 import '../../domain/repository/measurement_repository.dart';
 import '../shared/measurement_session.dart';
@@ -80,7 +80,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
   Future<void> _initCaptureAndTimers() async {
     // 1. wakelock 활성화 (D2, Phase 2)
     try {
-      await WakelockPlus.enable();
+      await WakelockPlus.enable().timeout(const Duration(milliseconds: 100)).catchError((_) {});
     } catch (_) {}
 
     // 2. 오디오 권한 요청 (거부 시 소음 N/A 처리용 안내)
@@ -143,14 +143,44 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
         }
       });
 
-      // 1초 후에도 실제 콜백이 전혀 없다면 mock 스트림으로 폴백
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted && !_receivedRealSample && _speedSub == null) {
-          _subscribeMockStream();
+      // 1초 후에도 실제 콜백이 전혀 없다면 mock 스트림으로 폴백 (디버그 모드 전용)
+      if (kDebugMode) {
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted && !_receivedRealSample && _speedSub == null) {
+            _subscribeMockStream();
+          }
+        });
+      }
+    } else {
+      if (kDebugMode) {
+        _subscribeMockStream();
+      }
+    }
+
+    // 릴리즈 경로: 3초간 수신 없으면 측정 중단 및 복귀 (저장 없음)
+    if (!kDebugMode) {
+      Future.delayed(const Duration(seconds: 3), () async {
+        if (mounted && !_receivedRealSample) {
+          _cleanup();
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('측정 실패'),
+              content: const Text('센서 응답이 없습니다. 측정을 중단합니다.'),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    if (mounted) context.go('/start');
+                  },
+                  child: const Text('확인'),
+                ),
+              ],
+            ),
+          );
         }
       });
-    } else {
-      _subscribeMockStream();
     }
   }
 
@@ -184,7 +214,7 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
     _sensorSub?.cancel();
     _sensorManager.stopCapture();
     try {
-      WakelockPlus.disable();
+      WakelockPlus.disable().catchError((_) {});
     } catch (_) {}
   }
 
@@ -198,36 +228,63 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
     _cleanup();
 
     final site = MeasurementSession.instance.currentSite;
-    MeasurementResult result;
-    if (_engine.sampleCount >= 2) {
-      result = _engine.analyze(
-        jobNo: site?.jobNo ?? '2024F 1447R01',
-        siteName: site?.siteName ?? '럭키종합건설/송정동근생',
-        bottomFloor: int.tryParse(site?.bottomFloor ?? '1') ?? 1,
-        topFloor: int.tryParse(site?.topFloor ?? '8') ?? 8,
-        direction: site?.direction ?? '하부 → 상부',
-        dateTime: DateTime.now(),
-      );
-    } else {
-      final now = DateTime.now();
-      final jobNoStr = site?.jobNo ?? '2024F 1447R01';
-      final compressed = jobNoStr.replaceAll(RegExp(r'\s+'), '');
-      final y = now.year.toString().padLeft(4, '0');
-      final m = now.month.toString().padLeft(2, '0');
-      final d = now.day.toString().padLeft(2, '0');
-      final h = now.hour.toString().padLeft(2, '0');
-      final min = now.minute.toString().padLeft(2, '0');
-      final sec = now.second.toString().padLeft(2, '0');
-      result = MeasurementResult.mock.copyWith(
-        id: '${compressed}_$y$m${d}_$h$min$sec',
-        jobNo: jobNoStr,
-        siteName: site?.siteName ?? '럭키종합건설/송정동근생',
-        bottomFloor: int.tryParse(site?.bottomFloor ?? '1') ?? 1,
-        topFloor: int.tryParse(site?.topFloor ?? '8') ?? 8,
-        direction: site?.direction ?? '하부 → 상부',
-        dateTime: now,
-      );
+    final bottomFloor = site != null ? int.tryParse(site.bottomFloor) : null;
+    final topFloor = site != null ? int.tryParse(site.topFloor) : null;
+
+    if (site == null || bottomFloor == null || topFloor == null) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('측정 실패'),
+            content: const Text('현장 정보가 없습니다. 홈에서 다시 시작해 주세요.'),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  if (mounted) context.go('/start');
+                },
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
     }
+
+    if (_engine.sampleCount < 2) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('측정 실패'),
+            content: const Text('센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.'),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  if (mounted) context.go('/start');
+                },
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    final result = _engine.analyze(
+      jobNo: site.jobNo,
+      siteName: site.siteName,
+      bottomFloor: bottomFloor,
+      topFloor: topFloor,
+      direction: site.direction,
+      dateTime: DateTime.now(),
+    );
 
     MeasurementSession.instance.lastResult = result;
     MeasurementSession.instance.lastResultId = result.id;
@@ -237,11 +294,14 @@ class _MeasuringScreenState extends State<MeasuringScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('측정 결과 저장 완료: ${dir.path}', style: AppText.caption.copyWith(color: AppColors.bg)),
+            content: Text(
+              '저장되었습니다 (경로: ${dir.path})',
+              style: AppText.body.copyWith(color: Colors.white),
+            ),
             backgroundColor: AppColors.green,
-            duration: const Duration(seconds: 3),
           ),
         );
+        context.pushReplacement('/result/${result.id}');
       }
     } catch (e) {
       if (mounted) {

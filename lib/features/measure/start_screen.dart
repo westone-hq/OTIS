@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
+import '../../domain/sensor_channel.dart';
 import '../shared/measurement_session.dart';
 import 'placement_sheet.dart';
 
@@ -9,13 +11,22 @@ import 'placement_sheet.dart';
 /// - 카운트다운 대기 시간을 고르고 측정을 시작
 /// - 어르신 UX: 고정 높이 72dp 선택 카드, 64dp 시작 버튼, 색+아이콘+텍스트 3중 상태
 class StartScreen extends StatefulWidget {
-  const StartScreen({super.key});
+  final SensorChannelManager? sensorManager;
+  const StartScreen({super.key, this.sensorManager});
+
+  @visibleForTesting
+  static bool canStartMeasure({required bool available, required bool isDebug}) =>
+      available || isDebug;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
 }
 
 class _StartScreenState extends State<StartScreen> {
+  late final SensorChannelManager _sensorManager =
+      widget.sensorManager ?? SensorChannelManager();
+  bool _sensorsAvailable = true;
+
   // TODO: SharedPreferences 영구 저장으로 변경
   static bool _hasSeenPlacementSheet = false;
 
@@ -25,6 +36,7 @@ class _StartScreenState extends State<StartScreen> {
   @override
   void initState() {
     super.initState();
+    _checkSensors();
     if (!_hasSeenPlacementSheet) {
       _hasSeenPlacementSheet = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -32,6 +44,13 @@ class _StartScreenState extends State<StartScreen> {
           _showPlacementSheet();
         }
       });
+    }
+  }
+
+  Future<void> _checkSensors() async {
+    final available = await _sensorManager.checkSensorsAvailable();
+    if (mounted) {
+      setState(() => _sensorsAvailable = available);
     }
   }
 
@@ -97,6 +116,12 @@ class _StartScreenState extends State<StartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool canStart = StartScreen.canStartMeasure(
+      available: _sensorsAvailable,
+      isDebug: kDebugMode,
+    );
+    final bool isDebugBypassed = !_sensorsAvailable && kDebugMode;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('측정 시작'),
@@ -110,6 +135,36 @@ class _StartScreenState extends State<StartScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: AppDims.gap),
+                if (isDebugBypassed) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDims.gap2,
+                      vertical: AppDims.gap,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppDims.radius),
+                      border: Border.all(color: AppColors.gold, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppColors.gold,
+                          size: 24,
+                        ),
+                        const SizedBox(width: AppDims.gap),
+                        Expanded(
+                          child: Text(
+                            '디버그: 센서 체크 우회',
+                            style: AppText.bodyBold.copyWith(color: AppColors.gold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppDims.gap2),
+                ],
                 // 리마인더 카드
                 Container(
                   padding: const EdgeInsets.all(AppDims.gap2),
@@ -205,12 +260,47 @@ class _StartScreenState extends State<StartScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppDims.screenPad),
-          child: ElevatedButton(
-            onPressed: () {
-              MeasurementSession.instance.delaySec = _selectedSeconds;
-              context.push('/measuring');
-            },
-            child: Text(_selectedSeconds == 0 ? '측정 시작' : '카운트다운 시작'),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!canStart) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppDims.gap2),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppDims.radius),
+                    border: Border.all(color: AppColors.red, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: AppColors.red,
+                        size: 24,
+                      ),
+                      const SizedBox(width: AppDims.gap),
+                      Expanded(
+                        child: Text(
+                          '이 기기는 선형가속도 센서가 없어 측정을 지원하지 않습니다.',
+                          style: AppText.bodyBold.copyWith(color: AppColors.red),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppDims.gap2),
+              ],
+              ElevatedButton(
+                onPressed: canStart
+                    ? () {
+                        MeasurementSession.instance.delaySec = _selectedSeconds;
+                        context.push('/measuring');
+                      }
+                    : null,
+                child: Text(_selectedSeconds == 0 ? '측정 시작' : '카운트다운 시작'),
+              ),
+            ],
           ),
         ),
       ),

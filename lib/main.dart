@@ -16,7 +16,8 @@ class VibrationCheckerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'OTIS 진동측정',
+      title: 'OTIS 진동 측정',
+      color: AppColors.bg,
       theme: buildAppTheme(),
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,

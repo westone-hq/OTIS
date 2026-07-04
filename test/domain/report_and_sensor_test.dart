@@ -5,9 +5,19 @@ import 'package:vibration_checker/domain/models/measurement_result.dart';
 import 'package:vibration_checker/domain/parse_raw.dart';
 import 'package:vibration_checker/domain/report_generator.dart';
 import 'package:vibration_checker/domain/sensor_channel.dart';
+import 'package:vibration_checker/features/measure/start_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('StartScreen canStartMeasure 순수 함수 검증', () {
+    test('canStartMeasure - 4케이스 (available true/false × isDebug true/false)', () {
+      expect(StartScreen.canStartMeasure(available: true, isDebug: true), isTrue);
+      expect(StartScreen.canStartMeasure(available: true, isDebug: false), isTrue);
+      expect(StartScreen.canStartMeasure(available: false, isDebug: true), isTrue);
+      expect(StartScreen.canStartMeasure(available: false, isDebug: false), isFalse);
+    });
+  });
 
   group('P11 · 안드로이드 센서 채널 관리자 구조 및 인터페이스 검증', () {
     test('SensorSample.fromMap - 이벤트 맵 정상 변환 검증', () {
@@ -26,10 +36,10 @@ void main() {
       expect(sample.noiseDba, 55.4);
     });
 
-    test('SensorChannelManager - 플랫폼 예외 발생 시 안전한 fallback 처리 검증', () async {
+    test('SensorChannelManager - 플랫폼 예외 발생 시 fail-safe로 false 반환 및 안전한 fallback 처리 검증', () async {
       final manager = SensorChannelManager();
       final available = await manager.checkSensorsAvailable();
-      expect(available, isTrue);
+      expect(available, isFalse);
 
       // 예외 없이 완료되는지 확인
       await expectLater(manager.startCapture(targetSampleRate: 256), completes);

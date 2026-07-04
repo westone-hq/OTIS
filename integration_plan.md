@@ -362,5 +362,17 @@ DoD: `flutter analyze` 0건 · `flutter test` 전체 통과 · 릴리즈 빌드(
 | `models/sensor_sample.dart` | `domain/measure/sensor_sample.dart` | 병합(단위 mg·tsUs·noise 필드) |
 | `models/vibration_result.dart` | `domain/models/measurement_result.dart` | 개념 병합(Max/A95 P2P, 판정 getter, mg 변환 상수) 후 원본 폐기 |
 | `services/vibration_analyzer.dart` | `domain/measure/` 각 파일 | 기준선·구간검출·윈도우 P2P·percentile 이식, 3-sample MA·50Hz 가정 폐기 |
-| `screens/measurement_screen.dart` | — | 카운트다운 타이머·wakelock·구독 수명주기 로직만 발췌 이식, 화면은 폐기 |
 | `main.dart`, 테스트 | — | 폐기 |
+
+## 8. 최종 배포 및 이월 항목 점검결과 (최종 릴리스 단계)
+
+| 항목 | 분류 | 상태 | 조치 결과 및 사유 |
+|---|---|---|---|
+| 안드로이드 root-path 누락 문제 | 첨부 버그 | 해결 완료 | file_paths.xml에 `<root-path name="root" path="." />` 추가 완료 (실기기 첨부 예외 해소) |
+| 센서 가용성 예외 처리 fail-safe | 센서 버그 | 해결 완료 | checkSensorsAvailable 예외 시 false 반환으로 수정 (실기기 네이티브 오류 시 안전한 mock 전환 또는 불가용 처리) |
+| 센서 실패 시 골든 데이터 저장 버그 | 치명 버그 | 해결 완료 | measuring_screen의 _finishMeasurement 내 mock 저장 분기 완전 삭제 및 에러 다이얼로그 노출 |
+| 이메일 클라이언트 외부 연동 테스트 | 이월 항목 | 유지 | 위젯/유닛 테스트에서 ProcessTextPlugin 등 네이티브 인텐트 실행 불가 (실기기 QA 필요) |
+| 256Hz 하드웨어 센서 실제 캡처 주기 | 이월 항목 | 유지 | 테스트 환경은 mock/fake 스트림 사용으로 256Hz 실시간 캡처 물리 테스트는 실기기 필수 |
+| TUNE 리포트 PDF 실제 인쇄/렌더링 | 이월 항목 | 유지 | pdf 바이트 생성까지 검증 완료, 실기기 뷰어 열기 및 프린터 출력 테스트는 실기기 QA 항목 |
+
+**결론**: 코드 및 테스팅 레벨에서 가능한 치명 버그와 표준 예외 처리는 모두 완료되었으며, 물리적인 HW 연동 및 외부 앱 호출 3건만 실기기 이월 항목으로 유지한다.
