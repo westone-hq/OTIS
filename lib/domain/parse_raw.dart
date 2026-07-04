@@ -1,13 +1,12 @@
-import 'dart:math' as math;
-
-import 'metrics.dart';
+import 'measure/measurement_engine.dart';
+import 'measure/sensor_sample.dart';
 import 'models/measurement_result.dart';
 
-/// P9 · EVIMP1 형식 RAW 텍스트 파일 파싱 및 시계열 변환 유틸
+/// P9 · EVIMP1 형식 RAW 텍스트 파일 파싱, 직렬화(writer) 및 시계열 변환 유틸
 class RawDataParser {
   /// EVIMP1 문자열 데이터를 파싱하여 MeasurementResult 인스턴스를 반환한다.
   /// - 헤더(EVIMP1, 샘플링 레이트) 인식 및 4컬럼(X, Y, Z 진동 mg + 소음 dBA) 파싱
-  /// - P10 수치 해석 모듈(VibrationMetrics)을 연동하여 속도, 거리, 저크 시계열 도출
+  /// - Phase 1 신규 통합 엔진(MeasurementEngine)을 연동하여 지표 및 시계열 도출
   static MeasurementResult parseEvimp1({
     required String rawContent,
     required String id,
@@ -18,21 +17,39 @@ class RawDataParser {
     required String direction,
     required DateTime dateTime,
   }) {
+    final parseRes = parseEvimp1ToSamples(rawContent);
+    final samples = parseRes.samples;
+
+    final engine = MeasurementEngine();
+    engine.addSamples(samples);
+
+    return engine.analyze(
+      id: id,
+      jobNo: jobNo,
+      siteName: siteName,
+      bottomFloor: bottomFloor,
+      topFloor: topFloor,
+      direction: direction,
+      dateTime: dateTime,
+    );
+  }
+
+  /// EVIMP1 문자열을 파싱하여 SensorSample 리스트 및 샘플레이트를 반환
+  static ({List<SensorSample> samples, int sampleRate}) parseEvimp1ToSamples(
+      String rawContent) {
     final lines = rawContent.split(RegExp(r'\r?\n'));
     int sampleRate = 256;
+    final List<SensorSample> samples = [];
 
-    final List<double> xList = [];
-    final List<double> yList = [];
-    final List<double> zList = [];
-    final List<double> noiseList = [];
-
+    int index = 0;
     for (final rawLine in lines) {
       final line = rawLine.trim();
       if (line.isEmpty || line.startsWith('#')) continue;
       if (line == 'EVIMP1') continue;
 
-      // 두 번째 줄 등에서 정수 샘플링 레이트 판별
-      if (xList.isEmpty && int.tryParse(line) != null && !line.contains('.')) {
+      if (samples.isEmpty &&
+          int.tryParse(line) != null &&
+          !line.contains('.')) {
         sampleRate = int.parse(line);
         continue;
       }
@@ -45,63 +62,46 @@ class RawDataParser {
         final noise = double.tryParse(parts[3]);
 
         if (x != null && y != null && z != null && noise != null) {
-          xList.add(x);
-          yList.add(y);
-          zList.add(z);
-          noiseList.add(noise);
+          final int dtUs = (1000000 / sampleRate).round();
+          samples.add(
+            SensorSample(
+              tsUs: index * dtUs,
+              x: x,
+              y: y,
+              z: z,
+              noiseDba: noise,
+            ),
+          );
+          index++;
         }
       }
     }
 
-    // 데이터가 전혀 없는 경우 안전하게 0 배열 처리
-    if (xList.isEmpty) {
-      xList.add(0.0);
-      yList.add(0.0);
-      zList.add(0.0);
-      noiseList.add(0.0);
+    if (samples.isEmpty) {
+      samples.add(const SensorSample(
+          tsUs: 0, x: 0.0, y: 0.0, z: 0.0, noiseDba: 0.0));
     }
 
-    // P10 수치 해석 모듈을 통해 P2P 및 최대값 산출
-    final double xPtp = VibrationMetrics.calculateP2P(xList);
-    final double yPtp = VibrationMetrics.calculateP2P(yList);
-    final double zPtp = VibrationMetrics.calculateP2P(zList);
-    final double noiseMax = VibrationMetrics.calculateMax(noiseList);
+    return (samples: samples, sampleRate: sampleRate);
+  }
 
-    // Z축 진동/가속도 기반으로 속도, 이동 거리, 저크 산출
-    final double sr = sampleRate.toDouble();
-    final speedList = VibrationMetrics.calculateSpeedSeries(zList, sampleRate: sr);
-    final posList = VibrationMetrics.calculatePositionSeries(speedList, sampleRate: sr);
-    final jerkList = VibrationMetrics.calculateJerkSeries(zList, sampleRate: sr);
+  /// SensorSample 리스트 및 샘플레이트를 EVIMP1 형식 문자열로 직렬화 (writer)
+  static String writeEvimp1(List<SensorSample> samples, {int sampleRate = 256}) {
+    final buffer = StringBuffer();
+    buffer.writeln('EVIMP1');
+    buffer.writeln(sampleRate);
+    for (final s in samples) {
+      buffer.writeln(
+          '${_formatNum(s.x)} ${_formatNum(s.y)} ${_formatNum(s.z)} ${_formatNum(s.noiseDba)}');
+    }
+    return buffer.toString();
+  }
 
-    final double distance = posList.isNotEmpty
-        ? double.parse(posList.last.toStringAsFixed(1))
-        : 0.0;
-    final double maxSpeed = speedList.isNotEmpty
-        ? double.parse(speedList.reduce(math.max).toStringAsFixed(2))
-        : 0.0;
-
-    return MeasurementResult(
-      id: id,
-      jobNo: jobNo,
-      siteName: siteName,
-      bottomFloor: bottomFloor,
-      topFloor: topFloor,
-      direction: direction,
-      dateTime: dateTime,
-      xPtp: xPtp,
-      yPtp: yPtp,
-      zPtp: zPtp,
-      noiseMax: noiseMax,
-      distance: distance,
-      maxSpeed: maxSpeed,
-      xSeries: xList,
-      ySeries: yList,
-      zSeries: zList,
-      noiseSeries: noiseList,
-      positionSeries: posList,
-      speedSeries: speedList,
-      accelSeries: zList,
-      jerkSeries: jerkList,
-    );
+  static String _formatNum(double val) {
+    String str = val.toString();
+    if (str.contains('.')) {
+      str = str.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    }
+    return str;
   }
 }

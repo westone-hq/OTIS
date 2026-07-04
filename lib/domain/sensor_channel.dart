@@ -1,33 +1,8 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 
-/// P11 · 안드로이드(S22 등) 네이티브 센서 단일 샘플 데이터 모델
-/// - 가속도(X, Y, Z 진동 mg) 및 마이크 소음(dBA) 실시간 스트리밍 단건 데이터
-class SensorSample {
-  final double timestamp; // 밀리초(ms) 또는 OS 상대 시간
-  final double x;         // X축 진동 가속도 (mg)
-  final double y;         // Y축 진동 가속도 (mg)
-  final double z;         // Z축 진동 가속도 (mg)
-  final double noiseDba;  // A-weighting 보정된 음압 레벨 (dBA)
-
-  const SensorSample({
-    required this.timestamp,
-    required this.x,
-    required this.y,
-    required this.z,
-    required this.noiseDba,
-  });
-
-  factory SensorSample.fromMap(Map<dynamic, dynamic> map) {
-    return SensorSample(
-      timestamp: (map['timestamp'] as num?)?.toDouble() ?? 0.0,
-      x: (map['x'] as num?)?.toDouble() ?? 0.0,
-      y: (map['y'] as num?)?.toDouble() ?? 0.0,
-      z: (map['z'] as num?)?.toDouble() ?? 0.0,
-      noiseDba: (map['noiseDba'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-}
+import 'measure/sensor_sample.dart';
+export 'measure/sensor_sample.dart';
 
 /// P11 · 안드로이드 Kotlin 센서 채널 관리자 (구조 및 인터페이스 정의)
 /// - 나중에 UI(S4 MeasuringScreen) 및 기능 모듈 통합을 고려하여 설계된 뼈대 구조
@@ -57,7 +32,7 @@ class SensorChannelManager {
           if (event is Map) {
             return SensorSample.fromMap(event);
           }
-          return const SensorSample(timestamp: 0, x: 0, y: 0, z: 0, noiseDba: 0);
+          return const SensorSample(tsUs: 0, x: 0, y: 0, z: 0, noiseDba: 0);
         });
     return _sampleStream!;
   }

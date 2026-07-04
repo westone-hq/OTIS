@@ -33,8 +33,8 @@ EVIMP1
       // 2. X축 P2P 산출 검증: max(3.987) - min(-3.351) = 7.338 => 7.34
       expect(result.xPtp, 7.34);
 
-      // 3. 소음 최대치 산출 검증: max(63.884) => 63.88
-      expect(result.noiseMax, 63.88);
+      // 3. 소음 최대치 산출 검증: max(63.884) => 63.9 (Phase 1 규격 1자리)
+      expect(result.noiseMax, 63.9);
 
       // 4. 수치 연산 파생 배열(속도, 거리, 가속도, 저크) 생성 확인
       expect(result.speedSeries.length, 4);
@@ -58,6 +58,21 @@ EVIMP1
       expect(result.xSeries, [0.0]);
       expect(result.xPtp, 0.0);
       expect(result.distance, 0.0);
+    });
+
+    test('writeEvimp1 및 parseEvimp1ToSamples 라운드트립 검증', () {
+      final res = RawDataParser.parseEvimp1ToSamples(sampleText);
+      expect(res.sampleRate, 256);
+      expect(res.samples.length, 4);
+
+      final serialized = RawDataParser.writeEvimp1(res.samples, sampleRate: res.sampleRate);
+      expect(serialized, contains('EVIMP1\n256\n'));
+      expect(serialized, contains('-3.351 3.545 -1.787 58.073'));
+
+      final reParsed = RawDataParser.parseEvimp1ToSamples(serialized);
+      expect(reParsed.samples.length, 4);
+      expect(reParsed.samples[0].x, -3.351);
+      expect(reParsed.samples[0].noiseDba, 58.073);
     });
   });
 }

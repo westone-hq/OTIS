@@ -1,3 +1,5 @@
+import '../measure/sensor_sample.dart';
+
 /// 측정 결과 데이터 모델
 /// - 순수 Dart로 작성된 측정 결과 및 시계열 데이터
 class MeasurementResult {
@@ -26,6 +28,12 @@ class MeasurementResult {
   final List<double> accelSeries;
   final List<double> jerkSeries;
 
+  // Phase 1 확장 필드
+  final double sampleRate; // 실측 샘플레이트 (Hz)
+  final bool usedDetectedRideSegment; // 주행 자동 검출 성공 여부
+  final String constantSpeedRange; // 정속 구간 시간 범위 요약
+  final List<SensorSample>? rawSamples; // RAW 데이터 보관 (EVIMP1 저장용)
+
   const MeasurementResult({
     required this.id,
     required this.jobNo,
@@ -48,6 +56,10 @@ class MeasurementResult {
     required this.speedSeries,
     required this.accelSeries,
     required this.jerkSeries,
+    this.sampleRate = 256.0,
+    this.usedDetectedRideSegment = true,
+    this.constantSpeedRange = '전체 구간',
+    this.rawSamples,
   });
 
   // 임계 판정 getter (X·Y>10mg, Z>15mg, 소음>50dB -> 초과 시 true)
