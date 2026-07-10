@@ -12,7 +12,7 @@ import io.flutter.plugin.common.EventChannel
 
 /**
  * P11 · 안드로이드 가속도 센서 스트림 핸들러 및 256Hz 선형 보간 리샘플러
- * - Sensor.TYPE_LINEAR_ACCELERATION을 SENSOR_DELAY_FASTEST로 구독
+ * - Sensor.TYPE_LINEAR_ACCELERATION / TYPE_ACCELEROMETER / TYPE_GRAVITY를 SENSOR_DELAY_FASTEST로 구독
  * - 타임스탬프(ns) 기반 선형 보간(Linear Interpolation) 적용하여 유효 256Hz 샘플레이트 도출
  * - m/s² -> mg 단위 변환 (1 m/s² = 101.97 mg)
  * - 32샘플 단위 배칭으로 Flutter EventChannel 오버헤드 최적화
@@ -30,6 +30,8 @@ class SensorStreamHandler(
 
     private var sensorManager: SensorManager? = null
     private var linearSensor: Sensor? = null
+    private var accelerometerSensor: Sensor? = null
+    private var gravitySensor: Sensor? = null
     private var eventSink: EventChannel.EventSink? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -38,6 +40,12 @@ class SensorStreamHandler(
     private var prevX: Float = 0f
     private var prevY: Float = 0f
     private var prevZ: Float = 0f
+    private var latestRawX: Float = 0f
+    private var latestRawY: Float = 0f
+    private var latestRawZ: Float = 0f
+    private var latestGravityX: Float = 0f
+    private var latestGravityY: Float = 0f
+    private var latestGravityZ: Float = 0f
     private var nextTargetNs: Long = 0L
 
     private var rawCount: Int = 0
@@ -52,6 +60,8 @@ class SensorStreamHandler(
 
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager?
         linearSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+        accelerometerSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        gravitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
 
         if (linearSensor == null) {
             Log.e(TAG, "Linear Acceleration sensor not available on this device.")
@@ -60,6 +70,12 @@ class SensorStreamHandler(
 
         prevTimestampNs = 0L
         nextTargetNs = 0L
+        latestRawX = 0f
+        latestRawY = 0f
+        latestRawZ = 0f
+        latestGravityX = 0f
+        latestGravityY = 0f
+        latestGravityZ = 0f
         rawCount = 0
         resampledCount = 0
         lastLogNs = 0L
@@ -68,6 +84,12 @@ class SensorStreamHandler(
         }
 
         sensorManager?.registerListener(this, linearSensor, SensorManager.SENSOR_DELAY_FASTEST)
+        accelerometerSensor?.let {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+        }
+        gravitySensor?.let {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+        }
         Log.i(TAG, "SensorStreamHandler started at $rate Hz target.")
     }
 
@@ -90,6 +112,25 @@ class SensorStreamHandler(
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || eventSink == null) return
+
+        when (event.sensor.type) {
+            Sensor.TYPE_ACCELEROMETER -> {
+                latestRawX = event.values[0]
+                latestRawY = event.values[1]
+                latestRawZ = event.values[2]
+                return
+            }
+            Sensor.TYPE_GRAVITY -> {
+                latestGravityX = event.values[0]
+                latestGravityY = event.values[1]
+                latestGravityZ = event.values[2]
+                return
+            }
+            Sensor.TYPE_LINEAR_ACCELERATION -> {
+                // linear acceleration 이벤트 타임스탬프를 256Hz 리샘플 기준으로 사용한다.
+            }
+            else -> return
+        }
 
         val currNs = event.timestamp
         val currX = event.values[0]
@@ -131,6 +172,12 @@ class SensorStreamHandler(
                 "x" to (interpX * MPS2_TO_MG).toDouble(),
                 "y" to (interpY * MPS2_TO_MG).toDouble(),
                 "z" to (interpZ * MPS2_TO_MG).toDouble(),
+                "rawX" to (latestRawX * MPS2_TO_MG).toDouble(),
+                "rawY" to (latestRawY * MPS2_TO_MG).toDouble(),
+                "rawZ" to (latestRawZ * MPS2_TO_MG).toDouble(),
+                "gravityX" to (latestGravityX * MPS2_TO_MG).toDouble(),
+                "gravityY" to (latestGravityY * MPS2_TO_MG).toDouble(),
+                "gravityZ" to (latestGravityZ * MPS2_TO_MG).toDouble(),
                 "noiseDba" to noiseCaptureHandler.latestDba
             )
 

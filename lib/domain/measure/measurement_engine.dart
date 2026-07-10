@@ -93,7 +93,11 @@ class MeasurementEngine {
         noiseSeries: [s.noiseDba],
         positionSeries: [0.0],
         speedSeries: [0.0],
-        accelSeries: [double.parse((s.z * SensorSample.mgToMetersPerSecondSquared).toStringAsFixed(2))],
+        accelSeries: [
+          double.parse(
+            (s.z * SensorSample.mgToMetersPerSecondSquared).toStringAsFixed(2),
+          ),
+        ],
         jerkSeries: [0.0],
         sampleRate: 256.0,
         usedDetectedRideSegment: false,
@@ -102,27 +106,35 @@ class MeasurementEngine {
       );
     }
 
-    // 1. 기준선 보정
-    final correctedSamples = SignalFilters.applyBaselineCorrection(
-      _buffer,
+    // 1. 거리/속도용 모션 소스 구성 및 기준선 보정
+    final motionSourceSamples = _buildMotionSourceSamples(_buffer);
+    final correctedMotionSamples = SignalFilters.applyBaselineCorrection(
+      motionSourceSamples,
       baselineSec: config.baselineSec,
     );
 
     // 2. 실측 샘플레이트 도출
-    final double sampleRate =
-        SignalFilters.estimateSampleRate(_buffer);
+    final double sampleRate = SignalFilters.estimateSampleRate(_buffer);
 
-    // 3. 성분 분리 (Motion vs Vibration) - Aptp 경로는 기준선 보정 미적용 (원신호 _buffer 직접 분리)
-    // Aptp 경로는 baseline 보정 미적용: P2P는 DC 불변 + 이동평균 LPF의 edge effect와 상호작용해 Z 과소산출 유발. 적분 경로만 baseline 적용.
+    // 3. 진동용 성분 분리
+    // 거리/속도 적분과 분리하여 출발·정지 저주파 이동 성분을 제거한 신호로 Aptp를 산출한다.
     final sep = SignalFilters.separateMotionAndVibration(
       _buffer,
       sampleRate: sampleRate,
-      cutoffHz: config.motionLowpassCutoffHz,
+      cutoffHz: config.vibrationHighpassCutoffHz,
+      cutoffHzX: config.vibrationHighpassCutoffHzX,
+      cutoffHzY: config.vibrationHighpassCutoffHzY,
+      cutoffHzZ: config.vibrationHighpassCutoffHzZ,
+      lowpassCutoffHz: config.vibrationLowpassCutoffHz,
+      lowpassCutoffHzX: config.vibrationLowpassCutoffHzX,
+      lowpassCutoffHzY: config.vibrationLowpassCutoffHzY,
+      lowpassCutoffHzZ: config.vibrationLowpassCutoffHzZ,
     );
 
-    // 4. 수직축 적분 (속도, 거리, 저크) - 기준선 보정된 원신호(correctedSamples) 기준
+    // 4. 수직축 적분 (속도, 거리, 저크)
+    // 진동용 linear acceleration과 분리하여, 가능하면 raw accelerometer - gravity 기반 모션 성분을 사용한다.
     final integ = MotionIntegrator.integrate(
-      correctedSamples,
+      correctedMotionSamples,
       sampleRate: sampleRate,
     );
 
@@ -136,9 +148,15 @@ class MeasurementEngine {
     );
 
     // 6. 정속 구간 검출 (Constant Speed Detection)
-    final int safeEnd = mathMin(rideRes.endIndex, integ.displaySpeedSeriesMs.length - 1);
+    final int safeEnd = mathMin(
+      rideRes.endIndex,
+      integ.displaySpeedSeriesMs.length - 1,
+    );
     final int safeStart = mathMin(rideRes.startIndex, safeEnd);
-    final rideSpeedSub = integ.displaySpeedSeriesMs.sublist(safeStart, safeEnd + 1);
+    final rideSpeedSub = integ.displaySpeedSeriesMs.sublist(
+      safeStart,
+      safeEnd + 1,
+    );
 
     final constRes = RideDetector.detectConstantSpeedRange(
       rideRes.samples,
@@ -147,9 +165,50 @@ class MeasurementEngine {
     );
 
     // 7. 지표 산출 (Aptp, noiseMax)
+    final int rawRideStart = mathMax(0, rideRes.startIndex);
+    final int rawRideEnd = mathMin(rideRes.endIndex, _buffer.length - 1);
+    final rawRideSamples = _buffer.sublist(rawRideStart, rawRideEnd + 1);
+    final int rawConstStart = mathMin(
+      constRes.startIndex,
+      rawRideSamples.length - 1,
+    );
+    final int rawConstEnd = mathMin(
+      constRes.endIndex,
+      rawRideSamples.length - 1,
+    );
+    final rawConstSamples = rawRideSamples.sublist(
+      rawConstStart,
+      rawConstEnd + 1,
+    );
+
+    final rideX = rideRes.samples.map((s) => s.x).toList();
+    final rideY = rideRes.samples.map((s) => s.y).toList();
+    final rideZ = rideRes.samples.map((s) => s.z).toList();
     final constX = constRes.samples.map((s) => s.x).toList();
     final constY = constRes.samples.map((s) => s.y).toList();
     final constZ = constRes.samples.map((s) => s.z).toList();
+    final rawRideX = rawRideSamples.map((s) => s.x).toList();
+    final rawRideY = rawRideSamples.map((s) => s.y).toList();
+    final rawRideZ = rawRideSamples.map((s) => s.z).toList();
+    final rawConstX = rawConstSamples.map((s) => s.x).toList();
+    final rawConstY = rawConstSamples.map((s) => s.y).toList();
+    final rawConstZ = rawConstSamples.map((s) => s.z).toList();
+    final constantRatio = sep.vibration.isEmpty
+        ? 0.0
+        : constRes.samples.length / sep.vibration.length;
+
+    final fullXPtp = VibrationMetrics.calculateP2P(rideX);
+    final fullYPtp = VibrationMetrics.calculateP2P(rideY);
+    final fullZPtp = VibrationMetrics.calculateP2P(rideZ);
+    final constantXPtp = VibrationMetrics.calculateP2P(constX);
+    final constantYPtp = VibrationMetrics.calculateP2P(constY);
+    final constantZPtp = VibrationMetrics.calculateP2P(constZ);
+    final preFilterFullXPtp = VibrationMetrics.calculateP2P(rawRideX);
+    final preFilterFullYPtp = VibrationMetrics.calculateP2P(rawRideY);
+    final preFilterFullZPtp = VibrationMetrics.calculateP2P(rawRideZ);
+    final preFilterConstantXPtp = VibrationMetrics.calculateP2P(rawConstX);
+    final preFilterConstantYPtp = VibrationMetrics.calculateP2P(rawConstY);
+    final preFilterConstantZPtp = VibrationMetrics.calculateP2P(rawConstZ);
 
     final double xAptp = VibrationMetrics.calculateAptp(
       constX,
@@ -170,8 +229,9 @@ class MeasurementEngine {
       percentile: config.aptpPercentile,
     );
 
-    final double noiseMax =
-        VibrationMetrics.calculateNoiseMax(constRes.samples);
+    final double noiseMax = VibrationMetrics.calculateNoiseMax(
+      constRes.samples,
+    );
 
     // 시계열 데이터 구성 (전체 구간 기준 표시용)
     final xSeries = sep.vibration.map((s) => s.x).toList();
@@ -193,6 +253,18 @@ class MeasurementEngine {
       noiseMax: double.parse(noiseMax.toStringAsFixed(1)),
       distance: double.parse(integ.distanceM.toStringAsFixed(2)),
       maxSpeed: double.parse(integ.maxSpeedMs.toStringAsFixed(2)),
+      fullXPtp: fullXPtp,
+      fullYPtp: fullYPtp,
+      fullZPtp: fullZPtp,
+      constantXPtp: constantXPtp,
+      constantYPtp: constantYPtp,
+      constantZPtp: constantZPtp,
+      preFilterFullXPtp: preFilterFullXPtp,
+      preFilterFullYPtp: preFilterFullYPtp,
+      preFilterFullZPtp: preFilterFullZPtp,
+      preFilterConstantXPtp: preFilterConstantXPtp,
+      preFilterConstantYPtp: preFilterConstantYPtp,
+      preFilterConstantZPtp: preFilterConstantZPtp,
       xSeries: xSeries,
       ySeries: ySeries,
       zSeries: zSeries,
@@ -212,9 +284,96 @@ class MeasurementEngine {
       sampleRate: sampleRate,
       usedDetectedRideSegment: rideRes.usedDetectedRideSegment,
       constantSpeedRange: constRes.rangeSummary,
+      usedDetectedConstantSpeed: constRes.isDetected,
+      constantSpeedSampleCount: constRes.samples.length,
+      totalVibrationSampleCount: sep.vibration.length,
+      constantSpeedRatio: constantRatio,
       rawSamples: List.from(_buffer),
+      debugMetrics: _buildDebugMetrics(
+        config: config,
+        sampleRate: sampleRate,
+        linearSamples: _buffer,
+        motionSamples: correctedMotionSamples,
+        integ: integ,
+      ),
     );
   }
 
   static int mathMin(int a, int b) => a < b ? a : b;
+  static int mathMax(int a, int b) => a > b ? a : b;
+
+  List<SensorSample> _buildMotionSourceSamples(List<SensorSample> samples) {
+    return samples
+        .map(
+          (sample) => SensorSample(
+            tsUs: sample.tsUs,
+            x: sample.motionX,
+            y: sample.motionY,
+            z: sample.motionZ,
+            noiseDba: sample.noiseDba,
+            rawX: sample.rawX,
+            rawY: sample.rawY,
+            rawZ: sample.rawZ,
+            gravityX: sample.gravityX,
+            gravityY: sample.gravityY,
+            gravityZ: sample.gravityZ,
+          ),
+        )
+        .toList();
+  }
+
+  Map<String, double> _buildDebugMetrics({
+    required MetricsConfig config,
+    required double sampleRate,
+    required List<SensorSample> linearSamples,
+    required List<SensorSample> motionSamples,
+    required IntegrationResult integ,
+  }) {
+    final linearZValues = linearSamples.map((sample) => sample.z).toList();
+    final motionZValues = motionSamples.map((sample) => sample.z).toList();
+    final rawZValues = linearSamples
+        .where((sample) => sample.rawZ != null)
+        .map((sample) => sample.rawZ!)
+        .toList();
+    final gravityZValues = linearSamples
+        .where((sample) => sample.gravityZ != null)
+        .map((sample) => sample.gravityZ!)
+        .toList();
+
+    return {
+      'sampleRate': sampleRate,
+      'linearZMin': _minOrZero(linearZValues),
+      'linearZMax': _maxOrZero(linearZValues),
+      'rawZMin': _minOrZero(rawZValues),
+      'rawZMax': _maxOrZero(rawZValues),
+      'gravityZMin': _minOrZero(gravityZValues),
+      'gravityZMax': _maxOrZero(gravityZValues),
+      'motionZMin': _minOrZero(motionZValues),
+      'motionZMax': _maxOrZero(motionZValues),
+      'maxAccelMs2': _maxAbsOrZero(integ.accelSeriesMs2),
+      'velocityMax': integ.maxSpeedMs,
+      'distanceRaw': integ.distanceM,
+      'vibrationHighpassX': config.vibrationHighpassCutoffHzX,
+      'vibrationHighpassY': config.vibrationHighpassCutoffHzY,
+      'vibrationHighpassZ': config.vibrationHighpassCutoffHzZ,
+      'vibrationLowpassX': config.vibrationLowpassCutoffHzX,
+      'vibrationLowpassY': config.vibrationLowpassCutoffHzY,
+      'vibrationLowpassZ': config.vibrationLowpassCutoffHzZ,
+    };
+  }
+
+  double _minOrZero(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    return values.reduce((a, b) => a < b ? a : b);
+  }
+
+  double _maxOrZero(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    return values.reduce((a, b) => a > b ? a : b);
+  }
+
+  double _maxAbsOrZero(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    return values.map((value) => value.abs()).reduce((a, b) => a > b ? a : b);
+  }
 }

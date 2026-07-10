@@ -8,6 +8,16 @@ class MetricsConfig {
   /// 저역통과필터(LPF) 차단 주파수 (Hz): 이동 성분(Motion) 분리 기준 (기본 0.1 Hz)
   final double motionLowpassCutoffHz;
 
+  /// 진동 산출용 high-pass 성격 분리 컷오프 (Hz): 출발/정지 저주파 성분 제거
+  final double vibrationHighpassCutoffHz;
+  final double vibrationHighpassCutoffHzX;
+  final double vibrationHighpassCutoffHzY;
+  final double vibrationHighpassCutoffHzZ;
+  final double vibrationLowpassCutoffHz;
+  final double vibrationLowpassCutoffHzX;
+  final double vibrationLowpassCutoffHzY;
+  final double vibrationLowpassCutoffHzZ;
+
   /// 주행 구간 감지 속도 임계값 (m/s): |v(t)| > 0.05 m/s 인 구간을 주행 중으로 인식
   final double rideSpeedThreshold;
 
@@ -50,6 +60,14 @@ class MetricsConfig {
   const MetricsConfig({
     this.baselineSec = 1.0,
     this.motionLowpassCutoffHz = 0.1,
+    this.vibrationHighpassCutoffHz = 0.5,
+    double? vibrationHighpassCutoffHzX,
+    double? vibrationHighpassCutoffHzY,
+    double? vibrationHighpassCutoffHzZ,
+    this.vibrationLowpassCutoffHz = 10.0,
+    double? vibrationLowpassCutoffHzX,
+    double? vibrationLowpassCutoffHzY,
+    double? vibrationLowpassCutoffHzZ,
     this.rideSpeedThreshold = 0.05,
     this.rideActivityPaddingSec = 0.8,
     this.minRideDurationSec = 3.0,
@@ -66,9 +84,20 @@ class MetricsConfig {
     this.minMeasureDurationSec = 8.0,
     this.minValidMaxSpeed = 0.1,
     this.minValidDistance = 0.5,
-  })  : aptpWindowSecX = aptpWindowSecX ?? aptpWindowSec,
-        aptpWindowSecY = aptpWindowSecY ?? aptpWindowSec,
-        aptpWindowSecZ = aptpWindowSecZ ?? aptpWindowSec;
+  }) : vibrationHighpassCutoffHzX =
+           vibrationHighpassCutoffHzX ?? vibrationHighpassCutoffHz,
+       vibrationHighpassCutoffHzY =
+           vibrationHighpassCutoffHzY ?? vibrationHighpassCutoffHz,
+       vibrationHighpassCutoffHzZ = vibrationHighpassCutoffHzZ ?? 1.0,
+       vibrationLowpassCutoffHzX =
+           vibrationLowpassCutoffHzX ?? vibrationLowpassCutoffHz,
+       vibrationLowpassCutoffHzY =
+           vibrationLowpassCutoffHzY ?? vibrationLowpassCutoffHz,
+       vibrationLowpassCutoffHzZ =
+           vibrationLowpassCutoffHzZ ?? vibrationLowpassCutoffHz,
+       aptpWindowSecX = aptpWindowSecX ?? aptpWindowSec,
+       aptpWindowSecY = aptpWindowSecY ?? aptpWindowSec,
+       aptpWindowSecZ = aptpWindowSecZ ?? aptpWindowSec;
 
   /// 기본 전역 인스턴스
   static const MetricsConfig defaultConfig = MetricsConfig();

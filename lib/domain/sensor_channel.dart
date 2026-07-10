@@ -6,7 +6,7 @@ export 'measure/sensor_sample.dart';
 
 /// P11 · 안드로이드 Kotlin 센서 채널 관리자 (구조 및 인터페이스 정의)
 /// - 나중에 UI(S4 MeasuringScreen) 및 기능 모듈 통합을 고려하여 설계된 뼈대 구조
-/// 
+///
 /// [기술적 대비 및 주의사항]
 /// 1. S22 샘플링 주파수 보간:
 ///    - 안드로이드 SensorManager에서 SENSOR_DELAY_FASTEST 또는 3906㎲(256Hz) 요청 시
@@ -17,10 +17,12 @@ export 'measure/sensor_sample.dart';
 ///    - AudioRecord 버퍼 RMS 계산 후 dBA 환산 시 계측기와의 오차 보정을 위해
 ///      startCapture 시 [calibrationOffsetDba] 파라미터로 기준 오프셋 주입 구조 마련.
 class SensorChannelManager {
-  static const MethodChannel _methodChannel =
-      MethodChannel('com.otis.vibration_checker/sensors_method');
-  static const EventChannel _eventChannel =
-      EventChannel('com.otis.vibration_checker/sensors_stream');
+  static const MethodChannel _methodChannel = MethodChannel(
+    'com.otis.vibration_checker/sensors_method',
+  );
+  static const EventChannel _eventChannel = EventChannel(
+    'com.otis.vibration_checker/sensors_stream',
+  );
 
   final bool useMock;
 
@@ -34,7 +36,11 @@ class SensorChannelManager {
         .receiveBroadcastStream()
         .expand<SensorSample>((event) {
           if (event is List) {
-            return event.map((e) => e is Map ? SensorSample.fromMap(e) : const SensorSample(tsUs: 0, x: 0, y: 0, z: 0, noiseDba: 0));
+            return event.map(
+              (e) => e is Map
+                  ? SensorSample.fromMap(e)
+                  : const SensorSample(tsUs: 0, x: 0, y: 0, z: 0, noiseDba: 0),
+            );
           } else if (event is Map) {
             return [SensorSample.fromMap(event)];
           }
@@ -47,8 +53,9 @@ class SensorChannelManager {
   Future<bool> checkSensorsAvailable() async {
     if (useMock) return false;
     try {
-      final bool? available =
-          await _methodChannel.invokeMethod<bool>('checkAvailable');
+      final bool? available = await _methodChannel.invokeMethod<bool>(
+        'checkAvailable',
+      );
       return available ?? false;
     } catch (_) {
       // fail-safe: 네이티브 확인 불가 시 불가용으로 간주.
@@ -62,8 +69,9 @@ class SensorChannelManager {
   Future<bool> requestAudioPermission() async {
     if (useMock) return true;
     try {
-      final bool? granted =
-          await _methodChannel.invokeMethod<bool>('requestAudioPermission');
+      final bool? granted = await _methodChannel.invokeMethod<bool>(
+        'requestAudioPermission',
+      );
       return granted ?? false;
     } catch (_) {
       return true; // fallback for tests
@@ -90,7 +98,9 @@ class SensorChannelManager {
   /// 센서 캡처 중단
   Future<void> stopCapture() async {
     try {
-      await _methodChannel.invokeMethod('stopCapture');
+      await _methodChannel
+          .invokeMethod('stopCapture')
+          .timeout(const Duration(milliseconds: 500));
     } catch (_) {
       // fallback
     }
