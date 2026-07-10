@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:vibration_checker/domain/auth_repository.dart';
 
-import 'screens/measurement_screen.dart';
+import 'core/router.dart';
+import 'core/theme.dart';
 
-void main() {
-  runApp(const OtisVibrationApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthRepository.instance.getAutoLoginId();
+  runApp(const VibrationCheckerApp());
 }
 
-class OtisVibrationApp extends StatelessWidget {
-  const OtisVibrationApp({super.key});
+class VibrationCheckerApp extends StatelessWidget {
+  const VibrationCheckerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'OTIS Vibration Prototype',
+    return MaterialApp.router(
+      title: 'OTIS 진동 측정',
+      color: AppColors.bg,
+      theme: buildAppTheme(),
+      routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-        useMaterial3: true,
-      ),
-      home: const MeasurementScreen(),
     );
   }
 }

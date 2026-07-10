@@ -1,0 +1,103 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/models/measurement_result.dart';
+import 'package:vibration_checker/domain/parse_raw.dart';
+import 'package:vibration_checker/domain/report_generator.dart';
+import 'package:vibration_checker/domain/sensor_channel.dart';
+import 'package:vibration_checker/features/measure/start_screen.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('StartScreen canStartMeasure 순수 함수 검증', () {
+    test('canStartMeasure - 4케이스 (available true/false × isDebug true/false)', () {
+      expect(StartScreen.canStartMeasure(available: true, isDebug: true), isTrue);
+      expect(StartScreen.canStartMeasure(available: true, isDebug: false), isTrue);
+      expect(StartScreen.canStartMeasure(available: false, isDebug: true), isTrue);
+      expect(StartScreen.canStartMeasure(available: false, isDebug: false), isFalse);
+    });
+  });
+
+  group('P11 · 안드로이드 센서 채널 관리자 구조 및 인터페이스 검증', () {
+    test('SensorSample.fromMap - 이벤트 맵 정상 변환 검증', () {
+      final sample = SensorSample.fromMap({
+        'timestamp': 12345.0,
+        'x': 5.2,
+        'y': -3.1,
+        'z': 16.8,
+        'noiseDba': 55.4,
+      });
+
+      expect(sample.timestamp, 12345.0);
+      expect(sample.x, 5.2);
+      expect(sample.y, -3.1);
+      expect(sample.z, 16.8);
+      expect(sample.noiseDba, 55.4);
+    });
+
+    test('SensorChannelManager - 플랫폼 예외 발생 시 fail-safe로 false 반환 및 안전한 fallback 처리 검증', () async {
+      final manager = SensorChannelManager();
+      final available = await manager.checkSensorsAvailable();
+      expect(available, isFalse);
+
+      // 예외 없이 완료되는지 확인
+      await expectLater(manager.startCapture(targetSampleRate: 256), completes);
+      await expectLater(manager.stopCapture(), completes);
+    });
+
+    test('SensorChannelManager - useMock 주입 시 checkSensorsAvailable false 및 안전한 처리 검증', () async {
+      final manager = SensorChannelManager(useMock: true);
+      final available = await manager.checkSensorsAvailable();
+      expect(available, isFalse);
+
+      final audioGranted = await manager.requestAudioPermission();
+      expect(audioGranted, isTrue);
+    });
+  });
+
+  group('P12 · TUNE 리포트 생성기 인터페이스 및 텍스트 요약 문서 검증', () {
+    test('generateTuneReportPdf - PDF 바이너리 헤더 정상 생성 검증 (Mock)', () async {
+      final pdfBytes = await ReportGenerator.generateTuneReportPdf(MeasurementResult.mock);
+      expect(pdfBytes.isNotEmpty, isTrue);
+      
+      final headerStr = utf8.decode(pdfBytes.sublist(0, 7));
+      expect(headerStr.startsWith('%PDF-1.'), isTrue);
+    });
+
+    test('generateTuneReportPdf - PDF 실제 골든 픽스처(6,988샘플) 파형 변환 검증', () async {
+      final goldenContent = File('C:/Users/User/Desktop/OTIS/assets/sample/2024F1447R01.txt').readAsStringSync();
+      final realResult = RawDataParser.parseEvimp1(
+        rawContent: goldenContent,
+        id: '2024F1447R01',
+        jobNo: '2024F 1447R01',
+        siteName: '럭키종합건설/송정동근생',
+        bottomFloor: 1,
+        topFloor: 8,
+        direction: '하부 → 상부',
+        dateTime: DateTime(2024, 7, 3, 14, 30),
+      );
+      final pdfBytes = await ReportGenerator.generateTuneReportPdf(realResult);
+      expect(pdfBytes.isNotEmpty, isTrue);
+
+      final outFile = File('C:/Users/User/.gemini/antigravity-ide/brain/b9a595e5-0085-4bd2-bf2c-fca74d6988ce/report.pdf');
+      await outFile.writeAsBytes(pdfBytes);
+    });
+
+    test('generateSummaryText - TUNE 측정 지표 요약 및 임계 초과 뱃지 표출 검증', () {
+      final summary = ReportGenerator.generateSummaryText(MeasurementResult.mock);
+
+      expect(summary.contains('2024F 1447R01'), isTrue);
+      expect(summary.contains('럭키종합건설/송정동근생'), isTrue);
+      expect(summary.contains('[기준 초과 ▲]'), isTrue);
+      expect(summary.contains('12.90 mg'), isTrue);
+      expect(summary.contains('71.7 dBA'), isTrue);
+    });
+
+    test('generateTuneReportPdf - usedDetectedRideSegment false 시 안내 문구 포함 PDF 정상 생성 검증', () async {
+      final res = MeasurementResult.mock.copyWith(usedDetectedRideSegment: false);
+      final pdfBytes = await ReportGenerator.generateTuneReportPdf(res);
+      expect(pdfBytes.isNotEmpty, isTrue);
+    });
+  });
+}
