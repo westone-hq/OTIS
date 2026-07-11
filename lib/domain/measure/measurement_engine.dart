@@ -129,6 +129,11 @@ class MeasurementEngine {
       lowpassCutoffHzX: config.vibrationLowpassCutoffHzX,
       lowpassCutoffHzY: config.vibrationLowpassCutoffHzY,
       lowpassCutoffHzZ: config.vibrationLowpassCutoffHzZ,
+      filterTypeX: config.vibrationFilterTypeX,
+      filterTypeY: config.vibrationFilterTypeY,
+      filterTypeZ: config.vibrationFilterTypeZ,
+      wdTransitionHz: config.wdTransitionHz,
+      wdTransitionQ: config.wdTransitionQ,
     );
 
     // 4. 수직축 적분 (속도, 거리, 저크)
