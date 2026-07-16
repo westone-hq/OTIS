@@ -117,9 +117,14 @@ class MeasurementEngine {
     final double sampleRate = SignalFilters.estimateSampleRate(_buffer);
 
     // 3. 진동용 성분 분리
-    // 거리/속도 적분과 분리하여 출발·정지 저주파 이동 성분을 제거한 신호로 Aptp를 산출한다.
-    final sep = SignalFilters.separateMotionAndVibration(
+    // linear acceleration에도 기준선 보정을 적용한 뒤 필터링한다.
+    // (TYPE_LINEAR_ACCELERATION 잔류 DC/드리프트가 HP 필터를 통과하며 P-P를 키우는 것을 방지)
+    final vibrationSourceSamples = SignalFilters.applyBaselineCorrection(
       _buffer,
+      baselineSec: config.baselineSec,
+    );
+    final sep = SignalFilters.separateMotionAndVibration(
+      vibrationSourceSamples,
       sampleRate: sampleRate,
       cutoffHz: config.vibrationHighpassCutoffHz,
       cutoffHzX: config.vibrationHighpassCutoffHzX,
@@ -134,6 +139,11 @@ class MeasurementEngine {
       filterTypeZ: config.vibrationFilterTypeZ,
       wdTransitionHz: config.wdTransitionHz,
       wdTransitionQ: config.wdTransitionQ,
+      wkTransitionHz: config.wkTransitionHz,
+      wkTransitionQ: config.wkTransitionQ,
+      wkUpwardStepHz: config.wkUpwardStepHz,
+      wkUpwardStepHighHz: config.wkUpwardStepHighHz,
+      wkUpwardStepQ: config.wkUpwardStepQ,
     );
 
     // 4. 수직축 적분 (속도, 거리, 저크)

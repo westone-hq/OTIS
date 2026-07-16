@@ -43,7 +43,14 @@ void main() {
       final rawContent = await rawFile.readAsString();
       expect(rawContent, contains('EVIMP1'));
       expect(rawContent, contains('256'));
-      expect(rawContent, contains('1 2 3 40'));
+      expect(
+        rawContent,
+        contains(
+          '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ',
+        ),
+      );
+      expect(rawContent, contains('0 1 2 3 40'));
+      expect(rawContent, contains('3906 1.5 2.5 3.5 41'));
     });
 
     test('list() - 여러 측정 결과 저장 시 최신 일시 순(내림차순)으로 정렬하여 반환 검증', () async {

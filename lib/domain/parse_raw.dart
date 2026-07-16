@@ -5,7 +5,8 @@ import 'models/measurement_result.dart';
 /// P9 · EVIMP1 형식 RAW 텍스트 파일 파싱, 직렬화(writer) 및 시계열 변환 유틸
 class RawDataParser {
   /// EVIMP1 문자열 데이터를 파싱하여 MeasurementResult 인스턴스를 반환한다.
-  /// - 헤더(EVIMP1, 샘플링 레이트) 인식 및 4컬럼(X, Y, Z 진동 mg + 소음 dBA) 파싱
+  /// - 헤더(EVIMP1, 샘플링 레이트) 인식
+  /// - legacy 4컬럼(x y z noise) 및 확장 11컬럼(tsUs x y z noise rawX rawY rawZ gravityX gravityY gravityZ) 파싱
   /// - Phase 1 신규 통합 엔진(MeasurementEngine)을 연동하여 지표 및 시계열 도출
   static MeasurementResult parseEvimp1({
     required String rawContent,
@@ -36,7 +37,8 @@ class RawDataParser {
 
   /// EVIMP1 문자열을 파싱하여 SensorSample 리스트 및 샘플레이트를 반환
   static ({List<SensorSample> samples, int sampleRate}) parseEvimp1ToSamples(
-      String rawContent) {
+    String rawContent,
+  ) {
     final lines = rawContent.split(RegExp(r'\r?\n'));
     int sampleRate = 256;
     final List<SensorSample> samples = [];
@@ -55,7 +57,37 @@ class RawDataParser {
       }
 
       final parts = line.split(RegExp(r'\s+'));
-      if (parts.length >= 4) {
+      if (parts.length >= 11) {
+        final tsUs =
+            int.tryParse(parts[0]) ?? double.tryParse(parts[0])?.round();
+        final x = double.tryParse(parts[1]);
+        final y = double.tryParse(parts[2]);
+        final z = double.tryParse(parts[3]);
+        final noise = double.tryParse(parts[4]);
+
+        if (tsUs != null &&
+            x != null &&
+            y != null &&
+            z != null &&
+            noise != null) {
+          samples.add(
+            SensorSample(
+              tsUs: tsUs,
+              x: x,
+              y: y,
+              z: z,
+              noiseDba: noise,
+              rawX: _parseNullableDouble(parts[5]),
+              rawY: _parseNullableDouble(parts[6]),
+              rawZ: _parseNullableDouble(parts[7]),
+              gravityX: _parseNullableDouble(parts[8]),
+              gravityY: _parseNullableDouble(parts[9]),
+              gravityZ: _parseNullableDouble(parts[10]),
+            ),
+          );
+          index++;
+        }
+      } else if (parts.length >= 4) {
         final x = double.tryParse(parts[0]);
         final y = double.tryParse(parts[1]);
         final z = double.tryParse(parts[2]);
@@ -64,13 +96,7 @@ class RawDataParser {
         if (x != null && y != null && z != null && noise != null) {
           final int dtUs = (1000000 / sampleRate).round();
           samples.add(
-            SensorSample(
-              tsUs: index * dtUs,
-              x: x,
-              y: y,
-              z: z,
-              noiseDba: noise,
-            ),
+            SensorSample(tsUs: index * dtUs, x: x, y: y, z: z, noiseDba: noise),
           );
           index++;
         }
@@ -78,23 +104,43 @@ class RawDataParser {
     }
 
     if (samples.isEmpty) {
-      samples.add(const SensorSample(
-          tsUs: 0, x: 0.0, y: 0.0, z: 0.0, noiseDba: 0.0));
+      samples.add(
+        const SensorSample(tsUs: 0, x: 0.0, y: 0.0, z: 0.0, noiseDba: 0.0),
+      );
     }
 
     return (samples: samples, sampleRate: sampleRate);
   }
 
   /// SensorSample 리스트 및 샘플레이트를 EVIMP1 형식 문자열로 직렬화 (writer)
-  static String writeEvimp1(List<SensorSample> samples, {int sampleRate = 256}) {
+  static String writeEvimp1(
+    List<SensorSample> samples, {
+    int sampleRate = 256,
+  }) {
     final buffer = StringBuffer();
     buffer.writeln('EVIMP1');
     buffer.writeln(sampleRate);
+    buffer.writeln(
+      '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ',
+    );
     for (final s in samples) {
       buffer.writeln(
-          '${_formatNum(s.x)} ${_formatNum(s.y)} ${_formatNum(s.z)} ${_formatNum(s.noiseDba)}');
+        '${s.tsUs} ${_formatNum(s.x)} ${_formatNum(s.y)} ${_formatNum(s.z)} ${_formatNum(s.noiseDba)} '
+        '${_formatNullableNum(s.rawX)} ${_formatNullableNum(s.rawY)} ${_formatNullableNum(s.rawZ)} '
+        '${_formatNullableNum(s.gravityX)} ${_formatNullableNum(s.gravityY)} ${_formatNullableNum(s.gravityZ)}',
+      );
     }
     return buffer.toString();
+  }
+
+  static double? _parseNullableDouble(String val) {
+    if (val == 'null' || val == '-' || val.isEmpty) return null;
+    return double.tryParse(val);
+  }
+
+  static String _formatNullableNum(double? val) {
+    if (val == null) return 'null';
+    return _formatNum(val);
   }
 
   static String _formatNum(double val) {

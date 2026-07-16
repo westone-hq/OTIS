@@ -1,18 +1,21 @@
 /// 축별 진동 성분 필터 종류
 enum VibrationFilterType {
-  /// 2차 Butterworth band-limit (HP + LP), 인과 biquad 적용 — Z축
+  /// 2차 Butterworth band-limit (HP + LP), 인과 biquad 적용 — 레거시 Z축
   butterworthBandLimit,
 
   /// ISO 8041 Wd(수평 진동 가중) 필터 캐스케이드: band-limit HP → band-limit LP → 가속도-속도 천이 — X/Y축
   isoWdWeighting,
+
+  /// ISO 8041 Wk(수직 좌석 진동 가중) 필터 캐스케이드: band-limit HP → LP → 천이 → upward-step — Z축
+  isoWkWeighting,
 }
 
 /// 측정 엔진 필터, 윈도우, 임계값 파라미터 단일 정의 (OI-1 캘리브레이션 단일 지점)
 /// - 모든 필터 및 임계 수치는 본 파일에만 정의되어야 하며, 타 파일에 리터럴 하드코딩 금지
 /// - 이 수치들은 실패 검증으로 확정됨. 변경 시 연구노트 대조 필수. X/Y Aptp는 OI-1(Phase7 현장 캘리브레이션) 대기 중이라 미확정.
 /// - 진동 지표(Aptp) 필터 아키텍처: X/Y축은 ISO 8041 Wd(수평 진동 가중) 필터 캐스케이드,
-///   Z축은 2차 Butterworth band-limit(HP 1.0Hz~LP 30.0Hz)를 적용. 모두 인과(causal) biquad
-///   1회 순방향 적용이며, 과거 이동평균 기반 band-limit(HP/LP)은 더 이상 사용하지 않는다.
+///   Z축은 2차 Butterworth band-limit(HP 1.0Hz~LP 30.0Hz)를 적용. (ISO 8041 Wk는
+///   isoWkWeighting으로 선택 가능). 모두 인과(causal) biquad 1회 순방향 적용.
 ///   거리/속도 산출용 motion 분리(motionLowpassCutoffHz)는 기존과 동일하게 이동평균을 사용한다.
 class MetricsConfig {
   /// 기준선 보정 적용 시간 (초): 측정 시작 후 처음 1.0초간의 평균을 0점으로 잡음
@@ -42,7 +45,22 @@ class MetricsConfig {
   final VibrationFilterType vibrationFilterTypeY;
   final VibrationFilterType vibrationFilterTypeZ;
 
-  /// ISO 8041 Wd 가속도-속도 천이(transition) 필터 특성 주파수 (f3 = f4, Hz) — X/Y축 전용
+  /// ISO 8041 Wk 가속도-속도 천이 필터 특성 주파수 (f3 = f4, Hz) — Z축 전용
+  final double wkTransitionHz;
+
+  /// ISO 8041 Wk 가속도-속도 천이 필터 Q값 (Q4) — Z축 전용
+  final double wkTransitionQ;
+
+  /// ISO 8041 Wk upward-step 필터 f5 (Hz) — Z축 전용
+  final double wkUpwardStepHz;
+
+  /// ISO 8041 Wk upward-step 필터 f6 (Hz) — Z축 전용
+  final double wkUpwardStepHighHz;
+
+  /// ISO 8041 Wk upward-step 필터 Q5/Q6 — Z축 전용
+  final double wkUpwardStepQ;
+
+  /// ISO 8041 Wd 가속도-속도 천이 필터 특성 주파수 (f3 = f4, Hz) — X/Y축 전용
   /// H_t(s) = (ω4²/ω3)·(s + ω3) / (s² + (ω4/Q4)·s + ω4²), ω = 2πf
   final double wdTransitionHz;
 
@@ -120,6 +138,11 @@ class MetricsConfig {
     this.vibrationFilterTypeZ = VibrationFilterType.butterworthBandLimit,
     this.wdTransitionHz = 2.0,
     this.wdTransitionQ = 0.63,
+    this.wkTransitionHz = 12.5,
+    this.wkTransitionQ = 0.63,
+    this.wkUpwardStepHz = 2.37,
+    this.wkUpwardStepHighHz = 3.3,
+    this.wkUpwardStepQ = 0.91,
   }) : vibrationHighpassCutoffHzX =
            vibrationHighpassCutoffHzX ?? 0.4, // ISO 8041 Wd f1
        vibrationHighpassCutoffHzY =

@@ -43,13 +43,20 @@ class SignalFilters {
   }) {
     if (samples.isEmpty) return [];
     if (samples.length == 1) {
+      final s = samples.first;
       return [
         SensorSample(
-          tsUs: samples.first.tsUs,
+          tsUs: s.tsUs,
           x: 0.0,
           y: 0.0,
           z: 0.0,
-          noiseDba: samples.first.noiseDba,
+          noiseDba: s.noiseDba,
+          rawX: s.rawX,
+          rawY: s.rawY,
+          rawZ: s.rawZ,
+          gravityX: s.gravityX,
+          gravityY: s.gravityY,
+          gravityZ: s.gravityZ,
         ),
       ];
     }
@@ -84,6 +91,12 @@ class SignalFilters {
             y: s.y - avgY,
             z: s.z - avgZ,
             noiseDba: s.noiseDba,
+            rawX: s.rawX,
+            rawY: s.rawY,
+            rawZ: s.rawZ,
+            gravityX: s.gravityX,
+            gravityY: s.gravityY,
+            gravityZ: s.gravityZ,
           ),
         )
         .toList();
@@ -134,6 +147,11 @@ class SignalFilters {
     VibrationFilterType filterTypeZ = VibrationFilterType.butterworthBandLimit,
     double wdTransitionHz = 2.0,
     double wdTransitionQ = 0.63,
+    double wkTransitionHz = 12.5,
+    double wkTransitionQ = 0.63,
+    double wkUpwardStepHz = 2.37,
+    double wkUpwardStepHighHz = 3.3,
+    double wkUpwardStepQ = 0.91,
   }) {
     if (samples.isEmpty) {
       return const MotionAndVibration(motion: [], vibration: []);
@@ -200,6 +218,11 @@ class SignalFilters {
       lowpassHz: effectiveLowpassZ,
       wdTransitionHz: wdTransitionHz,
       wdTransitionQ: wdTransitionQ,
+      wkTransitionHz: wkTransitionHz,
+      wkTransitionQ: wkTransitionQ,
+      wkUpwardStepHz: wkUpwardStepHz,
+      wkUpwardStepHighHz: wkUpwardStepHighHz,
+      wkUpwardStepQ: wkUpwardStepQ,
     );
 
     final List<SensorSample> motion = [];
@@ -350,6 +373,7 @@ class SignalFilters {
   /// 축 1개의 진동 성분 계산: 필터 종류에 따라 분기
   /// - butterworthBandLimit: HP(highpassHz) → 선택적 LP(lowpassHz)
   /// - isoWdWeighting: HP(highpassHz) → LP(lowpassHz) → 가속도-속도 천이(wdTransitionHz, wdTransitionQ)
+  /// - isoWkWeighting: HP → LP → Wk 천이(12.5Hz) → upward-step(2.37/3.3Hz)
   static List<double> _computeAxisVibration(
     List<double> raw, {
     required double sampleRate,
@@ -358,6 +382,11 @@ class SignalFilters {
     double? lowpassHz,
     required double wdTransitionHz,
     required double wdTransitionQ,
+    double wkTransitionHz = 12.5,
+    double wkTransitionQ = 0.63,
+    double wkUpwardStepHz = 2.37,
+    double wkUpwardStepHighHz = 3.3,
+    double wkUpwardStepQ = 0.91,
   }) {
     final hp = _applyButterworthHighpass(
       raw,
@@ -374,6 +403,21 @@ class SignalFilters {
         sampleRate: sampleRate,
         transitionHz: wdTransitionHz,
         transitionQ: wdTransitionQ,
+      );
+    }
+    if (filterType == VibrationFilterType.isoWkWeighting) {
+      final transitioned = _applyWdTransition(
+        lp,
+        sampleRate: sampleRate,
+        transitionHz: wkTransitionHz,
+        transitionQ: wkTransitionQ,
+      );
+      return _applyWkUpwardStep(
+        transitioned,
+        sampleRate: sampleRate,
+        stepHz: wkUpwardStepHz,
+        stepHighHz: wkUpwardStepHighHz,
+        stepQ: wkUpwardStepQ,
       );
     }
     return lp;
@@ -446,6 +490,43 @@ class SignalFilters {
     return _applyBiquadCausal(
       values,
       _wdTransitionCoeffs(sampleRate, transitionHz, transitionQ),
+    );
+  }
+
+  /// ISO 8041 Wk upward-step 필터 계수
+  /// Hs(s) = (Q5·s² + ω5²) / (s² + (ω6/Q6)·s + ω6²)
+  static _BiquadCoeffs _wkUpwardStepCoeffs(
+    double sampleRate,
+    double stepHz,
+    double stepHighHz,
+    double stepQ,
+  ) {
+    final double omega5 = _prewarpOmega(stepHz, sampleRate);
+    final double omega6 = _prewarpOmega(stepHighHz, sampleRate);
+    return _bilinearTransform(
+      b2: stepQ,
+      b1: 0.0,
+      b0: omega5 * omega5,
+      a2: 1.0,
+      a1: omega6 / stepQ,
+      a0: omega6 * omega6,
+    );
+  }
+
+  static List<double> _applyWkUpwardStep(
+    List<double> values, {
+    required double sampleRate,
+    required double stepHz,
+    required double stepHighHz,
+    required double stepQ,
+  }) {
+    if (values.isEmpty) return [];
+    if (values.length <= 2 || stepHz <= 0.0 || stepHighHz <= 0.0) {
+      return List.from(values);
+    }
+    return _applyBiquadCausal(
+      values,
+      _wkUpwardStepCoeffs(sampleRate, stepHz, stepHighHz, stepQ),
     );
   }
 }
