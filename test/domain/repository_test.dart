@@ -20,7 +20,7 @@ void main() {
       }
     });
 
-    test('save() - raw.txt, meta.json, report.pdf 3개 파일 정상 생성 및 저장 검증', () async {
+    test('save() - raw.txt, 초별 xlsx, meta.json, report.pdf 정상 생성', () async {
       final mockResult = MeasurementResult.mock.copyWith(
         id: '2024F1447R01_20260704_120000',
         rawSamples: [
@@ -34,11 +34,21 @@ void main() {
 
       final metaFile = File('${dir.path}/meta.json');
       final rawFile = File('${dir.path}/raw.txt');
+      final excel256 = File('${dir.path}/EVIMP1_전체1초_초별분리_센서값_256.xlsx');
+      final excel128 = File('${dir.path}/EVIMP1_전체1초_초별분리_센서값_128.xlsx');
+      final excel64 = File('${dir.path}/EVIMP1_전체1초_초별분리_센서값_64.xlsx');
       final pdfFile = File('${dir.path}/report.pdf');
+      final summaryFile = File('${dir.path}/raw_summary.txt');
+      final readableFile = File('${dir.path}/raw_readable.txt');
 
       expect(await metaFile.exists(), isTrue);
       expect(await rawFile.exists(), isTrue);
+      expect(await excel256.exists(), isTrue);
+      expect(await excel128.exists(), isTrue);
+      expect(await excel64.exists(), isTrue);
       expect(await pdfFile.exists(), isTrue);
+      expect(await summaryFile.exists(), isFalse);
+      expect(await readableFile.exists(), isFalse);
 
       final rawContent = await rawFile.readAsString();
       expect(rawContent, contains('EVIMP1'));
@@ -46,11 +56,16 @@ void main() {
       expect(
         rawContent,
         contains(
-          '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ',
+          '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ motionX motionY motionZ velocityX velocityY velocityZ distanceX distanceY distanceZ',
         ),
       );
       expect(rawContent, contains('0 1 2 3 40'));
       expect(rawContent, contains('3906 1.5 2.5 3.5 41'));
+      expect(rawContent, contains('1 2 3 0 0 0'));
+
+      expect((await excel256.readAsBytes()).length, greaterThan(100));
+      expect((await excel128.readAsBytes()).length, greaterThan(100));
+      expect((await excel64.readAsBytes()).length, greaterThan(100));
     });
 
     test('list() - 여러 측정 결과 저장 시 최신 일시 순(내림차순)으로 정렬하여 반환 검증', () async {

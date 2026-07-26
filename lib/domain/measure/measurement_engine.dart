@@ -344,25 +344,65 @@ class MeasurementEngine {
     required List<SensorSample> motionSamples,
     required IntegrationResult integ,
   }) {
+    final linearXValues = linearSamples.map((sample) => sample.x).toList();
+    final linearYValues = linearSamples.map((sample) => sample.y).toList();
     final linearZValues = linearSamples.map((sample) => sample.z).toList();
+    final motionXValues = motionSamples.map((sample) => sample.x).toList();
+    final motionYValues = motionSamples.map((sample) => sample.y).toList();
     final motionZValues = motionSamples.map((sample) => sample.z).toList();
+    final rawXValues = linearSamples
+        .where((sample) => sample.rawX != null)
+        .map((sample) => sample.rawX!)
+        .toList();
+    final rawYValues = linearSamples
+        .where((sample) => sample.rawY != null)
+        .map((sample) => sample.rawY!)
+        .toList();
     final rawZValues = linearSamples
         .where((sample) => sample.rawZ != null)
         .map((sample) => sample.rawZ!)
+        .toList();
+    final gravityXValues = linearSamples
+        .where((sample) => sample.gravityX != null)
+        .map((sample) => sample.gravityX!)
+        .toList();
+    final gravityYValues = linearSamples
+        .where((sample) => sample.gravityY != null)
+        .map((sample) => sample.gravityY!)
         .toList();
     final gravityZValues = linearSamples
         .where((sample) => sample.gravityZ != null)
         .map((sample) => sample.gravityZ!)
         .toList();
+    final hasExtendedRaw =
+        rawXValues.isNotEmpty && gravityXValues.isNotEmpty ? 1.0 : 0.0;
 
     return {
       'sampleRate': sampleRate,
+      'rawSampleCount': linearSamples.length.toDouble(),
+      'hasExtendedRaw': hasExtendedRaw,
+      'linearXMin': _minOrZero(linearXValues),
+      'linearXMax': _maxOrZero(linearXValues),
+      'linearYMin': _minOrZero(linearYValues),
+      'linearYMax': _maxOrZero(linearYValues),
       'linearZMin': _minOrZero(linearZValues),
       'linearZMax': _maxOrZero(linearZValues),
+      'rawXMin': _minOrZero(rawXValues),
+      'rawXMax': _maxOrZero(rawXValues),
+      'rawYMin': _minOrZero(rawYValues),
+      'rawYMax': _maxOrZero(rawYValues),
       'rawZMin': _minOrZero(rawZValues),
       'rawZMax': _maxOrZero(rawZValues),
+      'gravityXMin': _minOrZero(gravityXValues),
+      'gravityXMax': _maxOrZero(gravityXValues),
+      'gravityYMin': _minOrZero(gravityYValues),
+      'gravityYMax': _maxOrZero(gravityYValues),
       'gravityZMin': _minOrZero(gravityZValues),
       'gravityZMax': _maxOrZero(gravityZValues),
+      'motionXMin': _minOrZero(motionXValues),
+      'motionXMax': _maxOrZero(motionXValues),
+      'motionYMin': _minOrZero(motionYValues),
+      'motionYMax': _maxOrZero(motionYValues),
       'motionZMin': _minOrZero(motionZValues),
       'motionZMax': _maxOrZero(motionZValues),
       'maxAccelMs2': _maxAbsOrZero(integ.accelSeriesMs2),

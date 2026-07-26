@@ -73,11 +73,11 @@ EVIMP1
       expect(
         serialized,
         contains(
-          '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ',
+          '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ motionX motionY motionZ velocityX velocityY velocityZ distanceX distanceY distanceZ',
         ),
       );
       expect(serialized, contains('0 -3.351 3.545 -1.787 58.073'));
-      expect(serialized, contains('null null null null null null'));
+      expect(serialized.split('\n').any((line) => line.contains('0 0 0')), isTrue);
 
       final reParsed = RawDataParser.parseEvimp1ToSamples(serialized);
       expect(reParsed.samples.length, 4);

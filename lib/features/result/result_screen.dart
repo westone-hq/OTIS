@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../core/theme.dart';
+import '../../domain/measure/raw_sensor_diagnostics.dart';
+import '../../domain/measure/sensor_sample.dart';
 import '../../domain/models/measurement_result.dart';
 import '../../domain/parse_raw.dart';
 import '../../domain/repository/measurement_repository.dart';
@@ -236,6 +238,8 @@ class _ResultScreenState extends State<ResultScreen> {
           ],
         ),
         const SizedBox(height: AppDims.gap3),
+        _buildOriginalSensorDataBox(),
+        const SizedBox(height: AppDims.gap2),
         _buildRideSegmentBox(),
         const SizedBox(height: AppDims.gap2),
         _buildDebugMetricsBox(),
@@ -338,6 +342,171 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
+  /// S22 원본 센서 XYZ + raw 값 전용 표시 (계산값과 분리)
+  Widget _buildOriginalSensorDataBox() {
+    final samples = _result.rawSamples;
+    if (samples == null || samples.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppDims.gap2),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppDims.radius),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('원본 센서 데이터', style: AppText.bodyBold),
+            const SizedBox(height: AppDims.gap),
+            Text(
+              '저장된 raw 샘플이 없습니다. 새로 측정한 결과에서 확인하세요.',
+              style: AppText.caption.copyWith(color: AppColors.textSub),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final diag = RawSensorDiagnostics.fromSamples(
+      samples,
+      sampleRateHz: _result.sampleRate,
+    );
+    final extended = diag.hasExtendedRaw;
+    final previewLines = _buildRawDataPreviewLines(samples, extended: extended);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDims.gap2),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.navy, width: 1.5),
+        borderRadius: BorderRadius.circular(AppDims.radius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('원본 센서 데이터 (S22)', style: AppText.bodyBold),
+          const SizedBox(height: 4),
+          Text(
+            '${diag.sampleCount}샘플 · ${diag.durationSec.toStringAsFixed(1)}초 · '
+            '${diag.sampleRateHz.toStringAsFixed(0)}Hz · 단위 mg',
+            style: AppText.caption.copyWith(color: AppColors.textSub),
+          ),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('① Linear XYZ (중력 제외 · 진동용)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          _buildXyzLine('X', diag.linearX),
+          _buildXyzLine('Y', diag.linearY),
+          _buildXyzLine('Z', diag.linearZ),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('② Raw XYZ (가속도계 원값 · 중력 포함)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          if (extended) ...[
+            _buildXyzLine('X', diag.rawX),
+            _buildXyzLine('Y', diag.rawY),
+            _buildXyzLine('Z', diag.rawZ, hint: '정지 시 Z ≈ 1000'),
+          ] else
+            Text('미수집 (옛 raw 포맷)', style: AppText.caption.copyWith(color: AppColors.textSub)),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('③ Gravity XYZ (중력 추정)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          if (extended) ...[
+            _buildXyzLine('X', diag.gravityX),
+            _buildXyzLine('Y', diag.gravityY),
+            _buildXyzLine('Z', diag.gravityZ, hint: '정지 시 Z ≈ 1000'),
+          ] else
+            Text('미수집 (옛 raw 포맷)', style: AppText.caption.copyWith(color: AppColors.textSub)),
+          const SizedBox(height: AppDims.gap2),
+
+          if (diag.noise.available)
+            Text(
+              '소음: min ${diag.noise.min.toStringAsFixed(1)} / '
+              'max ${diag.noise.max.toStringAsFixed(1)} / '
+              'mean ${diag.noise.mean.toStringAsFixed(1)} dBA',
+              style: AppText.caption,
+            ),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('④ Raw 샘플 값 (시작·중간·끝)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            extended
+                ? 'tsUs  linX linY linZ  noise  rawX rawY rawZ  gX gY gZ'
+                : 'linX linY linZ  noise',
+            style: AppText.caption.copyWith(
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: AppColors.textSub,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 220),
+            padding: const EdgeInsets.all(AppDims.gap),
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: SingleChildScrollView(
+              child: SelectableText(
+                previewLines,
+                style: AppText.caption.copyWith(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  height: 1.35,
+                  color: AppColors.text,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDims.gap),
+          Text(
+            '전체 샘플은 저장 폴더의 raw.txt에 있습니다.',
+            style: AppText.caption.copyWith(color: AppColors.textSub),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildXyzLine(String axis, ChannelStats stats, {String? hint}) {
+    if (!stats.available) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          '$axis: —',
+          style: AppText.caption.copyWith(color: AppColors.textSub),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        '$axis: min ${stats.min.toStringAsFixed(1)}  '
+        'max ${stats.max.toStringAsFixed(1)}  '
+        'mean ${stats.mean.toStringAsFixed(1)}  '
+        'P-P ${stats.peakToPeak.toStringAsFixed(1)}'
+        '${hint != null ? '  ($hint)' : ''}',
+        style: AppText.caption.copyWith(color: AppColors.text),
+      ),
+    );
+  }
+
+  String _buildRawDataPreviewLines(
+    List<SensorSample> samples, {
+    required bool extended,
+  }) {
+    final list = selectRawPreviewSamples(samples, edgeCount: 8);
+    final buf = StringBuffer();
+    for (final s in list) {
+      buf.writeln(formatRawSampleLine(s, extended: extended));
+    }
+    return buf.toString().trimRight();
+  }
+
   Widget _buildDebugMetricsBox() {
     final metrics = _result.debugMetrics;
     if (metrics.isEmpty) {
@@ -360,26 +529,10 @@ class _ResultScreenState extends State<ResultScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('센서 진단값', style: AppText.bodyBold),
+          Text('센서 진단값 (계산용)', style: AppText.bodyBold),
           const SizedBox(height: AppDims.gap),
           Text(
             'sampleRate: ${f('sampleRate', unit: ' Hz', digits: 1)}',
-            style: AppText.caption,
-          ),
-          Text(
-            'linear Z: ${f('linearZMin')} ~ ${f('linearZMax')} mg',
-            style: AppText.caption,
-          ),
-          Text(
-            'raw Z: ${f('rawZMin')} ~ ${f('rawZMax')} mg',
-            style: AppText.caption,
-          ),
-          Text(
-            'gravity Z: ${f('gravityZMin')} ~ ${f('gravityZMax')} mg',
-            style: AppText.caption,
-          ),
-          Text(
-            'motion Z(raw-gravity): ${f('motionZMin')} ~ ${f('motionZMax')} mg',
             style: AppText.caption,
           ),
           Text(
@@ -393,23 +546,6 @@ class _ResultScreenState extends State<ResultScreen> {
           Text(
             'distance raw: ${f('distanceRaw', unit: ' m')}',
             style: AppText.caption,
-          ),
-          Text(
-            'vibration HP: X ${f('vibrationHighpassX', unit: ' Hz', digits: 1)}, '
-            'Y ${f('vibrationHighpassY', unit: ' Hz', digits: 1)}, '
-            'Z ${f('vibrationHighpassZ', unit: ' Hz', digits: 1)}',
-            style: AppText.caption,
-          ),
-          Text(
-            'vibration LP: X ${f('vibrationLowpassX', unit: ' Hz', digits: 1)}, '
-            'Y ${f('vibrationLowpassY', unit: ' Hz', digits: 1)}, '
-            'Z ${f('vibrationLowpassZ', unit: ' Hz', digits: 1)}',
-            style: AppText.caption,
-          ),
-          const SizedBox(height: AppDims.gap),
-          Text(
-            '임시 표시: 거리/속도 과소 산출 원인 확인 후 제거 예정',
-            style: AppText.caption.copyWith(color: AppColors.textSub),
           ),
         ],
       ),

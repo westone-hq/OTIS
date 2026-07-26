@@ -1,3 +1,4 @@
+import 'measure/axis_integration_export.dart';
 import 'measure/measurement_engine.dart';
 import 'measure/sensor_sample.dart';
 import 'models/measurement_result.dart';
@@ -6,7 +7,8 @@ import 'models/measurement_result.dart';
 class RawDataParser {
   /// EVIMP1 문자열 데이터를 파싱하여 MeasurementResult 인스턴스를 반환한다.
   /// - 헤더(EVIMP1, 샘플링 레이트) 인식
-  /// - legacy 4컬럼(x y z noise) 및 확장 11컬럼(tsUs x y z noise rawX rawY rawZ gravityX gravityY gravityZ) 파싱
+  /// - legacy 4컬럼(x y z noise) 및 확장 11/20컬럼 파싱
+  /// - 20컬럼: 기존 11 + motionX/Y/Z velocityX/Y/Z distanceX/Y/Z
   /// - Phase 1 신규 통합 엔진(MeasurementEngine)을 연동하여 지표 및 시계열 도출
   static MeasurementResult parseEvimp1({
     required String rawContent,
@@ -113,21 +115,44 @@ class RawDataParser {
   }
 
   /// SensorSample 리스트 및 샘플레이트를 EVIMP1 형식 문자열로 직렬화 (writer)
+  ///
+  /// 축별 motion/velocity/distance는 저장 시점에 [AxisIntegrationExport]로 계산한다.
   static String writeEvimp1(
     List<SensorSample> samples, {
     int sampleRate = 256,
   }) {
+    final integrationRows = AxisIntegrationExport.compute(samples);
+
     final buffer = StringBuffer();
     buffer.writeln('EVIMP1');
     buffer.writeln(sampleRate);
     buffer.writeln(
-      '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ',
+      '# columns: tsUs linearX linearY linearZ noiseDba '
+      'rawX rawY rawZ gravityX gravityY gravityZ '
+      'motionX motionY motionZ '
+      'velocityX velocityY velocityZ '
+      'distanceX distanceY distanceZ',
     );
-    for (final s in samples) {
+    for (int i = 0; i < samples.length; i++) {
+      final s = samples[i];
+      final row = i < integrationRows.length
+          ? integrationRows[i]
+          : AxisIntegrationRow.zero;
       buffer.writeln(
-        '${s.tsUs} ${_formatNum(s.x)} ${_formatNum(s.y)} ${_formatNum(s.z)} ${_formatNum(s.noiseDba)} '
-        '${_formatNullableNum(s.rawX)} ${_formatNullableNum(s.rawY)} ${_formatNullableNum(s.rawZ)} '
-        '${_formatNullableNum(s.gravityX)} ${_formatNullableNum(s.gravityY)} ${_formatNullableNum(s.gravityZ)}',
+        '${s.tsUs} ${_formatNum(s.x)} ${_formatNum(s.y)} ${_formatNum(s.z)} '
+        '${_formatNum(s.noiseDba)} '
+        '${_formatNullableNum(s.rawX)} ${_formatNullableNum(s.rawY)} '
+        '${_formatNullableNum(s.rawZ)} '
+        '${_formatNullableNum(s.gravityX)} ${_formatNullableNum(s.gravityY)} '
+        '${_formatNullableNum(s.gravityZ)} '
+        '${_formatNum(row.motionX)} ${_formatNum(row.motionY)} '
+        '${_formatNum(row.motionZ)} '
+        '${_formatIntegrationNum(row.velocityX)} '
+        '${_formatIntegrationNum(row.velocityY)} '
+        '${_formatIntegrationNum(row.velocityZ)} '
+        '${_formatIntegrationNum(row.distanceX)} '
+        '${_formatIntegrationNum(row.distanceY)} '
+        '${_formatIntegrationNum(row.distanceZ)}',
       );
     }
     return buffer.toString();
@@ -149,5 +174,10 @@ class RawDataParser {
       str = str.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
     }
     return str;
+  }
+
+  /// 속도(m/s)·거리(m) — raw.txt 가독성용 (불필요한 0 제거)
+  static String _formatIntegrationNum(double val) {
+    return _formatNum(double.parse(val.toStringAsFixed(6)));
   }
 }
