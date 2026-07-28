@@ -120,21 +120,45 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       }
 
       final baseDir = await MeasurementRepository.instance.getBaseDirectory();
+      final repo = MeasurementRepository.instance;
       final List<String> attachments = [];
+      final List<String> attachmentDescriptions = [];
+
       if (_sendPdf) {
-        final pdfFile = File('${baseDir.path}/${widget.jobId}/report.pdf');
-        if (await pdfFile.exists()) attachments.add(pdfFile.path);
+        final pdfFile = await repo.ensureReportPdf(widget.jobId);
+        if (pdfFile != null && await pdfFile.exists()) {
+          attachments.add(pdfFile.path);
+          attachmentDescriptions.add(
+            '- report.pdf: 앱 측정 결과(가공값)',
+          );
+        }
       }
       if (_sendRaw) {
+        // 1) 센서 원본 raw.txt
         final rawFile = File('${baseDir.path}/${widget.jobId}/raw.txt');
-        if (await rawFile.exists()) attachments.add(rawFile.path);
+        if (await rawFile.exists()) {
+          attachments.add(rawFile.path);
+          attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
+        }
+        // 2) 초별 분리 엑셀 (256 / 128 / 64Hz)
+        final excelFiles = await repo.ensureRawExcelFiles(widget.jobId);
+        for (final excel in excelFiles) {
+          if (await excel.exists()) {
+            attachments.add(excel.path);
+            final name = excel.path.replaceAll('\\', '/').split('/').last;
+            attachmentDescriptions.add('- $name');
+          }
+        }
       }
 
       final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(result.dateTime);
       final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr';
       final body = _sendSummary
           ? ReportGenerator.generateSummaryText(result)
-          : 'OTIS 승강기 진동 측정 TUNE 리포트 및 첨부파일입니다.';
+          : 'OTIS 승강기 진동 측정 리포트입니다.\n'
+              '${attachmentDescriptions.join('\n')}\n'
+              '\n'
+              '※ 첨부 ${attachments.length}개';
 
       final email = Email(
         body: body,
@@ -297,7 +321,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                     ),
                     const Divider(height: 1, color: AppColors.border),
                     _buildCheckboxItem(
-                      title: 'RAW 데이터 파일',
+                      title:
+                          'RAW 원본 (raw.txt + 엑셀 256/128/64)',
                       value: _sendRaw,
                       onChanged: (val) => setState(() => _sendRaw = val ?? false),
                     ),

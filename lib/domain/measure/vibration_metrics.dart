@@ -51,7 +51,7 @@ class ThresholdEvaluation {
 /// 승강기 진동·소음 연산 및 지표 도출 모듈 (ISO 18738 / Otis TUNE 규격)
 class VibrationMetrics {
   /// Aptp (A95 Peak-to-Peak) 산출
-  /// - 정속 구간(또는 지정 구간)의 진동 성분을 [windowSec] (기본 1.0초) 슬라이딩 윈도우(stride <= 1/5)로 분할
+  /// - 정속 구간(또는 지정 구간)의 진동 성분을 [windowSec] (기본 1.0초) 슬라이딩 윈도우(stride = 1/10)로 분할
   /// - 각 윈도우별 P2P(max - min)를 도출하고 그 중 95백분위수(ceil((n-1)*p)) 선택
   static double calculateAptp(
     List<double> vibrationSeries, {

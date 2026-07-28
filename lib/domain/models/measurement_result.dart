@@ -18,6 +18,18 @@ class MeasurementResult {
   final double noiseMax; // 소음 최대 (dBA)
   final double distance; // 운행거리 (m)
   final double maxSpeed; // 최대속도 (m/s)
+  final double fullXPtp; // 전체 주행 구간 X P-P (mg)
+  final double fullYPtp; // 전체 주행 구간 Y P-P (mg)
+  final double fullZPtp; // 전체 주행 구간 Z P-P (mg)
+  final double constantXPtp; // 정속 구간 X P-P (mg)
+  final double constantYPtp; // 정속 구간 Y P-P (mg)
+  final double constantZPtp; // 정속 구간 Z P-P (mg)
+  final double preFilterFullXPtp; // 필터 전 전체 주행 구간 X P-P (mg)
+  final double preFilterFullYPtp; // 필터 전 전체 주행 구간 Y P-P (mg)
+  final double preFilterFullZPtp; // 필터 전 전체 주행 구간 Z P-P (mg)
+  final double preFilterConstantXPtp; // 필터 전 정속 구간 X P-P (mg)
+  final double preFilterConstantYPtp; // 필터 전 정속 구간 Y P-P (mg)
+  final double preFilterConstantZPtp; // 필터 전 정속 구간 Z P-P (mg)
 
   // 시계열 List들 (mock 또는 실제 파싱 데이터)
   final List<double> xSeries;
@@ -33,8 +45,13 @@ class MeasurementResult {
   final double sampleRate; // 실측 샘플레이트 (Hz)
   final bool usedDetectedRideSegment; // 주행 자동 검출 성공 여부
   final String constantSpeedRange; // 정속 구간 시간 범위 요약
+  final bool usedDetectedConstantSpeed; // 정속 구간 자동 검출 성공 여부
+  final int constantSpeedSampleCount; // 정속 구간 샘플 수
+  final int totalVibrationSampleCount; // 진동 분석 전체 샘플 수
+  final double constantSpeedRatio; // 전체 대비 정속 구간 비율
   final List<SensorSample>? rawSamples; // RAW 데이터 보관 (EVIMP1 저장용)
   final bool lowMotionWarning; // 움직임 미감지 경고 플래그
+  final Map<String, double> debugMetrics; // 실측 진단용 임시 지표
 
   const MeasurementResult({
     required this.id,
@@ -50,6 +67,18 @@ class MeasurementResult {
     required this.noiseMax,
     required this.distance,
     required this.maxSpeed,
+    this.fullXPtp = 0.0,
+    this.fullYPtp = 0.0,
+    this.fullZPtp = 0.0,
+    this.constantXPtp = 0.0,
+    this.constantYPtp = 0.0,
+    this.constantZPtp = 0.0,
+    this.preFilterFullXPtp = 0.0,
+    this.preFilterFullYPtp = 0.0,
+    this.preFilterFullZPtp = 0.0,
+    this.preFilterConstantXPtp = 0.0,
+    this.preFilterConstantYPtp = 0.0,
+    this.preFilterConstantZPtp = 0.0,
     required this.xSeries,
     required this.ySeries,
     required this.zSeries,
@@ -61,8 +90,13 @@ class MeasurementResult {
     this.sampleRate = 256.0,
     this.usedDetectedRideSegment = true,
     this.constantSpeedRange = '전체 구간',
+    this.usedDetectedConstantSpeed = false,
+    this.constantSpeedSampleCount = 0,
+    this.totalVibrationSampleCount = 0,
+    this.constantSpeedRatio = 0.0,
     this.rawSamples,
     this.lowMotionWarning = false,
+    this.debugMetrics = const {},
   });
 
   MeasurementResult copyWith({
@@ -79,6 +113,18 @@ class MeasurementResult {
     double? noiseMax,
     double? distance,
     double? maxSpeed,
+    double? fullXPtp,
+    double? fullYPtp,
+    double? fullZPtp,
+    double? constantXPtp,
+    double? constantYPtp,
+    double? constantZPtp,
+    double? preFilterFullXPtp,
+    double? preFilterFullYPtp,
+    double? preFilterFullZPtp,
+    double? preFilterConstantXPtp,
+    double? preFilterConstantYPtp,
+    double? preFilterConstantZPtp,
     List<double>? xSeries,
     List<double>? ySeries,
     List<double>? zSeries,
@@ -90,8 +136,13 @@ class MeasurementResult {
     double? sampleRate,
     bool? usedDetectedRideSegment,
     String? constantSpeedRange,
+    bool? usedDetectedConstantSpeed,
+    int? constantSpeedSampleCount,
+    int? totalVibrationSampleCount,
+    double? constantSpeedRatio,
     List<SensorSample>? rawSamples,
     bool? lowMotionWarning,
+    Map<String, double>? debugMetrics,
   }) {
     return MeasurementResult(
       id: id ?? this.id,
@@ -107,6 +158,21 @@ class MeasurementResult {
       noiseMax: noiseMax ?? this.noiseMax,
       distance: distance ?? this.distance,
       maxSpeed: maxSpeed ?? this.maxSpeed,
+      fullXPtp: fullXPtp ?? this.fullXPtp,
+      fullYPtp: fullYPtp ?? this.fullYPtp,
+      fullZPtp: fullZPtp ?? this.fullZPtp,
+      constantXPtp: constantXPtp ?? this.constantXPtp,
+      constantYPtp: constantYPtp ?? this.constantYPtp,
+      constantZPtp: constantZPtp ?? this.constantZPtp,
+      preFilterFullXPtp: preFilterFullXPtp ?? this.preFilterFullXPtp,
+      preFilterFullYPtp: preFilterFullYPtp ?? this.preFilterFullYPtp,
+      preFilterFullZPtp: preFilterFullZPtp ?? this.preFilterFullZPtp,
+      preFilterConstantXPtp:
+          preFilterConstantXPtp ?? this.preFilterConstantXPtp,
+      preFilterConstantYPtp:
+          preFilterConstantYPtp ?? this.preFilterConstantYPtp,
+      preFilterConstantZPtp:
+          preFilterConstantZPtp ?? this.preFilterConstantZPtp,
       xSeries: xSeries ?? this.xSeries,
       ySeries: ySeries ?? this.ySeries,
       zSeries: zSeries ?? this.zSeries,
@@ -116,10 +182,19 @@ class MeasurementResult {
       accelSeries: accelSeries ?? this.accelSeries,
       jerkSeries: jerkSeries ?? this.jerkSeries,
       sampleRate: sampleRate ?? this.sampleRate,
-      usedDetectedRideSegment: usedDetectedRideSegment ?? this.usedDetectedRideSegment,
+      usedDetectedRideSegment:
+          usedDetectedRideSegment ?? this.usedDetectedRideSegment,
       constantSpeedRange: constantSpeedRange ?? this.constantSpeedRange,
+      usedDetectedConstantSpeed:
+          usedDetectedConstantSpeed ?? this.usedDetectedConstantSpeed,
+      constantSpeedSampleCount:
+          constantSpeedSampleCount ?? this.constantSpeedSampleCount,
+      totalVibrationSampleCount:
+          totalVibrationSampleCount ?? this.totalVibrationSampleCount,
+      constantSpeedRatio: constantSpeedRatio ?? this.constantSpeedRatio,
       rawSamples: rawSamples ?? this.rawSamples,
       lowMotionWarning: lowMotionWarning ?? this.lowMotionWarning,
+      debugMetrics: debugMetrics ?? this.debugMetrics,
     );
   }
 
@@ -138,10 +213,27 @@ class MeasurementResult {
       'noiseMax': noiseMax,
       'distance': distance,
       'maxSpeed': maxSpeed,
+      'fullXPtp': fullXPtp,
+      'fullYPtp': fullYPtp,
+      'fullZPtp': fullZPtp,
+      'constantXPtp': constantXPtp,
+      'constantYPtp': constantYPtp,
+      'constantZPtp': constantZPtp,
+      'preFilterFullXPtp': preFilterFullXPtp,
+      'preFilterFullYPtp': preFilterFullYPtp,
+      'preFilterFullZPtp': preFilterFullZPtp,
+      'preFilterConstantXPtp': preFilterConstantXPtp,
+      'preFilterConstantYPtp': preFilterConstantYPtp,
+      'preFilterConstantZPtp': preFilterConstantZPtp,
       'sampleRate': sampleRate,
       'usedDetectedRideSegment': usedDetectedRideSegment,
       'constantSpeedRange': constantSpeedRange,
+      'usedDetectedConstantSpeed': usedDetectedConstantSpeed,
+      'constantSpeedSampleCount': constantSpeedSampleCount,
+      'totalVibrationSampleCount': totalVibrationSampleCount,
+      'constantSpeedRatio': constantSpeedRatio,
       'lowMotionWarning': lowMotionWarning,
+      'debugMetrics': debugMetrics,
       'xSeries': xSeries,
       'ySeries': ySeries,
       'zSeries': zSeries,
@@ -175,10 +267,39 @@ class MeasurementResult {
       noiseMax: (map['noiseMax'] as num?)?.toDouble() ?? 0.0,
       distance: (map['distance'] as num?)?.toDouble() ?? 0.0,
       maxSpeed: (map['maxSpeed'] as num?)?.toDouble() ?? 0.0,
+      fullXPtp: (map['fullXPtp'] as num?)?.toDouble() ?? 0.0,
+      fullYPtp: (map['fullYPtp'] as num?)?.toDouble() ?? 0.0,
+      fullZPtp: (map['fullZPtp'] as num?)?.toDouble() ?? 0.0,
+      constantXPtp: (map['constantXPtp'] as num?)?.toDouble() ?? 0.0,
+      constantYPtp: (map['constantYPtp'] as num?)?.toDouble() ?? 0.0,
+      constantZPtp: (map['constantZPtp'] as num?)?.toDouble() ?? 0.0,
+      preFilterFullXPtp: (map['preFilterFullXPtp'] as num?)?.toDouble() ?? 0.0,
+      preFilterFullYPtp: (map['preFilterFullYPtp'] as num?)?.toDouble() ?? 0.0,
+      preFilterFullZPtp: (map['preFilterFullZPtp'] as num?)?.toDouble() ?? 0.0,
+      preFilterConstantXPtp:
+          (map['preFilterConstantXPtp'] as num?)?.toDouble() ?? 0.0,
+      preFilterConstantYPtp:
+          (map['preFilterConstantYPtp'] as num?)?.toDouble() ?? 0.0,
+      preFilterConstantZPtp:
+          (map['preFilterConstantZPtp'] as num?)?.toDouble() ?? 0.0,
       sampleRate: (map['sampleRate'] as num?)?.toDouble() ?? 256.0,
       usedDetectedRideSegment: map['usedDetectedRideSegment'] as bool? ?? true,
       constantSpeedRange: map['constantSpeedRange'] as String? ?? '전체 구간',
+      usedDetectedConstantSpeed:
+          map['usedDetectedConstantSpeed'] as bool? ?? false,
+      constantSpeedSampleCount:
+          (map['constantSpeedSampleCount'] as num?)?.toInt() ?? 0,
+      totalVibrationSampleCount:
+          (map['totalVibrationSampleCount'] as num?)?.toInt() ?? 0,
+      constantSpeedRatio:
+          (map['constantSpeedRatio'] as num?)?.toDouble() ?? 0.0,
       lowMotionWarning: map['lowMotionWarning'] as bool? ?? false,
+      debugMetrics:
+          (map['debugMetrics'] as Map?)?.map(
+            (key, value) =>
+                MapEntry(key.toString(), (value as num?)?.toDouble() ?? 0.0),
+          ) ??
+          const {},
       xSeries: toDoubleList(map['xSeries']),
       ySeries: toDoubleList(map['ySeries']),
       zSeries: toDoubleList(map['zSeries']),
@@ -243,6 +364,18 @@ class MeasurementResult {
       noiseMax: 71.7,
       distance: 21.0,
       maxSpeed: 1.50,
+      fullXPtp: 12.0,
+      fullYPtp: 16.4,
+      fullZPtp: 28.5,
+      constantXPtp: 8.2,
+      constantYPtp: 12.9,
+      constantZPtp: 22.2,
+      preFilterFullXPtp: 14.2,
+      preFilterFullYPtp: 18.6,
+      preFilterFullZPtp: 34.0,
+      preFilterConstantXPtp: 10.1,
+      preFilterConstantYPtp: 15.2,
+      preFilterConstantZPtp: 28.8,
       xSeries: xList,
       ySeries: yList,
       zSeries: zList,
@@ -251,6 +384,11 @@ class MeasurementResult {
       speedSeries: spdList,
       accelSeries: accList,
       jerkSeries: jrkList,
+      constantSpeedRange: '2.1초 ~ 16.8초',
+      usedDetectedConstantSpeed: true,
+      constantSpeedSampleCount: 3200,
+      totalVibrationSampleCount: 4200,
+      constantSpeedRatio: 3200 / 4200,
     );
   }
 
@@ -274,6 +412,18 @@ class MeasurementResult {
         noiseMax: 45.0,
         distance: 45.0,
         maxSpeed: 2.00,
+        fullXPtp: 6.1,
+        fullYPtp: 5.0,
+        fullZPtp: 10.2,
+        constantXPtp: 5.2,
+        constantYPtp: 4.1,
+        constantZPtp: 8.9,
+        preFilterFullXPtp: 7.3,
+        preFilterFullYPtp: 6.0,
+        preFilterFullZPtp: 13.1,
+        preFilterConstantXPtp: 6.2,
+        preFilterConstantYPtp: 5.0,
+        preFilterConstantZPtp: 11.0,
         xSeries: base.xSeries.map((v) => v * 0.4).toList(),
         ySeries: base.ySeries.map((v) => v * 0.5).toList(),
         zSeries: base.zSeries.map((v) => v * 0.4).toList(),
@@ -282,6 +432,11 @@ class MeasurementResult {
         speedSeries: base.speedSeries,
         accelSeries: base.accelSeries,
         jerkSeries: base.jerkSeries,
+        constantSpeedRange: '1.8초 ~ 22.4초',
+        usedDetectedConstantSpeed: true,
+        constantSpeedSampleCount: 4100,
+        totalVibrationSampleCount: 5200,
+        constantSpeedRatio: 4100 / 5200,
       ),
       // 변형 2: X축 및 소음 초과
       MeasurementResult(
@@ -298,6 +453,18 @@ class MeasurementResult {
         noiseMax: 52.3,
         distance: 60.0,
         maxSpeed: 2.50,
+        fullXPtp: 18.3,
+        fullYPtp: 9.2,
+        fullZPtp: 17.1,
+        constantXPtp: 11.5,
+        constantYPtp: 7.0,
+        constantZPtp: 14.2,
+        preFilterFullXPtp: 22.0,
+        preFilterFullYPtp: 11.0,
+        preFilterFullZPtp: 21.3,
+        preFilterConstantXPtp: 14.8,
+        preFilterConstantYPtp: 9.2,
+        preFilterConstantZPtp: 18.5,
         xSeries: base.xSeries.map((v) => v * 0.9).toList(),
         ySeries: base.ySeries.map((v) => v * 0.8).toList(),
         zSeries: base.zSeries.map((v) => v * 0.6).toList(),
@@ -306,6 +473,11 @@ class MeasurementResult {
         speedSeries: base.speedSeries,
         accelSeries: base.accelSeries,
         jerkSeries: base.jerkSeries,
+        constantSpeedRange: '2.0초 ~ 28.7초',
+        usedDetectedConstantSpeed: true,
+        constantSpeedSampleCount: 5300,
+        totalVibrationSampleCount: 6800,
+        constantSpeedRatio: 5300 / 6800,
       ),
     ];
   }

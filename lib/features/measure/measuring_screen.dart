@@ -42,12 +42,7 @@ class MeasuringScreen extends StatefulWidget {
 }
 
 /// S4 측정 저장 전 검증 게이트 판정 결과
-enum _SaveGateResult {
-  ok,
-  siteInvalid,
-  noSamples,
-  lowMotion,
-}
+enum _SaveGateResult { ok, siteInvalid, noSamples, lowMotion }
 
 /// 라이브 측정 화면의 상태 및 생명주기(센서 수집, 타이머, 백그라운드 전환 등)를 관리합니다.
 class _MeasuringScreenState extends State<MeasuringScreen>
@@ -77,6 +72,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
 
   bool _measurementAborted = false;
   bool _isFinished = false;
+  bool _isFinishing = false;
 
   @override
   void initState() {
@@ -114,7 +110,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   Future<void> _initCaptureAndTimers() async {
     // 1. wakelock 활성화 (D2, Phase 2)
     try {
-      await WakelockPlus.enable().timeout(const Duration(milliseconds: 100)).catchError((_) {});
+      await WakelockPlus.enable()
+          .timeout(const Duration(milliseconds: 100))
+          .catchError((_) {});
     } catch (_) {}
 
     // 2. 오디오 권한 요청 (거부 시 소음 N/A 처리용 안내)
@@ -164,13 +162,17 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           if (_elapsedSeconds < 1) {
             _baselineSumZ += sample.z;
             _baselineCount++;
-            _baselineZ = _baselineCount > 0 ? _baselineSumZ / _baselineCount : 0.0;
+            _baselineZ = _baselineCount > 0
+                ? _baselineSumZ / _baselineCount
+                : 0.0;
             _signedVelocity = 0.0;
           } else {
             final double dt = (_lastTsUs > 0 && sample.tsUs > _lastTsUs)
                 ? (sample.tsUs - _lastTsUs) / 1000000.0
                 : (1.0 / 256.0);
-            final double aZ = (sample.z - _baselineZ) * SensorSample.mgToMetersPerSecondSquared;
+            final double aZ =
+                (sample.z - _baselineZ) *
+                SensorSample.mgToMetersPerSecondSquared;
             _signedVelocity = (_signedVelocity + aZ * dt).clamp(-3.0, 3.0);
           }
           _lastTsUs = sample.tsUs;
@@ -196,7 +198,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       _releaseTimeoutTimer = Timer(const Duration(seconds: 3), () async {
         if (mounted && !_receivedRealSample) {
           _isFinished = true;
-          _cleanup();
+          await _cleanup();
           await _showMeasureFailDialog('센서 응답이 없습니다. 측정을 중단합니다.');
         }
       });
@@ -225,32 +227,51 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     });
   }
 
-  void _cleanup() {
+  Future<void> _cleanup() async {
     _timeTimer?.cancel();
     _uiTimer?.cancel();
     _countdownTimer?.cancel();
     _mockFallbackTimer?.cancel();
     _releaseTimeoutTimer?.cancel();
-    _speedSub?.cancel();
-    _sensorSub?.cancel();
-    _sensorManager.stopCapture();
+    _timeTimer = null;
+    _uiTimer = null;
+    _countdownTimer = null;
+    _mockFallbackTimer = null;
+    _releaseTimeoutTimer = null;
+    final speedSub = _speedSub;
+    final sensorSub = _sensorSub;
+    _speedSub = null;
+    _sensorSub = null;
+    await Future.wait<void>([
+      if (speedSub != null) _ignoreSlowCleanup(speedSub.cancel()),
+      if (sensorSub != null) _ignoreSlowCleanup(sensorSub.cancel()),
+      _ignoreSlowCleanup(_sensorManager.stopCapture()),
+    ]);
     try {
-      WakelockPlus.disable().catchError((_) {});
+      await WakelockPlus.disable().timeout(const Duration(milliseconds: 200));
+    } catch (_) {}
+  }
+
+  Future<void> _ignoreSlowCleanup(Future<void> future) async {
+    try {
+      await future.timeout(const Duration(milliseconds: 500));
     } catch (_) {}
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _cleanup();
+    unawaited(_cleanup());
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused && !_isFinished && !_measurementAborted) {
-      _cleanup();
+    if (state == AppLifecycleState.paused &&
+        !_isFinished &&
+        !_measurementAborted) {
+      unawaited(_cleanup());
       _measurementAborted = true;
     } else if (state == AppLifecycleState.resumed && _measurementAborted) {
       _showAbortedDialog();
@@ -394,9 +415,15 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 측정 종료 시 안전장치 게이트 평가, 분기, 저장, 화면 이동을 수행합니다.
-  void _finishMeasurement() async {
+  Future<void> _finishMeasurement() async {
+    if (_isFinishing || _isFinished) return;
+    if (mounted) {
+      setState(() => _isFinishing = true);
+    } else {
+      _isFinishing = true;
+    }
     _isFinished = true;
-    _cleanup();
+    await _cleanup();
 
     final preGate = _evaluateSaveGate(null);
     if (preGate == _SaveGateResult.siteInvalid) {
@@ -404,7 +431,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       return;
     }
     if (preGate == _SaveGateResult.noSamples) {
-      await _showMeasureFailDialog('센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.');
+      await _showMeasureFailDialog(
+        '센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.',
+      );
       return;
     }
 
@@ -439,7 +468,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       onSuccess: (dir) => savedDir = dir,
     );
     if (!initialSuccess) {
-      await _showSaveRetryDialog(finalResult, onSuccess: (dir) => savedDir = dir);
+      await _showSaveRetryDialog(
+        finalResult,
+        onSuccess: (dir) => savedDir = dir,
+      );
     }
 
     if (savedDir != null && mounted) {
@@ -543,8 +575,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         final confirm = await _showExitDialog();
         if (confirm == true && context.mounted) {
           _isFinished = true;
-          _cleanup();
-          context.pop();
+          await _cleanup();
+          if (context.mounted) context.pop();
         }
       },
       child: Scaffold(
@@ -569,8 +601,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                   final confirm = await _showExitDialog();
                   if (confirm == true && context.mounted) {
                     _isFinished = true;
-                    _cleanup();
-                    context.pop();
+                    await _cleanup();
+                    if (context.mounted) context.pop();
                   }
                 },
               ),
@@ -676,8 +708,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           child: Padding(
             padding: const EdgeInsets.all(AppDims.screenPad),
             child: ElevatedButton(
-              onPressed: () => _finishMeasurement(),
-              child: const Text('테스트 완료'),
+              onPressed: _isFinishing ? null : _finishMeasurement,
+              child: Text(_isFinishing ? '종료 중...' : '테스트 완료'),
             ),
           ),
         ),

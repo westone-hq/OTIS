@@ -28,11 +28,15 @@ class ConstantSpeedResult {
   final List<SensorSample> samples;
   final bool isDetected;
   final String rangeSummary; // 예: "1.2초 ~ 18.5초"
+  final int startIndex; // rideSamples 기준 시작 인덱스
+  final int endIndex; // rideSamples 기준 종료 인덱스
 
   const ConstantSpeedResult({
     required this.samples,
     required this.isDetected,
     required this.rangeSummary,
+    required this.startIndex,
+    required this.endIndex,
   });
 }
 
@@ -92,8 +96,10 @@ class RideDetector {
     }
 
     // 패딩 적용: timestamp 기준으로 앞뒤 paddingSec 추가
-    final int startTsUs = samples[firstActive].tsUs - (paddingSec * 1000000.0).round();
-    final int endTsUs = samples[lastActive].tsUs + (paddingSec * 1000000.0).round();
+    final int startTsUs =
+        samples[firstActive].tsUs - (paddingSec * 1000000.0).round();
+    final int endTsUs =
+        samples[lastActive].tsUs + (paddingSec * 1000000.0).round();
 
     int paddedStart = 0;
     int paddedEnd = samples.length - 1;
@@ -144,6 +150,8 @@ class RideDetector {
         samples: List.from(rideSamples),
         isDetected: false,
         rangeSummary: '전체 구간',
+        startIndex: 0,
+        endIndex: math.max(0, rideSamples.length - 1),
       );
     }
 
@@ -157,6 +165,8 @@ class RideDetector {
         samples: List.from(rideSamples),
         isDetected: false,
         rangeSummary: '전체 구간',
+        startIndex: 0,
+        endIndex: math.max(0, rideSamples.length - 1),
       );
     }
 
@@ -181,28 +191,37 @@ class RideDetector {
     }
 
     // 유효 정속 구간이 최소 1초 이상(또는 10샘플 이상) 되지 않으면 주행 전체 구간 폴백
+    final int rangeBaseTsUs = rideSamples.first.tsUs;
     final double durationSec = bestStart != -1 && bestLen >= 2
-        ? (rideSamples[bestStart + bestLen - 1].tsUs - rideSamples[bestStart].tsUs) / 1000000.0
+        ? (rideSamples[bestStart + bestLen - 1].tsUs -
+                  rideSamples[bestStart].tsUs) /
+              1000000.0
         : 0.0;
     if (bestStart == -1 || bestLen < 10 || durationSec < 1.0) {
-      final double startSec = rideSamples.first.tsUs / 1000000.0;
-      final double endSec = rideSamples.last.tsUs / 1000000.0;
+      final double startSec = 0.0;
+      final double endSec = (rideSamples.last.tsUs - rangeBaseTsUs) / 1000000.0;
       return ConstantSpeedResult(
         samples: List.from(rideSamples),
         isDetected: false,
-        rangeSummary: '${startSec.toStringAsFixed(1)}초 ~ ${endSec.toStringAsFixed(1)}초 (전체)',
+        rangeSummary:
+            '${startSec.toStringAsFixed(1)}초 ~ ${endSec.toStringAsFixed(1)}초 (전체)',
+        startIndex: 0,
+        endIndex: rideSamples.length - 1,
       );
     }
 
     final int bestEnd = bestStart + bestLen - 1;
     final subSamples = rideSamples.sublist(bestStart, bestEnd + 1);
-    final double startSec = subSamples.first.tsUs / 1000000.0;
-    final double endSec = subSamples.last.tsUs / 1000000.0;
+    final double startSec = (subSamples.first.tsUs - rangeBaseTsUs) / 1000000.0;
+    final double endSec = (subSamples.last.tsUs - rangeBaseTsUs) / 1000000.0;
 
     return ConstantSpeedResult(
       samples: subSamples,
       isDetected: true,
-      rangeSummary: '${startSec.toStringAsFixed(1)}초 ~ ${endSec.toStringAsFixed(1)}초',
+      rangeSummary:
+          '${startSec.toStringAsFixed(1)}초 ~ ${endSec.toStringAsFixed(1)}초',
+      startIndex: bestStart,
+      endIndex: bestEnd,
     );
   }
 }

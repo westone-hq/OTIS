@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../core/theme.dart';
+import '../../domain/measure/raw_sensor_diagnostics.dart';
+import '../../domain/measure/sensor_sample.dart';
 import '../../domain/models/measurement_result.dart';
 import '../../domain/parse_raw.dart';
 import '../../domain/repository/measurement_repository.dart';
@@ -63,7 +65,9 @@ class _ResultScreenState extends State<ResultScreen> {
 
   Future<void> _loadRawSample() async {
     try {
-      final rawContent = await rootBundle.loadString('assets/sample/2024F1447R01.txt');
+      final rawContent = await rootBundle.loadString(
+        'assets/sample/2024F1447R01.txt',
+      );
       final parsed = RawDataParser.parseEvimp1(
         rawContent: rawContent,
         id: widget.id,
@@ -81,7 +85,9 @@ class _ResultScreenState extends State<ResultScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('실제 2024F1447R01 파싱 데이터 로드 완료 (${parsed.xSeries.length}개 샘플)'),
+            content: Text(
+              '실제 2024F1447R01 파싱 데이터 로드 완료 (${parsed.xSeries.length}개 샘플)',
+            ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: AppColors.navy,
           ),
@@ -206,9 +212,13 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
             MetricCard(
               label: '최대 소음',
-              valueStr: _result.noiseMax <= 0.0 ? 'N/A' : _result.noiseMax.toStringAsFixed(1),
+              valueStr: _result.noiseMax <= 0.0
+                  ? 'N/A'
+                  : _result.noiseMax.toStringAsFixed(1),
               unit: _result.noiseMax <= 0.0 ? '' : 'dBA',
-              isExceeded: _result.noiseMax <= 0.0 ? null : _result.noiseExceeded,
+              isExceeded: _result.noiseMax <= 0.0
+                  ? null
+                  : _result.noiseExceeded,
               onTap: () => _scrollToChart(3),
             ),
             MetricCard(
@@ -228,11 +238,317 @@ class _ResultScreenState extends State<ResultScreen> {
           ],
         ),
         const SizedBox(height: AppDims.gap3),
+        _buildOriginalSensorDataBox(),
+        const SizedBox(height: AppDims.gap2),
+        _buildRideSegmentBox(),
+        const SizedBox(height: AppDims.gap2),
+        _buildDebugMetricsBox(),
+        const SizedBox(height: AppDims.gap3),
 
         // 차트 섹션 제목
         Text('데이터 차트', style: AppText.subhead),
         const SizedBox(height: AppDims.gap2),
       ],
+    );
+  }
+
+  Widget _buildRideSegmentBox() {
+    return Container(
+      padding: const EdgeInsets.all(AppDims.gap2),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppDims.radius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('정속 구간 진단', style: AppText.bodyBold),
+          const SizedBox(height: AppDims.gap),
+          Text('정속 구간: ${_result.constantSpeedRange}', style: AppText.caption),
+          Text(
+            '검출 상태: ${_result.usedDetectedConstantSpeed ? '자동 검출' : '전체 구간 사용'}',
+            style: AppText.caption,
+          ),
+          Text(
+            '샘플 수: ${_result.constantSpeedSampleCount} / ${_result.totalVibrationSampleCount} '
+            '(${(_result.constantSpeedRatio * 100).toStringAsFixed(1)}%)',
+            style: AppText.caption,
+          ),
+          const SizedBox(height: AppDims.gap),
+          Text(
+            'P-P 비교 (필터 전 → 후)',
+            style: AppText.caption.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppDims.gap),
+          _buildFilterPtpCompareRow(
+            axis: 'X',
+            preFull: _result.preFilterFullXPtp,
+            postFull: _result.fullXPtp,
+            preConstant: _result.preFilterConstantXPtp,
+            postConstant: _result.constantXPtp,
+          ),
+          _buildFilterPtpCompareRow(
+            axis: 'Y',
+            preFull: _result.preFilterFullYPtp,
+            postFull: _result.fullYPtp,
+            preConstant: _result.preFilterConstantYPtp,
+            postConstant: _result.constantYPtp,
+          ),
+          _buildFilterPtpCompareRow(
+            axis: 'Z',
+            preFull: _result.preFilterFullZPtp,
+            postFull: _result.fullZPtp,
+            preConstant: _result.preFilterConstantZPtp,
+            postConstant: _result.constantZPtp,
+          ),
+          const SizedBox(height: AppDims.gap),
+          Text(
+            'Aptp 판정은 정속 구간의 필터 후 신호 기준이며, 위 값은 원인 분석용 P-P 비교입니다.',
+            style: AppText.caption.copyWith(color: AppColors.textSub),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterPtpCompareRow({
+    required String axis,
+    required double preFull,
+    required double postFull,
+    required double preConstant,
+    required double postConstant,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppDims.gap),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$axis축',
+            style: AppText.caption.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '전체 ${preFull.toStringAsFixed(1)} → ${postFull.toStringAsFixed(1)} mg',
+            style: AppText.caption,
+          ),
+          Text(
+            '정속 ${preConstant.toStringAsFixed(1)} → ${postConstant.toStringAsFixed(1)} mg',
+            style: AppText.caption.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// S22 원본 센서 XYZ + raw 값 전용 표시 (계산값과 분리)
+  Widget _buildOriginalSensorDataBox() {
+    final samples = _result.rawSamples;
+    if (samples == null || samples.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppDims.gap2),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppDims.radius),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('원본 센서 데이터', style: AppText.bodyBold),
+            const SizedBox(height: AppDims.gap),
+            Text(
+              '저장된 raw 샘플이 없습니다. 새로 측정한 결과에서 확인하세요.',
+              style: AppText.caption.copyWith(color: AppColors.textSub),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final diag = RawSensorDiagnostics.fromSamples(
+      samples,
+      sampleRateHz: _result.sampleRate,
+    );
+    final extended = diag.hasExtendedRaw;
+    final previewLines = _buildRawDataPreviewLines(samples, extended: extended);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDims.gap2),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.navy, width: 1.5),
+        borderRadius: BorderRadius.circular(AppDims.radius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('원본 센서 데이터 (S22)', style: AppText.bodyBold),
+          const SizedBox(height: 4),
+          Text(
+            '${diag.sampleCount}샘플 · ${diag.durationSec.toStringAsFixed(1)}초 · '
+            '${diag.sampleRateHz.toStringAsFixed(0)}Hz · 단위 mg',
+            style: AppText.caption.copyWith(color: AppColors.textSub),
+          ),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('① Linear XYZ (중력 제외 · 진동용)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          _buildXyzLine('X', diag.linearX),
+          _buildXyzLine('Y', diag.linearY),
+          _buildXyzLine('Z', diag.linearZ),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('② Raw XYZ (가속도계 원값 · 중력 포함)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          if (extended) ...[
+            _buildXyzLine('X', diag.rawX),
+            _buildXyzLine('Y', diag.rawY),
+            _buildXyzLine('Z', diag.rawZ, hint: '정지 시 Z ≈ 1000'),
+          ] else
+            Text('미수집 (옛 raw 포맷)', style: AppText.caption.copyWith(color: AppColors.textSub)),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('③ Gravity XYZ (중력 추정)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          if (extended) ...[
+            _buildXyzLine('X', diag.gravityX),
+            _buildXyzLine('Y', diag.gravityY),
+            _buildXyzLine('Z', diag.gravityZ, hint: '정지 시 Z ≈ 1000'),
+          ] else
+            Text('미수집 (옛 raw 포맷)', style: AppText.caption.copyWith(color: AppColors.textSub)),
+          const SizedBox(height: AppDims.gap2),
+
+          if (diag.noise.available)
+            Text(
+              '소음: min ${diag.noise.min.toStringAsFixed(1)} / '
+              'max ${diag.noise.max.toStringAsFixed(1)} / '
+              'mean ${diag.noise.mean.toStringAsFixed(1)} dBA',
+              style: AppText.caption,
+            ),
+          const SizedBox(height: AppDims.gap2),
+
+          Text('④ Raw 샘플 값 (시작·중간·끝)', style: AppText.caption.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            extended
+                ? 'tsUs  linX linY linZ  noise  rawX rawY rawZ  gX gY gZ'
+                : 'linX linY linZ  noise',
+            style: AppText.caption.copyWith(
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: AppColors.textSub,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 220),
+            padding: const EdgeInsets.all(AppDims.gap),
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: SingleChildScrollView(
+              child: SelectableText(
+                previewLines,
+                style: AppText.caption.copyWith(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  height: 1.35,
+                  color: AppColors.text,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDims.gap),
+          Text(
+            '전체 샘플은 저장 폴더의 raw.txt에 있습니다.',
+            style: AppText.caption.copyWith(color: AppColors.textSub),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildXyzLine(String axis, ChannelStats stats, {String? hint}) {
+    if (!stats.available) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          '$axis: —',
+          style: AppText.caption.copyWith(color: AppColors.textSub),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        '$axis: min ${stats.min.toStringAsFixed(1)}  '
+        'max ${stats.max.toStringAsFixed(1)}  '
+        'mean ${stats.mean.toStringAsFixed(1)}  '
+        'P-P ${stats.peakToPeak.toStringAsFixed(1)}'
+        '${hint != null ? '  ($hint)' : ''}',
+        style: AppText.caption.copyWith(color: AppColors.text),
+      ),
+    );
+  }
+
+  String _buildRawDataPreviewLines(
+    List<SensorSample> samples, {
+    required bool extended,
+  }) {
+    final list = selectRawPreviewSamples(samples, edgeCount: 8);
+    final buf = StringBuffer();
+    for (final s in list) {
+      buf.writeln(formatRawSampleLine(s, extended: extended));
+    }
+    return buf.toString().trimRight();
+  }
+
+  Widget _buildDebugMetricsBox() {
+    final metrics = _result.debugMetrics;
+    if (metrics.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    String f(String key, {String unit = '', int digits = 2}) {
+      final value = metrics[key];
+      if (value == null) return '-';
+      return '${value.toStringAsFixed(digits)}$unit';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(AppDims.gap2),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppDims.radius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('센서 진단값 (계산용)', style: AppText.bodyBold),
+          const SizedBox(height: AppDims.gap),
+          Text(
+            'sampleRate: ${f('sampleRate', unit: ' Hz', digits: 1)}',
+            style: AppText.caption,
+          ),
+          Text(
+            'max accel: ${f('maxAccelMs2', unit: ' m/s²')}',
+            style: AppText.caption,
+          ),
+          Text(
+            'velocity max: ${f('velocityMax', unit: ' m/s')}',
+            style: AppText.caption,
+          ),
+          Text(
+            'distance raw: ${f('distanceRaw', unit: ' m')}',
+            style: AppText.caption,
+          ),
+        ],
+      ),
     );
   }
 
@@ -303,7 +619,9 @@ class _ResultScreenState extends State<ResultScreen> {
         break;
     }
 
-    final double sampleRate = _result.sampleRate > 0 ? _result.sampleRate : 256.0;
+    final double sampleRate = _result.sampleRate > 0
+        ? _result.sampleRate
+        : 256.0;
     List<FlSpot> spots;
     if (series.length > 800) {
       final int stride = (series.length / 800).ceil();
@@ -371,10 +689,7 @@ class _ResultScreenState extends State<ResultScreen> {
             height: 180,
             child: LineChart(
               LineChartData(
-                gridData: const FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                ),
+                gridData: const FlGridData(show: true, drawVerticalLine: false),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
@@ -479,7 +794,9 @@ class _ResultScreenState extends State<ResultScreen> {
         // 성능을 위해 ListView.builder 사용 (lazy build)
         child: ListView.builder(
           padding: const EdgeInsets.all(AppDims.screenPad),
-          scrollCacheExtent: const ScrollCacheExtent.pixels(3000), // 카드 탭 시 8개 차트 위치 스크롤 보장을 위해 충분한 캐시 지정
+          scrollCacheExtent: const ScrollCacheExtent.pixels(
+            3000,
+          ), // 카드 탭 시 8개 차트 위치 스크롤 보장을 위해 충분한 캐시 지정
           itemCount: 9, // 0: 요약 헤더 + 1~8: 차트 8종
           itemBuilder: (context, index) {
             if (index == 0) {

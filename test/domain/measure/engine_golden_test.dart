@@ -40,18 +40,14 @@ void main() {
       print('constantSpeedRange: ${result.constantSpeedRange}');
       print('====================================');
 
-      // 1. X Aptp (문서 기대값: X 8.2 mg)
-      // OI-1: EVA 축별 주파수 가중 필터 부재로 과대 산출됨. Phase 7 캘리브레이션 대상.
-      // Phase 1 단계 검증: 엔진이 crash 없이 수치를 산출하고 X < Y 순서가 유지되는지 확인 (느슨한 검증)
-      expect(result.xPtp, greaterThan(0.0), reason: 'X Aptp가 정상 산출되어야 합니다.');
+      // 1. X Aptp (문서 기대값: X 8.2 mg) — ISO 8041 Wd 가중 필터 적용 후 엄격 검증
+      expect(result.xPtp, closeTo(8.2, 1.0), reason: 'X Aptp는 문서값(8.2 mg) 기준 허용 오차 내에 있어야 합니다.');
 
-      // 2. Y Aptp (문서 기대값: Y 12.9 mg)
-      // OI-1: Phase 7 캘리브레이션 시 문서 기대값 복원. Phase 1은 X < Y 순서 유지 검증.
-      expect(result.yPtp, greaterThan(result.xPtp), reason: 'X < Y 순서가 유지되어야 합니다 (// OI-1).');
+      // 2. Y Aptp (문서 기대값: Y 12.9 mg) — ISO 8041 Wd 가중 필터 적용 후 엄격 검증
+      expect(result.yPtp, closeTo(12.9, 1.0), reason: 'Y Aptp는 문서값(12.9 mg) 기준 허용 오차 내에 있어야 합니다.');
 
-      // 3. Z Aptp (문서 기대값: Z 22.2 mg)
-      // OI-1: 목표 22.2, 현재 23~26 안정 산출. 축별 가중 필터 적용 후 22.2 기준으로 조임.
-      expect(result.zPtp, closeTo(24.0, 4.0), reason: 'Z Aptp는 문서값(22.2 mg) 기준 허용 오차 내에 있어야 합니다.');
+      // 3. Z Aptp (문서 기대값: Z 22.2 mg) — 2차 Butterworth band-limit(HP 1.0/LP 30.0Hz) 적용 후 엄격 검증
+      expect(result.zPtp, closeTo(22.2, 1.5), reason: 'Z Aptp는 문서값(22.2 mg) 기준 허용 오차 내에 있어야 합니다.');
 
       // 4. noiseMax (기대 71.7 dBA, ±0.5 dBA - 엄격하게 검증)
       expect(result.noiseMax, closeTo(71.7, 0.5), reason: 'noiseMax가 기대 범위 내에 있어야 합니다.');

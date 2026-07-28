@@ -60,19 +60,50 @@ EVIMP1
       expect(result.distance, 0.0);
     });
 
-    test('writeEvimp1 및 parseEvimp1ToSamples 라운드트립 검증', () {
+    test('writeEvimp1 및 parseEvimp1ToSamples 확장 컬럼 라운드트립 검증', () {
       final res = RawDataParser.parseEvimp1ToSamples(sampleText);
       expect(res.sampleRate, 256);
       expect(res.samples.length, 4);
 
-      final serialized = RawDataParser.writeEvimp1(res.samples, sampleRate: res.sampleRate);
+      final serialized = RawDataParser.writeEvimp1(
+        res.samples,
+        sampleRate: res.sampleRate,
+      );
       expect(serialized, contains('EVIMP1\n256\n'));
-      expect(serialized, contains('-3.351 3.545 -1.787 58.073'));
+      expect(
+        serialized,
+        contains(
+          '# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ motionX motionY motionZ velocityX velocityY velocityZ distanceX distanceY distanceZ',
+        ),
+      );
+      expect(serialized, contains('0 -3.351 3.545 -1.787 58.073'));
+      expect(serialized.split('\n').any((line) => line.contains('0 0 0')), isTrue);
 
       final reParsed = RawDataParser.parseEvimp1ToSamples(serialized);
       expect(reParsed.samples.length, 4);
       expect(reParsed.samples[0].x, -3.351);
       expect(reParsed.samples[0].noiseDba, 58.073);
+    });
+
+    test('parseEvimp1ToSamples - 확장 raw/gravity 컬럼 파싱 검증', () {
+      const extendedText = '''
+EVIMP1
+256
+# columns: tsUs linearX linearY linearZ noiseDba rawX rawY rawZ gravityX gravityY gravityZ
+1000 1.1 2.2 3.3 55.5 10.1 20.2 30.3 9.1 18.2 27.3
+4906 1.2 2.3 3.4 56.5 null null null null null null
+''';
+
+      final res = RawDataParser.parseEvimp1ToSamples(extendedText);
+
+      expect(res.samples.length, 2);
+      expect(res.samples[0].tsUs, 1000);
+      expect(res.samples[0].x, 1.1);
+      expect(res.samples[0].rawZ, 30.3);
+      expect(res.samples[0].gravityZ, 27.3);
+      expect(res.samples[1].tsUs, 4906);
+      expect(res.samples[1].rawX, isNull);
+      expect(res.samples[1].gravityX, isNull);
     });
   });
 }
