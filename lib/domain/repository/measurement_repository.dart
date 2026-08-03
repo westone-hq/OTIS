@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
+import '../measure/dense_interpolated_export.dart';
 import '../measure/raw_excel_export.dart';
 import '../measure/sensor_sample.dart';
 import '../models/measurement_result.dart';
@@ -10,7 +11,9 @@ import '../report_generator.dart';
 
 /// P13 · 측정 결과 파일 저장소 Repository (Phase 4-A)
 /// - 로컬 디스크 문서 디렉토리 내 `measurements/{id}/` 폴더 관리
-/// - `raw.txt` (EVIMP1 형식 RAW 샘플)
+/// - `raw.txt` (EVIMP1 형식 RAW 샘플 · 256Hz 보간 · 거리/속도/진동 기준)
+/// - `raw_native.txt` (보간 전 센서 이벤트 · 실제 측정)
+/// - `dense_interpolated_*.csv` (그래프 확대용 보간 · 측정값 아님)
 /// - `EVIMP1_전체N초_초별분리_센서값_{256|128|64}.xlsx` (초당 샘플 수별)
 /// - `meta.json` (SiteInfo + 지표 + 판정 메타데이터)
 /// - `report.pdf` (TUNE 리포트 PDF 바이트)
@@ -39,8 +42,11 @@ class MeasurementRepository {
   }
 
   /// 측정 결과를 저장하고 생성된 디렉토리 인스턴스를 반환
-  /// - `raw.txt`, 초별 xlsx, `meta.json`, `report.pdf` 동기화 생성
-  Future<Directory> save(MeasurementResult result) async {
+  /// - `raw.txt`, `raw_native.txt`(선택), 초별 xlsx, `meta.json`, `report.pdf`
+  Future<Directory> save(
+    MeasurementResult result, {
+    String? nativeRawPath,
+  }) async {
     final baseDir = await getBaseDirectory();
     final targetDir = Directory('${baseDir.path}/${result.id}');
     if (overrideBaseDir != null) {
@@ -50,7 +56,7 @@ class MeasurementRepository {
       final metaFile = File('${targetDir.path}/meta.json');
       metaFile.writeAsStringSync(result.toJson(), flush: true);
 
-      _writeRawFilesSync(targetDir, result);
+      _writeRawFilesSync(targetDir, result, nativeRawPath: nativeRawPath);
 
       final pdfFile = File('${targetDir.path}/report.pdf');
       final pdfBytes = await ReportGenerator.generateTuneReportPdf(result);
@@ -67,8 +73,8 @@ class MeasurementRepository {
     final metaFile = File('${targetDir.path}/meta.json');
     await metaFile.writeAsString(result.toJson(), flush: true);
 
-    // 2. raw.txt + 초별 분리 xlsx
-    await _writeRawFiles(targetDir, result);
+    // 2. raw.txt + raw_native.txt + 초별 분리 xlsx
+    await _writeRawFiles(targetDir, result, nativeRawPath: nativeRawPath);
 
     // 3. report.pdf 저장
     final pdfFile = File('${targetDir.path}/report.pdf');
@@ -78,7 +84,11 @@ class MeasurementRepository {
     return targetDir;
   }
 
-  void _writeRawFilesSync(Directory targetDir, MeasurementResult result) {
+  void _writeRawFilesSync(
+    Directory targetDir,
+    MeasurementResult result, {
+    String? nativeRawPath,
+  }) {
     final rawSamples = result.rawSamples ?? [];
     final rawFile = File('${targetDir.path}/raw.txt');
     rawFile.writeAsStringSync(
@@ -88,14 +98,17 @@ class MeasurementRepository {
       ),
       flush: true,
     );
+    _copyNativeRawSync(targetDir, nativeRawPath);
+    _writeDenseInterpolatedSync(targetDir);
     _removeLegacyRawSidecarsSync(targetDir);
     _writeExcelFilesSync(targetDir, rawSamples, result.sampleRate);
   }
 
   Future<void> _writeRawFiles(
     Directory targetDir,
-    MeasurementResult result,
-  ) async {
+    MeasurementResult result, {
+    String? nativeRawPath,
+  }) async {
     final rawSamples = result.rawSamples ?? [];
     final rawFile = File('${targetDir.path}/raw.txt');
     await rawFile.writeAsString(
@@ -105,8 +118,83 @@ class MeasurementRepository {
       ),
       flush: true,
     );
+    await _copyNativeRaw(targetDir, nativeRawPath);
+    await _writeDenseInterpolated(targetDir);
     await _removeLegacyRawSidecars(targetDir);
     await _writeExcelFiles(targetDir, rawSamples, result.sampleRate);
+  }
+
+  void _copyNativeRawSync(Directory targetDir, String? nativeRawPath) {
+    final dest = File('${targetDir.path}/raw_native.txt');
+    if (nativeRawPath == null || nativeRawPath.isEmpty) return;
+    final src = File(nativeRawPath);
+    if (!src.existsSync()) return;
+    src.copySync(dest.path);
+  }
+
+  Future<void> _copyNativeRaw(Directory targetDir, String? nativeRawPath) async {
+    final dest = File('${targetDir.path}/raw_native.txt');
+    if (nativeRawPath == null || nativeRawPath.isEmpty) return;
+    final src = File(nativeRawPath);
+    if (!await src.exists()) return;
+    await src.copy(dest.path);
+  }
+
+  void _writeDenseInterpolatedSync(Directory targetDir) {
+    final nativeFile = File('${targetDir.path}/raw_native.txt');
+    if (!nativeFile.existsSync()) return;
+    final text = nativeFile.readAsStringSync();
+    final files = buildAllDenseInterpolatedCsv(text);
+    for (final entry in files.entries) {
+      File('${targetDir.path}/${entry.key}').writeAsStringSync(
+        entry.value,
+        flush: true,
+      );
+    }
+  }
+
+  Future<void> _writeDenseInterpolated(Directory targetDir) async {
+    final nativeFile = File('${targetDir.path}/raw_native.txt');
+    if (!await nativeFile.exists()) return;
+    final text = await nativeFile.readAsString();
+    final files = buildAllDenseInterpolatedCsv(text);
+    for (final entry in files.entries) {
+      await File('${targetDir.path}/${entry.key}').writeAsString(
+        entry.value,
+        flush: true,
+      );
+    }
+  }
+
+  /// 메일 첨부용: raw_native.txt가 있으면 경로 반환
+  Future<File?> ensureRawNativeFile(String id) async {
+    final baseDir = await getBaseDirectory();
+    final nativeFile = File('${baseDir.path}/$id/raw_native.txt');
+    if (await nativeFile.exists()) return nativeFile;
+    return null;
+  }
+
+  /// 메일 첨부용: dense_interpolated_*.csv (없으면 native 기준 생성)
+  Future<List<File>> ensureDenseInterpolatedFiles(String id) async {
+    final baseDir = await getBaseDirectory();
+    final targetDir = Directory('${baseDir.path}/$id');
+    final existing = <File>[];
+    for (final name in kDenseInterpolatedSpecs.keys) {
+      final f = File('${targetDir.path}/$name');
+      if (await f.exists()) existing.add(f);
+    }
+    if (existing.length == kDenseInterpolatedSpecs.length) return existing;
+
+    final native = File('${targetDir.path}/raw_native.txt');
+    if (!await native.exists()) return existing;
+    await _writeDenseInterpolated(targetDir);
+
+    final out = <File>[];
+    for (final name in kDenseInterpolatedSpecs.keys) {
+      final f = File('${targetDir.path}/$name');
+      if (await f.exists()) out.add(f);
+    }
+    return out;
   }
 
   void _writeExcelFilesSync(

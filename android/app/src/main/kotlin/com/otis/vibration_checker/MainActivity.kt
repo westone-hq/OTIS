@@ -61,9 +61,9 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "stopCapture" -> {
-                        sensorStreamHandler.stop()
+                        val nativePath = sensorStreamHandler.stop()
                         noiseCaptureHandler.stop()
-                        result.success(null)
+                        result.success(nativePath)
                     }
                     else -> {
                         result.notImplemented()
@@ -88,7 +88,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         super.onDestroy()
         if (::sensorStreamHandler.isInitialized) {
-            sensorStreamHandler.stop()
+            sensorStreamHandler.stop() // 경로 불필요 (Activity 종료)
         }
         if (::noiseCaptureHandler.isInitialized) {
             noiseCaptureHandler.stop()

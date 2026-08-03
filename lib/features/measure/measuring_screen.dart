@@ -27,9 +27,13 @@ class MeasuringScreen extends StatefulWidget {
   static Future<bool> attemptSave(
     MeasurementResult result, {
     void Function(Directory)? onSuccess,
+    String? nativeRawPath,
   }) async {
     try {
-      final dir = await MeasurementRepository.instance.save(result);
+      final dir = await MeasurementRepository.instance.save(
+        result,
+        nativeRawPath: nativeRawPath,
+      );
       onSuccess?.call(dir);
       return true;
     } catch (_) {
@@ -73,6 +77,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   bool _measurementAborted = false;
   bool _isFinished = false;
   bool _isFinishing = false;
+  /// 보간 전 원본 덤프(임시 파일) 경로 — stopCapture 시 수신
+  String? _nativeRawPath;
 
   @override
   void initState() {
@@ -245,8 +251,15 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     await Future.wait<void>([
       if (speedSub != null) _ignoreSlowCleanup(speedSub.cancel()),
       if (sensorSub != null) _ignoreSlowCleanup(sensorSub.cancel()),
-      _ignoreSlowCleanup(_sensorManager.stopCapture()),
     ]);
+    try {
+      final path = await _sensorManager
+          .stopCapture()
+          .timeout(const Duration(milliseconds: 2000));
+      if (path != null && path.isNotEmpty) {
+        _nativeRawPath = path;
+      }
+    } catch (_) {}
     try {
       await WakelockPlus.disable().timeout(const Duration(milliseconds: 200));
     } catch (_) {}
@@ -383,6 +396,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   Future<void> _showSaveRetryDialog(
     MeasurementResult finalResult, {
     required void Function(Directory) onSuccess,
+    String? nativeRawPath,
   }) async {
     if (!mounted) return;
     await showDialog<bool>(
@@ -403,6 +417,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
               final success = await MeasuringScreen.attemptSave(
                 finalResult,
                 onSuccess: onSuccess,
+                nativeRawPath: nativeRawPath,
               );
               if (success && ctx.mounted) {
                 Navigator.of(ctx).pop(true);
@@ -466,11 +481,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     final bool initialSuccess = await MeasuringScreen.attemptSave(
       finalResult,
       onSuccess: (dir) => savedDir = dir,
+      nativeRawPath: _nativeRawPath,
     );
     if (!initialSuccess) {
       await _showSaveRetryDialog(
         finalResult,
         onSuccess: (dir) => savedDir = dir,
+        nativeRawPath: _nativeRawPath,
       );
     }
 

@@ -9,6 +9,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import io.flutter.plugin.common.EventChannel
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileWriter
 
 /**
  * P11 · 안드로이드 가속도 센서 스트림 핸들러 및 256Hz 선형 보간 리샘플러
@@ -113,6 +116,16 @@ class SensorStreamHandler(
 
     private val batchBuffer = ArrayList<Map<String, Any>>(BATCH_SIZE)
 
+    /** 보간 전 원본 이벤트 덤프 (촘촘 검증용) */
+    private var nativeFile: File? = null
+    private var nativeWriter: BufferedWriter? = null
+    private var lastAccelNs: Long = 0L
+    private var lastGravityNs: Long = 0L
+    private var lastLinearNs: Long = 0L
+    private var nativeAccelCount: Int = 0
+    private var nativeGravityCount: Int = 0
+    private var nativeLinearCount: Int = 0
+
     fun start(targetSampleRate: Int) {
         val rate = if (targetSampleRate > 0) targetSampleRate else 256
         targetIntervalNs = 1_000_000_000L / rate
@@ -134,9 +147,16 @@ class SensorStreamHandler(
         rawCount = 0
         resampledCount = 0
         lastLogNs = 0L
+        lastAccelNs = 0L
+        lastGravityNs = 0L
+        lastLinearNs = 0L
+        nativeAccelCount = 0
+        nativeGravityCount = 0
+        nativeLinearCount = 0
         synchronized(batchBuffer) {
             batchBuffer.clear()
         }
+        openNativeDump()
 
         sensorManager?.registerListener(this, linearSensor, SensorManager.SENSOR_DELAY_FASTEST)
         accelerometerSensor?.let {
@@ -148,12 +168,89 @@ class SensorStreamHandler(
         Log.i(TAG, "SensorStreamHandler started at $rate Hz target.")
     }
 
-    fun stop() {
+    /**
+     * 센서 구독 종료 후 보간 전 덤프 파일 경로를 반환한다.
+     * 파일이 없으면 null.
+     */
+    fun stop(): String? {
         sensorManager?.unregisterListener(this)
         synchronized(batchBuffer) {
             batchBuffer.clear()
         }
-        Log.i(TAG, "SensorStreamHandler stopped.")
+        val path = closeNativeDump()
+        Log.i(
+            TAG,
+            "SensorStreamHandler stopped. native accel=$nativeAccelCount " +
+                "gravity=$nativeGravityCount linear=$nativeLinearCount path=$path",
+        )
+        return path
+    }
+
+    private fun openNativeDump() {
+        closeNativeDump()
+        try {
+            val file = File(context.cacheDir, "otis_raw_native_${System.currentTimeMillis()}.txt")
+            val writer = BufferedWriter(FileWriter(file))
+            writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트 (SENSOR_DELAY_FASTEST)\n")
+            writer.write("# 256Hz 리샘플 이전의 실제 콜백. 간격은 기기마다 약 3~7ms로 불규칙할 수 있음.\n")
+            writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")
+            writer.write("# type: accel | gravity | linear\n")
+            writer.flush()
+            nativeFile = file
+            nativeWriter = writer
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to open native dump file", e)
+            nativeFile = null
+            nativeWriter = null
+        }
+    }
+
+    private fun closeNativeDump(): String? {
+        try {
+            nativeWriter?.flush()
+            nativeWriter?.close()
+        } catch (_: Exception) {
+        }
+        nativeWriter = null
+        val path = nativeFile?.absolutePath
+        nativeFile = null
+        return path
+    }
+
+    private fun appendNativeEvent(type: String, timestampNs: Long, x: Float, y: Float, z: Float) {
+        val writer = nativeWriter ?: return
+        val prevNs = when (type) {
+            "accel" -> lastAccelNs
+            "gravity" -> lastGravityNs
+            else -> lastLinearNs
+        }
+        val dtUs = if (prevNs > 0L && timestampNs > prevNs) {
+            (timestampNs - prevNs) / 1000L
+        } else {
+            0L
+        }
+        when (type) {
+            "accel" -> {
+                lastAccelNs = timestampNs
+                nativeAccelCount++
+            }
+            "gravity" -> {
+                lastGravityNs = timestampNs
+                nativeGravityCount++
+            }
+            else -> {
+                lastLinearNs = timestampNs
+                nativeLinearCount++
+            }
+        }
+        try {
+            writer.write(
+                "$type ${timestampNs / 1000L} " +
+                    "${x * MPS2_TO_MG} ${y * MPS2_TO_MG} ${z * MPS2_TO_MG} $dtUs\n",
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to append native event", e)
+        }
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
@@ -170,6 +267,13 @@ class SensorStreamHandler(
 
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
+                appendNativeEvent(
+                    "accel",
+                    event.timestamp,
+                    event.values[0],
+                    event.values[1],
+                    event.values[2],
+                )
                 rawSample.push(
                     event.timestamp,
                     event.values[0],
@@ -179,6 +283,13 @@ class SensorStreamHandler(
                 return
             }
             Sensor.TYPE_GRAVITY -> {
+                appendNativeEvent(
+                    "gravity",
+                    event.timestamp,
+                    event.values[0],
+                    event.values[1],
+                    event.values[2],
+                )
                 gravitySample.push(
                     event.timestamp,
                     event.values[0],
@@ -197,6 +308,8 @@ class SensorStreamHandler(
         val currX = event.values[0]
         val currY = event.values[1]
         val currZ = event.values[2]
+
+        appendNativeEvent("linear", currNs, currX, currY, currZ)
 
         rawCount++
         if (lastLogNs == 0L) lastLogNs = currNs

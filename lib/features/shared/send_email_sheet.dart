@@ -140,7 +140,26 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
           attachments.add(rawFile.path);
           attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
         }
-        // 2) 초별 분리 엑셀 (256 / 128 / 64Hz)
+        // 2) 보간 전 원본 (실제 측정)
+        final native = await repo.ensureRawNativeFile(widget.jobId);
+        if (native != null && await native.exists()) {
+          attachments.add(native.path);
+          attachmentDescriptions.add(
+            '- raw_native.txt: 보간 전 센서 이벤트(실제 측정)',
+          );
+        }
+        // 3) 확대용 dense 보간 CSV (측정값 아님)
+        final denseFiles = await repo.ensureDenseInterpolatedFiles(widget.jobId);
+        for (final dense in denseFiles) {
+          if (await dense.exists()) {
+            attachments.add(dense.path);
+            final name = dense.path.replaceAll('\\', '/').split('/').last;
+            attachmentDescriptions.add(
+              '- $name: interpolated / visualization only',
+            );
+          }
+        }
+        // 4) 초별 분리 엑셀 (256 / 128 / 64Hz)
         final excelFiles = await repo.ensureRawExcelFiles(widget.jobId);
         for (final excel in excelFiles) {
           if (await excel.exists()) {
@@ -322,7 +341,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                     const Divider(height: 1, color: AppColors.border),
                     _buildCheckboxItem(
                       title:
-                          'RAW 원본 (raw.txt + 엑셀 256/128/64)',
+                          'RAW 원본 (raw/native/dense/엑셀)',
                       value: _sendRaw,
                       onChanged: (val) => setState(() => _sendRaw = val ?? false),
                     ),

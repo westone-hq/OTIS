@@ -95,14 +95,17 @@ class SensorChannelManager {
     }
   }
 
-  /// 센서 캡처 중단
-  Future<void> stopCapture() async {
+  /// 센서 캡처 중단.
+  /// 성공 시 보간 전 원본 덤프 파일 절대경로를 반환한다 (없으면 null).
+  Future<String?> stopCapture() async {
     try {
-      await _methodChannel
+      final dynamic path = await _methodChannel
           .invokeMethod('stopCapture')
-          .timeout(const Duration(milliseconds: 500));
+          .timeout(const Duration(milliseconds: 2000));
+      if (path is String && path.isNotEmpty) return path;
+      return null;
     } catch (_) {
-      // fallback
+      return null;
     }
   }
 }

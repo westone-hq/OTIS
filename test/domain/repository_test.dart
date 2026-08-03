@@ -37,6 +37,7 @@ void main() {
       final excel256 = File('${dir.path}/EVIMP1_전체1초_초별분리_센서값_256.xlsx');
       final excel128 = File('${dir.path}/EVIMP1_전체1초_초별분리_센서값_128.xlsx');
       final excel64 = File('${dir.path}/EVIMP1_전체1초_초별분리_센서값_64.xlsx');
+      final nativeFile = File('${dir.path}/raw_native.txt');
       final pdfFile = File('${dir.path}/report.pdf');
       final summaryFile = File('${dir.path}/raw_summary.txt');
       final readableFile = File('${dir.path}/raw_readable.txt');
@@ -49,6 +50,36 @@ void main() {
       expect(await pdfFile.exists(), isTrue);
       expect(await summaryFile.exists(), isFalse);
       expect(await readableFile.exists(), isFalse);
+      // native 경로 없이 저장하면 raw_native.txt는 없음
+      expect(await nativeFile.exists(), isFalse);
+
+      final nativeSrc = File('${tempDir.path}/native_src.txt');
+      await nativeSrc.writeAsString(
+        '# OTIS raw_native.txt\n'
+        'accel 0 10 0 0 0\n'
+        'accel 4000 20 0 0 4000\n'
+        'gravity 0 0 0 1000 0\n'
+        'gravity 4000 0 0 1000 4000\n'
+        'linear 0 1 0 0 0\n'
+        'linear 4000 2 0 0 4000\n',
+      );
+      final dir2 = await MeasurementRepository.instance.save(
+        mockResult.copyWith(id: 'NATIVE_COPY_TEST'),
+        nativeRawPath: nativeSrc.path,
+      );
+      final nativeCopied = File('${dir2.path}/raw_native.txt');
+      expect(await nativeCopied.exists(), isTrue);
+      expect(await nativeCopied.readAsString(), contains('accel'));
+      for (final name in const [
+        'dense_interpolated_512.csv',
+        'dense_interpolated_1024.csv',
+        'dense_interpolated_50x.csv',
+        'dense_interpolated_100x.csv',
+      ]) {
+        final dense = File('${dir2.path}/$name');
+        expect(await dense.exists(), isTrue, reason: name);
+        expect(await dense.readAsString(), contains('VISUALIZATION ONLY'));
+      }
 
       final rawContent = await rawFile.readAsString();
       expect(rawContent, contains('EVIMP1'));
