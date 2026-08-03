@@ -15,11 +15,15 @@ import java.io.FileWriter
 
 /**
  * P11 · 안드로이드 가속도 센서 스트림 핸들러 및 256Hz 선형 보간 리샘플러
- * - Sensor.TYPE_LINEAR_ACCELERATION / TYPE_ACCELEROMETER / TYPE_GRAVITY를 SENSOR_DELAY_FASTEST로 구독
+ * - Sensor.TYPE_LINEAR_ACCELERATION / TYPE_ACCELEROMETER / TYPE_GRAVITY를
+ *   samplingPeriodUs=3000 (1~3ms 요청)으로 단일 구독
  * - 타임스탬프(ns) 기반 선형 보간(Linear Interpolation) 적용하여 유효 256Hz 샘플레이트 도출
  * - linear / raw accelerometer / gravity 모두 리샘플 시점에 보간
  * - m/s² -> mg 단위 변환 (1 m/s² = 101.97 mg)
  * - 32샘플 단위 배칭으로 Flutter EventChannel 오버헤드 최적화
+ *
+ * 참고: samplingPeriodUs는 요청 힌트이며, 실제 네이티브 콜백 간격은 기기/OS에 따라
+ * 1~3ms보다 길 수 있다. Flutter로 내보내는 분석 스트림은 256Hz로 유지한다.
  */
 class SensorStreamHandler(
     private val context: Context,
@@ -30,6 +34,9 @@ class SensorStreamHandler(
         private const val TAG = "SensorStreamHandler"
         private const val MPS2_TO_MG = 101.97162129779283
         private const val BATCH_SIZE = 32
+
+        /** 1~3ms 요청 (단일 스트림). SENSOR_DELAY_FASTEST 대신 명시 주기 사용. */
+        private const val SAMPLING_PERIOD_US = 3000
     }
 
     private data class AxisSample(
@@ -158,14 +165,19 @@ class SensorStreamHandler(
         }
         openNativeDump()
 
-        sensorManager?.registerListener(this, linearSensor, SensorManager.SENSOR_DELAY_FASTEST)
+        // 단일 스트림: samplingPeriodUs=3000 (1~3ms 요청)
+        sensorManager?.registerListener(this, linearSensor, SAMPLING_PERIOD_US)
         accelerometerSensor?.let {
-            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+            sensorManager?.registerListener(this, it, SAMPLING_PERIOD_US)
         }
         gravitySensor?.let {
-            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+            sensorManager?.registerListener(this, it, SAMPLING_PERIOD_US)
         }
-        Log.i(TAG, "SensorStreamHandler started at $rate Hz target.")
+        Log.i(
+            TAG,
+            "SensorStreamHandler started: samplingPeriodUs=$SAMPLING_PERIOD_US, " +
+                "resampleTarget=${rate}Hz",
+        )
     }
 
     /**
@@ -191,8 +203,8 @@ class SensorStreamHandler(
         try {
             val file = File(context.cacheDir, "otis_raw_native_${System.currentTimeMillis()}.txt")
             val writer = BufferedWriter(FileWriter(file))
-            writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트 (SENSOR_DELAY_FASTEST)\n")
-            writer.write("# 256Hz 리샘플 이전의 실제 콜백. 간격은 기기마다 약 3~7ms로 불규칙할 수 있음.\n")
+            writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트 (samplingPeriodUs=$SAMPLING_PERIOD_US)\n")
+            writer.write("# 256Hz 리샘플 이전의 실제 콜백. 요청은 1~3ms이며 실제 간격은 기기/OS에 따라 불규칙할 수 있음.\n")
             writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")
             writer.write("# type: accel | gravity | linear\n")
             writer.flush()
