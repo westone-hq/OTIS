@@ -68,10 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icon(Icons.check_circle_outline, color: AppColors.green),
             SizedBox(width: AppDims.gap),
             Expanded(
-              child: Text(
-                '저장되었습니다',
-                style: TextStyle(color: Colors.white),
-              ),
+              child: Text('저장되었습니다', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -207,9 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('설정'),
-      ),
+      appBar: AppBar(title: const Text('설정')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppDims.screenPad),
@@ -247,15 +242,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: AppDims.gap3),
 
               // 3. 앱 버전 및 문의하기
-              _buildListTile(
-                title: '앱 버전',
-                trailingText: '0.1.0',
-              ),
+              _buildListTile(title: '앱 버전', trailingText: '0.1.0'),
               const SizedBox(height: AppDims.gap),
               _buildListTile(
                 title: '문의하기',
                 trailingIcon: Icons.chevron_right,
                 onTap: _showReadyNotice,
+              ),
+              const SizedBox(height: AppDims.gap),
+              _buildListTile(
+                title: '전체 센서 비교 (파일 8개)',
+                trailingIcon: Icons.chevron_right,
+                onTap: () => context.push('/verify-fastest'),
+              ),
+              const SizedBox(height: AppDims.gap),
+              _buildListTile(
+                title: '1ms · 3ms 센서 검증',
+                trailingIcon: Icons.chevron_right,
+                onTap: () => context.push('/verify-fixed'),
               ),
               const SizedBox(height: 48),
 

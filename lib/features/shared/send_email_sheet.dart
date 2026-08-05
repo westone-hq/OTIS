@@ -134,32 +134,24 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
         }
       }
       if (_sendRaw) {
-        // 1) 센서 원본 raw.txt
+        // 1) 256Hz 보간본 (≈3~7ms 원본 → 초당 256개)
         final rawFile = File('${baseDir.path}/${widget.jobId}/raw.txt');
         if (await rawFile.exists()) {
           attachments.add(rawFile.path);
-          attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
-        }
-        // 2) 보간 전 원본 (실제 측정)
-        final native = await repo.ensureRawNativeFile(widget.jobId);
-        if (native != null && await native.exists()) {
-          attachments.add(native.path);
           attachmentDescriptions.add(
-            '- raw_native.txt: 보간 전 센서 이벤트(실제 측정)',
+            '- raw.txt: ≈3~7ms 원본을 256Hz로 보간한 분석용',
           );
         }
-        // 3) 확대용 dense 보간 CSV (측정값 아님)
-        final denseFiles = await repo.ensureDenseInterpolatedFiles(widget.jobId);
-        for (final dense in denseFiles) {
-          if (await dense.exists()) {
-            attachments.add(dense.path);
-            final name = dense.path.replaceAll('\\', '/').split('/').last;
-            attachmentDescriptions.add(
-              '- $name: interpolated / visualization only',
-            );
+        // 2) 초별 원본 텍스트 (3~7ms / 1~3ms)
+        final nativeFiles = await repo.ensureNativeReadableFiles(widget.jobId);
+        for (final f in nativeFiles) {
+          if (await f.exists()) {
+            attachments.add(f.path);
+            final name = f.path.replaceAll('\\', '/').split('/').last;
+            attachmentDescriptions.add('- $name');
           }
         }
-        // 4) 초별 분리 엑셀 (256 / 128 / 64Hz)
+        // 3) 분석용 256Hz 초별 엑셀
         final excelFiles = await repo.ensureRawExcelFiles(widget.jobId);
         for (final excel in excelFiles) {
           if (await excel.exists()) {
@@ -341,7 +333,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                     const Divider(height: 1, color: AppColors.border),
                     _buildCheckboxItem(
                       title:
-                          'RAW 원본 (raw/native/dense/엑셀)',
+                          'RAW (raw.txt + 3~7ms/1~3ms 초별 + 엑셀256)',
                       value: _sendRaw,
                       onChanged: (val) => setState(() => _sendRaw = val ?? false),
                     ),

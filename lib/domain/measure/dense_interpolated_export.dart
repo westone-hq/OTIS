@@ -12,7 +12,8 @@ const Map<String, int> kDenseInterpolatedSpecs = {
 };
 
 class NativeSensorEvent {
-  final String type; // accel | gravity | linear
+  /// raw | gravity | linear  (구버전 파일의 accel → raw로 정규화)
+  final String type;
   final int tsUs;
   final double xMg;
   final double yMg;
@@ -27,7 +28,7 @@ class NativeSensorEvent {
   });
 }
 
-/// raw_native.txt 본문 파싱
+/// native dump 본문 파싱 (`raw` = accelerometer / 구버전 `accel` 호환)
 List<NativeSensorEvent> parseRawNativeText(String content) {
   final out = <NativeSensorEvent>[];
   for (final rawLine in content.split('\n')) {
@@ -35,8 +36,9 @@ List<NativeSensorEvent> parseRawNativeText(String content) {
     if (line.isEmpty || line.startsWith('#')) continue;
     final parts = line.split(RegExp(r'\s+'));
     if (parts.length < 5) continue;
-    final type = parts[0];
-    if (type != 'accel' && type != 'gravity' && type != 'linear') continue;
+    var type = parts[0];
+    if (type == 'accel') type = 'raw'; // 구버전 호환
+    if (type != 'raw' && type != 'gravity' && type != 'linear') continue;
     final ts = int.tryParse(parts[1]);
     final x = double.tryParse(parts[2]);
     final y = double.tryParse(parts[3]);
@@ -66,7 +68,7 @@ String buildDenseInterpolatedCsv(
     'Distance/speed/vibration analysis must use resampled 256Hz (raw.txt).',
   );
   buf.writeln(
-    't_sec,accel_x_mg,accel_y_mg,accel_z_mg,'
+    't_sec,raw_x_mg,raw_y_mg,raw_z_mg,'
     'gravity_x_mg,gravity_y_mg,gravity_z_mg,'
     'linear_x_mg,linear_y_mg,linear_z_mg',
   );
@@ -75,7 +77,7 @@ String buildDenseInterpolatedCsv(
     return buf.toString();
   }
 
-  final accel = events.where((e) => e.type == 'accel').toList();
+  final raw = events.where((e) => e.type == 'raw').toList();
   final gravity = events.where((e) => e.type == 'gravity').toList();
   final linear = events.where((e) => e.type == 'linear').toList();
 
@@ -95,7 +97,7 @@ String buildDenseInterpolatedCsv(
     final t = tStart + (i * periodUs).round();
     if (t > tEnd) break;
     final tSec = (t - tStart) / 1000000.0;
-    final a = _interpAt(accel, t);
+    final a = _interpAt(raw, t);
     final g = _interpAt(gravity, t);
     final l = _interpAt(linear, t);
     buf.writeln(

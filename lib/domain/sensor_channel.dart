@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 
+import 'measure/sample_rate.dart';
 import 'measure/sensor_sample.dart';
 export 'measure/sensor_sample.dart';
 
 /// P11 · 안드로이드 Kotlin 센서 채널 관리자 (구조 및 인터페이스 정의)
-/// - 나중에 UI(S4 MeasuringScreen) 및 기능 모듈 통합을 고려하여 설계된 뼈대 구조
+/// - 나중에 UI(S4 MeasuringScreen) 및 기능 계층 통합을 고려하여 설계된 뼈대 구조
 ///
 /// [기술적 대비 및 주의사항]
 /// 1. S22 샘플링 주파수 보간:
-///    - 안드로이드 SensorManager에서 SENSOR_DELAY_FASTEST 또는 3906㎲(256Hz) 요청 시
-///      하드웨어가 약 400~500Hz 콜백을 생성할 수 있음.
-///    - OS 콜백 지연 불균일성을 보완하기 위해 네이티브 또는 Dart 스트림 수신 단에서
-///      타임스탬프 기반 선형 보간(Linear Interpolation) 적용 예정.
+///    - 분석용 목표 간격은 [SampleRate] (기본 256Hz ≈ 3906µs) 단일 정의.
+///      Flutter가 startCapture(sampleRate)로 넘기고, 네이티브가 1e9/rate ns로 리샘플한다.
+///      하드웨어 콜백은 FASTEST 등으로 더 빠를 수 있으며, OS 간격은 불규칙할 수 있음.
 /// 2. 마이크 소음(dBA) 물리 보정:
 ///    - AudioRecord 버퍼 RMS 계산 후 dBA 환산 시 계측기와의 오차 보정을 위해
 ///      startCapture 시 [calibrationOffsetDba] 파라미터로 기준 오프셋 주입 구조 마련.
@@ -58,9 +58,6 @@ class SensorChannelManager {
       );
       return available ?? false;
     } catch (_) {
-      // fail-safe: 네이티브 확인 불가 시 불가용으로 간주.
-      // 테스트 환경(MissingPluginException)도 false가 되며,
-      // 측정 화면의 mock 폴백(디버그 한정)이 이를 흡수한다.
       return false;
     }
   }
@@ -74,13 +71,13 @@ class SensorChannelManager {
       );
       return granted ?? false;
     } catch (_) {
-      return true; // fallback for tests
+      return true;
     }
   }
 
   /// 센서 캡처 시작 (목표 샘플링 주파수 및 소음 오프셋 주입)
   Future<void> startCapture({
-    int targetSampleRate = 256,
+    int targetSampleRate = SampleRate.hz,
     double calibrationOffsetDba = 0.0,
     double micDbfsToDbaOffset = 85.0,
   }) async {
@@ -90,22 +87,33 @@ class SensorChannelManager {
         'calibrationOffset': calibrationOffsetDba,
         'micDbfsToDbaOffset': micDbfsToDbaOffset,
       });
-    } catch (_) {
-      // 구현 전 fallback (위젯 및 모듈 통합 테스트 시 안전한 진행)
-    }
+    } catch (_) {}
   }
 
   /// 센서 캡처 중단.
-  /// 성공 시 보간 전 원본 덤프 파일 절대경로를 반환한다 (없으면 null).
-  Future<String?> stopCapture() async {
+  /// 반환: {native3to7, native1to3} 임시 파일 경로 (없으면 해당 키 없음)
+  Future<Map<String, String>> stopCapture() async {
     try {
-      final dynamic path = await _methodChannel
+      final dynamic raw = await _methodChannel
           .invokeMethod('stopCapture')
           .timeout(const Duration(milliseconds: 2000));
-      if (path is String && path.isNotEmpty) return path;
-      return null;
+      if (raw is Map) {
+        final out = <String, String>{};
+        for (final e in raw.entries) {
+          final v = e.value;
+          if (v is String && v.isNotEmpty) {
+            out[e.key.toString()] = v;
+          }
+        }
+        return out;
+      }
+      // 구버전: 단일 String 경로 → 1to3로 취급
+      if (raw is String && raw.isNotEmpty) {
+        return {'native1to3': raw};
+      }
+      return {};
     } catch (_) {
-      return null;
+      return {};
     }
   }
 }

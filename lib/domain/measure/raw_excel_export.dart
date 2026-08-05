@@ -40,7 +40,12 @@ Uint8List buildRawBySecondExcelBytes(
     final sheetName = '${sec + 1}초';
     final sheet = excel[sheetName];
 
-    _setText(sheet, 0, 0, 'EVIMP1 센서 측정값 — ${sec + 1}초 구간 (${exportRate}Hz)');
+    _setText(
+      sheet,
+      0,
+      0,
+      '분석용 리샘플 — ${sec + 1}초 구간 (${exportRate}Hz, 초당 $exportRate개 고정)',
+    );
     _setText(sheet, 1, 0, '구간');
     _setText(sheet, 1, 1, '${sec + 1}초');
     _setText(sheet, 1, 2, '원본 순번');
@@ -55,14 +60,16 @@ Uint8List buildRawBySecondExcelBytes(
 
     _setText(sheet, 2, 0, '출력');
     _setText(sheet, 2, 1, '${exportRate}Hz');
-    _setText(sheet, 2, 2, '원본');
+    _setText(sheet, 2, 2, '리샘플격자');
     _setText(sheet, 2, 3, '${sourceRate}Hz');
     _setText(sheet, 2, 4, '추출');
     _setText(
       sheet,
       2,
       5,
-      step == 1 ? '전 샘플' : '$step샘플마다 1개',
+      step == 1
+          ? '보간본(기존≈3~7ms 원본→256격자)'
+          : '$step샘플마다 1개',
     );
 
     const headers = <String>[

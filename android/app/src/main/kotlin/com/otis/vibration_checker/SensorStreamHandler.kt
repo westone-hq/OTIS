@@ -9,21 +9,15 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import io.flutter.plugin.common.EventChannel
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileWriter
 
 /**
  * P11 · 안드로이드 가속도 센서 스트림 핸들러 및 256Hz 선형 보간 리샘플러
- * - Sensor.TYPE_LINEAR_ACCELERATION / TYPE_ACCELEROMETER / TYPE_GRAVITY를
- *   samplingPeriodUs=3000 (1~3ms 요청)으로 단일 구독
- * - 타임스탬프(ns) 기반 선형 보간(Linear Interpolation) 적용하여 유효 256Hz 샘플레이트 도출
- * - linear / raw accelerometer / gravity 모두 리샘플 시점에 보간
- * - m/s² -> mg 단위 변환 (1 m/s² = 101.97 mg)
- * - 32샘플 단위 배칭으로 Flutter EventChannel 오버헤드 최적화
  *
- * 참고: samplingPeriodUs는 요청 힌트이며, 실제 네이티브 콜백 간격은 기기/OS에 따라
- * 1~3ms보다 길 수 있다. Flutter로 내보내는 분석 스트림은 256Hz로 유지한다.
+ * 이중 구독:
+ * - FASTEST(≈3~7ms): 분석용 256Hz 리샘플 + raw_3to7ms 원본 덤프
+ * - samplingPeriodUs=3000(1~3ms 요청): raw_1to3ms 원본 덤프 전용
+ *
+ * 참고: 요청 주기는 힌트이며 실제 콜백 간격은 기기/OS에 따라 다를 수 있다.
  */
 class SensorStreamHandler(
     private val context: Context,
@@ -35,8 +29,14 @@ class SensorStreamHandler(
         private const val MPS2_TO_MG = 101.97162129779283
         private const val BATCH_SIZE = 32
 
-        /** 1~3ms 요청 (단일 스트림). SENSOR_DELAY_FASTEST 대신 명시 주기 사용. */
-        private const val SAMPLING_PERIOD_US = 3000
+        /**
+         * 분석용 리샘플 목표 Hz (Flutter [SampleRate.hz]와 동일해야 함).
+         * 간격 = 1e9/TARGET_SAMPLE_RATE_HZ ns ≈ 3.906ms (3906µs).
+         */
+        const val TARGET_SAMPLE_RATE_HZ = 256
+
+        /** 1~3ms 요청 (원본 덤프 전용 스트림) */
+        private const val SAMPLING_PERIOD_1TO3_US = 3000
     }
 
     private data class AxisSample(
@@ -111,7 +111,7 @@ class SensorStreamHandler(
     private var eventSink: EventChannel.EventSink? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private var targetIntervalNs: Long = 1_000_000_000L / 256L
+    private var targetIntervalNs: Long = 1_000_000_000L / TARGET_SAMPLE_RATE_HZ
     private val linearSample = AxisSample()
     private val rawSample = AxisSample()
     private val gravitySample = AxisSample()
@@ -123,18 +123,39 @@ class SensorStreamHandler(
 
     private val batchBuffer = ArrayList<Map<String, Any>>(BATCH_SIZE)
 
-    /** 보간 전 원본 이벤트 덤프 (촘촘 검증용) */
-    private var nativeFile: File? = null
-    private var nativeWriter: BufferedWriter? = null
-    private var lastAccelNs: Long = 0L
-    private var lastGravityNs: Long = 0L
-    private var lastLinearNs: Long = 0L
-    private var nativeAccelCount: Int = 0
-    private var nativeGravityCount: Int = 0
-    private var nativeLinearCount: Int = 0
+    /** FASTEST(≈3~7ms) 원본 덤프 — 분석 스트림과 동일 리스너 */
+    private val dump3to7 = NativeDumpWriter(
+        context,
+        tag = "native3to7",
+        requestLabel = "SENSOR_DELAY_FASTEST (≈3~7ms 요청)",
+    )
+
+    /** 3000us(1~3ms) 원본 덤프 전용 */
+    private val dump1to3 = NativeDumpWriter(
+        context,
+        tag = "native1to3",
+        requestLabel = "samplingPeriodUs=$SAMPLING_PERIOD_1TO3_US (1~3ms 요청)",
+    )
+
+    private val listener1to3 = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent?) {
+            if (event == null) return
+            val type = when (event.sensor.type) {
+                Sensor.TYPE_ACCELEROMETER -> "raw"
+                Sensor.TYPE_GRAVITY -> "gravity"
+                Sensor.TYPE_LINEAR_ACCELERATION -> "linear"
+                else -> return
+            }
+            dump1to3.append(type, event.timestamp, event.values[0], event.values[1], event.values[2])
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
 
     fun start(targetSampleRate: Int) {
-        val rate = if (targetSampleRate > 0) targetSampleRate else 256
+        val rate =
+            if (targetSampleRate > 0) targetSampleRate else TARGET_SAMPLE_RATE_HZ
+        // 1초(ns) / Hz = 샘플 간격. 256Hz → ≈ 3.90625ms
         targetIntervalNs = 1_000_000_000L / rate
 
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager?
@@ -154,115 +175,60 @@ class SensorStreamHandler(
         rawCount = 0
         resampledCount = 0
         lastLogNs = 0L
-        lastAccelNs = 0L
-        lastGravityNs = 0L
-        lastLinearNs = 0L
-        nativeAccelCount = 0
-        nativeGravityCount = 0
-        nativeLinearCount = 0
         synchronized(batchBuffer) {
             batchBuffer.clear()
         }
-        openNativeDump()
+        dump3to7.open()
+        dump1to3.open()
 
-        // 단일 스트림: samplingPeriodUs=3000 (1~3ms 요청)
-        sensorManager?.registerListener(this, linearSensor, SAMPLING_PERIOD_US)
+        // A) ≈3~7ms: 분석(256Hz 리샘플) + 원본 덤프
+        sensorManager?.registerListener(this, linearSensor, SensorManager.SENSOR_DELAY_FASTEST)
         accelerometerSensor?.let {
-            sensorManager?.registerListener(this, it, SAMPLING_PERIOD_US)
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
         }
         gravitySensor?.let {
-            sensorManager?.registerListener(this, it, SAMPLING_PERIOD_US)
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
         }
+
+        // B) 1~3ms 요청: 원본 덤프만
+        sensorManager?.registerListener(listener1to3, linearSensor, SAMPLING_PERIOD_1TO3_US)
+        accelerometerSensor?.let {
+            sensorManager?.registerListener(listener1to3, it, SAMPLING_PERIOD_1TO3_US)
+        }
+        gravitySensor?.let {
+            sensorManager?.registerListener(listener1to3, it, SAMPLING_PERIOD_1TO3_US)
+        }
+
         Log.i(
             TAG,
-            "SensorStreamHandler started: samplingPeriodUs=$SAMPLING_PERIOD_US, " +
+            "SensorStreamHandler started: FASTEST(≈3~7ms)+${SAMPLING_PERIOD_1TO3_US}us(1~3ms), " +
                 "resampleTarget=${rate}Hz",
         )
     }
 
     /**
-     * 센서 구독 종료 후 보간 전 덤프 파일 경로를 반환한다.
-     * 파일이 없으면 null.
+     * 센서 구독 종료 후 원본 덤프 경로 맵을 반환한다.
+     * keys: native3to7, native1to3
      */
-    fun stop(): String? {
+    fun stop(): Map<String, String> {
         sensorManager?.unregisterListener(this)
+        sensorManager?.unregisterListener(listener1to3)
         synchronized(batchBuffer) {
             batchBuffer.clear()
         }
-        val path = closeNativeDump()
+        // close()는 중복 호출해도 마지막 경로를 유지한다 (EventChannel onCancel → stopCapture 순서 대비)
+        val path3 = dump3to7.close()
+        val path1 = dump1to3.close()
         Log.i(
             TAG,
-            "SensorStreamHandler stopped. native accel=$nativeAccelCount " +
-                "gravity=$nativeGravityCount linear=$nativeLinearCount path=$path",
+            "SensorStreamHandler stopped. " +
+                "3to7 raw=${dump3to7.accelCount} path=$path3 · " +
+                "1to3 raw=${dump1to3.accelCount} path=$path1",
         )
-        return path
-    }
-
-    private fun openNativeDump() {
-        closeNativeDump()
-        try {
-            val file = File(context.cacheDir, "otis_raw_native_${System.currentTimeMillis()}.txt")
-            val writer = BufferedWriter(FileWriter(file))
-            writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트 (samplingPeriodUs=$SAMPLING_PERIOD_US)\n")
-            writer.write("# 256Hz 리샘플 이전의 실제 콜백. 요청은 1~3ms이며 실제 간격은 기기/OS에 따라 불규칙할 수 있음.\n")
-            writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")
-            writer.write("# type: accel | gravity | linear\n")
-            writer.flush()
-            nativeFile = file
-            nativeWriter = writer
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to open native dump file", e)
-            nativeFile = null
-            nativeWriter = null
-        }
-    }
-
-    private fun closeNativeDump(): String? {
-        try {
-            nativeWriter?.flush()
-            nativeWriter?.close()
-        } catch (_: Exception) {
-        }
-        nativeWriter = null
-        val path = nativeFile?.absolutePath
-        nativeFile = null
-        return path
-    }
-
-    private fun appendNativeEvent(type: String, timestampNs: Long, x: Float, y: Float, z: Float) {
-        val writer = nativeWriter ?: return
-        val prevNs = when (type) {
-            "accel" -> lastAccelNs
-            "gravity" -> lastGravityNs
-            else -> lastLinearNs
-        }
-        val dtUs = if (prevNs > 0L && timestampNs > prevNs) {
-            (timestampNs - prevNs) / 1000L
-        } else {
-            0L
-        }
-        when (type) {
-            "accel" -> {
-                lastAccelNs = timestampNs
-                nativeAccelCount++
-            }
-            "gravity" -> {
-                lastGravityNs = timestampNs
-                nativeGravityCount++
-            }
-            else -> {
-                lastLinearNs = timestampNs
-                nativeLinearCount++
-            }
-        }
-        try {
-            writer.write(
-                "$type ${timestampNs / 1000L} " +
-                    "${x * MPS2_TO_MG} ${y * MPS2_TO_MG} ${z * MPS2_TO_MG} $dtUs\n",
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to append native event", e)
-        }
+        val out = linkedMapOf<String, String>()
+        if (!path3.isNullOrEmpty()) out["native3to7"] = path3
+        if (!path1.isNullOrEmpty()) out["native1to3"] = path1
+        return out
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
@@ -270,8 +236,9 @@ class SensorStreamHandler(
     }
 
     override fun onCancel(arguments: Any?) {
+        // sink만 끊는다. 덤프 close/경로 회수는 stopCapture→stop()에서 한다.
+        // (여기서 stop() 하면 경로가 버려진 채 초별 txt가 저장되지 않음)
         this.eventSink = null
-        stop()
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -279,8 +246,8 @@ class SensorStreamHandler(
 
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
-                appendNativeEvent(
-                    "accel",
+                dump3to7.append(
+                    "raw",
                     event.timestamp,
                     event.values[0],
                     event.values[1],
@@ -295,7 +262,7 @@ class SensorStreamHandler(
                 return
             }
             Sensor.TYPE_GRAVITY -> {
-                appendNativeEvent(
+                dump3to7.append(
                     "gravity",
                     event.timestamp,
                     event.values[0],
@@ -321,7 +288,7 @@ class SensorStreamHandler(
         val currY = event.values[1]
         val currZ = event.values[2]
 
-        appendNativeEvent("linear", currNs, currX, currY, currZ)
+        dump3to7.append("linear", currNs, currX, currY, currZ)
 
         rawCount++
         if (lastLogNs == 0L) lastLogNs = currNs

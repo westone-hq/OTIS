@@ -9,6 +9,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../core/theme.dart';
 import '../../domain/measure/metrics_config.dart';
 import '../../domain/measure/measurement_engine.dart';
+import '../../domain/measure/sample_rate.dart';
 import '../../domain/sensor_channel.dart';
 import '../../domain/repository/measurement_repository.dart';
 import '../../domain/models/measurement_result.dart';
@@ -27,12 +28,12 @@ class MeasuringScreen extends StatefulWidget {
   static Future<bool> attemptSave(
     MeasurementResult result, {
     void Function(Directory)? onSuccess,
-    String? nativeRawPath,
+    Map<String, String>? nativeRawPaths,
   }) async {
     try {
       final dir = await MeasurementRepository.instance.save(
         result,
-        nativeRawPath: nativeRawPath,
+        nativeRawPaths: nativeRawPaths,
       );
       onSuccess?.call(dir);
       return true;
@@ -78,7 +79,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   bool _isFinished = false;
   bool _isFinishing = false;
   /// 보간 전 원본 덤프(임시 파일) 경로 — stopCapture 시 수신
-  String? _nativeRawPath;
+  /// keys: native3to7, native1to3
+  Map<String, String> _nativeRawPaths = {};
 
   @override
   void initState() {
@@ -157,7 +159,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     final bool available = await _sensorManager.checkSensorsAvailable();
     if (available && !_sensorManager.useMock) {
       await _sensorManager.startCapture(
-        targetSampleRate: 256,
+        targetSampleRate: SampleRate.hz,
         micDbfsToDbaOffset: MetricsConfig.defaultConfig.micDbfsToDbaOffset,
       );
       _sensorSub = _sensorManager.sensorStream.listen((sample) {
@@ -175,7 +177,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           } else {
             final double dt = (_lastTsUs > 0 && sample.tsUs > _lastTsUs)
                 ? (sample.tsUs - _lastTsUs) / 1000000.0
-                : (1.0 / 256.0);
+                : SampleRate.periodSec;
             final double aZ =
                 (sample.z - _baselineZ) *
                 SensorSample.mgToMetersPerSecondSquared;
@@ -244,6 +246,18 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     _countdownTimer = null;
     _mockFallbackTimer = null;
     _releaseTimeoutTimer = null;
+
+    // 원본 덤프 경로를 먼저 회수한다.
+    // (EventChannel cancel이 먼저 stop을 타면 경로가 유실되어 초별 txt가 안 생김)
+    try {
+      final paths = await _sensorManager
+          .stopCapture()
+          .timeout(const Duration(milliseconds: 2000));
+      if (paths.isNotEmpty) {
+        _nativeRawPaths = paths;
+      }
+    } catch (_) {}
+
     final speedSub = _speedSub;
     final sensorSub = _sensorSub;
     _speedSub = null;
@@ -252,14 +266,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       if (speedSub != null) _ignoreSlowCleanup(speedSub.cancel()),
       if (sensorSub != null) _ignoreSlowCleanup(sensorSub.cancel()),
     ]);
-    try {
-      final path = await _sensorManager
-          .stopCapture()
-          .timeout(const Duration(milliseconds: 2000));
-      if (path != null && path.isNotEmpty) {
-        _nativeRawPath = path;
-      }
-    } catch (_) {}
     try {
       await WakelockPlus.disable().timeout(const Duration(milliseconds: 200));
     } catch (_) {}
@@ -396,7 +402,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   Future<void> _showSaveRetryDialog(
     MeasurementResult finalResult, {
     required void Function(Directory) onSuccess,
-    String? nativeRawPath,
+    Map<String, String>? nativeRawPaths,
   }) async {
     if (!mounted) return;
     await showDialog<bool>(
@@ -417,7 +423,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
               final success = await MeasuringScreen.attemptSave(
                 finalResult,
                 onSuccess: onSuccess,
-                nativeRawPath: nativeRawPath,
+                nativeRawPaths: nativeRawPaths,
               );
               if (success && ctx.mounted) {
                 Navigator.of(ctx).pop(true);
@@ -481,13 +487,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     final bool initialSuccess = await MeasuringScreen.attemptSave(
       finalResult,
       onSuccess: (dir) => savedDir = dir,
-      nativeRawPath: _nativeRawPath,
+      nativeRawPaths: _nativeRawPaths,
     );
     if (!initialSuccess) {
       await _showSaveRetryDialog(
         finalResult,
         onSuccess: (dir) => savedDir = dir,
-        nativeRawPath: _nativeRawPath,
+        nativeRawPaths: _nativeRawPaths,
       );
     }
 

@@ -2,21 +2,17 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-import '../measure/dense_interpolated_export.dart';
+import '../measure/native_readable_export.dart';
 import '../measure/raw_excel_export.dart';
-import '../measure/sensor_sample.dart';
 import '../models/measurement_result.dart';
 import '../parse_raw.dart';
 import '../report_generator.dart';
 
 /// P13 · 측정 결과 파일 저장소 Repository (Phase 4-A)
-/// - 로컬 디스크 문서 디렉토리 내 `measurements/{id}/` 폴더 관리
-/// - `raw.txt` (EVIMP1 형식 RAW 샘플 · 256Hz 보간 · 거리/속도/진동 기준)
-/// - `raw_native.txt` (보간 전 센서 이벤트 · 실제 측정)
-/// - `dense_interpolated_*.csv` (그래프 확대용 보간 · 측정값 아님)
-/// - `EVIMP1_전체N초_초별분리_센서값_{256|128|64}.xlsx` (초당 샘플 수별)
-/// - `meta.json` (SiteInfo + 지표 + 판정 메타데이터)
-/// - `report.pdf` (TUNE 리포트 PDF 바이트)
+/// - `raw.txt` : ≈3~7ms 원본을 256Hz로 보간한 분석용
+/// - `raw_3to7ms_초별.txt` : FASTEST(≈3~7ms) 원본을 초별로 보기 쉽게
+/// - `raw_1to3ms_초별.txt` : 3000us(1~3ms) 원본을 초별로 보기 쉽게
+/// - `meta.json` / `report.pdf`
 class MeasurementRepository {
   static final MeasurementRepository instance = MeasurementRepository._();
   MeasurementRepository._();
@@ -42,11 +38,16 @@ class MeasurementRepository {
   }
 
   /// 측정 결과를 저장하고 생성된 디렉토리 인스턴스를 반환
-  /// - `raw.txt`, `raw_native.txt`(선택), 초별 xlsx, `meta.json`, `report.pdf`
   Future<Directory> save(
     MeasurementResult result, {
-    String? nativeRawPath,
+    Map<String, String>? nativeRawPaths,
+    @Deprecated('Use nativeRawPaths') String? nativeRawPath,
   }) async {
+    final paths = <String, String>{
+      ...?nativeRawPaths,
+      if (nativeRawPath != null && nativeRawPath.isNotEmpty)
+        'native1to3': nativeRawPath,
+    };
     final baseDir = await getBaseDirectory();
     final targetDir = Directory('${baseDir.path}/${result.id}');
     if (overrideBaseDir != null) {
@@ -56,7 +57,7 @@ class MeasurementRepository {
       final metaFile = File('${targetDir.path}/meta.json');
       metaFile.writeAsStringSync(result.toJson(), flush: true);
 
-      _writeRawFilesSync(targetDir, result, nativeRawPath: nativeRawPath);
+      _writeRawFilesSync(targetDir, result, nativeRawPaths: paths);
 
       final pdfFile = File('${targetDir.path}/report.pdf');
       final pdfBytes = await ReportGenerator.generateTuneReportPdf(result);
@@ -69,14 +70,11 @@ class MeasurementRepository {
       await targetDir.create(recursive: true);
     }
 
-    // 1. meta.json 저장
     final metaFile = File('${targetDir.path}/meta.json');
     await metaFile.writeAsString(result.toJson(), flush: true);
 
-    // 2. raw.txt + raw_native.txt + 초별 분리 xlsx
-    await _writeRawFiles(targetDir, result, nativeRawPath: nativeRawPath);
+    await _writeRawFiles(targetDir, result, nativeRawPaths: paths);
 
-    // 3. report.pdf 저장
     final pdfFile = File('${targetDir.path}/report.pdf');
     final pdfBytes = await ReportGenerator.generateTuneReportPdf(result);
     await pdfFile.writeAsBytes(pdfBytes, flush: true);
@@ -87,158 +85,142 @@ class MeasurementRepository {
   void _writeRawFilesSync(
     Directory targetDir,
     MeasurementResult result, {
-    String? nativeRawPath,
+    Map<String, String> nativeRawPaths = const {},
   }) {
     final rawSamples = result.rawSamples ?? [];
-    final rawFile = File('${targetDir.path}/raw.txt');
-    rawFile.writeAsStringSync(
+    File('${targetDir.path}/raw.txt').writeAsStringSync(
       RawDataParser.writeEvimp1(
         rawSamples,
         sampleRate: result.sampleRate.round(),
       ),
       flush: true,
     );
-    _copyNativeRawSync(targetDir, nativeRawPath);
-    _writeDenseInterpolatedSync(targetDir);
+    _writeReadableNativeSync(targetDir, nativeRawPaths);
     _removeLegacyRawSidecarsSync(targetDir);
-    _writeExcelFilesSync(targetDir, rawSamples, result.sampleRate);
+    // 분석용 256Hz 초별 엑셀만 유지 (128/64는 생략 — 메일/저장 부담 감소)
+    final excelName = rawBySecondExcelFileName(
+      rawSamples,
+      sampleRateHz: result.sampleRate,
+      exportRateHz: 256,
+    );
+    File('${targetDir.path}/$excelName').writeAsBytesSync(
+      buildRawBySecondExcelBytes(
+        rawSamples,
+        sampleRateHz: result.sampleRate,
+        exportRateHz: 256,
+      ),
+      flush: true,
+    );
   }
 
   Future<void> _writeRawFiles(
     Directory targetDir,
     MeasurementResult result, {
-    String? nativeRawPath,
+    Map<String, String> nativeRawPaths = const {},
   }) async {
     final rawSamples = result.rawSamples ?? [];
-    final rawFile = File('${targetDir.path}/raw.txt');
-    await rawFile.writeAsString(
+    await File('${targetDir.path}/raw.txt').writeAsString(
       RawDataParser.writeEvimp1(
         rawSamples,
         sampleRate: result.sampleRate.round(),
       ),
       flush: true,
     );
-    await _copyNativeRaw(targetDir, nativeRawPath);
-    await _writeDenseInterpolated(targetDir);
+    await _writeReadableNative(targetDir, nativeRawPaths);
     await _removeLegacyRawSidecars(targetDir);
-    await _writeExcelFiles(targetDir, rawSamples, result.sampleRate);
+    final excelName = rawBySecondExcelFileName(
+      rawSamples,
+      sampleRateHz: result.sampleRate,
+      exportRateHz: 256,
+    );
+    await File('${targetDir.path}/$excelName').writeAsBytes(
+      buildRawBySecondExcelBytes(
+        rawSamples,
+        sampleRateHz: result.sampleRate,
+        exportRateHz: 256,
+      ),
+      flush: true,
+    );
   }
 
-  void _copyNativeRawSync(Directory targetDir, String? nativeRawPath) {
-    final dest = File('${targetDir.path}/raw_native.txt');
-    if (nativeRawPath == null || nativeRawPath.isEmpty) return;
-    final src = File(nativeRawPath);
-    if (!src.existsSync()) return;
-    src.copySync(dest.path);
-  }
-
-  Future<void> _copyNativeRaw(Directory targetDir, String? nativeRawPath) async {
-    final dest = File('${targetDir.path}/raw_native.txt');
-    if (nativeRawPath == null || nativeRawPath.isEmpty) return;
-    final src = File(nativeRawPath);
-    if (!await src.exists()) return;
-    await src.copy(dest.path);
-  }
-
-  void _writeDenseInterpolatedSync(Directory targetDir) {
-    final nativeFile = File('${targetDir.path}/raw_native.txt');
-    if (!nativeFile.existsSync()) return;
-    final text = nativeFile.readAsStringSync();
-    final files = buildAllDenseInterpolatedCsv(text);
-    for (final entry in files.entries) {
-      File('${targetDir.path}/${entry.key}').writeAsStringSync(
-        entry.value,
-        flush: true,
-      );
+  void _writeReadableNativeSync(
+    Directory targetDir,
+    Map<String, String> nativeRawPaths,
+  ) {
+    final p3 = nativeRawPaths['native3to7'];
+    if (p3 != null && p3.isNotEmpty) {
+      final src = File(p3);
+      if (src.existsSync()) {
+        File('${targetDir.path}/$kRaw3to7BySecondFileName').writeAsStringSync(
+          buildNativeBySecondReadableText(
+            src.readAsStringSync(),
+            title: kRaw3to7BySecondFileName,
+            requestLabel: 'SENSOR_DELAY_FASTEST (≈3~7ms 요청)',
+          ),
+          flush: true,
+        );
+      }
+    }
+    final p1 = nativeRawPaths['native1to3'];
+    if (p1 != null && p1.isNotEmpty) {
+      final src = File(p1);
+      if (src.existsSync()) {
+        File('${targetDir.path}/$kRaw1to3BySecondFileName').writeAsStringSync(
+          buildNativeBySecondReadableText(
+            src.readAsStringSync(),
+            title: kRaw1to3BySecondFileName,
+            requestLabel: 'samplingPeriodUs=3000 (1~3ms 요청)',
+          ),
+          flush: true,
+        );
+      }
     }
   }
 
-  Future<void> _writeDenseInterpolated(Directory targetDir) async {
-    final nativeFile = File('${targetDir.path}/raw_native.txt');
-    if (!await nativeFile.exists()) return;
-    final text = await nativeFile.readAsString();
-    final files = buildAllDenseInterpolatedCsv(text);
-    for (final entry in files.entries) {
-      await File('${targetDir.path}/${entry.key}').writeAsString(
-        entry.value,
-        flush: true,
-      );
+  Future<void> _writeReadableNative(
+    Directory targetDir,
+    Map<String, String> nativeRawPaths,
+  ) async {
+    final p3 = nativeRawPaths['native3to7'];
+    if (p3 != null && p3.isNotEmpty) {
+      final src = File(p3);
+      if (await src.exists()) {
+        await File('${targetDir.path}/$kRaw3to7BySecondFileName').writeAsString(
+          buildNativeBySecondReadableText(
+            await src.readAsString(),
+            title: kRaw3to7BySecondFileName,
+            requestLabel: 'SENSOR_DELAY_FASTEST (≈3~7ms 요청)',
+          ),
+          flush: true,
+        );
+      }
+    }
+    final p1 = nativeRawPaths['native1to3'];
+    if (p1 != null && p1.isNotEmpty) {
+      final src = File(p1);
+      if (await src.exists()) {
+        await File('${targetDir.path}/$kRaw1to3BySecondFileName').writeAsString(
+          buildNativeBySecondReadableText(
+            await src.readAsString(),
+            title: kRaw1to3BySecondFileName,
+            requestLabel: 'samplingPeriodUs=3000 (1~3ms 요청)',
+          ),
+          flush: true,
+        );
+      }
     }
   }
 
-  /// 메일 첨부용: raw_native.txt가 있으면 경로 반환
-  Future<File?> ensureRawNativeFile(String id) async {
-    final baseDir = await getBaseDirectory();
-    final nativeFile = File('${baseDir.path}/$id/raw_native.txt');
-    if (await nativeFile.exists()) return nativeFile;
-    return null;
-  }
-
-  /// 메일 첨부용: dense_interpolated_*.csv (없으면 native 기준 생성)
-  Future<List<File>> ensureDenseInterpolatedFiles(String id) async {
+  /// 메일 첨부용: 초별 원본 텍스트
+  Future<List<File>> ensureNativeReadableFiles(String id) async {
     final baseDir = await getBaseDirectory();
     final targetDir = Directory('${baseDir.path}/$id');
-    final existing = <File>[];
-    for (final name in kDenseInterpolatedSpecs.keys) {
-      final f = File('${targetDir.path}/$name');
-      if (await f.exists()) existing.add(f);
-    }
-    if (existing.length == kDenseInterpolatedSpecs.length) return existing;
-
-    final native = File('${targetDir.path}/raw_native.txt');
-    if (!await native.exists()) return existing;
-    await _writeDenseInterpolated(targetDir);
-
     final out = <File>[];
-    for (final name in kDenseInterpolatedSpecs.keys) {
+    for (final name in [kRaw3to7BySecondFileName, kRaw1to3BySecondFileName]) {
       final f = File('${targetDir.path}/$name');
       if (await f.exists()) out.add(f);
     }
     return out;
-  }
-
-  void _writeExcelFilesSync(
-    Directory targetDir,
-    List<SensorSample> samples,
-    double sampleRateHz,
-  ) {
-    for (final rate in kRawExcelExportRatesHz) {
-      final excelName = rawBySecondExcelFileName(
-        samples,
-        sampleRateHz: sampleRateHz,
-        exportRateHz: rate,
-      );
-      File('${targetDir.path}/$excelName').writeAsBytesSync(
-        buildRawBySecondExcelBytes(
-          samples,
-          sampleRateHz: sampleRateHz,
-          exportRateHz: rate,
-        ),
-        flush: true,
-      );
-    }
-  }
-
-  Future<void> _writeExcelFiles(
-    Directory targetDir,
-    List<SensorSample> samples,
-    double sampleRateHz,
-  ) async {
-    for (final rate in kRawExcelExportRatesHz) {
-      final excelName = rawBySecondExcelFileName(
-        samples,
-        sampleRateHz: sampleRateHz,
-        exportRateHz: rate,
-      );
-      await File('${targetDir.path}/$excelName').writeAsBytes(
-        buildRawBySecondExcelBytes(
-          samples,
-          sampleRateHz: sampleRateHz,
-          exportRateHz: rate,
-        ),
-        flush: true,
-      );
-    }
   }
 
   Future<List<File>> _findRawExcelFiles(Directory targetDir) async {
@@ -257,13 +239,19 @@ class MeasurementRepository {
     for (final name in const [
       'raw_summary.txt',
       'raw_readable.txt',
+      'raw_native.txt',
+      'collection_rate_summary.txt',
+      'native_by_second_원본_제한없음.xlsx',
     ]) {
       final f = File('${targetDir.path}/$name');
       if (f.existsSync()) f.deleteSync();
     }
     if (!targetDir.existsSync()) return;
     for (final entity in targetDir.listSync()) {
-      if (entity is File && isRawBySecondExcelPath(entity.path)) {
+      if (entity is! File) continue;
+      final name = entity.path.replaceAll('\\', '/').split('/').last;
+      if (isRawBySecondExcelPath(entity.path) ||
+          name.startsWith('dense_interpolated_')) {
         entity.deleteSync();
       }
     }
@@ -273,44 +261,54 @@ class MeasurementRepository {
     for (final name in const [
       'raw_summary.txt',
       'raw_readable.txt',
+      'raw_native.txt',
+      'collection_rate_summary.txt',
+      'native_by_second_원본_제한없음.xlsx',
     ]) {
       final f = File('${targetDir.path}/$name');
       if (await f.exists()) await f.delete();
     }
     if (!await targetDir.exists()) return;
     await for (final entity in targetDir.list()) {
-      if (entity is File && isRawBySecondExcelPath(entity.path)) {
+      if (entity is! File) continue;
+      final name = entity.path.replaceAll('\\', '/').split('/').last;
+      if (isRawBySecondExcelPath(entity.path) ||
+          name.startsWith('dense_interpolated_')) {
         await entity.delete();
       }
     }
   }
 
-  /// 메일 첨부용: 256/128/64Hz 초별 xlsx가 없으면 생성 후 경로 목록 반환
+  /// 메일 첨부용: 256Hz 초별 xlsx
   Future<List<File>> ensureRawExcelFiles(String id) async {
     final baseDir = await getBaseDirectory();
     final targetDir = Directory('${baseDir.path}/$id');
-
     final existing = await _findRawExcelFiles(targetDir);
-    final hasAllRates = kRawExcelExportRatesHz.every(
-      (rate) => existing.any((f) => f.path.endsWith('_$rate.xlsx')),
-    );
-    if (hasAllRates) return existing;
+    if (existing.any((f) => f.path.endsWith('_256.xlsx'))) {
+      return existing.where((f) => f.path.endsWith('_256.xlsx')).toList();
+    }
 
     final result = await load(id);
     final samples = result?.rawSamples;
     if (result == null || samples == null || samples.isEmpty) {
       return existing;
     }
-
     if (!await targetDir.exists()) {
       await targetDir.create(recursive: true);
     }
-
-    // 이전 단일/부분 xlsx 정리 후 256·128·64 재생성
-    for (final f in existing) {
-      if (await f.exists()) await f.delete();
-    }
-    await _writeExcelFiles(targetDir, samples, result.sampleRate);
+    final excelName = rawBySecondExcelFileName(
+      samples,
+      sampleRateHz: result.sampleRate,
+      exportRateHz: 256,
+    );
+    await File('${targetDir.path}/$excelName').writeAsBytes(
+      buildRawBySecondExcelBytes(
+        samples,
+        sampleRateHz: result.sampleRate,
+        exportRateHz: 256,
+      ),
+      flush: true,
+    );
     return _findRawExcelFiles(targetDir);
   }
 
