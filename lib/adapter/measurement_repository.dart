@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:vibration_checker/domain/models/measurement_result.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
 
 /// [연결] 측정 저장소 어댑터. UI 계약 시그니처만 유지한다.
 /// 저장·출력 계층 리빌딩에서 구현한다. 기존 구현: main 브랜치 git 이력 참조.

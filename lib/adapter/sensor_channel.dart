@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:vibration_checker/domain/capture/motion_synthesizer.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
-import 'measure/sensor_sample.dart';
-export 'measure/sensor_sample.dart';
+import 'package:vibration_checker/model/sensor_sample.dart';
+export 'package:vibration_checker/model/sensor_sample.dart';
 
 /// 안드로이드 네이티브 수집 채널 관리자.
 ///

@@ -6,11 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme.dart';
-import '../../domain/measure/metrics_config.dart';
-import '../../domain/measure/measurement_engine.dart';
-import '../../domain/sensor_channel.dart';
-import '../../domain/repository/measurement_repository.dart';
-import '../../domain/models/measurement_result.dart';
+import 'package:vibration_checker/model/metrics_config.dart';
+import 'package:vibration_checker/adapter/measurement_engine.dart';
+import 'package:vibration_checker/adapter/sensor_channel.dart';
+import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
 import '../shared/measurement_session.dart';
 import '../../core/widgets/app_dialog.dart';
 

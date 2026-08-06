@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibration_checker/domain/auth_repository.dart';
+import 'package:vibration_checker/adapter/auth_repository.dart';
 
 import '../../core/theme.dart';
 

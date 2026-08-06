@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../shared/measurement_session.dart';
-import '../../domain/prefs_store.dart';
+import 'package:vibration_checker/adapter/prefs_store.dart';
 
 /// S2 홈 / 현장정보 입력
 /// - 이번 측정의 현장 정보를 입력하고 측정을 시작하는 홈 화면

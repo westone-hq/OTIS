@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
-import '../../domain/models/measurement_result.dart';
-import '../../domain/repository/measurement_repository.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/adapter/measurement_repository.dart';
 import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 

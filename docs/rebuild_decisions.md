@@ -177,3 +177,10 @@ parse_raw, report_generator, sensor_channel(구현 완료), auth_repository(우�
 analyze 가 미구현이므로 종료 버튼에서 예외가 난다. 원본 기록 파일은
 정지(stopCapture) 시점에 이미 저장되므로 실측 자료 확보에는 지장이 없다.
 신호 처리 계층 리빌딩에서 해소된다.
+
+## RD-21 (8/7) 최상위 폴더를 역할로 분리한다: ui / domain / adapter / model
+ui = 화면 전부. domain = 기능(순수 로직, 리빌딩 산출물). adapter = UI 계약을
+유지하는 연결 계층. model = UI 와 기능이 함께 쓰는 데이터·값 정의.
+UI 파일의 변경은 import 줄로 한정했다.
+참고: docs/ui_contract.md 의 파일 경로 표기는 이동 전 배치 기준이며,
+심볼·시그니처 계약 자체는 그대로 유효하다.

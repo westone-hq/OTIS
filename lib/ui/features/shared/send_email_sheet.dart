@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../domain/prefs_store.dart';
-import 'package:vibration_checker/domain/auth_repository.dart';
-import 'package:vibration_checker/domain/models/measurement_result.dart';
-import 'package:vibration_checker/domain/report_generator.dart';
-import 'package:vibration_checker/domain/repository/measurement_repository.dart';
+import 'package:vibration_checker/adapter/prefs_store.dart';
+import 'package:vibration_checker/adapter/auth_repository.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/adapter/report_generator.dart';
+import 'package:vibration_checker/adapter/measurement_repository.dart';
 
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';

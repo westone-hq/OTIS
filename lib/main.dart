@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:vibration_checker/domain/auth_repository.dart';
+import 'package:vibration_checker/adapter/auth_repository.dart';
 
-import 'core/router.dart';
-import 'core/theme.dart';
+import 'ui/core/router.dart';
+import 'ui/core/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -5,11 +5,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../core/theme.dart';
-import '../../domain/measure/raw_sensor_diagnostics.dart';
-import '../../domain/measure/sensor_sample.dart';
-import '../../domain/models/measurement_result.dart';
-import '../../domain/parse_raw.dart';
-import '../../domain/repository/measurement_repository.dart';
+import 'package:vibration_checker/model/raw_sensor_diagnostics.dart';
+import 'package:vibration_checker/model/sensor_sample.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/adapter/parse_raw.dart';
+import 'package:vibration_checker/adapter/measurement_repository.dart';
 import '../shared/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
 import 'metric_card.dart';

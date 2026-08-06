@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
-import '../../domain/sensor_channel.dart';
+import 'package:vibration_checker/adapter/sensor_channel.dart';
 import '../shared/measurement_session.dart';
 import 'placement_sheet.dart';
 

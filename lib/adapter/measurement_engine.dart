@@ -1,5 +1,5 @@
-import 'package:vibration_checker/domain/measure/sensor_sample.dart';
-import 'package:vibration_checker/domain/models/measurement_result.dart';
+import 'package:vibration_checker/model/sensor_sample.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
 
 /// [연결] 측정 엔진 어댑터. UI 계약 시그니처만 유지한다.
 /// 샘플 버퍼만 보관하고, 결과 산출은 신호 처리 계층 리빌딩에서 구현한다.

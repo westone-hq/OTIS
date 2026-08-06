@@ -1,5 +1,5 @@
 import 'dart:convert';
-import '../measure/sensor_sample.dart';
+import 'package:vibration_checker/model/sensor_sample.dart';
 
 /// 측정 결과 데이터 모델
 /// - 순수 Dart로 작성된 측정 결과 및 시계열 데이터

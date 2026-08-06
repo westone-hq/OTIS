@@ -1,5 +1,5 @@
 import 'package:vibration_checker/domain/capture/native_event.dart';
-import 'package:vibration_checker/domain/measure/sensor_sample.dart';
+import 'package:vibration_checker/model/sensor_sample.dart';
 
 /// raw 와 gravity 원본 이벤트로 motion 샘플을 합성한다.
 ///

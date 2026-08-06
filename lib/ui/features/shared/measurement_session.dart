@@ -1,4 +1,4 @@
-import '../../domain/models/measurement_result.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 측정 현장 정보 (홈 화면에서 입력)
 class SiteInfo {
