@@ -109,6 +109,17 @@ class SensorStreamHandler(
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         this.eventSink = events
+        // 구독 전에 도착해 버퍼에 쌓인 이벤트를 즉시 내보낸다 (유실 방지).
+        var pending: List<Map<String, Any>>? = null
+        synchronized(batchBuffer) {
+            if (batchBuffer.isNotEmpty()) {
+                pending = ArrayList(batchBuffer)
+                batchBuffer.clear()
+            }
+        }
+        pending?.let { batch ->
+            mainHandler.post { events?.success(batch) }
+        }
     }
 
     override fun onCancel(arguments: Any?) {
@@ -150,12 +161,13 @@ class SensorStreamHandler(
         var readyBatch: List<Map<String, Any>>? = null
         synchronized(batchBuffer) {
             batchBuffer.add(sampleMap)
-            // sink 미연결 상태에서 버퍼가 무한정 커지지 않도록 상한을 둔다.
-            // 상한 초과 시 가장 오래된 배치 크기만큼 버린다 (연결 전 프리롤 방지).
-            if (eventSink == null && batchBuffer.size > BATCH_SIZE * 4) {
+            // sink 미연결 상태에서 버퍼가 무한정 커지지 않도록 상한.
+            // 초과 시 가장 오래된 배치 크기만큼 버린다.
+            if (eventSink == null && batchBuffer.size > BATCH_SIZE * 8) {
                 batchBuffer.subList(0, BATCH_SIZE).clear()
             }
-            if (batchBuffer.size >= BATCH_SIZE) {
+            // sink 가 있고 한 배치가 찼으면 내보낼 배치를 뜬다.
+            if (eventSink != null && batchBuffer.size >= BATCH_SIZE) {
                 readyBatch = ArrayList(batchBuffer)
                 batchBuffer.clear()
             }
