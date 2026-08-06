@@ -1,6 +1,7 @@
 import 'sensor_sample.dart';
 
-/// 단일 채널(min/max/mean/P-P) 통계
+/// 목적: 한 축(예: X축)의 센서 데이터 묶음에서 최솟값, 최댓값, 평균, 최대 진폭을 계산하여 
+///       해당 축 센서가 정상적으로 작동했는지 진단하기 위한 통계를 담는다.
 class ChannelStats {
   final bool available;
   final double min;
@@ -18,6 +19,11 @@ class ChannelStats {
 
   static const unavailable = ChannelStats(available: false);
 
+  /// 목적: 리스트로 주어진 수많은 센서 수치들을 순회하며 최솟값, 최댓값, 평균, 최대 진폭(P2P)을 구한다.
+  /// 인자: values — 분석할 센서 수치 목록
+  /// 반환: 계산이 완료된 ChannelStats 객체. 목록이 비어있으면 available이 false인 빈 객체를 반환한다.
+  /// 식: peakToPeak = max - min, mean = sum / length
+  /// 근거: 인용 — 기본적인 기술 통계량(Descriptive Statistics) 산출 공식
   factory ChannelStats.fromValues(List<double> values) {
     if (values.isEmpty) return unavailable;
     double minVal = values.first;
@@ -38,7 +44,8 @@ class ChannelStats {
   }
 }
 
-/// 원본 센서 RAW 샘플 요약 (결과 화면 진단용)
+/// 목적: 측정된 수만 개의 전체 센서 데이터를 통계적으로 요약하여,
+///       측정 과정에서 누락이나 센서 오류가 없었는지 무결성을 검증할 수 있는 요약본을 제공한다.
 class RawSensorDiagnostics {
   final int sampleCount;
   final double durationSec;
@@ -154,7 +161,8 @@ class RawSensorDiagnostics {
   }
 }
 
-/// rawSamples에서 시작/중간/끝 대표 행 추출
+/// 목적: 방대한 전체 센서 데이터 중 처음, 중간, 끝부분의 일부 샘플만 뽑아내어
+///       미리보기(Preview) 텍스트를 구성하기 위해 사용한다.
 List<SensorSample> selectRawPreviewSamples(
   List<SensorSample> samples, {
   int edgeCount = 3,
@@ -168,6 +176,7 @@ List<SensorSample> selectRawPreviewSamples(
   ];
 }
 
+/// 목적: 단일 센서 샘플 객체를 텍스트 파일이나 화면에 출력하기 좋은 1줄짜리 문자열로 변환한다.
 String formatRawSampleLine(SensorSample s, {required bool extended}) {
   if (!extended) {
     return '${s.x.toStringAsFixed(2)} ${s.y.toStringAsFixed(2)} '
@@ -180,7 +189,8 @@ String formatRawSampleLine(SensorSample s, {required bool extended}) {
       '${n(s.gravityX)} ${n(s.gravityY)} ${n(s.gravityZ)}';
 }
 
-/// raw.txt를 사람이 읽기 쉽게 정리한 요약 텍스트 (메일 첨부용)
+/// 목적: 현장 엔지니어가 본사나 개발팀에 에러 리포트를 보낼 때 첨부할 수 있도록,
+///       복잡한 센서 통계 데이터를 사람이 읽기 쉬운 형태의 한국어 요약 텍스트로 만들어 반환한다.
 String writeRawSummaryText(
   List<SensorSample> samples, {
   double sampleRateHz = 256,

@@ -1,3 +1,4 @@
+/// 목적: 스마트폰 센서 데이터가 일정하게 들어오는지 검증하는 시간 간격 계산(IntervalStats) 로직이 수식적으로 맞게 떨어지는지 테스트한다.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';

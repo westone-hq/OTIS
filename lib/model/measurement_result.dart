@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:vibration_checker/model/sensor_sample.dart';
 
-/// 측정 결과 데이터 모델
-/// - 순수 Dart로 작성된 측정 결과 및 시계열 데이터
+/// 목적: 진동 분석 엔진이 계산을 마친 최종 결과(성적표) 데이터를 담는다.
 class MeasurementResult {
   final String id;
   final String jobNo; // 제번
@@ -316,15 +315,31 @@ class MeasurementResult {
   factory MeasurementResult.fromJson(String source) =>
       MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
-  // 임계 판정 getter (X·Y>10mg, Z>15mg, 소음>50dB -> 초과 시 true)
+  /// 목적: X축 진동이 위험 기준치를 넘었는지 확인한다.
+  /// 반환: 기준치(10.0mg) 초과 시 true
+  /// 근거: 측정 — 기준 초과 알림 로직
   bool get xExceeded => xPtp > 10.0;
+  
+  /// 목적: Y축 진동이 위험 기준치를 넘었는지 확인한다.
+  /// 반환: 기준치(10.0mg) 초과 시 true
+  /// 근거: 측정 — 기준 초과 알림 로직
   bool get yExceeded => yPtp > 10.0;
+  
+  /// 목적: Z축 진동이 위험 기준치를 넘었는지 확인한다.
+  /// 반환: 기준치(15.0mg) 초과 시 true
+  /// 근거: 측정 — 기준 초과 알림 로직
   bool get zExceeded => zPtp > 15.0;
+  
+  /// 목적: 최대 소음이 위험 기준치를 넘었는지 확인한다.
+  /// 반환: 기준치(50.0dBA) 초과 시 true
+  /// 근거: 측정 — 기준 초과 알림 로직
   bool get noiseExceeded => noiseMax > 50.0;
 
-  /// 화면 예시용 Mock 인스턴스 (문서 요구사항 예시값, OI-1 엔진 실측치와는 다름)
-  /// 제번 `2024F 1447R01`, 현장 `럭키종합건설/송정동근생`, 1층→8층
-  /// X 8.2mg / Y 12.9mg / Z 22.2mg / 소음 71.7dBA / 21.0m / 1.50m/s
+  /// 목적: UI 화면 디자인 및 테스트를 위한 가상의 측정 결과 데이터를 생성한다.
+  ///       실제 센서 측정 없이도 그래프와 결과 화면이 잘 뜨는지 확인하기 위해 쓴다.
+  /// 인자: 없음
+  /// 반환: 가상의 파동 데이터와 진폭이 채워진 MeasurementResult 객체
+  /// 근거: 미정 — UI 테스트용 임시 데이터
   static MeasurementResult get mock {
     const count = 40;
     final List<double> xList = [];
@@ -392,7 +407,10 @@ class MeasurementResult {
     );
   }
 
-  /// S5 저장 결과 목록용 Mock 데이터 3건 (실제 값 1건 + 변형 2건)
+  /// 목적: 과거 측정 이력 화면(리스트)을 테스트하기 위한 가상의 결과 목록을 생성한다.
+  /// 인자: 없음
+  /// 반환: 3개의 가상 측정 결과를 담은 목록
+  /// 근거: 미정 — UI 테스트용 임시 데이터
   static List<MeasurementResult> get mockList {
     final base = mock;
     return [

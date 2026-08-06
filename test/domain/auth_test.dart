@@ -1,3 +1,4 @@
+/// 목적: 사용자가 입력한 아이디와 비밀번호가 올바른 형식(사번 6자리, T사번 5자리 등)인지 검사하는 로그인 로직이 정상 작동하는지 테스트한다.
 @Skip('로그인 우회(T00000) 기간 무효. auth_repository 원복 시 함께 복원 — RD-12')
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -3,11 +3,9 @@ import 'dart:math' as math;
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
-/// 원본 이벤트의 수신 간격 산출.
-///
-/// 간격은 반드시 같은 종류의 이벤트끼리만 계산한다.
-/// raw(accel)와 gravity 이벤트는 한 파일에 섞여 도착하므로,
-/// 종류 구분 없이 간격을 재면 실제 수신 주기의 절반 수준 값이 나와 판정을 왜곡한다.
+/// 목적: 스마트폰에서 데이터가 얼마나 일정한 시간 간격으로 들어오는지(수신 간격)를 계산하고 검증한다.
+///       주의할 점은 가속도(accel)와 중력(gravity) 센서 데이터가 섞여서 들어오기 때문에,
+///       반드시 같은 종류의 데이터끼리만 묶어서 시간 간격을 재야 한다.
 class SampleInterval {
   /// 목적: 지정 종류 이벤트의 앞뒤 수신 간격을 구한다.
   /// 인자: events — 원본 이벤트 목록 (파일 순서 유지 상태)
@@ -30,10 +28,10 @@ class SampleInterval {
     return result;
   }
 
-  /// 목적: 재계산 간격과 기록 당시 dtUs 를 대조해 불일치 수를 센다.
-  /// 인자: events — 원본 이벤트 목록, type — 대조할 이벤트 종류
-  /// 반환: 불일치 건수. 첫 이벤트(dtUs=0 규약)는 대조에서 제외.
-  ///       0이 아니면 기록 과정에 문제가 있다는 뜻이다 (기록 무결성 검증, RD-5)
+  /// 목적: 나중에 파일을 읽어들였을 때, 파일에 적혀있던 간격(dtUs)과 실제 타임스탬프로 재계산한 간격이 똑같은지 비교해 파일이 깨지지 않았는지 무결성을 검증한다.
+  /// 인자: events — 원본 이벤트 목록
+  ///       type — 검증할 이벤트 종류
+  /// 반환: 불일치 건수 (0이 아니면 파일 기록 과정에 문제가 있었다는 뜻이다)
   static int recordedDtMismatchCount(
     List<NativeEvent> events,
     NativeEventType type,
@@ -54,9 +52,7 @@ class SampleInterval {
   }
 }
 
-/// 간격 통계.
-///
-/// 주기별 수신 확인과 간격 편차 판정의 근거 자료를 만든다.
+/// 목적: 센서가 얼마나 안정적으로 데이터를 주었는지 판별하기 위해, 수만 개의 수신 간격들을 모아 통계(최소, 최대, 평균, 표준편차 등)를 낸다.
 class IntervalStats {
   const IntervalStats({
     required this.count,
@@ -93,14 +89,12 @@ class IntervalStats {
   /// 정상 상한 초과 간격 수 (설정값 기준. 수신 지연·유실 의심)
   final int aboveNormalCount;
 
-  /// 목적: 간격 목록에서 통계를 구한다.
-  /// 인자: intervalsUs — 간격 목록 (마이크로초)
-  ///       config — 정상 간격 범위를 담은 설정
-  /// 반환: 통계. 목록이 비면 전부 0.
-  ///       표준편차는 표본 표준편차(n-1)이며 간격이 1개면 0
-  /// 식:   stdDev = sqrt( Σ(x - mean)² / (n - 1) )  (표본 표준편차)
-  /// 주의: 정상 범위 경계값(below/aboveNormalCount)은 CaptureConfig 의
-  ///       미확정 임시 기준을 따른다
+  /// 목적: 여러 센서 데이터들의 시간 간격 리스트를 받아와서 최솟값, 최댓값, 중앙값, 표본 표준편차 등 핵심 통계량을 한 번에 계산한다.
+  /// 인자: intervalsUs — 센서 수신 간격 목록 (단위: 마이크로초)
+  ///       config — 지연/폭주를 판정할 정상 간격 범위 설정값
+  /// 반환: 계산이 완료된 IntervalStats 객체 (데이터가 없으면 0으로 채워 반환)
+  /// 식: stdDev(표준편차) = sqrt( Σ(x - mean)² / (n - 1) )
+  /// 근거: 인용 — 통계학 표본 표준편차(Sample Standard Deviation) 공식
   factory IntervalStats.from(
     List<int> intervalsUs, {
     required CaptureConfig config,
@@ -150,20 +144,18 @@ class IntervalStats {
     );
   }
 
-  /// 목적: 중앙값으로 실제 수신 주기를 구한다.
-  ///       평균을 쓰지 않는 이유는, 운영체제가 가끔 값을 늦게 주는데
-  ///       그 몇 개의 큰 간격이 평균을 밀어 주기를 실제보다 낮게 만들기 때문이다.
+  /// 목적: 평균값이 아닌 '중앙값(Median)'을 이용해 스마트폰의 실제 센서 수집 속도(Hz)를 역추산한다.
+  ///       (스마트폰이 가끔 데이터를 늦게 줄 때 발생하는 튀는 값(Outlier)이 평균을 왜곡하는 것을 막기 위함)
   /// 인자: 없음
-  /// 반환: 주기 (헤르츠). 중앙값이 0 이하면 0
+  /// 반환: 추산된 실제 주기 (단위: Hz)
+  /// 식: 주파수(Hz) = 1,000,000 / 중앙값(us)
+  /// 근거: 인용 — 주파수(Hz)와 주기(T)의 역수 관계 공식
   double get estimatedRateHz {
     if (medianUs <= 0) return 0;
     return 1000000 / medianUs;
   }
 
-  /// 목적: 회의 자료용 요약 글을 만든다.
-  /// 인자: label — 자료 제목 (예: 이벤트 종류, 측정 회차)
-  ///       config — 목표 주기와 정상 범위 표기용
-  /// 반환: 여러 줄 요약 문자열
+  /// 목적: 개발팀 및 엔지니어가 수집 상태를 한눈에 볼 수 있도록, 통계 결과를 사람이 읽기 쉬운 한국어 텍스트로 정리해 반환한다.
   String toReportText({
     required String label,
     required CaptureConfig config,
@@ -187,7 +179,7 @@ class IntervalStats {
       '$belowNormalCount건, 상한(${config.normalIntervalMaxUs}) 초과 '
       '$aboveNormalCount건',
     );
-    buffer.writeln('  ※ 정상 범위 경계값은 미확정 임시 기준 (CaptureConfig 참조)');
+    buffer.writeln('  ※ 정상 범위 경계값은 CaptureConfig 참조');
     return buffer.toString();
   }
 }

@@ -1,3 +1,4 @@
+/// 목적: 가속도 센서와 중력 센서의 데이터가 들어왔을 때, 가속도에서 중력을 빼서 순수한 진동(Motion) 값을 정확히 계산해 내는지 검증한다.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/motion_synthesizer.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';

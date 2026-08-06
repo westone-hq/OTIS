@@ -1,17 +1,13 @@
 import 'dart:io';
 
-/// 보간 전 원본 센서 이벤트의 종류.
-///
-/// accel   = 가속도계 원값 (중력 포함)
-/// gravity = 중력 추정값
-/// linear  = 선형가속도 (중력 제거)
+/// 목적: 스마트폰 하드웨어 센서에서 직접 올라오는 원시(Raw) 데이터의 3가지 종류를 정의한다.
+///       - accel: 중력이 포함된 가속도계 원본 데이터
+///       - gravity: 스마트폰이 추정한 중력 방향 데이터
+///       - linear: OS가 자체적으로 중력을 제거한 선형 가속도 (당사에서는 부정확하여 미사용)
 enum NativeEventType { accel, gravity, linear }
 
-/// 보간 전 원본 센서 이벤트 1건.
-///
-/// 안드로이드 센서 콜백이 도착한 그대로를 담는다.
-/// 값 가공(보간·필터·보정)은 이 계층에서 하지 않는다.
-/// 기록 형식 근거: develop 브랜치 08ef27a raw_native.txt
+/// 목적: 안드로이드 센서 콜백에서 도착한 가공되지 않은 1건의 센서 이벤트를 담는다.
+///       값에 대한 어떠한 가공(보간, 필터, 보정)도 이 단계에서는 수행하지 않는다.
 class NativeEvent {
   const NativeEvent({
     required this.type,
@@ -25,8 +21,8 @@ class NativeEvent {
   /// 이벤트 종류
   final NativeEventType type;
 
-  /// 센서가 찍은 시각 (마이크로초). 부팅 기준 단조증가.
-  /// 근거: 인용 — Android SensorEvent.timestamp(나노초)를 마이크로초로 환산한 값
+  /// 목적: 센서가 데이터를 측정한 시점의 타임스탬프 (단위: 마이크로초)
+  /// 근거: 인용 — 안드로이드 SensorEvent.timestamp 기준 단조증가(Monotonically increasing) 시간
   final int tsUs;
 
   /// X축 가속도 (밀리지)
@@ -38,14 +34,13 @@ class NativeEvent {
   /// Z축 가속도 (밀리지)
   final double zMg;
 
-  /// 직전 동일 종류 이벤트와의 간격 (마이크로초). 첫 이벤트는 0.
-  /// 기록 당시 네이티브가 계산한 값을 그대로 보존한다.
-  /// 판독 후 tsUs 차이로 재계산해 이 값과 대조하면 기록 무결성을 검증할 수 있다.
+  /// 목적: 바로 이전 데이터와 현재 데이터 사이의 시간 간격 (단위: 마이크로초)
+  ///       안드로이드(Native) 단에서 넘겨준 값을 그대로 들고 와서 지연/유실 검증에 쓴다.
   final int dtUs;
 
-  /// 목적: 파일 한 줄을 이벤트로 판독한다.
-  /// 인자: line — 공백 구분 6항목 (type tsUs xMg yMg zMg dtUs)
-  /// 반환: 이벤트. 형식이 맞지 않으면 null (0값 대체 금지 — 유령 샘플 차단)
+  /// 목적: 텍스트 파일에 기록된 데이터 한 줄을 다시 NativeEvent 객체로 복원(역직렬화)한다.
+  /// 인자: line — 파싱할 문자열 한 줄 (type, tsUs, xMg, yMg, zMg, dtUs 값이 공백으로 구분됨)
+  /// 반환: 파싱된 NativeEvent 객체. 형식이 하나라도 어긋나면 null을 반환하여 잘못된 데이터(유령 샘플) 섞임을 막는다.
   static NativeEvent? fromRecordLine(String line) {
     final parts = line.trim().split(RegExp(r'\s+'));
     if (parts.length != 6) return null;
@@ -73,18 +68,15 @@ class NativeEvent {
     );
   }
 
-  /// 목적: 이벤트를 파일 한 줄로 만든다.
-  /// 인자: 없음
-  /// 반환: 공백 구분 6항목 문자열. fromRecordLine 과 왕복 시 값이 보존된다
+  /// 목적: NativeEvent 객체를 텍스트 파일에 기록하기 좋게 공백으로 구분된 한 줄의 문자열로 변환(직렬화)한다.
   String toRecordLine() {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
   }
 
-  /// 목적: 네이티브 채널 Map 을 이벤트로 판독한다.
-  /// 인자: map — type, tsUs, xMg, yMg, zMg, dtUs 키를 가진 Map.
-  ///       noiseDba 등 계약에 정의된 여분 키는 무시한다
-  /// 반환: 이벤트. 필수 키 누락·형식 불일치면 null (0값 대체 금지 — 유령 샘플 차단)
-  /// 근거: 인용 — docs/capture_channel_contract.md
+  /// 목적: 안드로이드 네이티브(EventChannel)에서 쏘아준 딕셔너리(Map) 형태의 데이터를 NativeEvent 객체로 조립한다.
+  /// 인자: map — 안드로이드에서 전달받은 Map 데이터
+  /// 반환: 파싱된 NativeEvent 객체. 데이터 타입이 안 맞거나 누락되면 null을 반환하여 유령 샘플을 차단한다.
+  /// 근거: 인용 — 네이티브 채널 데이터 통신 규약
   static NativeEvent? fromChannelMap(Map<dynamic, dynamic> map) {
     final type = NativeEventType.values.asNameMap()[map['type']];
     final tsUs = map['tsUs'];
@@ -111,16 +103,13 @@ class NativeEvent {
   }
 }
 
-/// raw_native 형식 기록·판독.
-///
-/// develop 브랜치가 생성하는 otis_raw_native_*.txt 와 상호 호환된다.
-/// # 로 시작하는 줄은 주석으로 취급한다.
-/// 형식 근거: develop 브랜치 08ef27a raw_native.txt (이하 이 클래스 전체에 적용)
+/// 목적: 스마트폰에서 수집한 순수 원본 센서 이벤트를 `.txt` 파일로 저장하고,
+///       나중에 다시 이 파일을 읽어서 앱 화면에 띄우거나 테스트할 수 있게 도와준다.
 class NativeEventRecord {
-  /// 목적: 이벤트 목록을 파일 내용 전체로 만든다.
-  /// 인자: events — 이벤트 목록 (수신 순서 유지)
-  ///       targetSampleRateHz — 측정 당시 목표 주기 (헤르츠). 머리말에 기록
-  /// 반환: 머리말 4줄 + 이벤트 줄들. 반올림·가공 없음
+  /// 목적: 여러 개의 NativeEvent 객체들이 들어있는 리스트를 통째로 텍스트 파일 형태의 긴 문자열로 변환한다.
+  /// 인자: events — 저장할 센서 이벤트 리스트
+  ///       targetSampleRateHz — 측정 시 설정했던 목표 주파수(Hz) (파일 머리말 기록용)
+  /// 반환: 머리말(주석)과 센서 기록들이 줄바꿈(\n)으로 이어진 최종 텍스트 문자열
   static String encode(
     List<NativeEvent> events, {
     required int targetSampleRateHz,
@@ -136,11 +125,9 @@ class NativeEventRecord {
     return buffer.toString();
   }
 
-  /// 목적: 파일 내용 전체를 이벤트 목록으로 판독한다.
-  /// 인자: text — 파일 내용. 주석(#)과 빈 줄은 건너뛴다
-  /// 반환: events — 판독된 이벤트 (파일 순서 유지)
-  ///       skippedLineCount — 형식 불일치로 폐기한 줄 수 (주석·빈 줄 제외).
-  ///       폐기 줄을 0값으로 채우지 않는다 — 유령 샘플 차단
+  /// 목적: 통짜 텍스트 파일 문자열을 줄 단위로 쪼개어 읽으면서 다시 NativeEvent 리스트로 복원한다.
+  /// 인자: text — 텍스트 파일 전체 문자열 (주석 `#`은 무시)
+  /// 반환: 복원된 이벤트 리스트(events)와 파싱에 실패하여 버려진 줄 수(skippedLineCount)를 담은 레코드
   static ({List<NativeEvent> events, int skippedLineCount}) decode(
     String text,
   ) {
@@ -159,7 +146,7 @@ class NativeEventRecord {
     return (events: events, skippedLineCount: skipped);
   }
 
-  /// 목적: 이벤트 목록을 파일로 저장한다.
+  /// 목적: 이벤트 리스트를 실제 디바이스 저장소의 .txt 파일로 기록한다.
   static Future<void> writeFile(
     String path,
     List<NativeEvent> events, {
@@ -170,7 +157,7 @@ class NativeEventRecord {
     );
   }
 
-  /// 목적: 파일을 읽어 이벤트 목록으로 판독한다.
+  /// 목적: 디바이스 저장소에 있는 .txt 파일을 읽어와 이벤트 리스트로 복원한다.
   static Future<({List<NativeEvent> events, int skippedLineCount})> readFile(
     String path,
   ) async {

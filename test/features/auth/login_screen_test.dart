@@ -1,3 +1,4 @@
+/// 목적: 로그인 화면(UI)에서 아이디/비밀번호를 입력하고 버튼을 눌렀을 때, 에러 메시지가 잘 뜨는지, 성공하면 다음 화면으로 잘 넘어가는지 등 사용자 시나리오를 테스트한다.
 @Skip('로그인 우회(T00000) 기간 무효. auth_repository 원복 시 함께 복원 — RD-12')
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

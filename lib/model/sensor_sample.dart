@@ -1,7 +1,4 @@
-/// 측정 엔진 표준 센서 단일 샘플 모델
-/// - 가속도 단위: mg (1 m/s² = 101.97 mg)
-/// - 소음 단위: dBA
-/// - 타임스탬프: 마이크로초(us) 단위 상대 또는 절대 시간
+/// 목적: 1초에 수백 번씩 찍히는 개별 센서 측정치 '한 점'의 데이터를 정의한다.
 class SensorSample {
   final int tsUs; // 타임스탬프 (마이크로초 us)
   final double x; // X축 linear acceleration (mg)
@@ -29,12 +26,17 @@ class SensorSample {
     this.gravityZ,
   });
 
-  /// develop(m/s²) 모델 및 일반 초/밀리초/마이크로초 단위 변환 상수
-  static const double metersPerSecondSquaredToMg =
-      101.97162129779283; // 1000 / 9.80665
+  /// 목적: 안드로이드 기본 가속도 단위(m/s²)를 엘리베이터 업계 표준 진동 단위(mg)로 환산하기 위한 상수
+  /// 식: 1 m/s² = (1000 / 9.80665) mg
+  /// 근거: 표준 — 국제단위계(SI) 중력가속도 환산 공식
+  static const double metersPerSecondSquaredToMg = 101.97162129779283; 
+  
+  /// 목적: 엘리베이터 업계 표준 진동 단위(mg)를 안드로이드 기본 가속도 단위(m/s²)로 환산하기 위한 상수
+  /// 식: 1 mg = (9.80665 / 1000) m/s²
+  /// 근거: 표준 — 국제단위계(SI) 중력가속도 환산 공식
   static const double mgToMetersPerSecondSquared = 0.00980665;
 
-  /// develop의 SensorSample(DateTime, x, y, z in m/s²) 등에서 변환
+  /// 목적: m/s² 단위로 들어오는 외부 센서 데이터를 앱 내부 표준인 mg 단위로 자동 변환하여 샘플을 생성한다.
   factory SensorSample.fromMps2({
     required int tsUs,
     required double xMps2,
@@ -51,7 +53,7 @@ class SensorSample {
     );
   }
 
-  /// Map(EventChannel 수신 또는 JSON 파싱)에서 변환
+  /// 목적: 안드로이드 네이티브(EventChannel)나 JSON 문자열에서 넘어온 Map 데이터를 SensorSample 객체로 조립한다.
   factory SensorSample.fromMap(Map<dynamic, dynamic> map) {
     final num? ts = map['tsUs'] as num? ?? map['timestamp'] as num?;
     int timestampUs = 0;
@@ -85,10 +87,10 @@ class SensorSample {
   double get motionZ =>
       rawZ != null && gravityZ != null ? rawZ! - gravityZ! : z;
 
-  /// 기존 feature-ui 호환용 timestamp(ms) 게터
+  /// 목적: 구형 UI 코드와의 호환성을 위해 마이크로초(us)를 밀리초(ms)로 환산하여 반환한다.
   double get timestamp => tsUs / 1000.0;
 
-  /// 초 단위 상대 타임스탬프 (s)
+  /// 목적: 계산의 편의를 위해 마이크로초(us)를 초(s) 단위로 환산하여 반환한다.
   double get timestampSec => tsUs / 1000000.0;
 
   @override
