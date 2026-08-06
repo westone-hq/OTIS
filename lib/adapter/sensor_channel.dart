@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
 
@@ -89,8 +90,15 @@ class SensorChannelManager {
         'checkAvailable',
       );
       return available ?? false;
-    } catch (_) {
-      // 네이티브 확인 불가 시 불가용으로 간주 (테스트 환경 포함)
+    } catch (error, stack) {
+      // 원인을 삼키지 않고 로그로 남긴다. 반환 동작(false)은 유지.
+      developer.log(
+        'checkSensorsAvailable 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+      lastCaptureError = error;
       return false;
     }
   }
