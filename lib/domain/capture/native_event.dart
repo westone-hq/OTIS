@@ -80,6 +80,36 @@ class NativeEvent {
   String toRecordLine() {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
   }
+
+  /// 목적: 네이티브 채널 Map 을 이벤트로 판독한다.
+  /// 인자: map — type, tsUs, xMg, yMg, zMg, dtUs 키를 가진 Map.
+  ///       noiseDba 등 계약에 정의된 여분 키는 무시한다
+  /// 반환: 이벤트. 필수 키 누락·형식 불일치면 null (0값 대체 금지 — 유령 샘플 차단)
+  /// 근거: 인용 — docs/capture_channel_contract.md
+  static NativeEvent? fromChannelMap(Map<dynamic, dynamic> map) {
+    final type = NativeEventType.values.asNameMap()[map['type']];
+    final tsUs = map['tsUs'];
+    final xMg = map['xMg'];
+    final yMg = map['yMg'];
+    final zMg = map['zMg'];
+    final dtUs = map['dtUs'];
+    if (type == null ||
+        tsUs is! int ||
+        xMg is! num ||
+        yMg is! num ||
+        zMg is! num ||
+        dtUs is! int) {
+      return null;
+    }
+    return NativeEvent(
+      type: type,
+      tsUs: tsUs,
+      xMg: xMg.toDouble(),
+      yMg: yMg.toDouble(),
+      zMg: zMg.toDouble(),
+      dtUs: dtUs,
+    );
+  }
 }
 
 /// raw_native 형식 기록·판독.
