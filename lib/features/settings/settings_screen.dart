@@ -251,7 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: AppDims.gap),
               _buildListTile(
-                title: '전체 센서 비교 (파일 8개)',
+                title: '전체 센서 비교 (파일 11개)',
                 trailingIcon: Icons.chevron_right,
                 onTap: () => context.push('/verify-fastest'),
               ),

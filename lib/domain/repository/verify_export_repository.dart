@@ -20,7 +20,7 @@ class VerifyExportRepository {
 
   final VerifyBaseDirectoryProvider _baseDirectoryProvider;
 
-  /// 전체 동시 검증: 네 방식의 원본·256Hz 총 8개를 같은 폴더에 저장한다.
+  /// 전체 동시 검증: 기존 8개 + 기본 256/128/64Hz 총 11개를 저장한다.
   Future<VerifyExportResult> exportAll(Map<String, String> nativePaths) async {
     return _copyManyAtomically(
       nativePaths: nativePaths,
@@ -33,6 +33,9 @@ class VerifyExportRepository {
         ('oneMs256', '1ms_256Hz.txt'),
         ('threeMsRaw', '3ms_원본.txt'),
         ('threeMs256', '3ms_256Hz.txt'),
+        ('base256', '기본_FASTEST_256Hz.txt'),
+        ('base128', '기본_FASTEST_128Hz.txt'),
+        ('base64', '기본_FASTEST_64Hz.txt'),
       ],
     );
   }

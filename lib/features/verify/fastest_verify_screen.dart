@@ -10,7 +10,7 @@ import '../../domain/prefs_store.dart';
 import '../../domain/repository/verify_export_repository.dart';
 import '../../domain/verify_sensor_channel.dart';
 
-/// FASTEST·HandlerThread·1ms·3ms를 한 번에 실행하고 txt 8개를 출력한다.
+/// 네 수신 방식 8개 + 기본 FASTEST 256/128/64Hz, 총 11개를 출력한다.
 class FastestVerifyScreen extends StatefulWidget {
   const FastestVerifyScreen({super.key});
 
@@ -63,7 +63,7 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
     if (!_running || _saving) return;
     setState(() => _saving = true);
     try {
-      // 두 네이티브 핸들러를 먼저 멈춰 4+4 경로를 모두 회수한다.
+      // 두 네이티브 핸들러를 먼저 멈춰 7+4 경로를 모두 회수한다.
       final stopped = await Future.wait([
         _fastestChannel.stop(),
         _fixedChannel.stop(),
@@ -71,7 +71,7 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
       final nativePaths = <String, String>{...stopped[0], ...stopped[1]};
       await _cancelSubscriptions();
 
-      // 8개가 모두 있을 때만 같은 세션 폴더의 최종 이름으로 확정한다.
+      // 11개가 모두 있을 때만 같은 세션 폴더의 최종 이름으로 확정한다.
       final exported = await _repository.exportAll(nativePaths);
       if (!mounted) return;
       setState(() {
@@ -81,7 +81,7 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
         _savedPaths = _savedFilePaths.join('\n');
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('검증 파일 8개 저장 완료\n${exported.directory.path}')),
+        SnackBar(content: Text('검증 파일 11개 저장 완료\n${exported.directory.path}')),
       );
     } catch (error) {
       await _cancelSubscriptions();
@@ -89,13 +89,13 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
       setState(() {
         _running = false;
         _saving = false;
-        _error = '8개 파일 출력 실패: $error';
+        _error = '11개 파일 출력 실패: $error';
       });
     }
   }
 
   Future<void> _sendEmail() async {
-    if (_savedFilePaths.length != 8 || _emailSending) return;
+    if (_savedFilePaths.length != 11 || _emailSending) return;
     final userId = AuthRepository.instance.currentUserId;
     final recipient = userId == null
         ? null
@@ -111,17 +111,17 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
     try {
       await FlutterEmailSender.send(
         Email(
-          subject: 'OTIS 센서 수신 비교 결과 (8개 txt)',
+          subject: 'OTIS 센서 수신 비교 결과 (11개 txt)',
           body:
               'FASTEST, HandlerThread, 1ms, 3ms의 '
-              '원본 및 256Hz 보간 결과입니다.\n\n첨부 8개',
+              '원본·256Hz 결과와 기본 256/128/64Hz 결과입니다.\n\n첨부 11개',
           recipients: [recipient.trim()],
           attachmentPaths: _savedFilePaths,
         ),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('메일 작성창을 열었습니다. 파일 8개가 첨부되었습니다.')),
+        const SnackBar(content: Text('메일 작성창을 열었습니다. 파일 11개가 첨부되었습니다.')),
       );
     } catch (error) {
       if (mounted) setState(() => _error = '메일 작성창 호출 실패: $error');
@@ -174,7 +174,8 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
           children: [
             Text(
               'FASTEST, FASTEST+HandlerThread, 1ms, 3ms를 동시에 받고 '
-              '각각 ${SampleRate.hz}Hz로 보간합니다.',
+              '각각 ${SampleRate.hz}Hz로 보간합니다. 기본 FASTEST 원본은 '
+              '256Hz·128Hz·64Hz로도 각각 독립 보간합니다.',
               style: AppText.body,
             ),
             const SizedBox(height: AppDims.gap2),
@@ -187,7 +188,7 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
             _statusCard('3ms 요청', 'threeMs'),
             if (_savedPaths != null) ...[
               const SizedBox(height: AppDims.gap2),
-              _messageBox('파일 8개 저장됨', _savedPaths!, AppColors.green),
+              _messageBox('파일 11개 저장됨', _savedPaths!, AppColors.green),
             ],
             if (_error != null) ...[
               const SizedBox(height: AppDims.gap2),
@@ -206,18 +207,18 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
               height: AppDims.buttonH,
               child: OutlinedButton(
                 onPressed: _running && !_saving ? _stopAndExport : null,
-                child: Text(_saving ? '파일 8개 만드는 중…' : '중지 및 파일 8개 출력'),
+                child: Text(_saving ? '파일 11개 만드는 중…' : '중지 및 파일 11개 출력'),
               ),
             ),
             const SizedBox(height: AppDims.gap),
             SizedBox(
               height: AppDims.buttonH,
               child: ElevatedButton.icon(
-                onPressed: _savedFilePaths.length == 8 && !_emailSending
+                onPressed: _savedFilePaths.length == 11 && !_emailSending
                     ? _sendEmail
                     : null,
                 icon: const Icon(Icons.email_outlined),
-                label: Text(_emailSending ? '메일 준비 중…' : '파일 8개 이메일 보내기'),
+                label: Text(_emailSending ? '메일 준비 중…' : '파일 11개 이메일 보내기'),
               ),
             ),
           ],

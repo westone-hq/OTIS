@@ -15,6 +15,7 @@ import java.util.Locale
  * 반환 파일:
  * - fastestRaw / fastest256
  * - handlerRaw / handler256
+ * - base256 / base128 / base64
  */
 class FastestVerifyHandler(
     private val context: Context,
@@ -35,12 +36,21 @@ class FastestVerifyHandler(
         var lastStatsNs: Long = 0,
     )
 
+    private data class RateOutput(
+        val body: File,
+        val output: File,
+        var writer: BufferedWriter,
+        var count: Long = 0,
+    )
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var eventSink: EventChannel.EventSink? = null
     private var fastestCore: Fastest256Core? = null
     private var handlerCore: HandlerThread256Core? = null
+    private var multiRateCore: FastestMultiRateCore? = null
     private var fastestOutput: OutputSet? = null
     private var handlerOutput: OutputSet? = null
+    private val rateOutputs = linkedMapOf<Int, RateOutput>()
 
     fun start(targetHz: Int): Boolean {
         stop()
@@ -53,7 +63,15 @@ class FastestVerifyHandler(
                     fastestOutput = null
                     return false
                 }
+        if (!openRateOutputs(stamp)) {
+            closeAndDelete(fastestOutput)
+            closeAndDelete(handlerOutput)
+            fastestOutput = null
+            handlerOutput = null
+            return false
+        }
 
+        multiRateCore = FastestMultiRateCore(::writeMultiRateProcessed)
         fastestCore =
             Fastest256Core(
                 context = context,
@@ -74,8 +92,10 @@ class FastestVerifyHandler(
             handlerCore?.stop()
             fastestCore = null
             handlerCore = null
+            multiRateCore = null
             closeAndDelete(fastestOutput)
             closeAndDelete(handlerOutput)
+            closeAndDeleteRateOutputs()
             fastestOutput = null
             handlerOutput = null
             return false
@@ -92,8 +112,10 @@ class FastestVerifyHandler(
         activeHandler?.stop()
         fastestCore = null
         handlerCore = null
+        multiRateCore = null
         closeOutput(fastestOutput)
         closeOutput(handlerOutput)
+        closeRateOutputs()
 
         val fastestRaw =
             buildFastestOriginal(activeFastest, fastestOutput)
@@ -103,9 +125,13 @@ class FastestVerifyHandler(
             buildHandlerOriginal(activeHandler, handlerOutput)
         val handler256 =
             buildProcessed("FASTEST+HandlerThread 원본의 256Hz 보간", handlerOutput)
+        val base256 = buildRateOutput(256)
+        val base128 = buildRateOutput(128)
+        val base64 = buildRateOutput(64)
 
         cleanupBodies(fastestOutput)
         cleanupBodies(handlerOutput)
+        cleanupRateOutputs()
         fastestOutput = null
         handlerOutput = null
 
@@ -113,13 +139,19 @@ class FastestVerifyHandler(
             fastestRaw != null &&
             fastest256 != null &&
             handlerRaw != null &&
-            handler256 != null
+            handler256 != null &&
+            base256 != null &&
+            base128 != null &&
+            base64 != null
         ) {
             linkedMapOf(
                 "fastestRaw" to fastestRaw,
                 "fastest256" to fastest256,
                 "handlerRaw" to handlerRaw,
                 "handler256" to handler256,
+                "base256" to base256,
+                "base128" to base128,
+                "base64" to base64,
             )
         } else {
             emptyMap()
@@ -145,8 +177,29 @@ class FastestVerifyHandler(
         }
     }
 
+    private fun openRateOutputs(stamp: Long): Boolean {
+        rateOutputs.clear()
+        return try {
+            for (rate in FastestMultiRateCore.TARGET_RATES_HZ) {
+                val body = File(context.cacheDir, "base_${rate}_$stamp.tmp")
+                rateOutputs[rate] =
+                    RateOutput(
+                        body = body,
+                        output = File(context.cacheDir, "base_${rate}_$stamp.txt"),
+                        writer = BufferedWriter(FileWriter(body)),
+                    )
+            }
+            true
+        } catch (_: Exception) {
+            closeAndDeleteRateOutputs()
+            false
+        }
+    }
+
     private fun writeFastestOriginal(sample: Fastest256Core.OriginalSample) {
         val output = fastestOutput ?: return
+        // 같은 FASTEST 원본을 256·128·64 독립 보간 코어에도 전달한다.
+        multiRateCore?.accept(sample)
         val type =
             when (sample.kind) {
                 Fastest256Core.SensorKind.RAW -> "raw"
@@ -169,6 +222,30 @@ class FastestVerifyHandler(
             sendFastestStats()
             output.lastStatsNs = sample.timestampNs
         }
+    }
+
+    private fun writeMultiRateProcessed(
+        rateHz: Int,
+        sample: FastestMultiRateCore.ResampledSample,
+    ) {
+        val output = rateOutputs[rateHz] ?: return
+        output.count++
+        output.writer.write(
+            String.format(
+                Locale.US,
+                "%d %.9f %.9f %.9f %.9f %.9f %.9f %.9f %.9f %.9f%n",
+                sample.timestampNs / 1000L,
+                sample.linearX * MPS2_TO_MG,
+                sample.linearY * MPS2_TO_MG,
+                sample.linearZ * MPS2_TO_MG,
+                sample.rawX * MPS2_TO_MG,
+                sample.rawY * MPS2_TO_MG,
+                sample.rawZ * MPS2_TO_MG,
+                sample.gravityX * MPS2_TO_MG,
+                sample.gravityY * MPS2_TO_MG,
+                sample.gravityZ * MPS2_TO_MG,
+            ),
+        )
     }
 
     private fun writeHandlerOriginal(sample: HandlerThread256Core.OriginalSample) {
@@ -422,6 +499,19 @@ class FastestVerifyHandler(
         }
     }
 
+    private fun buildRateOutput(rateHz: Int): String? {
+        val rateOutput = rateOutputs[rateHz] ?: return null
+        return buildFile(rateOutput.output, rateOutput.body) { writer ->
+            writer.write("# 기본 SENSOR_DELAY_FASTEST 원본의 ${rateHz}Hz 독립 선형 보간\n")
+            writer.write("# 목표 간격(ns): ${1_000_000_000L / rateHz}\n")
+            writer.write("# 가공 총개수: ${rateOutput.count}\n")
+            writer.write(
+                "# columns: tsUs linearX_mg linearY_mg linearZ_mg " +
+                    "rawX_mg rawY_mg rawZ_mg gravityX_mg gravityY_mg gravityZ_mg\n",
+            )
+        }
+    }
+
     private fun buildFile(
         output: File,
         body: File,
@@ -443,14 +533,30 @@ class FastestVerifyHandler(
         try { output.processedWriter.flush(); output.processedWriter.close() } catch (_: Exception) {}
     }
 
+    private fun closeRateOutputs() {
+        for (output in rateOutputs.values) {
+            try { output.writer.flush(); output.writer.close() } catch (_: Exception) {}
+        }
+    }
+
     private fun cleanupBodies(output: OutputSet?) {
         output?.originalBody?.delete()
         output?.processedBody?.delete()
     }
 
+    private fun cleanupRateOutputs() {
+        for (output in rateOutputs.values) output.body.delete()
+        rateOutputs.clear()
+    }
+
     private fun closeAndDelete(output: OutputSet?) {
         closeOutput(output)
         cleanupBodies(output)
+    }
+
+    private fun closeAndDeleteRateOutputs() {
+        closeRateOutputs()
+        cleanupRateOutputs()
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {

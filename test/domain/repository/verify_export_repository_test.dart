@@ -20,7 +20,7 @@ void main() {
     }
   });
 
-  test('전체 검증은 네 방식의 원본·256Hz 총 8개를 함께 저장한다', () async {
+  test('전체 검증은 기존 8개와 기본 다중 주파수 3개를 함께 저장한다', () async {
     final keys = [
       'fastestRaw',
       'fastest256',
@@ -30,6 +30,9 @@ void main() {
       'oneMs256',
       'threeMsRaw',
       'threeMs256',
+      'base256',
+      'base128',
+      'base64',
     ];
     final sources = <String, String>{};
     for (final key in keys) {
@@ -40,7 +43,7 @@ void main() {
 
     final result = await repository.exportAll(sources);
 
-    expect(result.files, hasLength(8));
+    expect(result.files, hasLength(11));
     expect(result.files.map((file) => file.path), [
       endsWith('FASTEST_원본.txt'),
       endsWith('FASTEST_256Hz.txt'),
@@ -50,6 +53,9 @@ void main() {
       endsWith('1ms_256Hz.txt'),
       endsWith('3ms_원본.txt'),
       endsWith('3ms_256Hz.txt'),
+      endsWith('기본_FASTEST_256Hz.txt'),
+      endsWith('기본_FASTEST_128Hz.txt'),
+      endsWith('기본_FASTEST_64Hz.txt'),
     ]);
   });
 
