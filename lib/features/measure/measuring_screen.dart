@@ -50,20 +50,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   late final SensorChannelManager _sensorManager =
       widget.sensorManager ?? SensorChannelManager();
   Timer? _timeTimer;
-  Timer? _uiTimer;
   Timer? _mockFallbackTimer;
   Timer? _releaseTimeoutTimer;
   StreamSubscription<double>? _speedSub;
   StreamSubscription<SensorSample>? _sensorSub;
 
   int _elapsedSeconds = 0;
-  double _currentSpeed = 0.00;
   bool _receivedRealSample = false;
-  double _signedVelocity = 0.0;
-  double _baselineSumZ = 0.0;
-  int _baselineCount = 0;
-  double _baselineZ = 0.0;
-  int _lastTsUs = 0;
 
   final MeasurementEngine _engine = MeasurementEngine();
   int _countdownSec = 0;
@@ -137,16 +130,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       }
     });
 
-    // 4. UI 갱신 스로틀링 (150ms 주기 setState - 50Hz 과부하 해소)
-    _uiTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
-      if (!mounted) return;
-      if (_receivedRealSample) {
-        setState(() {
-          _currentSpeed = _elapsedSeconds < 1 ? 0.00 : _signedVelocity.abs();
-        });
-      }
-    });
-
     // 5. 센서 가용성 검증 및 단일 스트림 명시적 구독
     final bool available = await _sensorManager.checkSensorsAvailable();
     if (available && !_sensorManager.useMock) {
@@ -158,24 +141,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         if (sample.tsUs > 0) {
           _receivedRealSample = true;
           _engine.addSamples([sample]);
-          // 첫 1초간 Z축 baseline 보정 수집
-          if (_elapsedSeconds < 1) {
-            _baselineSumZ += sample.z;
-            _baselineCount++;
-            _baselineZ = _baselineCount > 0
-                ? _baselineSumZ / _baselineCount
-                : 0.0;
-            _signedVelocity = 0.0;
-          } else {
-            final double dt = (_lastTsUs > 0 && sample.tsUs > _lastTsUs)
-                ? (sample.tsUs - _lastTsUs) / 1000000.0
-                : (1.0 / 256.0);
-            final double aZ =
-                (sample.z - _baselineZ) *
-                SensorSample.mgToMetersPerSecondSquared;
-            _signedVelocity = (_signedVelocity + aZ * dt).clamp(-3.0, 3.0);
-          }
-          _lastTsUs = sample.tsUs;
         }
       });
 
@@ -208,9 +173,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   void _subscribeMockStream() {
     _speedSub?.cancel();
     _speedSub = _mockSpeedStream().listen((speed) {
-      if (mounted && !_receivedRealSample) {
-        setState(() => _currentSpeed = speed);
-      }
     });
   }
 
@@ -229,12 +191,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
 
   Future<void> _cleanup() async {
     _timeTimer?.cancel();
-    _uiTimer?.cancel();
     _countdownTimer?.cancel();
     _mockFallbackTimer?.cancel();
     _releaseTimeoutTimer?.cancel();
     _timeTimer = null;
-    _uiTimer = null;
     _countdownTimer = null;
     _mockFallbackTimer = null;
     _releaseTimeoutTimer = null;
@@ -627,26 +587,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                       children: [
                         // 현재 속도 섹션
                         Text(
-                          '현재 속도',
+                          '측정 중',
                           style: AppText.bodyBold.copyWith(
                             color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                        ),
-                        const SizedBox(height: AppDims.gap),
-                        Text(
-                          _currentSpeed.toStringAsFixed(2),
-                          style: AppText.bigNumber.copyWith(
-                            fontSize: 72,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '미터/초',
-                          style: AppText.subhead.copyWith(
-                            color: AppColors.gold,
                           ),
                         ),
                         const SizedBox(height: 40),

@@ -1,9 +1,12 @@
-import 'prefs_store.dart';
-
 /// P5 · 인증 레포지토리 인터페이스 및 구현
 /// - 사번 6자리 (숫자 6자리) 또는 T사번 (T + 숫자 5자리, 대소문자 무관) 검증
 /// - PW == ID 검증 (D11, FR-2)
 /// - 관리자 활성/비활성 여부 확인 (OI-2: 서버 확정 대기이므로 Local 은 항상 true 반환)
+///
+/// [우회] 인증 미구현 상태의 임시 처리.
+/// 고정 사용자 T00000 으로 항상 로그인 상태를 반환한다.
+/// 인증 기능 착수 시 이 파일 전체를 원복해야 한다.
+/// 근거: 미정 — 서버 인증 연동 방침 확정 후 재작성
 abstract class AuthRepository {
   static AuthRepository instance = LocalAuthRepository();
 
@@ -23,42 +26,16 @@ abstract class AuthRepository {
 }
 
 class LocalAuthRepository implements AuthRepository {
-  static final _idPattern = RegExp(r'^(\d{6}|[Tt]\d{5})$');
-
-  String? _currentUserId;
-
   @override
-  String? get currentUserId => _currentUserId;
+  String? get currentUserId => 'T00000';
 
   @override
   Future<String?> getAutoLoginId() async {
-    final savedId = await PrefsStore.instance.loadAutoLoginId();
-    if (savedId != null && _idPattern.hasMatch(savedId)) {
-      _currentUserId = savedId;
-      return _currentUserId;
-    }
-    return null;
+    return 'T00000';
   }
 
   @override
   Future<bool> login(String id, String pw) async {
-    final trimmedId = id.trim();
-    final trimmedPw = pw.trim();
-
-    if (!_idPattern.hasMatch(trimmedId)) {
-      throw const FormatException('아이디 형식을 확인하세요.\n사번 6자리 또는 T+숫자 5자리입니다.');
-    }
-    if (trimmedPw != trimmedId) {
-      throw const FormatException('아이디 또는 비밀번호를 확인하세요.');
-    }
-
-    final enabled = await isEnabled(trimmedId);
-    if (!enabled) {
-      throw const FormatException('비활성화된 계정입니다. 관리자에게 문의하세요.');
-    }
-
-    _currentUserId = trimmedId;
-    await PrefsStore.instance.saveAutoLoginId(_currentUserId!);
     return true;
   }
 
@@ -71,7 +48,5 @@ class LocalAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    _currentUserId = null;
-    await PrefsStore.instance.removeAutoLoginId();
   }
 }
