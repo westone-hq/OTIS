@@ -137,7 +137,6 @@ class SensorStreamHandler(
 
         appendRecordLine(type, tsUs, xMg, yMg, zMg, dtUs)
 
-        if (eventSink == null) return
         val sampleMap = mapOf<String, Any>(
             "type" to type,
             "tsUs" to tsUs,
@@ -151,6 +150,11 @@ class SensorStreamHandler(
         var readyBatch: List<Map<String, Any>>? = null
         synchronized(batchBuffer) {
             batchBuffer.add(sampleMap)
+            // sink 미연결 상태에서 버퍼가 무한정 커지지 않도록 상한을 둔다.
+            // 상한 초과 시 가장 오래된 배치 크기만큼 버린다 (연결 전 프리롤 방지).
+            if (eventSink == null && batchBuffer.size > BATCH_SIZE * 4) {
+                batchBuffer.subList(0, BATCH_SIZE).clear()
+            }
             if (batchBuffer.size >= BATCH_SIZE) {
                 readyBatch = ArrayList(batchBuffer)
                 batchBuffer.clear()
