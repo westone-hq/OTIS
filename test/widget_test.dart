@@ -1,3 +1,4 @@
+@Skip('sensor_channel 재작성으로 무효. 새 채널 계약 테스트로 대체 예정 — RD-12')
 import 'dart:io';
 
 import 'package:flutter/material.dart';

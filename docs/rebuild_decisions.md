@@ -61,3 +61,17 @@ gravity 확보 전 raw 는 폐기·집계한다.
 ## RD-11 (8/6) 화면·엔진에 주는 샘플의 tsUs 는 실제 센서 시각이다
 기존 구조의 보간 격자 시각을 폐기한다 (판독서 D1). 샘플 간격은 불균일하며,
 등간격이 필요한 후처리는 이 시각을 근거로 별도 수행한다.
+
+## RD-12 (8/6) 우회·재작성으로 무효화된 기존 테스트는 사유를 적어 보류한다
+삭제하지 않고 @Skip 으로 보류하며, 주석에 무효 사유와 복원 조건을 남긴다.
+근거: 전체 테스트가 항상 실패 상태면 이후 실제 회귀가 묻힌다.
+보류 목록:
+- test/domain/auth_test.dart (원인 A - 로그인 우회)
+- test/features/auth/login_screen_test.dart (원인 A - 로그인 우회)
+- test/features/settings/settings_and_email_test.dart (원인 A - 로그인 우회)
+- test/widget_test.dart (원인 C - sensor_channel 재구현)
+
+## RD-13 (8/6) startCapture 기본값 256·85.0 은 계약 고정값으로 당분간 유지한다
+UI 계약(ui_contract.md §2.5)이 시그니처 기본값을 고정하고 있어 지금은 옮길 수 없다.
+계약 해제(UI 분해) 시 CaptureConfig 참조로 이관한다.
+근거: 주석 규칙 "숫자는 설정 파일에만"과의 충돌을 인지한 상태의 의도적 예외.

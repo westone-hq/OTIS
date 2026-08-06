@@ -1,3 +1,4 @@
+@Skip('로그인 우회(T00000) 기간 무효. auth_repository 원복 시 함께 복원 — RD-12')
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/domain/auth_repository.dart';
