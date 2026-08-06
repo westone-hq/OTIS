@@ -11,6 +11,7 @@ enum NativeEventType { accel, gravity, linear }
 ///
 /// 안드로이드 센서 콜백이 도착한 그대로를 담는다.
 /// 값 가공(보간·필터·보정)은 이 계층에서 하지 않는다.
+/// 기록 형식 근거: develop 브랜치 08ef27a raw_native.txt
 class NativeEvent {
   const NativeEvent({
     required this.type,
@@ -45,7 +46,6 @@ class NativeEvent {
   /// 목적: 파일 한 줄을 이벤트로 판독한다.
   /// 인자: line — 공백 구분 6항목 (type tsUs xMg yMg zMg dtUs)
   /// 반환: 이벤트. 형식이 맞지 않으면 null (0값 대체 금지 — 유령 샘플 차단)
-  /// 근거: 인용 — develop 브랜치 08ef27a raw_native.txt 형식
   static NativeEvent? fromRecordLine(String line) {
     final parts = line.trim().split(RegExp(r'\s+'));
     if (parts.length != 6) return null;
@@ -76,7 +76,6 @@ class NativeEvent {
   /// 목적: 이벤트를 파일 한 줄로 만든다.
   /// 인자: 없음
   /// 반환: 공백 구분 6항목 문자열. fromRecordLine 과 왕복 시 값이 보존된다
-  /// 근거: 인용 — develop 브랜치 08ef27a raw_native.txt 형식
   String toRecordLine() {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
   }
@@ -116,12 +115,12 @@ class NativeEvent {
 ///
 /// develop 브랜치가 생성하는 otis_raw_native_*.txt 와 상호 호환된다.
 /// # 로 시작하는 줄은 주석으로 취급한다.
+/// 형식 근거: develop 브랜치 08ef27a raw_native.txt (이하 이 클래스 전체에 적용)
 class NativeEventRecord {
   /// 목적: 이벤트 목록을 파일 내용 전체로 만든다.
   /// 인자: events — 이벤트 목록 (수신 순서 유지)
   ///       targetSampleRateHz — 측정 당시 목표 주기 (헤르츠). 머리말에 기록
   /// 반환: 머리말 4줄 + 이벤트 줄들. 반올림·가공 없음
-  /// 근거: 인용 — develop 브랜치 08ef27a raw_native.txt 형식
   static String encode(
     List<NativeEvent> events, {
     required int targetSampleRateHz,
@@ -142,7 +141,6 @@ class NativeEventRecord {
   /// 반환: events — 판독된 이벤트 (파일 순서 유지)
   ///       skippedLineCount — 형식 불일치로 폐기한 줄 수 (주석·빈 줄 제외).
   ///       폐기 줄을 0값으로 채우지 않는다 — 유령 샘플 차단
-  /// 근거: 인용 — develop 브랜치 08ef27a raw_native.txt 형식
   static ({List<NativeEvent> events, int skippedLineCount}) decode(
     String text,
   ) {

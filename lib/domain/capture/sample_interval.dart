@@ -14,7 +14,6 @@ class SampleInterval {
   ///       type — 간격을 잴 이벤트 종류
   /// 반환: 간격 목록 (마이크로초). 해당 종류가 2개 미만이면 빈 목록.
   ///       음수·0 간격(타임스탬프 역행)도 그대로 담는다 — 판정은 통계 쪽에서 한다
-  /// 근거: 측정 — 수집 주기 편차 판정 자료
   static List<int> intervalsUs(
     List<NativeEvent> events,
     NativeEventType type,
@@ -34,8 +33,7 @@ class SampleInterval {
   /// 목적: 재계산 간격과 기록 당시 dtUs 를 대조해 불일치 수를 센다.
   /// 인자: events — 원본 이벤트 목록, type — 대조할 이벤트 종류
   /// 반환: 불일치 건수. 첫 이벤트(dtUs=0 규약)는 대조에서 제외.
-  ///       0이 아니면 기록 과정에 문제가 있다는 뜻이다
-  /// 근거: 측정 — 기록 무결성 검증 (RD-5)
+  ///       0이 아니면 기록 과정에 문제가 있다는 뜻이다 (기록 무결성 검증, RD-5)
   static int recordedDtMismatchCount(
     List<NativeEvent> events,
     NativeEventType type,
@@ -100,9 +98,9 @@ class IntervalStats {
   ///       config — 정상 간격 범위를 담은 설정
   /// 반환: 통계. 목록이 비면 전부 0.
   ///       표준편차는 표본 표준편차(n-1)이며 간격이 1개면 0
-  /// 식:   stdDev = sqrt( Σ(x - mean)² / (n - 1) )
-  /// 근거: 측정 — 수집 주기 편차 판정 자료.
-  ///       정상 범위 경계값은 CaptureConfig 참조 (근거: 미정 상태)
+  /// 식:   stdDev = sqrt( Σ(x - mean)² / (n - 1) )  (표본 표준편차)
+  /// 주의: 정상 범위 경계값(below/aboveNormalCount)은 CaptureConfig 의
+  ///       미확정 임시 기준을 따른다
   factory IntervalStats.from(
     List<int> intervalsUs, {
     required CaptureConfig config,
@@ -157,8 +155,6 @@ class IntervalStats {
   ///       그 몇 개의 큰 간격이 평균을 밀어 주기를 실제보다 낮게 만들기 때문이다.
   /// 인자: 없음
   /// 반환: 주기 (헤르츠). 중앙값이 0 이하면 0
-  /// 식:   rateHz = 1,000,000 / medianUs
-  /// 근거: 표준 — 단위 정의 (1초 = 1,000,000 마이크로초)
   double get estimatedRateHz {
     if (medianUs <= 0) return 0;
     return 1000000 / medianUs;
@@ -168,7 +164,6 @@ class IntervalStats {
   /// 인자: label — 자료 제목 (예: 이벤트 종류, 측정 회차)
   ///       config — 목표 주기와 정상 범위 표기용
   /// 반환: 여러 줄 요약 문자열
-  /// 근거: 측정 — 판정 근거 제시용 서식
   String toReportText({
     required String label,
     required CaptureConfig config,
