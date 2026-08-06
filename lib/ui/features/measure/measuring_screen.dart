@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -142,16 +141,15 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       });
     }
 
-    // 릴리즈 경로: 3초간 수신 없으면 측정 중단 및 복귀 (저장 없음)
-    if (!kDebugMode) {
-      _releaseTimeoutTimer = Timer(const Duration(seconds: 3), () async {
-        if (mounted && !_receivedRealSample) {
-          _isFinished = true;
-          await _cleanup();
-          await _showMeasureFailDialog('센서 응답이 없습니다. 측정을 중단합니다.');
-        }
-      });
-    }
+    // 3초간 수신 없으면 측정 중단 및 복귀 (저장 없음).
+    // 디버그·릴리즈 동일하게 동작해야 문제를 개발 단계에서 발견할 수 있다 (B-2).
+    _releaseTimeoutTimer = Timer(const Duration(seconds: 3), () async {
+      if (mounted && !_receivedRealSample) {
+        _isFinished = true;
+        await _cleanup();
+        await _showMeasureFailDialog('센서 응답이 없습니다. 측정을 중단합니다.');
+      }
+    });
   }
 
   Future<void> _cleanup() async {
