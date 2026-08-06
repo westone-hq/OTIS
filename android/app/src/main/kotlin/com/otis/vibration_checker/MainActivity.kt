@@ -36,9 +36,11 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "checkAvailable" -> {
+                        // 계약: 가속도계와 중력 센서가 모두 있어야 측정 가능 (RD-6)
                         val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager?
-                        val linearSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
-                        result.success(linearSensor != null)
+                        val accel = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+                        val gravity = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
+                        result.success(accel != null && gravity != null)
                     }
                     "requestAudioPermission" -> {
                         if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -61,9 +63,10 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "stopCapture" -> {
-                        sensorStreamHandler.stop()
+                        // 계약: 원본 기록 파일 경로를 돌려준다
+                        val recordPath = sensorStreamHandler.stop()
                         noiseCaptureHandler.stop()
-                        result.success(null)
+                        result.success(recordPath)
                     }
                     else -> {
                         result.notImplemented()
