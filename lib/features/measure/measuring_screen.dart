@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -50,9 +49,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   late final SensorChannelManager _sensorManager =
       widget.sensorManager ?? SensorChannelManager();
   Timer? _timeTimer;
-  Timer? _mockFallbackTimer;
   Timer? _releaseTimeoutTimer;
-  StreamSubscription<double>? _speedSub;
   StreamSubscription<SensorSample>? _sensorSub;
 
   int _elapsedSeconds = 0;
@@ -143,19 +140,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           _engine.addSamples([sample]);
         }
       });
-
-      // 1초 후에도 실제 콜백이 전혀 없다면 mock 스트림으로 폴백 (디버그 모드 전용)
-      if (kDebugMode) {
-        _mockFallbackTimer = Timer(const Duration(seconds: 1), () {
-          if (mounted && !_receivedRealSample && _speedSub == null) {
-            _subscribeMockStream();
-          }
-        });
-      }
-    } else {
-      if (kDebugMode) {
-        _subscribeMockStream();
-      }
     }
 
     // 릴리즈 경로: 3초간 수신 없으면 측정 중단 및 복귀 (저장 없음)
@@ -170,40 +154,16 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
   }
 
-  void _subscribeMockStream() {
-    _speedSub?.cancel();
-    _speedSub = _mockSpeedStream().listen((speed) {
-    });
-  }
-
-  Stream<double> _mockSpeedStream() {
-    return Stream.periodic(const Duration(milliseconds: 100), (count) {
-      // 0.00에서 시작해 약 3초(30회) 동안 1.50 m/s까지 가속
-      if (count < 30) {
-        return (count * 0.05).clamp(0.0, 1.50);
-      } else {
-        // 1.50 유지 (미세한 0.01 변동으로 라이브 느낌 부여)
-        final noise = (math.Random().nextDouble() - 0.5) * 0.02;
-        return (1.50 + noise).clamp(1.48, 1.52);
-      }
-    });
-  }
-
   Future<void> _cleanup() async {
     _timeTimer?.cancel();
     _countdownTimer?.cancel();
-    _mockFallbackTimer?.cancel();
     _releaseTimeoutTimer?.cancel();
     _timeTimer = null;
     _countdownTimer = null;
-    _mockFallbackTimer = null;
     _releaseTimeoutTimer = null;
-    final speedSub = _speedSub;
     final sensorSub = _sensorSub;
-    _speedSub = null;
     _sensorSub = null;
     await Future.wait<void>([
-      if (speedSub != null) _ignoreSlowCleanup(speedSub.cancel()),
       if (sensorSub != null) _ignoreSlowCleanup(sensorSub.cancel()),
       _ignoreSlowCleanup(_sensorManager.stopCapture()),
     ]);
