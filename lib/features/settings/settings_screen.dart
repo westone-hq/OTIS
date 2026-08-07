@@ -261,6 +261,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 trailingIcon: Icons.chevron_right,
                 onTap: () => context.push('/verify-fixed'),
               ),
+              const SizedBox(height: AppDims.gap),
+              _buildListTile(
+                title: '128Hz 단독 센서 측정',
+                trailingIcon: Icons.chevron_right,
+                onTap: () => context.push('/verify-128'),
+              ),
+              const SizedBox(height: AppDims.gap),
+              _buildListTile(
+                title: '64Hz 단독 센서 측정',
+                trailingIcon: Icons.chevron_right,
+                onTap: () => context.push('/verify-64'),
+              ),
               const SizedBox(height: 48),
 
               // 4. 맨 아래 로그아웃 버튼

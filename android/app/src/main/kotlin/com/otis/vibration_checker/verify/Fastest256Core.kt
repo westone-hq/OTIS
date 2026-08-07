@@ -17,6 +17,13 @@ import android.hardware.SensorManager
  *
  * 제외:
  * txt, 파일 저장, 임시 파일, Writer, EventChannel, Flutter 통신
+ *
+ * 읽는 순서:
+ * [start] 센서 등록 → [onSensorChanged] 원본 분류 → [updateIntervalStats] 실측 간격 계산
+ * → [processLinearEvent] 3.90625ms 간격의 목표 시각을 만들고 세 센서를 같은 시각으로 보간.
+ *
+ * 주의: FASTEST는 "가능한 가장 빠르게 요청"한다는 뜻이며 실제 수신 Hz를 보장하지 않는다.
+ * 실제 속도는 [IntervalStats.measuredHz]로 확인한다.
  */
 class Fastest256Core(
     context: Context,
@@ -30,8 +37,10 @@ class Fastest256Core(
         private const val ONE_SECOND_NS = 1_000_000_000L
     }
 
+    /** Android 센서 종류를 출력에서 구분하기 위한 값이다. */
     enum class SensorKind { RAW, GRAVITY, LINEAR }
 
+    /** Android가 넘겨준 값을 보간하지 않고 그대로 보관하는 원본 한 행이다. */
     data class OriginalSample(
         val kind: SensorKind,
         val timestampNs: Long,
@@ -172,10 +181,12 @@ class Fastest256Core(
     private val linearSensor =
         sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
 
+    // 센서별 최근 두 점. 세 센서의 콜백 시각이 달라도 같은 목표 시각으로 맞출 때 사용한다.
     private val rawPoints = SensorPointPair()
     private val gravityPoints = SensorPointPair()
     private val linearPoints = SensorPointPair()
 
+    // 외부 Handler가 측정 종료 후 헤더와 화면 통계를 만들 수 있도록 공개한다.
     val rawStats = IntervalStats()
     val gravityStats = IntervalStats()
     val linearStats = IntervalStats()

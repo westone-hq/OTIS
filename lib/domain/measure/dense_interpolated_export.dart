@@ -1,4 +1,4 @@
-/// raw_native.txt 원본 이벤트 → 고밀도 선형 보간 CSV (그래프 확대용)
+/// raw_native.txt 또는 검증용 *_원본.txt → 고밀도 선형 보간 CSV
 ///
 /// 주의: 실제 센서 측정값이 아님. visualization only / interpolated.
 library;
@@ -28,21 +28,57 @@ class NativeSensorEvent {
   });
 }
 
-/// native dump 본문 파싱 (`raw` = accelerometer / 구버전 `accel` 호환)
+/// 원본 본문 파싱 (`raw` = accelerometer / 구버전 `accel` 호환)
+///
+/// 지원 형식:
+/// - raw_native: `type tsUs x_mg y_mg z_mg dtUs`
+/// - 센서 검증: `type tsUs dtUs x_mg y_mg z_mg`
+///
+/// `# columns:` 헤더가 있으면 열 이름으로 위치를 찾고, 없으면 raw_native 순서를 쓴다.
 List<NativeSensorEvent> parseRawNativeText(String content) {
   final out = <NativeSensorEvent>[];
+  var typeIndex = 0;
+  var tsIndex = 1;
+  var xIndex = 2;
+  var yIndex = 3;
+  var zIndex = 4;
+
   for (final rawLine in content.split('\n')) {
     final line = rawLine.trim();
-    if (line.isEmpty || line.startsWith('#')) continue;
+    if (line.isEmpty) continue;
+    if (line.startsWith('#')) {
+      if (line.startsWith('# columns:')) {
+        final columns = line
+            .substring('# columns:'.length)
+            .trim()
+            .split(RegExp(r'\s+'));
+        final indexes = <String, int>{
+          for (var i = 0; i < columns.length; i++) columns[i]: i,
+        };
+        typeIndex = indexes['type'] ?? typeIndex;
+        tsIndex = indexes['tsUs'] ?? tsIndex;
+        xIndex = indexes['x_mg'] ?? xIndex;
+        yIndex = indexes['y_mg'] ?? yIndex;
+        zIndex = indexes['z_mg'] ?? zIndex;
+      }
+      continue;
+    }
     final parts = line.split(RegExp(r'\s+'));
-    if (parts.length < 5) continue;
-    var type = parts[0];
+    final lastRequiredIndex = [
+      typeIndex,
+      tsIndex,
+      xIndex,
+      yIndex,
+      zIndex,
+    ].reduce((a, b) => a > b ? a : b);
+    if (parts.length <= lastRequiredIndex) continue;
+    var type = parts[typeIndex];
     if (type == 'accel') type = 'raw'; // 구버전 호환
     if (type != 'raw' && type != 'gravity' && type != 'linear') continue;
-    final ts = int.tryParse(parts[1]);
-    final x = double.tryParse(parts[2]);
-    final y = double.tryParse(parts[3]);
-    final z = double.tryParse(parts[4]);
+    final ts = int.tryParse(parts[tsIndex]);
+    final x = double.tryParse(parts[xIndex]);
+    final y = double.tryParse(parts[yIndex]);
+    final z = double.tryParse(parts[zIndex]);
     if (ts == null || x == null || y == null || z == null) continue;
     out.add(NativeSensorEvent(type: type, tsUs: ts, xMg: x, yMg: y, zMg: z));
   }
@@ -55,27 +91,28 @@ String buildDenseInterpolatedCsv(
   List<NativeSensorEvent> events, {
   required int targetHz,
   required String fileLabel,
-}) {
-  final buf = StringBuffer();
-  buf.writeln('# $fileLabel');
-  buf.writeln('# INTERPOLATED / VISUALIZATION ONLY / NOT MEASURED SAMPLE');
-  buf.writeln('# source: raw_native.txt');
-  buf.writeln('# method: linear interpolation between native sensor events');
-  buf.writeln('# target_rate_hz: $targetHz');
-  buf.writeln(
-    '# note: smartphone sensors do not actually sample at this rate; '
-    'use for MATLAB/Excel zoom review only. '
-    'Distance/speed/vibration analysis must use resampled 256Hz (raw.txt).',
-  );
-  buf.writeln(
-    't_sec,raw_x_mg,raw_y_mg,raw_z_mg,'
-    'gravity_x_mg,gravity_y_mg,gravity_z_mg,'
-    'linear_x_mg,linear_y_mg,linear_z_mg',
-  );
+}) =>
+    '${buildDenseInterpolatedLines(events, targetHz: targetHz, fileLabel: fileLabel).join('\n')}\n';
 
-  if (events.isEmpty || targetHz <= 0) {
-    return buf.toString();
-  }
+/// 대용량 50배·100배 결과를 메모리에 한꺼번에 올리지 않고 한 줄씩 생성한다.
+Iterable<String> buildDenseInterpolatedLines(
+  List<NativeSensorEvent> events, {
+  required int targetHz,
+  required String fileLabel,
+}) sync* {
+  yield '# $fileLabel';
+  yield '# INTERPOLATED / VISUALIZATION ONLY / NOT MEASURED SAMPLE';
+  yield '# source: raw_native.txt or verification original txt';
+  yield '# method: linear interpolation between native sensor events';
+  yield '# target_rate_hz: $targetHz';
+  yield '# note: smartphone sensors do not actually sample at this rate; '
+      'use for MATLAB/Excel zoom review only. '
+      'Distance/speed/vibration analysis must use resampled 256Hz (raw.txt).';
+  yield 't_sec,raw_x_mg,raw_y_mg,raw_z_mg,'
+      'gravity_x_mg,gravity_y_mg,gravity_z_mg,'
+      'linear_x_mg,linear_y_mg,linear_z_mg';
+
+  if (events.isEmpty || targetHz <= 0) return;
 
   final raw = events.where((e) => e.type == 'raw').toList();
   final gravity = events.where((e) => e.type == 'gravity').toList();
@@ -83,9 +120,7 @@ String buildDenseInterpolatedCsv(
 
   final tStart = events.first.tsUs;
   final tEnd = events.last.tsUs;
-  if (tEnd <= tStart) {
-    return buf.toString();
-  }
+  if (tEnd <= tStart) return;
 
   final periodUs = 1000000.0 / targetHz;
   final durationUs = (tEnd - tStart).toDouble();
@@ -100,14 +135,11 @@ String buildDenseInterpolatedCsv(
     final a = _interpAt(raw, t);
     final g = _interpAt(gravity, t);
     final l = _interpAt(linear, t);
-    buf.writeln(
-      '${_fmt(tSec)},'
-      '${_fmtOpt(a?.$1)},${_fmtOpt(a?.$2)},${_fmtOpt(a?.$3)},'
-      '${_fmtOpt(g?.$1)},${_fmtOpt(g?.$2)},${_fmtOpt(g?.$3)},'
-      '${_fmtOpt(l?.$1)},${_fmtOpt(l?.$2)},${_fmtOpt(l?.$3)}',
-    );
+    yield ('${_fmt(tSec)},'
+        '${_fmtOpt(a?.$1)},${_fmtOpt(a?.$2)},${_fmtOpt(a?.$3)},'
+        '${_fmtOpt(g?.$1)},${_fmtOpt(g?.$2)},${_fmtOpt(g?.$3)},'
+        '${_fmtOpt(l?.$1)},${_fmtOpt(l?.$2)},${_fmtOpt(l?.$3)}');
   }
-  return buf.toString();
 }
 
 /// 스펙 전부에 대한 파일명→본문 맵

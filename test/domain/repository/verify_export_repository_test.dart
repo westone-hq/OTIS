@@ -20,7 +20,7 @@ void main() {
     }
   });
 
-  test('전체 검증은 기존 8개와 기본 다중 주파수 3개를 함께 저장한다', () async {
+  test('전체 검증은 센서 결과 11개만 함께 저장한다', () async {
     final keys = [
       'fastestRaw',
       'fastest256',
@@ -30,9 +30,9 @@ void main() {
       'oneMs256',
       'threeMsRaw',
       'threeMs256',
-      'base256',
-      'base128',
-      'base64',
+      'requested256',
+      'requested128',
+      'requested64',
     ];
     final sources = <String, String>{};
     for (final key in keys) {
@@ -53,10 +53,34 @@ void main() {
       endsWith('1ms_256Hz.txt'),
       endsWith('3ms_원본.txt'),
       endsWith('3ms_256Hz.txt'),
-      endsWith('기본_FASTEST_256Hz.txt'),
-      endsWith('기본_FASTEST_128Hz.txt'),
-      endsWith('기본_FASTEST_64Hz.txt'),
+      endsWith('256Hz_별도측정.txt'),
+      endsWith('128Hz_별도측정.txt'),
+      endsWith('64Hz_별도측정.txt'),
     ]);
+  });
+
+  test('128Hz 단독 측정은 해당 파일 한 개만 저장한다', () async {
+    final source = File('${temporaryDirectory.path}/standalone128.txt');
+    await source.writeAsString('128 only');
+
+    final result = await repository.exportStandalone128({
+      'standalone128': source.path,
+    });
+
+    expect(result.files, hasLength(1));
+    expect(result.files.single.path, endsWith('128Hz_단독측정.txt'));
+  });
+
+  test('64Hz 단독 측정은 해당 파일 한 개만 저장한다', () async {
+    final source = File('${temporaryDirectory.path}/standalone64.txt');
+    await source.writeAsString('64 only');
+
+    final result = await repository.exportStandalone64({
+      'standalone64': source.path,
+    });
+
+    expect(result.files, hasLength(1));
+    expect(result.files.single.path, endsWith('64Hz_단독측정.txt'));
   });
 
   test('FASTEST 출력은 원본과 256Hz 두 파일로 저장된다', () async {

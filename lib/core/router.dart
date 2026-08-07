@@ -10,6 +10,7 @@ import '../features/result/result_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/verify/fastest_verify_screen.dart';
 import '../features/verify/fixed_rate_verify_screen.dart';
+import '../features/verify/standalone_rate_verify_screen.dart';
 
 /// 화면 6개 + 시트 2개 구조 (2026-07 확정)
 /// /login      S1 로그인
@@ -21,6 +22,8 @@ import '../features/verify/fixed_rate_verify_screen.dart';
 /// /settings   S6 설정
 /// /verify-fastest  FASTEST(3~7ms) 검증
 /// /verify-fixed    1ms·3ms 동시 검증
+/// /verify-128      128Hz 단독 측정
+/// /verify-64       64Hz 단독 측정
 final appRouter = GoRouter(
   initialLocation: '/login',
   redirect: (context, state) {
@@ -48,6 +51,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/verify-fixed',
       builder: (_, _) => const FixedRateVerifyScreen(),
+    ),
+    GoRoute(
+      path: '/verify-128',
+      builder: (_, _) => const Requested128VerifyScreen(),
+    ),
+    GoRoute(
+      path: '/verify-64',
+      builder: (_, _) => const Requested64VerifyScreen(),
     ),
   ],
 );

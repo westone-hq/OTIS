@@ -20,7 +20,7 @@ class VerifyExportRepository {
 
   final VerifyBaseDirectoryProvider _baseDirectoryProvider;
 
-  /// 전체 동시 검증: 기존 8개 + 기본 256/128/64Hz 총 11개를 저장한다.
+  /// 전체 센서 비교 결과 11개를 같은 세션 폴더에 저장한다.
   Future<VerifyExportResult> exportAll(Map<String, String> nativePaths) async {
     return _copyManyAtomically(
       nativePaths: nativePaths,
@@ -33,10 +33,30 @@ class VerifyExportRepository {
         ('oneMs256', '1ms_256Hz.txt'),
         ('threeMsRaw', '3ms_원본.txt'),
         ('threeMs256', '3ms_256Hz.txt'),
-        ('base256', '기본_FASTEST_256Hz.txt'),
-        ('base128', '기본_FASTEST_128Hz.txt'),
-        ('base64', '기본_FASTEST_64Hz.txt'),
+        ('requested256', '256Hz_별도측정.txt'),
+        ('requested128', '128Hz_별도측정.txt'),
+        ('requested64', '64Hz_별도측정.txt'),
       ],
+    );
+  }
+
+  /// 128Hz 단독 측정 결과 한 개만 저장한다.
+  Future<VerifyExportResult> exportStandalone128(
+    Map<String, String> nativePaths,
+  ) async {
+    return _copyManyAtomically(
+      nativePaths: nativePaths,
+      outputs: const [('standalone128', '128Hz_단독측정.txt')],
+    );
+  }
+
+  /// 64Hz 단독 측정 결과 한 개만 저장한다.
+  Future<VerifyExportResult> exportStandalone64(
+    Map<String, String> nativePaths,
+  ) async {
+    return _copyManyAtomically(
+      nativePaths: nativePaths,
+      outputs: const [('standalone64', '64Hz_단독측정.txt')],
     );
   }
 

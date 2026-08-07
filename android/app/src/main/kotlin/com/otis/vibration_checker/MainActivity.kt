@@ -9,6 +9,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.otis.vibration_checker.verify.FastestVerifyHandler
 import com.otis.vibration_checker.verify.FixedRateVerifyHandler
+import com.otis.vibration_checker.verify.Requested128HzVerifyHandler
+import com.otis.vibration_checker.verify.Requested64HzVerifyHandler
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -22,6 +24,10 @@ class MainActivity : FlutterActivity() {
         private const val FASTEST_VERIFY_STREAM = "com.otis.vibration_checker/verify_fastest_stream"
         private const val FIXED_VERIFY_METHOD = "com.otis.vibration_checker/verify_fixed_method"
         private const val FIXED_VERIFY_STREAM = "com.otis.vibration_checker/verify_fixed_stream"
+        private const val REQUESTED_128_METHOD = "com.otis.vibration_checker/verify_128_method"
+        private const val REQUESTED_128_STREAM = "com.otis.vibration_checker/verify_128_stream"
+        private const val REQUESTED_64_METHOD = "com.otis.vibration_checker/verify_64_method"
+        private const val REQUESTED_64_STREAM = "com.otis.vibration_checker/verify_64_stream"
         private const val REQ_AUDIO_PERMISSION = 1001
     }
 
@@ -29,6 +35,8 @@ class MainActivity : FlutterActivity() {
     private lateinit var sensorStreamHandler: SensorStreamHandler
     private lateinit var fastestVerifyHandler: FastestVerifyHandler
     private lateinit var fixedRateVerifyHandler: FixedRateVerifyHandler
+    private lateinit var requested128VerifyHandler: Requested128HzVerifyHandler
+    private lateinit var requested64VerifyHandler: Requested64HzVerifyHandler
     private var permissionCallback: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -38,6 +46,8 @@ class MainActivity : FlutterActivity() {
         sensorStreamHandler = SensorStreamHandler(this, noiseCaptureHandler)
         fastestVerifyHandler = FastestVerifyHandler(this)
         fixedRateVerifyHandler = FixedRateVerifyHandler(this)
+        requested128VerifyHandler = Requested128HzVerifyHandler(this)
+        requested64VerifyHandler = Requested64HzVerifyHandler(this)
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, STREAM_CHANNEL)
             .setStreamHandler(sensorStreamHandler)
@@ -46,6 +56,10 @@ class MainActivity : FlutterActivity() {
             .setStreamHandler(fastestVerifyHandler)
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, FIXED_VERIFY_STREAM)
             .setStreamHandler(fixedRateVerifyHandler)
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, REQUESTED_128_STREAM)
+            .setStreamHandler(requested128VerifyHandler)
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, REQUESTED_64_STREAM)
+            .setStreamHandler(requested64VerifyHandler)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -93,6 +107,8 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "start" -> {
+                        requested128VerifyHandler.stop()
+                        requested64VerifyHandler.stop()
                         val sampleRate =
                             call.argument<Int>("sampleRate")
                                 ?: FastestVerifyHandler.TARGET_HZ
@@ -137,6 +153,58 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // 128Hz 단독 측정: 다른 검증 리스너를 모두 정지하고 128Hz Core 하나만 실행한다.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, REQUESTED_128_METHOD)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        sensorStreamHandler.stop()
+                        noiseCaptureHandler.stop()
+                        fastestVerifyHandler.stop()
+                        fixedRateVerifyHandler.stop()
+                        requested64VerifyHandler.stop()
+                        val started = requested128VerifyHandler.start()
+                        if (started) {
+                            result.success(null)
+                        } else {
+                            result.error(
+                                "VERIFY_SENSOR_UNAVAILABLE",
+                                "128Hz 단독 측정 센서를 시작할 수 없습니다.",
+                                null,
+                            )
+                        }
+                    }
+                    "stop" -> result.success(requested128VerifyHandler.stop())
+                    else -> result.notImplemented()
+                }
+            }
+
+        // 64Hz 단독 측정: 다른 검증 리스너를 모두 정지하고 64Hz Core 하나만 실행한다.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, REQUESTED_64_METHOD)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        sensorStreamHandler.stop()
+                        noiseCaptureHandler.stop()
+                        fastestVerifyHandler.stop()
+                        fixedRateVerifyHandler.stop()
+                        requested128VerifyHandler.stop()
+                        val started = requested64VerifyHandler.start()
+                        if (started) {
+                            result.success(null)
+                        } else {
+                            result.error(
+                                "VERIFY_SENSOR_UNAVAILABLE",
+                                "64Hz 단독 측정 센서를 시작할 수 없습니다.",
+                                null,
+                            )
+                        }
+                    }
+                    "stop" -> result.success(requested64VerifyHandler.stop())
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     override fun onRequestPermissionsResult(
@@ -162,6 +230,12 @@ class MainActivity : FlutterActivity() {
         }
         if (::fixedRateVerifyHandler.isInitialized) {
             fixedRateVerifyHandler.stop()
+        }
+        if (::requested128VerifyHandler.isInitialized) {
+            requested128VerifyHandler.stop()
+        }
+        if (::requested64VerifyHandler.isInitialized) {
+            requested64VerifyHandler.stop()
         }
         if (::noiseCaptureHandler.isInitialized) {
             noiseCaptureHandler.stop()

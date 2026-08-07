@@ -10,7 +10,7 @@ import '../../domain/prefs_store.dart';
 import '../../domain/repository/verify_export_repository.dart';
 import '../../domain/verify_sensor_channel.dart';
 
-/// 네 수신 방식 8개 + 기본 FASTEST 256/128/64Hz, 총 11개를 출력한다.
+/// 네 방식 8개 + 256/128/64Hz 독립 요청 원본 3개를 출력한다.
 class FastestVerifyScreen extends StatefulWidget {
   const FastestVerifyScreen({super.key});
 
@@ -114,7 +114,7 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
           subject: 'OTIS 센서 수신 비교 결과 (11개 txt)',
           body:
               'FASTEST, HandlerThread, 1ms, 3ms의 '
-              '원본·256Hz 결과와 기본 256/128/64Hz 결과입니다.\n\n첨부 11개',
+              '기존 원본·256Hz 결과와 256/128/64Hz 별도 요청 측정 결과입니다.\n\n첨부 11개',
           recipients: [recipient.trim()],
           attachmentPaths: _savedFilePaths,
         ),
@@ -174,8 +174,8 @@ class _FastestVerifyScreenState extends State<FastestVerifyScreen> {
           children: [
             Text(
               'FASTEST, FASTEST+HandlerThread, 1ms, 3ms를 동시에 받고 '
-              '각각 ${SampleRate.hz}Hz로 보간합니다. 기본 FASTEST 원본은 '
-              '256Hz·128Hz·64Hz로도 각각 독립 보간합니다.',
+              '각각 ${SampleRate.hz}Hz로 보간합니다. 추가로 256Hz·128Hz·64Hz를 '
+              '센서에 각각 별도 요청하여 원본 간격과 실측 Hz를 확인합니다.',
               style: AppText.body,
             ),
             const SizedBox(height: AppDims.gap2),

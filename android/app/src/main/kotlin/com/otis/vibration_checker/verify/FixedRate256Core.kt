@@ -17,6 +17,13 @@ import android.hardware.SensorManager
  *
  * 제외:
  * txt, 파일 저장, 임시 파일, Writer, EventChannel, Flutter 통신
+ *
+ * 읽는 순서:
+ * [start]에서 1ms/3ms lane 시작 → 각 [RateLane.onSensorChanged]에서 원본 분류
+ * → lane별 통계 계산 → lane별 원본을 서로 섞지 않고 각각 256Hz로 보간.
+ *
+ * 주의: samplingPeriodUs는 Android에 전달하는 요청값이다.
+ * 하드웨어가 정확히 1ms 또는 3ms마다 준다는 보장은 없으며 실측값은 [RateStats]로 확인한다.
  */
 class FixedRate256Core(
     context: Context,
@@ -33,7 +40,9 @@ class FixedRate256Core(
     }
 
     enum class RequestedRate {
+        /** samplingPeriodUs=1000으로 등록한 별도 수신 흐름 */
         ONE_MS,
+        /** samplingPeriodUs=3000으로 등록한 별도 수신 흐름 */
         THREE_MS,
     }
 
@@ -172,6 +181,7 @@ class FixedRate256Core(
         }
     }
 
+    /** 두 lane이 같은 Android SensorManager를 사용하되 리스너와 상태는 분리한다. */
     private val sensorManager =
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
@@ -198,6 +208,7 @@ class FixedRate256Core(
     // 1. 1ms와 3ms 센서 등록
     // -------------------------------------------------------------------------
     fun start(): Boolean {
+        // 재시작이면 기존 두 리스너를 먼저 확실히 해제한다.
         stop()
 
         val oneMsStarted = oneMsLane.start()
@@ -267,6 +278,7 @@ class FixedRate256Core(
             running = true
 
             // samplingPeriodUs=1000 또는 3000을 숫자로 직접 지정한다.
+            // 여기의 this는 바깥 Core가 아니라 현재 RateLane의 SensorEventListener다.
             val rawRegistered =
                 sensorManager.registerListener(
                     this,
@@ -311,6 +323,7 @@ class FixedRate256Core(
 
             when (event.sensor.type) {
                 Sensor.TYPE_ACCELEROMETER -> {
+                    // 이 lane의 raw 통계·원본·보간점만 갱신한다.
                     val intervalNs =
                         updateIntervalStats(rawIntervalStats, timestampNs)
                     onOriginal(
@@ -329,6 +342,7 @@ class FixedRate256Core(
                 }
 
                 Sensor.TYPE_GRAVITY -> {
+                    // 이 lane의 gravity 통계·원본·보간점만 갱신한다.
                     val intervalNs =
                         updateIntervalStats(gravityIntervalStats, timestampNs)
                     onOriginal(
@@ -347,6 +361,7 @@ class FixedRate256Core(
                 }
 
                 Sensor.TYPE_LINEAR_ACCELERATION -> {
+                    // linear는 통계와 원본 저장 후 256Hz 출력 시계도 진행시킨다.
                     val intervalNs =
                         updateIntervalStats(linearIntervalStats, timestampNs)
                     onOriginal(
@@ -412,6 +427,7 @@ class FixedRate256Core(
             linearPoints.push(timestampNs, x, y, z)
 
             while (nextTargetTimestampNs <= timestampNs) {
+                // 하나의 목표 시각에 raw/gravity/linear를 맞춰 10개 숫자로 출력한다.
                 val linear =
                     linearPoints.interpolate(nextTargetTimestampNs)
                 val raw =
@@ -435,6 +451,7 @@ class FixedRate256Core(
                     ),
                 )
 
+                // 다음 256Hz 목표점은 정확히 3,906,250ns 뒤다.
                 nextTargetTimestampNs += targetIntervalNs
             }
         }

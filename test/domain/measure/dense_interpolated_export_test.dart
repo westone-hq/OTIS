@@ -49,4 +49,21 @@ accel 4000 20 0 0 4000
     // t=0.002s → x=15
     expect(csv, contains('0.002,15,'));
   });
+
+  test('검증용 FASTEST 원본의 중간 dtUs 열을 건너뛴다', () {
+    final events = parseRawNativeText('''
+# columns: type tsUs dtUs x_mg y_mg z_mg
+raw 1000 0 10 20 30
+raw 5000 4000 50 60 70
+gravity 1000 0 1 2 3
+linear 1000 0 4 5 6
+''');
+
+    expect(events, hasLength(4));
+    final firstRaw = events.where((event) => event.type == 'raw').first;
+    expect(firstRaw.tsUs, 1000);
+    expect(firstRaw.xMg, 10);
+    expect(firstRaw.yMg, 20);
+    expect(firstRaw.zMg, 30);
+  });
 }

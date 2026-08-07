@@ -15,7 +15,15 @@ import java.util.Locale
  * 반환 파일:
  * - fastestRaw / fastest256
  * - handlerRaw / handler256
- * - base256 / base128 / base64
+ * - requested256 / requested128 / requested64
+ *
+ * 이 파일의 역할:
+ * 1. 일반 FASTEST·HandlerThread·주파수별 독립 요청 Core의 콜백을 연결한다.
+ * 2. 측정 중에는 본문을 cache의 임시 파일에 계속 기록한다.
+ * 3. 중지하면 통계 헤더와 본문을 합쳐 7개 txt 경로를 Flutter에 반환한다.
+ * 4. 약 1초마다 EventChannel로 화면 통계를 보낸다.
+ *
+ * 센서 수신·통계·보간 계산 자체는 각 Core에 있고, 이 Handler는 연결과 출력만 담당한다.
  */
 class FastestVerifyHandler(
     private val context: Context,
@@ -25,6 +33,7 @@ class FastestVerifyHandler(
         private const val MPS2_TO_MG = 101.97162129779283
     }
 
+    /** 한 측정 방식의 원본 파일과 256Hz 파일에 필요한 임시/최종 출력 묶음이다. */
     private data class OutputSet(
         val originalBody: File,
         val processedBody: File,
@@ -36,23 +45,36 @@ class FastestVerifyHandler(
         var lastStatsNs: Long = 0,
     )
 
-    private data class RateOutput(
+    /** 256/128/64Hz 독립 요청 원본 파일 하나에 필요한 출력 상태다. */
+    private data class RequestedOutput(
         val body: File,
         val output: File,
         var writer: BufferedWriter,
-        var count: Long = 0,
     )
 
+    /** 별도 요청 결과 파일 헤더에 기록할 센서 하나의 실측 통계다. */
+    private data class RequestedSensorStats(
+        val count: Long,
+        val meanUs: Double,
+        val minUs: Double,
+        val maxUs: Double,
+        val measuredHz: Double,
+    )
+
+    // EventChannel은 Flutter UI와 연결되므로 메인 스레드에서 success를 호출한다.
     private val mainHandler = Handler(Looper.getMainLooper())
     private var eventSink: EventChannel.EventSink? = null
     private var fastestCore: Fastest256Core? = null
     private var handlerCore: HandlerThread256Core? = null
-    private var multiRateCore: FastestMultiRateCore? = null
+    private var requested256Core: Requested256HzCore? = null
+    private var requested128Core: Requested128HzCore? = null
+    private var requested64Core: Requested64HzCore? = null
     private var fastestOutput: OutputSet? = null
     private var handlerOutput: OutputSet? = null
-    private val rateOutputs = linkedMapOf<Int, RateOutput>()
+    private val requestedOutputs = linkedMapOf<Int, RequestedOutput>()
 
     fun start(targetHz: Int): Boolean {
+        // 이전 측정이 남아 있으면 정리하고 모든 출력 파일을 같은 stamp로 연다.
         stop()
         val stamp = System.currentTimeMillis()
         fastestOutput = openOutputSet("fastest", stamp) ?: return false
@@ -63,7 +85,7 @@ class FastestVerifyHandler(
                     fastestOutput = null
                     return false
                 }
-        if (!openRateOutputs(stamp)) {
+        if (!openRequestedOutputs(stamp)) {
             closeAndDelete(fastestOutput)
             closeAndDelete(handlerOutput)
             fastestOutput = null
@@ -71,7 +93,6 @@ class FastestVerifyHandler(
             return false
         }
 
-        multiRateCore = FastestMultiRateCore(::writeMultiRateProcessed)
         fastestCore =
             Fastest256Core(
                 context = context,
@@ -84,18 +105,37 @@ class FastestVerifyHandler(
                 onOriginal = ::writeHandlerOriginal,
                 onResampled = ::writeHandlerProcessed,
             )
+        // 세 주파수는 FASTEST 원본을 공유하지 않고 각자 SensorManager에 별도 등록한다.
+        requested256Core = Requested256HzCore(context, ::writeRequested256Original)
+        requested128Core = Requested128HzCore(context, ::writeRequested128Original)
+        requested64Core = Requested64HzCore(context, ::writeRequested64Original)
 
+        // 일곱 출력 흐름을 같은 검증 구간에 시작한다.
         val fastestStarted = fastestCore?.start() == true
         val handlerStarted = handlerCore?.start() == true
-        if (!fastestStarted || !handlerStarted) {
+        val requested256Started = requested256Core?.start() == true
+        val requested128Started = requested128Core?.start() == true
+        val requested64Started = requested64Core?.start() == true
+        if (
+            !fastestStarted ||
+            !handlerStarted ||
+            !requested256Started ||
+            !requested128Started ||
+            !requested64Started
+        ) {
             fastestCore?.stop()
             handlerCore?.stop()
+            requested256Core?.stop()
+            requested128Core?.stop()
+            requested64Core?.stop()
             fastestCore = null
             handlerCore = null
-            multiRateCore = null
+            requested256Core = null
+            requested128Core = null
+            requested64Core = null
             closeAndDelete(fastestOutput)
             closeAndDelete(handlerOutput)
-            closeAndDeleteRateOutputs()
+            closeAndDeleteRequestedOutputs()
             fastestOutput = null
             handlerOutput = null
             return false
@@ -106,17 +146,35 @@ class FastestVerifyHandler(
     fun stop(): Map<String, String> {
         val activeFastest = fastestCore
         val activeHandler = handlerCore
-        if (activeFastest == null && activeHandler == null) return emptyMap()
+        val activeRequested256 = requested256Core
+        val activeRequested128 = requested128Core
+        val activeRequested64 = requested64Core
+        if (
+            activeFastest == null &&
+            activeHandler == null &&
+            activeRequested256 == null &&
+            activeRequested128 == null &&
+            activeRequested64 == null
+        ) {
+            return emptyMap()
+        }
 
+        // Writer를 닫기 전에 센서 콜백부터 중단해 기록 중 충돌을 막는다.
         activeFastest?.stop()
         activeHandler?.stop()
+        activeRequested256?.stop()
+        activeRequested128?.stop()
+        activeRequested64?.stop()
         fastestCore = null
         handlerCore = null
-        multiRateCore = null
+        requested256Core = null
+        requested128Core = null
+        requested64Core = null
         closeOutput(fastestOutput)
         closeOutput(handlerOutput)
-        closeRateOutputs()
+        closeRequestedOutputs()
 
+        // 임시 본문 앞에 통계/컬럼 헤더를 붙여 최종 txt를 만든다.
         val fastestRaw =
             buildFastestOriginal(activeFastest, fastestOutput)
         val fastest256 =
@@ -125,33 +183,34 @@ class FastestVerifyHandler(
             buildHandlerOriginal(activeHandler, handlerOutput)
         val handler256 =
             buildProcessed("FASTEST+HandlerThread 원본의 256Hz 보간", handlerOutput)
-        val base256 = buildRateOutput(256)
-        val base128 = buildRateOutput(128)
-        val base64 = buildRateOutput(64)
+        val requested256 = buildRequested256(activeRequested256)
+        val requested128 = buildRequested128(activeRequested128)
+        val requested64 = buildRequested64(activeRequested64)
 
         cleanupBodies(fastestOutput)
         cleanupBodies(handlerOutput)
-        cleanupRateOutputs()
+        cleanupRequestedOutputs()
         fastestOutput = null
         handlerOutput = null
 
+        // 7개 중 하나라도 실패하면 일부 경로를 성공처럼 반환하지 않는다.
         return if (
             fastestRaw != null &&
             fastest256 != null &&
             handlerRaw != null &&
             handler256 != null &&
-            base256 != null &&
-            base128 != null &&
-            base64 != null
+            requested256 != null &&
+            requested128 != null &&
+            requested64 != null
         ) {
             linkedMapOf(
                 "fastestRaw" to fastestRaw,
                 "fastest256" to fastest256,
                 "handlerRaw" to handlerRaw,
                 "handler256" to handler256,
-                "base256" to base256,
-                "base128" to base128,
-                "base64" to base64,
+                "requested256" to requested256,
+                "requested128" to requested128,
+                "requested64" to requested64,
             )
         } else {
             emptyMap()
@@ -159,6 +218,7 @@ class FastestVerifyHandler(
     }
 
     private fun openOutputSet(prefix: String, stamp: Long): OutputSet? {
+        // 측정 중에는 헤더 통계가 확정되지 않으므로 본문만 .tmp에 먼저 쓴다.
         val originalBody = File(context.cacheDir, "${prefix}_original_$stamp.tmp")
         val processedBody = File(context.cacheDir, "${prefix}_256_$stamp.tmp")
         return try {
@@ -177,29 +237,29 @@ class FastestVerifyHandler(
         }
     }
 
-    private fun openRateOutputs(stamp: Long): Boolean {
-        rateOutputs.clear()
+    private fun openRequestedOutputs(stamp: Long): Boolean {
+        // 세 요청은 서로 다른 원본 Writer를 사용한다.
+        requestedOutputs.clear()
         return try {
-            for (rate in FastestMultiRateCore.TARGET_RATES_HZ) {
-                val body = File(context.cacheDir, "base_${rate}_$stamp.tmp")
-                rateOutputs[rate] =
-                    RateOutput(
+            for (rate in intArrayOf(256, 128, 64)) {
+                val body = File(context.cacheDir, "requested_${rate}_$stamp.tmp")
+                requestedOutputs[rate] =
+                    RequestedOutput(
                         body = body,
-                        output = File(context.cacheDir, "base_${rate}_$stamp.txt"),
+                        output = File(context.cacheDir, "requested_${rate}_$stamp.txt"),
                         writer = BufferedWriter(FileWriter(body)),
                     )
             }
             true
         } catch (_: Exception) {
-            closeAndDeleteRateOutputs()
+            closeAndDeleteRequestedOutputs()
             false
         }
     }
 
     private fun writeFastestOriginal(sample: Fastest256Core.OriginalSample) {
         val output = fastestOutput ?: return
-        // 같은 FASTEST 원본을 256·128·64 독립 보간 코어에도 전달한다.
-        multiRateCore?.accept(sample)
+        // enum을 txt 첫 번째 열에 들어갈 읽기 쉬운 문자열로 바꾼다.
         val type =
             when (sample.kind) {
                 Fastest256Core.SensorKind.RAW -> "raw"
@@ -215,6 +275,7 @@ class FastestVerifyHandler(
             sample.y,
             sample.z,
         )
+        // 매 센서 이벤트마다 Flutter에 보내지 않고 linear 기준 약 1초마다 보낸다.
         if (
             sample.kind == Fastest256Core.SensorKind.LINEAR &&
             sample.timestampNs - output.lastStatsNs >= 1_000_000_000L
@@ -224,26 +285,80 @@ class FastestVerifyHandler(
         }
     }
 
-    private fun writeMultiRateProcessed(
+    private fun writeRequested256Original(sample: Requested256HzCore.OriginalSample) {
+        val type =
+            when (sample.kind) {
+                Requested256HzCore.SensorKind.RAW -> "raw"
+                Requested256HzCore.SensorKind.GRAVITY -> "gravity"
+                Requested256HzCore.SensorKind.LINEAR -> "linear"
+            }
+        writeRequestedOriginal(
+            256,
+            type,
+            sample.timestampNs,
+            sample.intervalNs,
+            sample.x,
+            sample.y,
+            sample.z,
+        )
+    }
+
+    private fun writeRequested128Original(sample: Requested128HzCore.OriginalSample) {
+        val type =
+            when (sample.kind) {
+                Requested128HzCore.SensorKind.RAW -> "raw"
+                Requested128HzCore.SensorKind.GRAVITY -> "gravity"
+                Requested128HzCore.SensorKind.LINEAR -> "linear"
+            }
+        writeRequestedOriginal(
+            128,
+            type,
+            sample.timestampNs,
+            sample.intervalNs,
+            sample.x,
+            sample.y,
+            sample.z,
+        )
+    }
+
+    private fun writeRequested64Original(sample: Requested64HzCore.OriginalSample) {
+        val type =
+            when (sample.kind) {
+                Requested64HzCore.SensorKind.RAW -> "raw"
+                Requested64HzCore.SensorKind.GRAVITY -> "gravity"
+                Requested64HzCore.SensorKind.LINEAR -> "linear"
+            }
+        writeRequestedOriginal(
+            64,
+            type,
+            sample.timestampNs,
+            sample.intervalNs,
+            sample.x,
+            sample.y,
+            sample.z,
+        )
+    }
+
+    private fun writeRequestedOriginal(
         rateHz: Int,
-        sample: FastestMultiRateCore.ResampledSample,
+        type: String,
+        timestampNs: Long,
+        intervalNs: Long,
+        x: Float,
+        y: Float,
+        z: Float,
     ) {
-        val output = rateOutputs[rateHz] ?: return
-        output.count++
+        val output = requestedOutputs[rateHz] ?: return
         output.writer.write(
             String.format(
                 Locale.US,
-                "%d %.9f %.9f %.9f %.9f %.9f %.9f %.9f %.9f %.9f%n",
-                sample.timestampNs / 1000L,
-                sample.linearX * MPS2_TO_MG,
-                sample.linearY * MPS2_TO_MG,
-                sample.linearZ * MPS2_TO_MG,
-                sample.rawX * MPS2_TO_MG,
-                sample.rawY * MPS2_TO_MG,
-                sample.rawZ * MPS2_TO_MG,
-                sample.gravityX * MPS2_TO_MG,
-                sample.gravityY * MPS2_TO_MG,
-                sample.gravityZ * MPS2_TO_MG,
+                "%s %d %d %.9f %.9f %.9f%n",
+                type,
+                timestampNs / 1000L,
+                intervalNs / 1000L,
+                x * MPS2_TO_MG,
+                y * MPS2_TO_MG,
+                z * MPS2_TO_MG,
             ),
         )
     }
@@ -283,6 +398,7 @@ class FastestVerifyHandler(
         y: Float,
         z: Float,
     ) {
+        // Android m/s² 값을 사람이 비교하기 쉬운 mg 단위로 변환한다.
         output.originalWriter.write(
             String.format(
                 Locale.US,
@@ -343,6 +459,7 @@ class FastestVerifyHandler(
         gravityZ: Double,
     ) {
         val output = outputSet ?: return
+        // 보간 결과 한 행에는 동일 timestamp의 linear/raw/gravity 3축이 들어간다.
         output.processedCount++
         output.processedWriter.write(
             String.format(
@@ -403,6 +520,7 @@ class FastestVerifyHandler(
         max: Double,
         processedCount: Long,
     ) {
+        // lane 이름으로 Flutter 화면의 FASTEST/HandlerThread 카드를 구분한다.
         val event =
             mapOf(
                 "type" to "stats",
@@ -499,16 +617,153 @@ class FastestVerifyHandler(
         }
     }
 
-    private fun buildRateOutput(rateHz: Int): String? {
-        val rateOutput = rateOutputs[rateHz] ?: return null
-        return buildFile(rateOutput.output, rateOutput.body) { writer ->
-            writer.write("# 기본 SENSOR_DELAY_FASTEST 원본의 ${rateHz}Hz 독립 선형 보간\n")
-            writer.write("# 목표 간격(ns): ${1_000_000_000L / rateHz}\n")
-            writer.write("# 가공 총개수: ${rateOutput.count}\n")
-            writer.write(
-                "# columns: tsUs linearX_mg linearY_mg linearZ_mg " +
-                    "rawX_mg rawY_mg rawZ_mg gravityX_mg gravityY_mg gravityZ_mg\n",
+    private fun buildRequested256(active: Requested256HzCore?): String? =
+        if (active == null) {
+            null
+        } else {
+            buildRequestedFile(
+                rateHz = Requested256HzCore.REQUESTED_HZ,
+                samplingPeriodUs = Requested256HzCore.SAMPLING_PERIOD_US,
+                raw =
+                    RequestedSensorStats(
+                        active.rawStats.count,
+                        active.rawStats.meanIntervalUs,
+                        active.rawStats.minIntervalUs,
+                        active.rawStats.maxIntervalUs,
+                        active.rawStats.measuredHz,
+                    ),
+                gravity =
+                    RequestedSensorStats(
+                        active.gravityStats.count,
+                        active.gravityStats.meanIntervalUs,
+                        active.gravityStats.minIntervalUs,
+                        active.gravityStats.maxIntervalUs,
+                        active.gravityStats.measuredHz,
+                    ),
+                linear =
+                    RequestedSensorStats(
+                        active.linearStats.count,
+                        active.linearStats.meanIntervalUs,
+                        active.linearStats.minIntervalUs,
+                        active.linearStats.maxIntervalUs,
+                        active.linearStats.measuredHz,
+                    ),
             )
+        }
+
+    private fun buildRequested128(active: Requested128HzCore?): String? =
+        if (active == null) {
+            null
+        } else {
+            buildRequestedFile(
+                rateHz = Requested128HzCore.REQUESTED_HZ,
+                samplingPeriodUs = Requested128HzCore.SAMPLING_PERIOD_US,
+                raw =
+                    RequestedSensorStats(
+                        active.rawStats.count,
+                        active.rawStats.meanIntervalUs,
+                        active.rawStats.minIntervalUs,
+                        active.rawStats.maxIntervalUs,
+                        active.rawStats.measuredHz,
+                    ),
+                gravity =
+                    RequestedSensorStats(
+                        active.gravityStats.count,
+                        active.gravityStats.meanIntervalUs,
+                        active.gravityStats.minIntervalUs,
+                        active.gravityStats.maxIntervalUs,
+                        active.gravityStats.measuredHz,
+                    ),
+                linear =
+                    RequestedSensorStats(
+                        active.linearStats.count,
+                        active.linearStats.meanIntervalUs,
+                        active.linearStats.minIntervalUs,
+                        active.linearStats.maxIntervalUs,
+                        active.linearStats.measuredHz,
+                    ),
+            )
+        }
+
+    private fun buildRequested64(active: Requested64HzCore?): String? =
+        if (active == null) {
+            null
+        } else {
+            buildRequestedFile(
+                rateHz = Requested64HzCore.REQUESTED_HZ,
+                samplingPeriodUs = Requested64HzCore.SAMPLING_PERIOD_US,
+                raw =
+                    RequestedSensorStats(
+                        active.rawStats.count,
+                        active.rawStats.meanIntervalUs,
+                        active.rawStats.minIntervalUs,
+                        active.rawStats.maxIntervalUs,
+                        active.rawStats.measuredHz,
+                    ),
+                gravity =
+                    RequestedSensorStats(
+                        active.gravityStats.count,
+                        active.gravityStats.meanIntervalUs,
+                        active.gravityStats.minIntervalUs,
+                        active.gravityStats.maxIntervalUs,
+                        active.gravityStats.measuredHz,
+                    ),
+                linear =
+                    RequestedSensorStats(
+                        active.linearStats.count,
+                        active.linearStats.meanIntervalUs,
+                        active.linearStats.minIntervalUs,
+                        active.linearStats.maxIntervalUs,
+                        active.linearStats.measuredHz,
+                    ),
+            )
+        }
+
+    private fun buildRequestedFile(
+        rateHz: Int,
+        samplingPeriodUs: Int,
+        raw: RequestedSensorStats,
+        gravity: RequestedSensorStats,
+        linear: RequestedSensorStats,
+    ): String? {
+        val requestedOutput = requestedOutputs[rateHz] ?: return null
+        return buildFile(requestedOutput.output, requestedOutput.body) { writer ->
+            writer.write("# ${rateHz}Hz 별도 센서 요청 측정\n")
+            writer.write("# samplingPeriodUs: $samplingPeriodUs\n")
+            writer.write(
+                String.format(
+                    Locale.US,
+                    "# raw: 개수=%d 평균=%.3fus 최소=%.3fus 최대=%.3fus 실측Hz=%.3f%n",
+                    raw.count,
+                    raw.meanUs,
+                    raw.minUs,
+                    raw.maxUs,
+                    raw.measuredHz,
+                ),
+            )
+            writer.write(
+                String.format(
+                    Locale.US,
+                    "# gravity: 개수=%d 평균=%.3fus 최소=%.3fus 최대=%.3fus 실측Hz=%.3f%n",
+                    gravity.count,
+                    gravity.meanUs,
+                    gravity.minUs,
+                    gravity.maxUs,
+                    gravity.measuredHz,
+                ),
+            )
+            writer.write(
+                String.format(
+                    Locale.US,
+                    "# linear: 개수=%d 평균=%.3fus 최소=%.3fus 최대=%.3fus 실측Hz=%.3f%n",
+                    linear.count,
+                    linear.meanUs,
+                    linear.minUs,
+                    linear.maxUs,
+                    linear.measuredHz,
+                ),
+            )
+            writer.write("# columns: type tsUs dtUs x_mg y_mg z_mg\n")
         }
     }
 
@@ -518,6 +773,7 @@ class FastestVerifyHandler(
         header: (BufferedWriter) -> Unit,
     ): String? =
         try {
+            // 최종 파일은 "측정 종료 후 확정된 헤더 + 측정 중 쌓은 본문" 순서다.
             BufferedWriter(FileWriter(output)).use { writer ->
                 header(writer)
                 body.forEachLine { writer.write("$it\n") }
@@ -533,8 +789,8 @@ class FastestVerifyHandler(
         try { output.processedWriter.flush(); output.processedWriter.close() } catch (_: Exception) {}
     }
 
-    private fun closeRateOutputs() {
-        for (output in rateOutputs.values) {
+    private fun closeRequestedOutputs() {
+        for (output in requestedOutputs.values) {
             try { output.writer.flush(); output.writer.close() } catch (_: Exception) {}
         }
     }
@@ -544,9 +800,9 @@ class FastestVerifyHandler(
         output?.processedBody?.delete()
     }
 
-    private fun cleanupRateOutputs() {
-        for (output in rateOutputs.values) output.body.delete()
-        rateOutputs.clear()
+    private fun cleanupRequestedOutputs() {
+        for (output in requestedOutputs.values) output.body.delete()
+        requestedOutputs.clear()
     }
 
     private fun closeAndDelete(output: OutputSet?) {
@@ -554,16 +810,18 @@ class FastestVerifyHandler(
         cleanupBodies(output)
     }
 
-    private fun closeAndDeleteRateOutputs() {
-        closeRateOutputs()
-        cleanupRateOutputs()
+    private fun closeAndDeleteRequestedOutputs() {
+        closeRequestedOutputs()
+        cleanupRequestedOutputs()
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+        // Flutter가 화면 스트림 구독을 시작하면 통계 전달 통로를 보관한다.
         eventSink = events
     }
 
     override fun onCancel(arguments: Any?) {
+        // 화면이 스트림 구독을 끝내면 더 이상 UI 이벤트를 보내지 않는다.
         eventSink = null
     }
 }
