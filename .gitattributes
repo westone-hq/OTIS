@@ -1,1 +1,12 @@
-*.dart text eol=lf
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.xlsx binary
+*.docx binary
+*.jar binary
+*.keystore binary
