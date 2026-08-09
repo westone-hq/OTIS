@@ -2,15 +2,20 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme.dart';
 import 'package:vibration_checker/model/metrics_config.dart';
-import 'package:vibration_checker/adapter/measurement_engine.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/adapter/vibration_file_writer.dart';
+import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 import '../shared/measurement_session.dart';
+import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
 /// S4 측정 중 (라이브)
@@ -49,12 +54,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       widget.sensorManager ?? SensorChannelManager();
   Timer? _timeTimer;
   Timer? _releaseTimeoutTimer;
-  StreamSubscription<SensorSample>? _sensorSub;
+  StreamSubscription<NativeEvent>? _sensorSub;
 
   int _elapsedSeconds = 0;
   bool _receivedRealSample = false;
 
-  final MeasurementEngine _engine = MeasurementEngine();
+  static const CaptureConfig _captureConfig = CaptureConfig();
+  final GridResampler _resampler = GridResampler(config: _captureConfig);
   int _countdownSec = 0;
   bool _isCountingDown = false;
   Timer? _countdownTimer;
@@ -130,14 +136,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     final bool available = await _sensorManager.checkSensorsAvailable();
     if (available && !_sensorManager.useMock) {
       await _sensorManager.startCapture(
-        targetSampleRate: 256,
         micDbfsToDbaOffset: MetricsConfig.defaultConfig.micDbfsToDbaOffset,
       );
-      _sensorSub = _sensorManager.sensorStream.listen((sample) {
-        if (sample.tsUs > 0) {
-          _receivedRealSample = true;
-          _engine.addSamples([sample]);
-        }
+      _sensorSub = _sensorManager.nativeEventStream.listen((event) {
+        _receivedRealSample = true;
+        _resampler.onEvent(event);
       });
     }
 
@@ -235,7 +238,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     if (_validateSite() == null) {
       return _SaveGateResult.siteInvalid;
     }
-    if (_engine.sampleCount < 2) {
+    if (_resampler.rawCount < 2 || _resampler.gravityCount < 2) {
       return _SaveGateResult.noSamples;
     }
     if (result == null) {
@@ -271,68 +274,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
-  /// 승강기 움직임 미감지 시 사용자 선택 다이얼로그 표시
-  /// - 반환값: true([그래도 저장]), false/null([다시 측정] 또는 닫기)
-  Future<bool?> _showLowMotionDialog() {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('승강기 움직임이 감지되지 않았습니다'),
-        content: const Text(
-          '측정 시간이 짧거나 이동이 거의 없습니다. 폰을 카 바닥에 두고 승강기를 운행한 뒤 완료를 눌러 주세요.',
-        ),
-        actions: [
-          AppDialogButton(
-            label: '그래도 저장',
-            onPressed: () => Navigator.of(ctx).pop(true),
-            primary: false,
-          ),
-          AppDialogButton(
-            label: '다시 측정',
-            onPressed: () => Navigator.of(ctx).pop(false),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 파일 저장 실패 시 재시도 다이얼로그 표시
-  Future<void> _showSaveRetryDialog(
-    MeasurementResult finalResult, {
-    required void Function(Directory) onSuccess,
-  }) async {
-    if (!mounted) return;
-    await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('저장 실패 알림'),
-        content: const Text('측정 결과 파일 저장에 실패했습니다\n결과 화면으로 이동합니다.'),
-        actions: [
-          AppDialogButton(
-            label: '확인',
-            onPressed: () => Navigator.of(ctx).pop(false),
-            primary: false,
-          ),
-          AppDialogButton(
-            label: '재시도',
-            onPressed: () async {
-              final success = await MeasuringScreen.attemptSave(
-                finalResult,
-                onSuccess: onSuccess,
-              );
-              if (success && ctx.mounted) {
-                Navigator.of(ctx).pop(true);
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 측정 종료 시 안전장치 게이트 평가, 분기, 저장, 화면 이동을 수행합니다.
+  /// 측정 종료 시 안전장치 게이트 평가, 격자 환산, 파일 저장, 요약 다이얼로그 표시를 수행합니다.
   Future<void> _finishMeasurement() async {
     if (_isFinishing || _isFinished) return;
     if (mounted) {
@@ -355,58 +297,104 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       return;
     }
 
-    final siteData = _validateSite()!;
+    final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
+    final result = _resampler.resample();
+    final baseDir = await MeasurementRepository.instance.getBaseDirectory();
+    final metaPath = '${baseDir.path}/${stamp}_meta.txt';
+    await VibrationFileWriter.writeMeta(metaPath, result);
 
-    final result = _engine.analyze(
-      jobNo: siteData.site.jobNo,
-      siteName: siteData.site.siteName,
-      bottomFloor: siteData.bottomFloor,
-      topFloor: siteData.topFloor,
-      direction: siteData.site.direction,
-      dateTime: DateTime.now(),
-    );
-
-    var finalResult = result;
-    if (_evaluateSaveGate(result) == _SaveGateResult.lowMotion) {
-      if (!mounted) return;
-      final proceed = await _showLowMotionDialog();
-      if (proceed != true) {
-        if (mounted) context.go('/start');
-        return;
-      }
-      finalResult = result.copyWith(lowMotionWarning: true);
-    }
-
-    MeasurementSession.instance.lastResult = finalResult;
-    MeasurementSession.instance.lastResultId = finalResult.id;
-
-    Directory? savedDir;
-    final bool initialSuccess = await MeasuringScreen.attemptSave(
-      finalResult,
-      onSuccess: (dir) => savedDir = dir,
-    );
-    if (!initialSuccess) {
-      await _showSaveRetryDialog(
-        finalResult,
-        onSuccess: (dir) => savedDir = dir,
+    if (!result.isSuccess) {
+      await _showMeasureFailDialog(
+        '측정 파일 생성에 실패했습니다.\n사유: ${result.failureReason}',
       );
+      return;
     }
 
-    if (savedDir != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '저장되었습니다 (경로: ${savedDir!.path})',
-            style: AppText.body.copyWith(color: Colors.white),
+    final valuePath = '${baseDir.path}/$stamp.txt';
+    await VibrationFileWriter.write(valuePath, result);
+
+    final rawPath = _sensorManager.lastRecordPath;
+    final rawCopyPath = '${baseDir.path}/${stamp}_raw.txt';
+    String? savedRawPath;
+    if (rawPath != null) {
+      await File(rawPath).copy(rawCopyPath);
+      savedRawPath = rawCopyPath;
+    } else {
+      await File(
+        metaPath,
+      ).writeAsString('rawRecordPath: null\n', mode: FileMode.append);
+    }
+
+    await _showCaptureSummaryDialog(
+      result: result,
+      valuePath: valuePath,
+      metaPath: metaPath,
+      rawPath: savedRawPath,
+    );
+  }
+
+  /// 측정 완료 후 저장된 파일 목록과 격자 환산 집계를 보여주고,
+  /// 메일 발송 또는 시작 화면 복귀로 이어주는 다이얼로그 표시
+  Future<void> _showCaptureSummaryDialog({
+    required GridResampleResult result,
+    required String valuePath,
+    required String metaPath,
+    required String? rawPath,
+  }) async {
+    if (!mounted) return;
+    final savedFiles = <String>[valuePath, metaPath, ?rawPath];
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('측정 완료'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('저장된 파일'),
+              for (final path in savedFiles) Text('- $path'),
+              const SizedBox(height: AppDims.gap),
+              Text('행 수: ${result.rowCount}'),
+              Text('측정시간(초): ${result.durationSec.toStringAsFixed(1)}'),
+              Text('raw 사용 수: ${result.rawUsedCount}'),
+              Text('gravity 사용 수: ${result.gravityUsedCount}'),
+              Text(
+                '폐기(0값, 시각역행): '
+                '${result.droppedZeroCount}, ${result.droppedBackwardCount}',
+              ),
+              Text(
+                '잘린 행(시작, 끝): '
+                '${result.headTrimmedRows}, ${result.tailTrimmedRows}',
+              ),
+              Text(
+                '최대 간격(raw, gravity): '
+                '${result.rawMaxSpanNs ~/ 1000}us, '
+                '${result.gravityMaxSpanNs ~/ 1000}us',
+              ),
+            ],
           ),
-          backgroundColor: AppColors.green,
         ),
-      );
-    }
-
-    if (mounted) {
-      context.pushReplacement('/result/${finalResult.id}');
-    }
+        actions: [
+          AppDialogButton(
+            label: '메일로 보내기',
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              showSendEmailSheet(context, attachmentPaths: savedFiles);
+            },
+            primary: false,
+          ),
+          AppDialogButton(
+            label: '닫기',
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              if (mounted) context.go('/start');
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   /// 사용자 뒤로가기/종료 요청 시 확인 다이얼로그 표시

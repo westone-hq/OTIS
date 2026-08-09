@@ -19,8 +19,6 @@ class MainActivity : FlutterActivity() {
         private const val STREAM_CHANNEL = "com.otis.vibration_checker/sensors_stream"
         private const val REQ_AUDIO_PERMISSION = 1001
         private const val REQ_HIGH_RATE_PERMISSION = 1002
-        // 200Hz 초과 요청 시 런타임 승인이 필요한 경계
-        private const val HIGH_RATE_THRESHOLD_HZ = 200
     }
 
     private lateinit var noiseCaptureHandler: NoiseCaptureHandler
@@ -62,20 +60,20 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "startCapture" -> {
-                        val sampleRate = call.argument<Int>("sampleRate") ?: 256
                         val calibrationOffset = call.argument<Double>("calibrationOffset") ?: 0.0
                         val micDbfsToDbaOffset = call.argument<Double>("micDbfsToDbaOffset") ?: 85.0
 
                         // 실제 수집 시작 동작
                         val begin = {
                             noiseCaptureHandler.start(calibrationOffset, micDbfsToDbaOffset)
-                            sensorStreamHandler.start(sampleRate)
+                            sensorStreamHandler.start()
                         }
 
-                        // 200Hz 초과 + Android 12+ 이면 고속 샘플링 권한을 먼저 확보한다.
-                        // 미승인 시 시스템이 콜백을 주지 않으므로, 승인 후에 begin 을 실행한다.
-                        val needsHighRate = sampleRate > HIGH_RATE_THRESHOLD_HZ &&
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        // SENSOR_DELAY_FASTEST 로 받으므로 실제 수신 속도는
+                        // 단말 하드웨어 주기이며 200Hz 를 넘는다. 따라서 Android 12+
+                        // 에서는 항상 고속 샘플링 권한 확보를 먼저 시도한다.
+                        // 근거: 측정 — 동일 단말 FASTEST 조건 raw 실측 421Hz
+                        val needsHighRate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                         val permName = "android.permission.HIGH_SAMPLING_RATE_SENSORS"
                         if (needsHighRate &&
                             ContextCompat.checkSelfPermission(this@MainActivity, permName)

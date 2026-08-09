@@ -13,8 +13,20 @@ import 'package:vibration_checker/adapter/measurement_repository.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
 
-/// S5/S6 공용 이메일 발송 바텀 시트 표시 함수
-void showSendEmailSheet(BuildContext context, {required String jobId}) {
+/// S5/S6 공용 이메일 발송 바텀 시트 표시 함수.
+/// jobId 와 attachmentPaths 중 정확히 하나만 지정해야 한다.
+/// jobId 는 기존 저장소 조회 경로, attachmentPaths 는 전달받은 파일을
+/// 저장소 조회·목업 생성 없이 그대로 첨부하는 경로다.
+void showSendEmailSheet(
+  BuildContext context, {
+  String? jobId,
+  List<String>? attachmentPaths,
+  String? subject,
+  String? body,
+}) {
+  if ((jobId != null) == (attachmentPaths != null)) {
+    throw ArgumentError('jobId 와 attachmentPaths 중 정확히 하나만 지정해야 한다');
+  }
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -24,7 +36,12 @@ void showSendEmailSheet(BuildContext context, {required String jobId}) {
         top: Radius.circular(AppDims.radius),
       ),
     ),
-    builder: (ctx) => SendEmailSheet(jobId: jobId),
+    builder: (ctx) => SendEmailSheet(
+      jobId: jobId,
+      attachmentPaths: attachmentPaths,
+      subject: subject,
+      body: body,
+    ),
   );
 }
 
@@ -32,12 +49,21 @@ void showSendEmailSheet(BuildContext context, {required String jobId}) {
 /// - 등록된 이메일 수신자 확인 및 발송 항목 선택
 /// - 어르신 UX: 70% 높이, 64dp 체크박스 행, 스케일 1.4 체크박스, 명확한 3중 에러 표시
 class SendEmailSheet extends StatefulWidget {
-  final String jobId;
+  final String? jobId;
+  final List<String>? attachmentPaths;
+  final String? subject;
+  final String? body;
 
   /// 위젯 테스트 등에서 실제 네이티브 호출을 가로채기 위한 override
   static Future<void> Function(Email email)? overrideEmailSender;
 
-  const SendEmailSheet({super.key, required this.jobId});
+  const SendEmailSheet({
+    super.key,
+    this.jobId,
+    this.attachmentPaths,
+    this.subject,
+    this.body,
+  });
 
   @override
   State<SendEmailSheet> createState() => _SendEmailSheetState();
@@ -107,65 +133,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     setState(() => _loading = true);
 
     try {
-      var result = await MeasurementRepository.instance.load(widget.jobId);
-      if (result == null) {
-        result = MeasurementResult.mock;
-        final baseDir = await MeasurementRepository.instance.getBaseDirectory();
-        final targetDir = Directory('${baseDir.path}/${widget.jobId}');
-        if (!await targetDir.exists()) await targetDir.create(recursive: true);
-        final pdfFile = File('${targetDir.path}/report.pdf');
-        if (!await pdfFile.exists()) await pdfFile.writeAsBytes([0x25, 0x50, 0x44, 0x46]);
-        final rawFile = File('${targetDir.path}/raw.txt');
-        if (!await rawFile.exists()) await rawFile.writeAsString('EVIMP1\n256\n');
-      }
-
-      final baseDir = await MeasurementRepository.instance.getBaseDirectory();
-      final repo = MeasurementRepository.instance;
-      final List<String> attachments = [];
-      final List<String> attachmentDescriptions = [];
-
-      if (_sendPdf) {
-        final pdfFile = await repo.ensureReportPdf(widget.jobId);
-        if (pdfFile != null && await pdfFile.exists()) {
-          attachments.add(pdfFile.path);
-          attachmentDescriptions.add(
-            '- report.pdf: 앱 측정 결과(가공값)',
-          );
-        }
-      }
-      if (_sendRaw) {
-        // 1) 센서 원본 raw.txt
-        final rawFile = File('${baseDir.path}/${widget.jobId}/raw.txt');
-        if (await rawFile.exists()) {
-          attachments.add(rawFile.path);
-          attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
-        }
-        // 2) 초별 분리 엑셀 (256 / 128 / 64Hz)
-        final excelFiles = await repo.ensureRawExcelFiles(widget.jobId);
-        for (final excel in excelFiles) {
-          if (await excel.exists()) {
-            attachments.add(excel.path);
-            final name = excel.path.replaceAll('\\', '/').split('/').last;
-            attachmentDescriptions.add('- $name');
-          }
-        }
-      }
-
-      final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(result.dateTime);
-      final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr';
-      final body = _sendSummary
-          ? ReportGenerator.generateSummaryText(result)
-          : 'OTIS 승강기 진동 측정 리포트입니다.\n'
-              '${attachmentDescriptions.join('\n')}\n'
-              '\n'
-              '※ 첨부 ${attachments.length}개';
-
-      final email = Email(
-        body: body,
-        subject: subject,
-        recipients: [_recipientEmail],
-        attachmentPaths: attachments,
-      );
+      final email = widget.attachmentPaths != null
+          ? await _buildAttachmentEmail(widget.attachmentPaths!)
+          : await _buildJobEmail(widget.jobId!);
 
       if (SendEmailSheet.overrideEmailSender != null) {
         await SendEmailSheet.overrideEmailSender!(email);
@@ -210,6 +180,100 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     }
   }
 
+  /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다 (기존 경로, 동작 변경 없음).
+  Future<Email> _buildJobEmail(String jobId) async {
+    var result = await MeasurementRepository.instance.load(jobId);
+    if (result == null) {
+      result = MeasurementResult.mock;
+      final baseDir = await MeasurementRepository.instance.getBaseDirectory();
+      final targetDir = Directory('${baseDir.path}/$jobId');
+      if (!await targetDir.exists()) await targetDir.create(recursive: true);
+      final pdfFile = File('${targetDir.path}/report.pdf');
+      if (!await pdfFile.exists()) {
+        await pdfFile.writeAsBytes([0x25, 0x50, 0x44, 0x46]);
+      }
+      final rawFile = File('${targetDir.path}/raw.txt');
+      if (!await rawFile.exists()) await rawFile.writeAsString('EVIMP1\n256\n');
+    }
+
+    final baseDir = await MeasurementRepository.instance.getBaseDirectory();
+    final repo = MeasurementRepository.instance;
+    final List<String> attachments = [];
+    final List<String> attachmentDescriptions = [];
+
+    if (_sendPdf) {
+      final pdfFile = await repo.ensureReportPdf(jobId);
+      if (pdfFile != null && await pdfFile.exists()) {
+        attachments.add(pdfFile.path);
+        attachmentDescriptions.add(
+          '- report.pdf: 앱 측정 결과(가공값)',
+        );
+      }
+    }
+    if (_sendRaw) {
+      // 1) 센서 원본 raw.txt
+      final rawFile = File('${baseDir.path}/$jobId/raw.txt');
+      if (await rawFile.exists()) {
+        attachments.add(rawFile.path);
+        attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
+      }
+      // 2) 초별 분리 엑셀 (256 / 128 / 64Hz)
+      final excelFiles = await repo.ensureRawExcelFiles(jobId);
+      for (final excel in excelFiles) {
+        if (await excel.exists()) {
+          attachments.add(excel.path);
+          final name = excel.path.replaceAll('\\', '/').split('/').last;
+          attachmentDescriptions.add('- $name');
+        }
+      }
+    }
+
+    final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(result.dateTime);
+    final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr';
+    final body = _sendSummary
+        ? ReportGenerator.generateSummaryText(result)
+        : 'OTIS 승강기 진동 측정 리포트입니다.\n'
+            '${attachmentDescriptions.join('\n')}\n'
+            '\n'
+            '※ 첨부 ${attachments.length}개';
+
+    return Email(
+      body: body,
+      subject: subject,
+      recipients: [_recipientEmail],
+      attachmentPaths: attachments,
+    );
+  }
+
+  /// 목적: 전달받은 첨부 경로를 그대로 써서 메일을 조립한다.
+  ///       저장소 조회·MeasurementResult·목업 파일 생성을 전부 거치지 않는다.
+  ///       존재하지 않는 경로는 첨부하지 않고 본문에 "누락: 파일명" 으로 남긴다.
+  Future<Email> _buildAttachmentEmail(List<String> paths) async {
+    final List<String> attachments = [];
+    final List<String> missingNames = [];
+
+    for (final path in paths) {
+      if (await File(path).exists()) {
+        attachments.add(path);
+      } else {
+        missingNames.add(path.replaceAll('\\', '/').split('/').last);
+      }
+    }
+
+    final subject = widget.subject ?? 'OTIS 진동측정 파일 전송';
+    final bodyLines = <String>[widget.body ?? 'OTIS 진동측정 계측 파일을 첨부합니다.'];
+    for (final name in missingNames) {
+      bodyLines.add('누락: $name');
+    }
+
+    return Email(
+      body: bodyLines.join('\n'),
+      subject: subject,
+      recipients: [_recipientEmail],
+      attachmentPaths: attachments,
+    );
+  }
+
   Widget _buildCheckboxItem({
     required String title,
     required bool value,
@@ -245,7 +309,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bool noneSelected = !_sendPdf && !_sendRaw && !_sendSummary;
+    final bool isAttachmentMode = widget.attachmentPaths != null;
+    final bool noneSelected =
+        !isAttachmentMode && !_sendPdf && !_sendRaw && !_sendSummary;
     final double sheetHeight = MediaQuery.of(context).size.height * 0.7;
 
     return SizedBox(
@@ -309,33 +375,39 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
             ),
             const SizedBox(height: AppDims.gap2),
 
-            // 3. 발송 항목 CheckboxListTile 3개
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildCheckboxItem(
-                      title: 'PDF 리포트',
-                      value: _sendPdf,
-                      onChanged: (val) => setState(() => _sendPdf = val ?? false),
-                    ),
-                    const Divider(height: 1, color: AppColors.border),
-                    _buildCheckboxItem(
-                      title:
-                          'RAW 원본 (raw.txt + 엑셀 256/128/64)',
-                      value: _sendRaw,
-                      onChanged: (val) => setState(() => _sendRaw = val ?? false),
-                    ),
-                    const Divider(height: 1, color: AppColors.border),
-                    _buildCheckboxItem(
-                      title: '지표 요약(메일 본문)',
-                      value: _sendSummary,
-                      onChanged: (val) => setState(() => _sendSummary = val ?? false),
-                    ),
-                  ],
+            // 3. 발송 항목 CheckboxListTile 3개 — attachmentPaths 경로에서는
+            //    전달받은 파일을 전부 보내므로 선택 UI를 표시하지 않는다.
+            if (!isAttachmentMode)
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildCheckboxItem(
+                        title: 'PDF 리포트',
+                        value: _sendPdf,
+                        onChanged: (val) =>
+                            setState(() => _sendPdf = val ?? false),
+                      ),
+                      const Divider(height: 1, color: AppColors.border),
+                      _buildCheckboxItem(
+                        title: 'RAW 원본 (raw.txt + 엑셀 256/128/64)',
+                        value: _sendRaw,
+                        onChanged: (val) =>
+                            setState(() => _sendRaw = val ?? false),
+                      ),
+                      const Divider(height: 1, color: AppColors.border),
+                      _buildCheckboxItem(
+                        title: '지표 요약(메일 본문)',
+                        value: _sendSummary,
+                        onChanged: (val) =>
+                            setState(() => _sendSummary = val ?? false),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              )
+            else
+              const Expanded(child: SizedBox.shrink()),
 
             // 4. 하단 안내 및 보내기 버튼
             if (noneSelected) ...[

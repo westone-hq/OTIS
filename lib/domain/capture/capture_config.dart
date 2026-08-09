@@ -41,8 +41,23 @@ class CaptureConfig {
   /// 목적: 256Hz 속도를 시간(간격)으로 역계산한 수학적 이상값
   /// 현재값: 3906 (마이크로초)
   /// 하는일: 1초(1,000,000마이크로초)를 256번으로 나누어 산출된 이상적인 측정 간격(3906마이크로초)입니다. 이를 기준으로 실제 데이터 간격의 오차를 판단합니다.
+  ///       ※ 표시·통계용이다. 격자 계산에는 idealIntervalNs 를 쓴다 (소수점 손실).
   int get idealIntervalUs {
     if (targetSampleRateHz <= 0) return 0;
     return 1000000 ~/ targetSampleRateHz;
   }
+
+  /// 목적: 격자 한 칸의 간격을 나노초로 반환한다.
+  ///       마이크로초는 1,000,000 / 256 = 3906.25 로 정수가 되지 않아
+  ///       등간격 격자를 만들 수 없다. 나노초는 3,906,250 으로 정확히 나뉜다.
+  /// 인자: 없음 (targetSampleRateHz 사용)
+  /// 반환: 격자 간격 (나노초)
+  /// 식: 1,000,000,000 / targetSampleRateHz
+  int get idealIntervalNs => 1000000000 ~/ targetSampleRateHz;
+
+  /// 목적: 목표 주기가 나노초 정수 간격으로 나뉘는지 알려준다.
+  ///       나뉘지 않으면 등간격 격자를 만들 수 없으므로 환산을 거부해야 한다.
+  /// 인자: 없음 (targetSampleRateHz 사용)
+  /// 반환: 정확히 나뉘면 true
+  bool get isGridExact => 1000000000 % targetSampleRateHz == 0;
 }

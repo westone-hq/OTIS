@@ -61,6 +61,51 @@ void main() {
     });
   });
 
+  group('NativeEvent.fromChannelMap', () {
+    test('정상 Map 을 판독하고 여분 키는 무시한다', () {
+      final event = NativeEvent.fromChannelMap({
+        'type': 'accel',
+        'tsUs': 12345,
+        'xMg': 1.5,
+        'yMg': -2,
+        'zMg': 1000.25,
+        'dtUs': 3900,
+        'noiseDba': 45.2,
+      });
+      expect(event, isNotNull);
+      expect(event!.type, NativeEventType.accel);
+      expect(event.tsUs, 12345);
+      expect(event.yMg, -2.0);
+      expect(event.dtUs, 3900);
+    });
+
+    test('필수 키 누락·형식 불일치는 null (0값 대체 금지)', () {
+      expect(NativeEvent.fromChannelMap({'type': 'accel'}), isNull);
+      expect(
+        NativeEvent.fromChannelMap({
+          'type': 'unknown',
+          'tsUs': 1,
+          'xMg': 0,
+          'yMg': 0,
+          'zMg': 0,
+          'dtUs': 0,
+        }),
+        isNull,
+      );
+      expect(
+        NativeEvent.fromChannelMap({
+          'type': 'accel',
+          'tsUs': '문자열',
+          'xMg': 0,
+          'yMg': 0,
+          'zMg': 0,
+          'dtUs': 0,
+        }),
+        isNull,
+      );
+    });
+  });
+
   group('NativeEventRecord.decode 방어', () {
     test('주석과 빈 줄은 폐기 집계에 넣지 않는다', () {
       const text = '# 주석\n\nlinear 100 1.0 2.0 3.0 0\n# 또 주석\n';

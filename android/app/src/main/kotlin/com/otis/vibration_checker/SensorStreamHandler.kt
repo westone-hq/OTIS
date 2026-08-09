@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
 import io.flutter.plugin.common.EventChannel
@@ -18,9 +19,9 @@ import java.io.FileWriter
  *
  * - TYPE_ACCELEROMETER(raw)와 TYPE_GRAVITY 2종만 구독한다.
  *   linear 는 사용하지 않는다 (RD-6).
- * - 요청 주기는 startCapture 의 sampleRate 로부터 도출한다:
- *   samplingPeriodUs = 1,000,000 / sampleRate. 요청은 힌트이며
- *   실제 콜백 간격은 기기·OS가 결정한다.
+ * - 요청 주기는 SENSOR_DELAY_FASTEST 로 고정한다. 목표 주기(256Hz)는
+ *   Dart 격자에서 정하며, 여기서 특정 Hz 를 요청하면 시스템이 하드웨어
+ *   주기의 정수배로 솎아 내려보내 최대 속도를 잃는다.
  * - 보간·리샘플 없음. 콜백 도착 그대로 파일에 기록하고 채널로 보낸다 (RD-1).
  * - 채널 계약: docs/capture_channel_contract.md
  */
@@ -47,6 +48,8 @@ class SensorStreamHandler(
     private var gravitySensor: Sensor? = null
     private var eventSink: EventChannel.EventSink? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var sensorThread: HandlerThread? = null
+    private var sensorHandler: Handler? = null
 
     private var lastAccelTsNs: Long = 0L
     private var lastGravityTsNs: Long = 0L
@@ -55,15 +58,17 @@ class SensorStreamHandler(
 
     private var recordFile: File? = null
     private var recordWriter: BufferedWriter? = null
+    private var lastClosedRecordPath: String? = null
 
     /**
-     * 수집을 시작한다. 요청 주기를 sampleRate 로부터 도출하고
-     * 원본 기록 파일을 연다.
+     * 수집을 시작한다. 요청 주기는 단말이 줄 수 있는 최대 속도로 고정한다.
+     *
+     * 목표 주기(256Hz)는 Dart 격자에서 정한다. 여기서 특정 Hz 를 요청하면
+     * 시스템이 하드웨어 주기의 정수배로 솎아 내려보내 최대 속도를 잃는다.
+     * 근거: 측정 — 동일 단말 요청 주기별 검증에서 128Hz 요청 시 210Hz,
+     * 64Hz 요청 시 70Hz 로 수신됨 확인 (하드웨어 주기 2374.785us 의 정수배)
      */
-    fun start(targetSampleRate: Int) {
-        val rate = if (targetSampleRate > 0) targetSampleRate else 256
-        val samplingPeriodUs = (1_000_000 / rate)
-
+    fun start() {
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager?
         accelSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gravitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
@@ -75,12 +80,22 @@ class SensorStreamHandler(
 
         lastAccelTsNs = 0L
         lastGravityTsNs = 0L
+        lastClosedRecordPath = null
         synchronized(batchBuffer) { batchBuffer.clear() }
-        openRecordFile(rate, samplingPeriodUs)
+        openRecordFile()
 
-        sensorManager?.registerListener(this, accelSensor, samplingPeriodUs)
-        sensorManager?.registerListener(this, gravitySensor, samplingPeriodUs)
-        Log.i(TAG, "started: samplingPeriodUs=$samplingPeriodUs (rate=$rate Hz)")
+        val thread = HandlerThread("otis-sensor").also { it.start() }
+        val handler = Handler(thread.looper)
+        sensorThread = thread
+        sensorHandler = handler
+
+        sensorManager?.registerListener(
+            this, accelSensor, SensorManager.SENSOR_DELAY_FASTEST, 0, handler,
+        )
+        sensorManager?.registerListener(
+            this, gravitySensor, SensorManager.SENSOR_DELAY_FASTEST, 0, handler,
+        )
+        Log.i(TAG, "started: SENSOR_DELAY_FASTEST, dedicated handler thread")
     }
 
     /**
@@ -88,7 +103,15 @@ class SensorStreamHandler(
      * @return 이번 측정의 원본 기록 파일 절대 경로. 기록 실패 시 null
      */
     fun stop(): String? {
+        if (recordWriter == null && lastClosedRecordPath != null) {
+            return lastClosedRecordPath
+        }
+
         sensorManager?.unregisterListener(this)
+        sensorThread?.quitSafely()
+        sensorThread?.join(500)
+        sensorThread = null
+        sensorHandler = null
 
         // 배치 잔여분 flush — 잔여 유실 방지 (판독서 C3)
         var remainder: List<Map<String, Any>>? = null
@@ -103,6 +126,7 @@ class SensorStreamHandler(
         }
 
         val path = closeRecordFile()
+        lastClosedRecordPath = path
         Log.i(TAG, "stopped. record=$path")
         return path
     }
@@ -124,7 +148,8 @@ class SensorStreamHandler(
 
     override fun onCancel(arguments: Any?) {
         this.eventSink = null
-        stop()
+        // stop() 을 부르지 않는다. Dart 가 구독 해제와 stopCapture 를 함께 실행하므로
+        // 여기서 먼저 파일을 닫으면 stopCapture 가 돌려줄 경로가 null 이 된다.
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -182,7 +207,7 @@ class SensorStreamHandler(
     }
 
     /** 원본 기록 파일을 앱 영속 저장소에 연다 (cacheDir 금지 — 판독서 C6). */
-    private fun openRecordFile(rate: Int, samplingPeriodUs: Int) {
+    private fun openRecordFile() {
         closeRecordFile()
         try {
             val dir = context.getExternalFilesDir(null) ?: context.filesDir
@@ -191,7 +216,7 @@ class SensorStreamHandler(
             writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트\n")
             writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")
             writer.write("# type: accel | gravity\n")
-            writer.write("# targetSampleRateHz: $rate (samplingPeriodUs=$samplingPeriodUs)\n")
+            writer.write("# request: SENSOR_DELAY_FASTEST (목표 주기는 Dart 격자에서 결정)\n")
             writer.flush()
             recordFile = file
             recordWriter = writer

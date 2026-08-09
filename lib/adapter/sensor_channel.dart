@@ -3,10 +3,8 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
 
-import 'package:vibration_checker/domain/capture/motion_synthesizer.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
-import 'package:vibration_checker/model/sensor_sample.dart';
 export 'package:vibration_checker/model/sensor_sample.dart';
 
 /// 목적: 플러터(UI)와 안드로이드(하드웨어) 사이에서 센서 데이터를 주고받는 다리 역할을 한다.
@@ -24,7 +22,6 @@ class SensorChannelManager {
 
   SensorChannelManager({this.useMock = false});
 
-  final MotionSynthesizer _synthesizer = MotionSynthesizer();
   Stream<(NativeEvent, double)>? _parsedStream;
 
   /// 목적: 안드로이드에서 쏴준 데이터 중 형태가 깨졌거나 이상해서 버린 데이터의 개수
@@ -67,15 +64,6 @@ class SensorChannelManager {
     return _events.map((pair) => pair.$1);
   }
 
-  /// 목적: 화면에 그래프를 그리거나 분석 엔진에 넘길 '순수 진동(Motion)' 데이터를 흘려보내는 파이프(스트림).
-  ///       들어오는 가속도에서 중력을 빼는 작업을 여기서 거친다.
-  Stream<SensorSample> get sensorStream {
-    return _events
-        .map((pair) => _synthesizer.onEvent(pair.$1, noiseDba: pair.$2))
-        .where((sample) => sample != null)
-        .cast<SensorSample>();
-  }
-
   /// 목적: 이 스마트폰에 우리가 필요한 센서(가속도, 중력)가 멀쩡히 달려있는지 안드로이드에 물어본다.
   Future<bool> checkSensorsAvailable() async {
     if (useMock) return false;
@@ -106,24 +94,21 @@ class SensorChannelManager {
       );
       return granted ?? false;
     } catch (_) {
-      return true; // 테스트 환경 대비 기본 허용
+      return false;
     }
   }
 
   /// 목적: 안드로이드에게 "지금부터 지정된 속도(Hz)로 센서 데이터 쏴줘!" 라고 명령을 내린다.
   ///       시작 전에 이전 측정 기록들을 모두 초기화한다.
   Future<void> startCapture({
-    int targetSampleRate = 256,
     double calibrationOffsetDba = 0.0,
     double micDbfsToDbaOffset = 85.0,
   }) async {
-    _synthesizer.reset();
     droppedMapCount = 0;
     lastCaptureError = null;
     lastRecordPath = null;
     try {
       await _methodChannel.invokeMethod('startCapture', {
-        'sampleRate': targetSampleRate,
         'calibrationOffset': calibrationOffsetDba,
         'micDbfsToDbaOffset': micDbfsToDbaOffset,
       });
