@@ -3,17 +3,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme.dart';
 import 'package:vibration_checker/model/metrics_config.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
-import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 import '../shared/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -25,27 +24,12 @@ class MeasuringScreen extends StatefulWidget {
   final SensorChannelManager? sensorManager;
   const MeasuringScreen({super.key, this.sensorManager});
 
-  /// 측정 결과 파일을 로컬 디스크(repository)에 저장하고 성공 여부를 반환합니다.
-  @visibleForTesting
-  static Future<bool> attemptSave(
-    MeasurementResult result, {
-    void Function(Directory)? onSuccess,
-  }) async {
-    try {
-      final dir = await MeasurementRepository.instance.save(result);
-      onSuccess?.call(dir);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   @override
   State<MeasuringScreen> createState() => _MeasuringScreenState();
 }
 
 /// S4 측정 저장 전 검증 게이트 판정 결과
-enum _SaveGateResult { ok, siteInvalid, noSamples, lowMotion }
+enum _CaptureGateResult { ok, siteInvalid, noSamples }
 
 /// 라이브 측정 화면의 상태 및 생명주기(센서 수집, 타이머, 백그라운드 전환 등)를 관리합니다.
 class _MeasuringScreenState extends State<MeasuringScreen>
@@ -103,7 +87,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   Future<void> _initCaptureAndTimers() async {
-    // 1. wakelock 활성화 (D2, Phase 2)
+    // 1. wakelock 활성화 (D2)
     try {
       await WakelockPlus.enable()
           .timeout(const Duration(milliseconds: 100))
@@ -223,33 +207,26 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
-  /// 현장 정보 및 층수 파싱 유효성 검증
-  ({SiteInfo site, int bottomFloor, int topFloor})? _validateSite() {
+  /// 목적: 현장 정보와 층수 파싱이 유효한지 확인한다.
+  /// 인자: 없음 (MeasurementSession 의 현재 현장 정보를 본다)
+  /// 반환: 현장 정보가 있고 시작·도착 층이 정수로 파싱되면 true
+  bool _hasValidSite() {
     final site = MeasurementSession.instance.currentSite;
-    if (site == null) return null;
-    final bottomFloor = int.tryParse(site.bottomFloor);
-    final topFloor = int.tryParse(site.topFloor);
-    if (bottomFloor == null || topFloor == null) return null;
-    return (site: site, bottomFloor: bottomFloor, topFloor: topFloor);
+    if (site == null) return false;
+    return int.tryParse(site.bottomFloor) != null &&
+        int.tryParse(site.topFloor) != null;
   }
 
-  /// 타당성 게이트 (측정 시간, 최대 속도, 운행 거리) 및 샘플/현장 정보 유효성 평가
-  _SaveGateResult _evaluateSaveGate(MeasurementResult? result) {
-    if (_validateSite() == null) {
-      return _SaveGateResult.siteInvalid;
-    }
+  /// 목적: 계측 시작·종료 전 진행 가능 여부를 판정한다.
+  /// 인자: 없음 (현장 정보와 리샘플러 누적 수를 본다)
+  /// 반환: 진행 가능하면 ok, 현장 정보 누락이면 siteInvalid,
+  ///       raw 또는 gravity 유효 샘플이 2개 미만이면 noSamples
+  _CaptureGateResult _evaluateCaptureGate() {
+    if (!_hasValidSite()) return _CaptureGateResult.siteInvalid;
     if (_resampler.rawCount < 2 || _resampler.gravityCount < 2) {
-      return _SaveGateResult.noSamples;
+      return _CaptureGateResult.noSamples;
     }
-    if (result == null) {
-      return _SaveGateResult.ok;
-    }
-    if (_elapsedSeconds < MetricsConfig.defaultConfig.minMeasureDurationSec ||
-        result.maxSpeed < MetricsConfig.defaultConfig.minValidMaxSpeed ||
-        result.distance < MetricsConfig.defaultConfig.minValidDistance) {
-      return _SaveGateResult.lowMotion;
-    }
-    return _SaveGateResult.ok;
+    return _CaptureGateResult.ok;
   }
 
   /// 현장 정보 누락 또는 센서 샘플 부족 시 실패 안내 다이얼로그 표시 후 /start 이동
@@ -274,6 +251,19 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
+  /// 목적: 이번 측정 산출물을 저장할 디렉터리를 확보한다.
+  /// 인자: 없음
+  /// 반환: 생성이 보장된 저장 디렉터리
+  /// 근거: 인용 — 판독서 C6, cacheDir 은 OS 가 임의로 비울 수 있어 사용 금지.
+  ///       저장·출력 계층은 리빌딩 전이므로 그 목업 저장소에 의존하지 않는다
+  Future<Directory> _resolveCaptureDirectory() async {
+    final external = await getExternalStorageDirectory();
+    final base = external ?? await getApplicationDocumentsDirectory();
+    final dir = Directory('${base.path}/captures');
+    await dir.create(recursive: true);
+    return dir;
+  }
+
   /// 측정 종료 시 안전장치 게이트 평가, 격자 환산, 파일 저장, 요약 다이얼로그 표시를 수행합니다.
   Future<void> _finishMeasurement() async {
     if (_isFinishing || _isFinished) return;
@@ -285,12 +275,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     _isFinished = true;
     await _cleanup();
 
-    final preGate = _evaluateSaveGate(null);
-    if (preGate == _SaveGateResult.siteInvalid) {
+    final preGate = _evaluateCaptureGate();
+    if (preGate == _CaptureGateResult.siteInvalid) {
       await _showMeasureFailDialog('현장 정보가 없습니다. 홈에서 다시 시작해 주세요.');
       return;
     }
-    if (preGate == _SaveGateResult.noSamples) {
+    if (preGate == _CaptureGateResult.noSamples) {
       await _showMeasureFailDialog(
         '센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.',
       );
@@ -299,50 +289,64 @@ class _MeasuringScreenState extends State<MeasuringScreen>
 
     final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
     final result = _resampler.resample();
-    final baseDir = await MeasurementRepository.instance.getBaseDirectory();
-    final metaPath = '${baseDir.path}/${stamp}_meta.txt';
-    await VibrationFileWriter.writeMeta(metaPath, result);
 
-    if (!result.isSuccess) {
-      await _showMeasureFailDialog(
-        '측정 파일 생성에 실패했습니다.\n사유: ${result.failureReason}',
+    try {
+      final baseDir = await _resolveCaptureDirectory();
+      final metaPath = '${baseDir.path}/${stamp}_meta.txt';
+
+      try {
+        await VibrationFileWriter.writeMeta(metaPath, result);
+      } catch (e, st) {
+        debugPrint('집계 파일 기록 실패: $e\n$st');
+      }
+
+      if (!result.isSuccess) {
+        await _showMeasureFailDialog(
+          '측정 파일 생성에 실패했습니다.\n사유: ${result.failureReason}',
+        );
+        return;
+      }
+
+      final valuePath = '${baseDir.path}/$stamp.txt';
+      await VibrationFileWriter.write(valuePath, result);
+
+      final rawPath = _sensorManager.lastRecordPath;
+      final rawCopyPath = '${baseDir.path}/${stamp}_raw.txt';
+      String? savedRawPath;
+      if (rawPath != null) {
+        await File(rawPath).copy(rawCopyPath);
+        savedRawPath = rawCopyPath;
+      } else {
+        await File(
+          metaPath,
+        ).writeAsString('rawRecordPath: null\n', mode: FileMode.append);
+      }
+
+      await _showCaptureSummaryDialog(
+        result: result,
+        dirPath: baseDir.path,
+        valuePath: valuePath,
+        metaPath: metaPath,
+        rawPath: savedRawPath,
       );
-      return;
+    } catch (e, st) {
+      debugPrint('측정 저장 실패: $e\n$st');
+      await _showMeasureFailDialog('측정 저장 중 오류가 발생했습니다.\n$e');
     }
-
-    final valuePath = '${baseDir.path}/$stamp.txt';
-    await VibrationFileWriter.write(valuePath, result);
-
-    final rawPath = _sensorManager.lastRecordPath;
-    final rawCopyPath = '${baseDir.path}/${stamp}_raw.txt';
-    String? savedRawPath;
-    if (rawPath != null) {
-      await File(rawPath).copy(rawCopyPath);
-      savedRawPath = rawCopyPath;
-    } else {
-      await File(
-        metaPath,
-      ).writeAsString('rawRecordPath: null\n', mode: FileMode.append);
-    }
-
-    await _showCaptureSummaryDialog(
-      result: result,
-      valuePath: valuePath,
-      metaPath: metaPath,
-      rawPath: savedRawPath,
-    );
   }
 
   /// 측정 완료 후 저장된 파일 목록과 격자 환산 집계를 보여주고,
   /// 메일 발송 또는 시작 화면 복귀로 이어주는 다이얼로그 표시
   Future<void> _showCaptureSummaryDialog({
     required GridResampleResult result,
+    required String dirPath,
     required String valuePath,
     required String metaPath,
     required String? rawPath,
   }) async {
     if (!mounted) return;
     final savedFiles = <String>[valuePath, metaPath, ?rawPath];
+    final fileNames = savedFiles.map((p) => p.split('/').last).toList();
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -353,8 +357,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              const Text('저장 위치'),
+              Text(dirPath, style: AppText.caption),
+              const SizedBox(height: AppDims.gap),
               const Text('저장된 파일'),
-              for (final path in savedFiles) Text('- $path'),
+              for (final name in fileNames) Text('- $name'),
               const SizedBox(height: AppDims.gap),
               Text('행 수: ${result.rowCount}'),
               Text('측정시간(초): ${result.durationSec.toStringAsFixed(1)}'),
