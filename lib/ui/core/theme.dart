@@ -36,7 +36,8 @@ abstract final class AppDims {
 }
 
 abstract final class AppText {
-  // TODO(Phase 7): Pretendard 적용 시 복원
+  // 폰트 파일은 assets/fonts/ 에 있으나 pubspec.yaml 에 등록되지 않아
+  // 테마에 적용되지 않는 상태다. 값만 정의해 둔다.
   static const family = 'Pretendard';
 
   // 어르신 UX: 본문 18 미만 금지, 캡션 최소 16
@@ -58,7 +59,6 @@ abstract final class AppText {
 ThemeData buildAppTheme() {
   final base = ThemeData(
     useMaterial3: true,
-    // fontFamily: AppText.family, // TODO(Phase 7): Pretendard 적용 시 복원
     scaffoldBackgroundColor: AppColors.bg,
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColors.navy,
@@ -76,7 +76,6 @@ ThemeData buildAppTheme() {
       elevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
-        // fontFamily: AppText.family, // TODO(Phase 7): Pretendard 적용 시 복원
         fontSize: 22,
         fontWeight: FontWeight.w700,
         color: AppColors.text,

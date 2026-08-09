@@ -30,7 +30,8 @@ class _StartScreenState extends State<StartScreen> {
       widget.sensorManager ?? SensorChannelManager();
   bool _sensorsAvailable = true;
 
-  // TODO(Phase 7): PrefsStore를 통한 SharedPreferences 영구 저장으로 변경
+  // static 변수로만 유지되어 앱을 재시작하면 초기화된다.
+  // PrefsStore 는 이 값을 저장하지 않는다.
   static bool _hasSeenPlacementSheet = false;
 
   int _selectedSeconds = 5;

@@ -40,7 +40,7 @@ class MeasurementResult {
   final List<double> accelSeries;
   final List<double> jerkSeries;
 
-  // Phase 1 확장 필드
+  // 분석 상세·진단용 확장 필드 (정속 구간 검출, 실측 샘플레이트 등)
   final double sampleRate; // 실측 샘플레이트 (Hz)
   final bool usedDetectedRideSegment; // 주행 자동 검출 성공 여부
   final String constantSpeedRange; // 정속 구간 시간 범위 요약

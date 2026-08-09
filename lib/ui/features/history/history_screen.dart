@@ -9,7 +9,7 @@ import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
 /// S5 저장 결과 목록 화면
-/// - 폰에 저장된 과거 측정 결과 목록 표시 및 관리 (Phase 4-C 연동)
+/// - 폰에 저장된 과거 측정 결과 목록 표시 및 관리
 /// - MeasurementRepository.instance.list() 로 로컬 디스크 조회 및 개별/전체 삭제
 /// - 어르신 UX: 88dp 이상의 큰 터치 영역 행, 색+텍스트 3중 상태 표출, 대형 빈 상태 안내
 class HistoryScreen extends StatefulWidget {
