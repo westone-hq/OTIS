@@ -131,7 +131,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       if (mounted && !_receivedRealSample) {
         _isFinished = true;
         await _cleanup();
-        await _showMeasureFailDialog('센서 응답이 없습니다. 측정을 중단합니다.');
+        final cause = _sensorManager.lastCaptureError;
+        final message = cause == null
+            ? '센서 응답이 없습니다. 측정을 중단합니다.'
+            : '센서 응답이 없습니다. 측정을 중단합니다.\n$cause';
+        await _showMeasureFailDialog(message);
       }
     });
   }
