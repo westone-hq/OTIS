@@ -120,6 +120,8 @@ class GridResampleResult {
   /// 인자: index — 행 번호 (0부터)
   /// 반환: 해당 행의 시각 (나노초)
   /// 식: t(n) = t0Ns + n x gridIntervalNs
+  ///       현재 호출되지 않는다. 격자 행의 시각은 출력 파일에 필요하지 않다.
+  ///       속도와 거리를 구하려면 시각이 필요하므로 분석 계층에서 쓴다.
   int tsNsAt(int index) => t0Ns + index * gridIntervalNs;
 
   /// 목적: 격자가 덮는 총 시간을 초 단위로 반환한다.
@@ -186,6 +188,8 @@ class GridResampler {
   }
 
   /// 목적: 다음 측정을 위해 누적분과 집계값을 모두 비운다.
+  ///       현재 호출되지 않는다. 측정 화면이 매번 새로 만들어져 인스턴스도
+  ///       새로 생기기 때문이다. 같은 화면에서 재측정하는 흐름이 붙으면 필요하다.
   void reset() {
     _raw.clear();
     _gravity.clear();

@@ -146,17 +146,6 @@ class NativeEventRecord {
     return (events: events, skippedLineCount: skipped);
   }
 
-  /// 목적: 이벤트 리스트를 실제 디바이스 저장소의 .txt 파일로 기록한다.
-  static Future<void> writeFile(
-    String path,
-    List<NativeEvent> events, {
-    required int targetSampleRateHz,
-  }) async {
-    await File(path).writeAsString(
-      encode(events, targetSampleRateHz: targetSampleRateHz),
-    );
-  }
-
   /// 목적: 디바이스 저장소에 있는 .txt 파일을 읽어와 이벤트 리스트로 복원한다.
   static Future<({List<NativeEvent> events, int skippedLineCount})> readFile(
     String path,

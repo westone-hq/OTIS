@@ -31,11 +31,6 @@ class SensorSample {
   /// 근거: 표준 — 국제단위계(SI) 중력가속도 환산 공식
   static const double metersPerSecondSquaredToMg = 101.97162129779283; 
   
-  /// 목적: 엘리베이터 업계 표준 진동 단위(mg)를 안드로이드 기본 가속도 단위(m/s²)로 환산하기 위한 상수
-  /// 식: 1 mg = (9.80665 / 1000) m/s²
-  /// 근거: 표준 — 국제단위계(SI) 중력가속도 환산 공식
-  static const double mgToMetersPerSecondSquared = 0.00980665;
-
   /// 목적: m/s² 단위로 들어오는 외부 센서 데이터를 앱 내부 표준인 mg 단위로 자동 변환하여 샘플을 생성한다.
   factory SensorSample.fromMps2({
     required int tsUs,
@@ -89,9 +84,6 @@ class SensorSample {
 
   /// 목적: 구형 UI 코드와의 호환성을 위해 마이크로초(us)를 밀리초(ms)로 환산하여 반환한다.
   double get timestamp => tsUs / 1000.0;
-
-  /// 목적: 계산의 편의를 위해 마이크로초(us)를 초(s) 단위로 환산하여 반환한다.
-  double get timestampSec => tsUs / 1000000.0;
 
   @override
   String toString() =>

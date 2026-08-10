@@ -1,11 +1,11 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 현재 상태: loadEmail 과 saveEmail 만 구현되어 있다.
-/// 나머지(자동 로그인 아이디, 최근 현장 정보)는 미구현이며, 예외를 던지지 않고
+/// 나머지(최근 현장 정보)는 미구현이며, 예외를 던지지 않고
 /// null 또는 빈 값을 돌려준다. 즉 저장한 것처럼 보이지만 저장되지 않는다.
 /// 호출하는 곳에서 실패를 알 수 없으므로 구현 전까지 그 값을 신뢰하면 안 된다.
 ///
-/// 목적: 앱 설정(자동 로그인 정보, 이메일 주소, 마지막 현장 정보 등)을 기기에 저장하고 불러오는 역할을 한다.
+/// 목적: 앱 설정(이메일 주소, 마지막 현장 정보 등)을 기기에 저장하고 불러오는 역할을 한다.
 ///       에러가 나도 앱이 죽지 않도록 무조건 빈 값을 반환하는 목업 상태다.
 class PrefsStore {
   static final PrefsStore instance = PrefsStore._();
@@ -13,18 +13,6 @@ class PrefsStore {
 
   /// 목적: 메일 주소 저장 키의 접두사. 다른 항목과 충돌하지 않게 분리한다.
   static const String _emailKeyPrefix = 'email:';
-
-  /// 저장·출력 계층 리빌딩 대상. 현재는 동작하지 않는다.
-  /// 목적: 기기에 저장된 자동 로그인 아이디를 불러온다. (현재는 항상 빈 값 반환)
-  Future<String?> loadAutoLoginId() async => null;
-
-  /// 저장·출력 계층 리빌딩 대상. 현재는 동작하지 않는다.
-  /// 목적: 로그인에 성공한 아이디를 자동 로그인을 위해 기기에 저장한다.
-  Future<void> saveAutoLoginId(String id) async {}
-
-  /// 저장·출력 계층 리빌딩 대상. 현재는 동작하지 않는다.
-  /// 목적: 로그아웃 시 저장되어 있던 자동 로그인 아이디를 지운다.
-  Future<void> removeAutoLoginId() async {}
 
   /// 목적: 사용자별로 저장된 메일 수신 주소를 읽어온다.
   /// 인자: id — 사용자 식별자. 사용자별로 키를 분리해 섞이지 않게 한다
