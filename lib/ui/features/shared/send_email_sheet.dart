@@ -17,7 +17,7 @@ import '../../core/widgets/app_dialog.dart';
 /// jobId 와 attachmentPaths 중 정확히 하나만 지정해야 한다.
 /// jobId 는 기존 저장소 조회 경로, attachmentPaths 는 전달받은 파일을
 /// 저장소 조회·목업 생성 없이 그대로 첨부하는 경로다.
-void showSendEmailSheet(
+Future<void> showSendEmailSheet(
   BuildContext context, {
   String? jobId,
   List<String>? attachmentPaths,
@@ -27,7 +27,7 @@ void showSendEmailSheet(
   if ((jobId != null) == (attachmentPaths != null)) {
     throw ArgumentError('jobId 와 attachmentPaths 중 정확히 하나만 지정해야 한다');
   }
-  showModalBottomSheet<void>(
+  return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,

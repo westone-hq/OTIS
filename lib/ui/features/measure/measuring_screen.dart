@@ -386,9 +386,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         actions: [
           AppDialogButton(
             label: '메일로 보내기',
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              showSendEmailSheet(context, attachmentPaths: savedFiles);
+              await showSendEmailSheet(context, attachmentPaths: savedFiles);
+              if (mounted) context.go('/start');
             },
             primary: false,
           ),
