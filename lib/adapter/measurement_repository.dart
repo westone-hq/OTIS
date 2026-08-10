@@ -8,7 +8,7 @@ import 'package:vibration_checker/model/measurement_result.dart';
 /// 이 화면들에서 해당 동작을 실행하면 실패한다.
 /// 계측 경로는 이 클래스를 쓰지 않는다. 측정 화면은 저장 위치를 직접 확보한다.
 ///
-/// 목적: 완성된 측정 결과(성적표)들을 기기에 파일 형태로 저장하거나, 목록을 불러오고, 삭제하는 창고(저장소) 역할을 한다.
+/// 목적: 완성된 측정 결과를 기기에 파일 형태로 저장하거나, 목록을 불러오고, 삭제하는 저장소 역할을 한다.
 class MeasurementRepository {
   static final MeasurementRepository instance = MeasurementRepository._();
   MeasurementRepository._();
@@ -38,7 +38,7 @@ class MeasurementRepository {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }
 
-  /// 목적: 특정 측정 결과에 대한 PDF 성적서 파일을 생성하거나 이미 있으면 가져온다.
+  /// 목적: 특정 측정 결과에 대한 PDF 보고서 파일을 생성하거나 이미 있으면 가져온다.
   Future<File?> ensureReportPdf(String id) async {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }
