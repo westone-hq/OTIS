@@ -169,9 +169,12 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       );
     } catch (e) {
       if (!mounted) return;
+      final message = widget.jobId != null
+          ? '저장·출력 기능은 아직 구현되지 않았습니다.\n(요청: 메일 첨부 자료 조회)'
+          : '메일 작성창 호출 실패: $e';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('메일 작성창 호출 실패: $e'),
+          content: Text(message),
           backgroundColor: AppColors.red,
         ),
       );

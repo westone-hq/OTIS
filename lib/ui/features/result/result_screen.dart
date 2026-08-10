@@ -60,7 +60,22 @@ class _ResultScreenState extends State<ResultScreen> {
           _isRealSample = true;
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      _showMockFailure('측정 기록 조회');
+    }
+  }
+
+  /// 목적: 저장·출력 계층 미구현 실패를 사용자가 이해할 수 있는 문구로 화면에 보여준다.
+  /// 인자: request — 시도한 동작을 설명하는 한국어 문구
+  /// 반환: 없음
+  void _showMockFailure(String request) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('저장·출력 기능은 아직 구현되지 않았습니다.\n(요청: $request)'),
+        backgroundColor: AppColors.red,
+      ),
+    );
   }
 
   Future<void> _loadRawSample() async {
@@ -94,7 +109,7 @@ class _ResultScreenState extends State<ResultScreen> {
         );
       }
     } catch (_) {
-      // fallback to mock
+      _showMockFailure('측정 데이터 파싱');
     }
   }
 
