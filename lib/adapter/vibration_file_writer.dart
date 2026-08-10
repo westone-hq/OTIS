@@ -10,7 +10,8 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 ///       3줄~ 값들, 공백 구분, 소수점 최대 3자리(뒤 0 제거), 줄바꿈 CRLF
 ///       시간 열은 없다. 시각은 행 번호로만 결정된다.
 ///
-///       이번 산출물은 소음 열이 없는 3열이므로 EVIMP1 이 아니다.
+///       이번 산출물은 소음 열이 없는 3열이므로 EVIMP1(회사 EVA 진동측정 장비가
+///       쓰는 표준 데이터 포맷) 이 아니다.
 ///       소음 열이 붙어 4열이 되는 시점에 formatId 와 columnCount 만 바꾸면 된다.
 class VibrationFileWriter {
   /// 목적: 이번 산출물의 포맷 식별자. 소음 열이 없어 EVIMP1 을 쓰지 않는다.

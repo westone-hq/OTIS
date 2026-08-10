@@ -128,6 +128,15 @@ class GridResampleResult {
       rowCount < 2 ? 0.0 : (rowCount - 1) * gridIntervalNs / 1000000000.0;
 }
 
+/// 용어
+///   raw      가속도 원본. 중력과 승강기 가속과 진동이 모두 섞인 값
+///   gravity  중력 방향 성분. 센서 허브가 계산해 내보내는 값이며 크기는 1000mg 고정
+///   motion   raw - gravity. 중력을 뺀 뒤 남는 승강기 가속과 진동
+///   격자      출력 파일의 등간격 행. 간격은 CaptureConfig.idealIntervalNs 로 정한다
+///   단위는 전부 mg(밀리지, 1000mg = 중력가속도 1개분)
+///
+/// 이 클래스는 raw 와 gravity 를 각각 격자에 맞춘 뒤 빼서 motion 을 만든다.
+///
 /// 목적: 수신한 원본 이벤트를 모아두었다가, 측정 종료 시 등간격 격자로 환산한다.
 ///       raw 와 gravity 를 각각 따로 격자에 맞춘 뒤 빼서 motion 을 만든다.
 ///
