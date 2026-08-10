@@ -23,11 +23,25 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   List<MeasurementResult> _items = kDebugMode ? MeasurementResult.mockList : [];
   final bool _isLoading = false;
+  bool _loadFailed = false;
 
   @override
   void initState() {
     super.initState();
     _loadItems();
+  }
+
+  /// 목적: 저장·출력 계층 미구현 실패를 사용자가 이해할 수 있는 문구로 화면에 보여준다.
+  /// 인자: request — 시도한 동작을 설명하는 한국어 문구
+  /// 반환: 없음
+  void _showMockFailure(String request) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('저장·출력 기능은 아직 구현되지 않았습니다.\n(요청: $request)'),
+        backgroundColor: AppColors.red,
+      ),
+    );
   }
 
   Future<void> _loadItems() async {
@@ -36,11 +50,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
       if (mounted) {
         setState(() {
           _items = list.isNotEmpty ? list : (kDebugMode ? MeasurementResult.mockList : []);
+          _loadFailed = false;
         });
       }
     } catch (_) {
       if (mounted && !kDebugMode) {
-        setState(() => _items = []);
+        setState(() {
+          _items = [];
+          _loadFailed = true;
+        });
       }
     }
   }
@@ -71,21 +89,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
 
-    if (confirmed == true) {
-      try {
-        await MeasurementRepository.instance.delete(item.id);
-      } catch (_) {}
-      if (mounted) {
-        setState(() {
-          _items.removeWhere((i) => i.id == item.id);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('측정 결과가 삭제되었습니다.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+    if (confirmed != true) return;
+
+    try {
+      await MeasurementRepository.instance.delete(item.id);
+    } catch (_) {
+      _showMockFailure('측정 기록 삭제');
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _items.removeWhere((i) => i.id == item.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('측정 결과가 삭제되었습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -143,9 +164,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             const SizedBox(height: AppDims.gap),
             Text(
-              '저장된 결과가 없습니다',
+              _loadFailed ? '저장된 결과를 불러오지 못했습니다' : '저장된 결과가 없습니다',
               style: AppText.body.copyWith(color: AppColors.textSub),
             ),
+            if (_loadFailed) ...[
+              const SizedBox(height: 4),
+              Text(
+                '저장·출력 기능은 아직 구현되지 않았습니다.\n(요청: 측정 기록 목록 조회)',
+                textAlign: TextAlign.center,
+                style: AppText.caption.copyWith(color: AppColors.textSub),
+              ),
+            ],
             const SizedBox(height: AppDims.gap2),
             SizedBox(
               width: 220,
@@ -296,13 +325,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     await MeasurementRepository.instance.save(MeasurementResult.mock);
                     final list = await MeasurementRepository.instance.list();
                     if (mounted && list.isNotEmpty) setState(() => _items = list);
-                  } catch (_) {}
+                  } catch (_) {
+                    _showMockFailure('측정 기록 저장');
+                  }
                 } else {
                   final oldItems = List<MeasurementResult>.from(_items);
                   setState(() => _items = []);
+                  var anyDeleteFailed = false;
                   for (final item in oldItems) {
-                    try { await MeasurementRepository.instance.delete(item.id); } catch (_) {}
+                    try {
+                      await MeasurementRepository.instance.delete(item.id);
+                    } catch (_) {
+                      anyDeleteFailed = true;
+                    }
                   }
+                  if (anyDeleteFailed) _showMockFailure('측정 기록 삭제');
                 }
               },
               tooltip: _items.isEmpty ? '샘플 복원' : '목록 비우기',

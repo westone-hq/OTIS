@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'package:vibration_checker/domain/capture/native_event.dart';
@@ -27,14 +28,16 @@ class SensorChannelManager {
   /// 목적: 안드로이드에서 쏴준 데이터 중 형태가 깨졌거나 이상해서 버린 데이터의 개수
   int droppedMapCount = 0;
 
-  /// 목적: 방금 측정 시작 시도 중 에러가 났다면 그 에러 내용을 담아둔다. (정상이면 null)
-  Object? lastCaptureError;
+  /// 목적: 방금 측정 시작 시도 중 실패가 있었다면 화면에 보여줄 한국어 요약을
+  ///       담아둔다. 원본 예외는 debugPrint/developer.log 로만 남긴다. (정상이면 null)
+  String? lastCaptureError;
 
   /// 목적: 측정을 끝냈을 때, 안드로이드가 저장해준 원본 텍스트 파일의 위치(경로)를 기억한다.
   String? lastRecordPath;
 
-  /// 목적: 안드로이드에서 무더기로 던져주는 데이터를 센서 이벤트로 풀어서 물흐르듯(Stream) 계속 내보낸다.
-  Stream<NativeEvent> get _events {
+  /// 목적: 안드로이드에서 배치로 보내는 데이터를 센서 이벤트로 풀어 그대로 내보낸다.
+  ///       가공(보간, 필터, 보정)은 하지 않는다.
+  Stream<NativeEvent> get nativeEventStream {
     _parsedStream ??= _eventChannel
         .receiveBroadcastStream()
         .expand<NativeEvent>((batch) {
@@ -58,11 +61,6 @@ class SensorChannelManager {
     return _parsedStream!;
   }
 
-  /// 목적: 가공되지 않은 센서 원본(Raw) 데이터만 흘려보내는 파이프(스트림). 텍스트 파일 저장용으로 쓰인다.
-  Stream<NativeEvent> get nativeEventStream {
-    return _events;
-  }
-
   /// 목적: 이 스마트폰에 우리가 필요한 센서(가속도, 중력)가 멀쩡히 달려있는지 안드로이드에 물어본다.
   Future<bool> checkSensorsAvailable() async {
     if (useMock) return false;
@@ -79,7 +77,7 @@ class SensorChannelManager {
         error: error,
         stackTrace: stack,
       );
-      lastCaptureError = error;
+      lastCaptureError = '센서 확인 요청이 실패했습니다.';
       return false;
     }
   }
@@ -106,7 +104,8 @@ class SensorChannelManager {
     try {
       await _methodChannel.invokeMethod('startCapture');
     } catch (error) {
-      lastCaptureError = error;
+      debugPrint('startCapture 실패: $error');
+      lastCaptureError = '측정 시작 요청이 실패했습니다.';
     }
   }
 

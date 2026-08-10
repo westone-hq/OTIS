@@ -310,8 +310,6 @@ class MeasurementResult {
     );
   }
 
-  String toJson() => jsonEncode(toMap());
-
   factory MeasurementResult.fromJson(String source) =>
       MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
