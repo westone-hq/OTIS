@@ -22,7 +22,7 @@ class HistoryScreen extends StatefulWidget {
 /// 저장된 측정 결과 목록의 비동기 로드, 이메일 발송 연결 및 개별 삭제 상태를 관리합니다.
 class _HistoryScreenState extends State<HistoryScreen> {
   List<MeasurementResult> _items = kDebugMode ? MeasurementResult.mockList : [];
-  final bool _isLoading = false;
+
   bool _loadFailed = false;
 
   @override
@@ -118,9 +118,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   String _getSummaryText(MeasurementResult item) {
-    if (item.id == '2024F1447R01') return 'Z 22.2mg 초과';
-    if (item.id == '2024F1448R02') return '전 지표 정상';
-    if (item.id == '2024F1449R03') return 'X 11.5mg, 소음 52.3dBA 초과';
     final isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded;
     if (!isExceeded) return '전 지표 정상';
     final List<String> reasons = [];
@@ -131,24 +128,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '${reasons.join(', ')} 초과';
   }
 
-  Widget _buildBadge(String label) {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.blue.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: AppText.caption.copyWith(
-          fontSize: 11,
-          color: AppColors.blue,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildEmptyState() {
     return Center(
@@ -266,13 +246,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        _buildBadge('PDF'),
-                        _buildBadge('RAW'),
-                      ],
-                    ),
+
                   ],
                 ),
               ),
@@ -348,19 +322,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ],
       ),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : (_items.isEmpty
-                ? _buildEmptyState()
-                : ListView.separated(
-                    itemCount: _items.length,
-                    separatorBuilder: (_, _) => const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: AppColors.border,
-                    ),
-                    itemBuilder: (context, index) => _buildListItem(_items[index]),
-                  )),
+        child: _items.isEmpty
+            ? _buildEmptyState()
+            : ListView.separated(
+                itemCount: _items.length,
+                separatorBuilder: (_, _) => const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.border,
+                ),
+                itemBuilder: (context, index) => _buildListItem(_items[index]),
+              ),
       ),
     );
   }

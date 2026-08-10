@@ -64,7 +64,7 @@ class MainActivity : FlutterActivity() {
                         val begin = {
                             // 소음 보정값은 계측 경로에서 전달하지 않는다 (RD-39). 첫 인자는 기본값이
                             // 없어 기존과 같은 0.0 을 넘기고, 두 번째는 생략해 클래스 기본값을 쓴다.
-                            noiseCaptureHandler.start(0.0)
+                            // noiseCaptureHandler.start(0.0) // M-01: 소음 캡처 비활성화
                             sensorStreamHandler.start()
                         }
 
@@ -92,7 +92,7 @@ class MainActivity : FlutterActivity() {
                     "stopCapture" -> {
                         // 계약: 원본 기록 파일 경로를 돌려준다
                         val recordPath = sensorStreamHandler.stop()
-                        noiseCaptureHandler.stop()
+                        // noiseCaptureHandler.stop() // M-01: 소음 캡처 비활성화
                         result.success(recordPath)
                     }
                     else -> {

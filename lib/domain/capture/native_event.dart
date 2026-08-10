@@ -117,7 +117,7 @@ class NativeEventRecord {
     final buffer = StringBuffer();
     buffer.writeln('# OTIS raw_native.txt · 보간 전 센서 이벤트');
     buffer.writeln('# columns: type tsUs x_mg y_mg z_mg dtUs');
-    buffer.writeln('# type: accel | gravity | linear');
+    buffer.writeln('# type: accel | gravity');
     buffer.writeln('# targetSampleRateHz: $targetSampleRateHz');
     for (final e in events) {
       buffer.writeln(e.toRecordLine());

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
+
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 현재 상태: 7개 메서드 전부 미구현이며 호출하면 UnimplementedError 가
@@ -15,7 +17,11 @@ class MeasurementRepository {
 
   /// 목적: 데이터들이 저장될 기준 폴더 경로를 가져온다.
   Future<Directory> getBaseDirectory() async {
-    throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
+    final external = await getExternalStorageDirectory();
+    final base = external ?? await getApplicationDocumentsDirectory();
+    final dir = Directory('${base.path}/captures');
+    await dir.create(recursive: true);
+    return dir;
   }
 
   /// 목적: 새롭게 계산된 측정 결과를 기기에 저장한다.

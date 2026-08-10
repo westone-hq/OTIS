@@ -276,7 +276,7 @@ class _StartScreenState extends State<StartScreen> {
                       const SizedBox(width: AppDims.gap),
                       Expanded(
                         child: Text(
-                          '이 기기는 선형가속도 센서가 없어 측정을 지원하지 않습니다.',
+                          '이 기기는 가속도 또는 중력 센서가 없어 측정을 지원하지 않습니다.',
                           style: AppText.bodyBold.copyWith(color: AppColors.red),
                         ),
                       ),

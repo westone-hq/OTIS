@@ -86,10 +86,12 @@ class SensorChannelManager {
   Future<bool> requestAudioPermission() async {
     if (useMock) return true;
     try {
-      final bool? granted = await _methodChannel.invokeMethod<bool>(
-        'requestAudioPermission',
-      );
-      return granted ?? false;
+      // M-01: 소음 캡처 비활성화로 권한 요청 무시
+      // final bool? granted = await _methodChannel.invokeMethod<bool>(
+      //   'requestAudioPermission',
+      // );
+      // return granted ?? false;
+      return true;
     } catch (_) {
       return false;
     }
