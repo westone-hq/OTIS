@@ -1,5 +1,9 @@
 import 'package:vibration_checker/model/measurement_result.dart';
 
+/// 현재 상태: 1개 메서드(parseEvimp1) 전부 미구현이며 호출하면
+/// UnimplementedError 가 발생한다. 파서 계층 리빌딩에서 구현한다.
+/// 호출하는 곳: 결과 화면. 이 화면에서 해당 동작을 실행하면 실패한다.
+///
 /// 목적: 회사 표준 데이터 포맷(EVIMP1)으로 작성된 텍스트 데이터를 읽어와서 앱에서 쓸 수 있는 측정 결과(성적표) 객체로 변환해주는 역할을 한다.
 class RawDataParser {
   /// 목적: 긴 문자열로 된 EVIMP1 포맷 텍스트를 분석(파싱)하여 MeasurementResult 객체로 만든다.

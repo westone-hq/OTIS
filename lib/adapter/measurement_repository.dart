@@ -2,6 +2,12 @@ import 'dart:io';
 
 import 'package:vibration_checker/model/measurement_result.dart';
 
+/// 현재 상태: 7개 메서드 전부 미구현이며 호출하면 UnimplementedError 가
+/// 발생한다. 저장·출력 계층 리빌딩에서 구현한다.
+/// 호출하는 곳: 이력 화면, 결과 화면, 메일 시트(jobId 경로).
+/// 이 화면들에서 해당 동작을 실행하면 실패한다.
+/// 계측 경로는 이 클래스를 쓰지 않는다. 측정 화면은 저장 위치를 직접 확보한다.
+///
 /// 목적: 완성된 측정 결과(성적표)들을 기기에 파일 형태로 저장하거나, 목록을 불러오고, 삭제하는 창고(저장소) 역할을 한다.
 class MeasurementRepository {
   static final MeasurementRepository instance = MeasurementRepository._();
