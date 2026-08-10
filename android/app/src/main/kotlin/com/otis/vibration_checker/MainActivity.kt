@@ -60,12 +60,11 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "startCapture" -> {
-                        val calibrationOffset = call.argument<Double>("calibrationOffset") ?: 0.0
-                        val micDbfsToDbaOffset = call.argument<Double>("micDbfsToDbaOffset") ?: 85.0
-
                         // 실제 수집 시작 동작
                         val begin = {
-                            noiseCaptureHandler.start(calibrationOffset, micDbfsToDbaOffset)
+                            // 소음 보정값은 계측 경로에서 전달하지 않는다 (RD-39). 첫 인자는 기본값이
+                            // 없어 기존과 같은 0.0 을 넘기고, 두 번째는 생략해 클래스 기본값을 쓴다.
+                            noiseCaptureHandler.start(0.0)
                             sensorStreamHandler.start()
                         }
 

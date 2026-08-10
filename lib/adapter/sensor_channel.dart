@@ -22,7 +22,7 @@ class SensorChannelManager {
 
   SensorChannelManager({this.useMock = false});
 
-  Stream<(NativeEvent, double)>? _parsedStream;
+  Stream<NativeEvent>? _parsedStream;
 
   /// 목적: 안드로이드에서 쏴준 데이터 중 형태가 깨졌거나 이상해서 버린 데이터의 개수
   int droppedMapCount = 0;
@@ -33,13 +33,13 @@ class SensorChannelManager {
   /// 목적: 측정을 끝냈을 때, 안드로이드가 저장해준 원본 텍스트 파일의 위치(경로)를 기억한다.
   String? lastRecordPath;
 
-  /// 목적: 안드로이드에서 무더기로 던져주는 데이터를 (센서 이벤트, 소음값) 쌍으로 예쁘게 포장해서 물흐르듯(Stream) 계속 내보낸다.
-  Stream<(NativeEvent, double)> get _events {
+  /// 목적: 안드로이드에서 무더기로 던져주는 데이터를 센서 이벤트로 풀어서 물흐르듯(Stream) 계속 내보낸다.
+  Stream<NativeEvent> get _events {
     _parsedStream ??= _eventChannel
         .receiveBroadcastStream()
-        .expand<(NativeEvent, double)>((batch) {
+        .expand<NativeEvent>((batch) {
           final items = batch is List ? batch : <dynamic>[batch];
-          final parsed = <(NativeEvent, double)>[];
+          final parsed = <NativeEvent>[];
           for (final item in items) {
             if (item is! Map) {
               droppedMapCount++;
@@ -50,8 +50,7 @@ class SensorChannelManager {
               droppedMapCount++;
               continue;
             }
-            final noise = item['noiseDba'];
-            parsed.add((event, noise is num ? noise.toDouble() : 0.0));
+            parsed.add(event);
           }
           return parsed;
         })
@@ -61,7 +60,7 @@ class SensorChannelManager {
 
   /// 목적: 가공되지 않은 센서 원본(Raw) 데이터만 흘려보내는 파이프(스트림). 텍스트 파일 저장용으로 쓰인다.
   Stream<NativeEvent> get nativeEventStream {
-    return _events.map((pair) => pair.$1);
+    return _events;
   }
 
   /// 목적: 이 스마트폰에 우리가 필요한 센서(가속도, 중력)가 멀쩡히 달려있는지 안드로이드에 물어본다.
@@ -100,18 +99,12 @@ class SensorChannelManager {
 
   /// 목적: 안드로이드에게 "지금부터 지정된 속도(Hz)로 센서 데이터 쏴줘!" 라고 명령을 내린다.
   ///       시작 전에 이전 측정 기록들을 모두 초기화한다.
-  Future<void> startCapture({
-    double calibrationOffsetDba = 0.0,
-    double micDbfsToDbaOffset = 85.0,
-  }) async {
+  Future<void> startCapture() async {
     droppedMapCount = 0;
     lastCaptureError = null;
     lastRecordPath = null;
     try {
-      await _methodChannel.invokeMethod('startCapture', {
-        'calibrationOffset': calibrationOffsetDba,
-        'micDbfsToDbaOffset': micDbfsToDbaOffset,
-      });
+      await _methodChannel.invokeMethod('startCapture');
     } catch (error) {
       lastCaptureError = error;
     }

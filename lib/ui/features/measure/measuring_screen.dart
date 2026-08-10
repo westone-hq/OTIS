@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme.dart';
-import 'package:vibration_checker/model/metrics_config.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
@@ -119,9 +118,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     // 5. 센서 가용성 검증 및 단일 스트림 명시적 구독
     final bool available = await _sensorManager.checkSensorsAvailable();
     if (available && !_sensorManager.useMock) {
-      await _sensorManager.startCapture(
-        micDbfsToDbaOffset: MetricsConfig.defaultConfig.micDbfsToDbaOffset,
-      );
+      await _sensorManager.startCapture();
       _sensorSub = _sensorManager.nativeEventStream.listen((event) {
         _receivedRealSample = true;
         _resampler.onEvent(event);
