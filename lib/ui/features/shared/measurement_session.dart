@@ -1,4 +1,3 @@
-import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 측정 현장 정보 (홈 화면에서 입력)
 class SiteInfo {
@@ -45,13 +44,5 @@ class MeasurementSession {
 
   SiteInfo? currentSite;
   int delaySec = 0;
-  String? lastResultId;
-  MeasurementResult? lastResult;
-  /// 세션에 보관된 현재 현장 정보 및 마지막 측정 결과를 초기화합니다.
-  void clear() {
-    currentSite = null;
-    delaySec = 0;
-    lastResultId = null;
-    lastResult = null;
-  }
+
 }

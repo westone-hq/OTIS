@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme.dart';
@@ -17,7 +17,7 @@ import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
 /// S4 측정 중 (라이브)
-/// - 실시간 속도 및 경과 시간 표시. 멀리서도 읽히게 초대형 UI
+/// - 경과 시간 표시. 멀리서도 읽히게 초대형 UI
 /// - 어르신 UX: 대비 높은 Navy 어두운 배경, 72sp 속도 표시, 56dp+ 확인 버튼
 class MeasuringScreen extends StatefulWidget {
   final SensorChannelManager? sensorManager;
@@ -94,7 +94,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     } catch (_) {}
 
     // 2. 오디오 권한 요청 (거부 시 소음 N/A 처리용 안내)
-    final bool audioGranted = await _sensorManager.requestAudioPermission();
+    await _sensorManager.requestAudioPermission();
+    // M-01: 소음 캡처 비활성화로 스낵바 표출 무시
+    /*
     if (!audioGranted && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -107,6 +109,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         ),
       );
     }
+    */
 
     // 3. 경과 시간 카운트 (1초 간격)
     _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -115,7 +118,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       }
     });
 
-    // 5. 센서 가용성 검증 및 단일 스트림 명시적 구독
+    // 4. 센서 가용성 검증 및 단일 스트림 명시적 구독
     final bool available = await _sensorManager.checkSensorsAvailable();
     if (available && !_sensorManager.useMock) {
       await _sensorManager.startCapture();
@@ -149,10 +152,15 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     _releaseTimeoutTimer = null;
     final sensorSub = _sensorSub;
     _sensorSub = null;
-    await Future.wait<void>([
-      if (sensorSub != null) _ignoreSlowCleanup(sensorSub.cancel()),
-      _ignoreSlowCleanup(_sensorManager.stopCapture()),
-    ]);
+    // 순서 고정: stopCapture 가 네이티브 잔여 배치를 flush 하므로 먼저 부른다.
+    // 구독을 먼저 끊으면 onCancel 이 eventSink 를 비워 잔여분이 버려진다.
+    await _ignoreSlowCleanup(_sensorManager.stopCapture());
+    // 잔여 배치는 네이티브 메인 루퍼에 post 되어 stopCapture 응답 이후 도착한다.
+    // 도착 대기 없이 구독을 끊으면 같은 유실이 재발한다.
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (sensorSub != null) {
+      await _ignoreSlowCleanup(sensorSub.cancel());
+    }
     try {
       await WakelockPlus.disable().timeout(const Duration(milliseconds: 200));
     } catch (_) {}
@@ -255,14 +263,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   /// 목적: 이번 측정 산출물을 저장할 디렉터리를 확보한다.
   /// 인자: 없음
   /// 반환: 생성이 보장된 저장 디렉터리
-  /// 근거: 인용 — 판독서 C6, cacheDir 은 OS 가 임의로 비울 수 있어 사용 금지.
-  ///       저장·출력 계층은 리빌딩 전이므로 그 목업 저장소에 의존하지 않는다
   Future<Directory> _resolveCaptureDirectory() async {
-    final external = await getExternalStorageDirectory();
-    final base = external ?? await getApplicationDocumentsDirectory();
-    final dir = Directory('${base.path}/captures');
-    await dir.create(recursive: true);
-    return dir;
+    return MeasurementRepository.instance.getBaseDirectory();
   }
 
   /// 측정 종료 시 안전장치 게이트 평가, 격자 환산, 파일 저장, 요약 다이얼로그 표시를 수행합니다.
@@ -540,7 +542,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // 현재 속도 섹션
+
                         Text(
                           '측정 중',
                           style: AppText.bodyBold.copyWith(

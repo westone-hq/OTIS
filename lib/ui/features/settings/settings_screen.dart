@@ -249,7 +249,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // 3. 앱 버전 및 문의하기
               _buildListTile(
                 title: '앱 버전',
-                trailingText: '0.1.0',
+                trailingText: '1.0.0',
               ),
               const SizedBox(height: AppDims.gap),
               _buildListTile(

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:vibration_checker/model/sensor_sample.dart';
 
-/// 목적: 진동 분석 엔진이 계산을 마친 최종 결과(성적표) 데이터를 담는다.
+/// 목적: 진동 분석 엔진이 계산을 마친 최종 측정 결과 데이터를 담는다.
 class MeasurementResult {
   final String id;
   final String jobNo; // 제번

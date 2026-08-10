@@ -1,7 +1,5 @@
 import 'package:go_router/go_router.dart';
-import 'package:vibration_checker/adapter/auth_repository.dart';
 
-import '../features/auth/login_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/measure/measuring_screen.dart';
@@ -18,16 +16,16 @@ import '../features/settings/settings_screen.dart';
 /// /history    S5 저장 결과 목록
 /// /settings   S6 설정
 final appRouter = GoRouter(
-  initialLocation: '/login',
-  redirect: (context, state) {
-    final loggedIn = AuthRepository.instance.currentUserId != null;
-    final isLoggingIn = state.matchedLocation == '/login';
-    if (!loggedIn && !isLoggingIn) return '/login';
-    if (loggedIn && isLoggingIn) return '/home';
-    return null;
-  },
+  initialLocation: '/home', // A-01: 초기 라우트 변경
+  // redirect: (context, state) {
+  //   final loggedIn = AuthRepository.instance.currentUserId != null;
+  //   final isLoggingIn = state.matchedLocation == '/login';
+  //   if (!loggedIn && !isLoggingIn) return '/login';
+  //   if (loggedIn && isLoggingIn) return '/home';
+  //   return null;
+  // },
   routes: [
-    GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+    // GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
     GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
     GoRoute(path: '/start', builder: (_, _) => const StartScreen()),
     GoRoute(path: '/measuring', builder: (_, _) => const MeasuringScreen()),

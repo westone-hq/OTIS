@@ -36,10 +36,6 @@ abstract final class AppDims {
 }
 
 abstract final class AppText {
-  // 폰트 파일은 assets/fonts/ 에 있으나 pubspec.yaml 에 등록되지 않아
-  // 테마에 적용되지 않는 상태다. 값만 정의해 둔다.
-  static const family = 'Pretendard';
-
   // 어르신 UX: 본문 18 미만 금지, 캡션 최소 16
   static const caption = TextStyle(fontSize: 16, color: AppColors.textSub);
   static const body = TextStyle(fontSize: 18, color: AppColors.text);

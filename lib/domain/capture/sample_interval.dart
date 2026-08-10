@@ -156,6 +156,8 @@ class IntervalStats {
   }
 
   /// 목적: 개발팀 및 엔지니어가 수집 상태를 한눈에 볼 수 있도록, 통계 결과를 사람이 읽기 쉬운 한국어 텍스트로 정리해 반환한다.
+  /// 주의: 정상 범위 판정의 기준은 목표 격자 주기에서 온 값이며 원본 채널
+  ///       판정에는 맞지 않는다. capture_config 의 해당 필드 주석을 참고한다.
   String toReportText({
     required String label,
     required CaptureConfig config,
