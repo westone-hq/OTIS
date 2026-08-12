@@ -64,6 +64,13 @@ class SensorStreamHandler(
 
         private const val TYPE_ACCEL = "accel"
         private const val TYPE_GRAVITY = "gravity"
+
+        /**
+         * Dart 격자 목표 256Hz에 대응하는 주기(µs).
+         * registerListener 요청값은 FASTEST이지만, 단말 최소주기가 이보다 크면
+         * 256Hz 격자를 하드웨어만으로 채우기 어렵다.
+         */
+        private const val TARGET_GRID_PERIOD_US = 3906
     }
 
     private var sensorManager: SensorManager? = null
@@ -118,7 +125,63 @@ class SensorStreamHandler(
         sensorManager?.registerListener(
             this, gravitySensor, SensorManager.SENSOR_DELAY_FASTEST, 0, handler,
         )
+        printSensorInformation()
         Log.i(TAG, "started: SENSOR_DELAY_FASTEST, dedicated handler thread")
+    }
+
+    /**
+     * 이 단말에 적용된 가속도·중력 센서 사양을 로그로 출력하고,
+     * 메일/파일 첨부용 텍스트도 같은 내용으로 돌려준다.
+     */
+    fun buildSensorInformationText(): String {
+        val manager = sensorManager
+            ?: (context.getSystemService(Context.SENSOR_SERVICE) as SensorManager?).also {
+                sensorManager = it
+            }
+        val accel = accelSensor ?: manager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER).also {
+            accelSensor = it
+        }
+        val gravity = gravitySensor ?: manager?.getDefaultSensor(Sensor.TYPE_GRAVITY).also {
+            gravitySensor = it
+        }
+
+        val buf = StringBuilder()
+        buf.appendLine("# OTIS sensor_info.txt · 단말 적용 센서 사양")
+        buf.appendLine("# request: SENSOR_DELAY_FASTEST")
+        buf.appendLine("# targetGrid: 256Hz (${TARGET_GRID_PERIOD_US}us)")
+        buf.appendLine()
+        buf.append(formatSensorBlock("ACCELEROMETER", accel))
+        buf.appendLine()
+        buf.append(formatSensorBlock("GRAVITY", gravity))
+        return buf.toString()
+    }
+
+    private fun printSensorInformation() {
+        val text = buildSensorInformationText()
+        for (line in text.lineSequence()) {
+            if (line.isNotBlank()) Log.i(TAG, line)
+        }
+    }
+
+    private fun formatSensorBlock(label: String, sensor: Sensor?): String {
+        if (sensor == null) {
+            return "[$label]\n센서 없음\n"
+        }
+        val minDelayUs = sensor.minDelay
+        val maximumSensorHz =
+            if (minDelayUs > 0) 1_000_000.0 / minDelayUs else 0.0
+        val buf = StringBuilder()
+        buf.appendLine("[$label]")
+        buf.appendLine("센서 이름: ${sensor.name}")
+        buf.appendLine("제조사: ${sensor.vendor}")
+        buf.appendLine("센서 최소주기: $minDelayUs μs")
+        buf.appendLine("이론상 최대속도: $maximumSensorHz Hz")
+        buf.appendLine("최대 측정범위: ${sensor.maximumRange} m/s²")
+        buf.appendLine("측정 해상도: ${sensor.resolution} m/s²")
+        if (minDelayUs > TARGET_GRID_PERIOD_US) {
+            buf.appendLine("경고: 이 센서는 요청한 256Hz를 지원하지 않을 가능성이 높다.")
+        }
+        return buf.toString()
     }
 
     /**

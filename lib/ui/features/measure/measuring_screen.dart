@@ -325,12 +325,21 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         ).writeAsString('rawRecordPath: null\n', mode: FileMode.append);
       }
 
+      final sensorInfoPath = '${baseDir.path}/${stamp}_sensor.txt';
+      String? savedSensorPath;
+      final sensorInfo = await _sensorManager.getSensorInformation();
+      if (sensorInfo != null && sensorInfo.trim().isNotEmpty) {
+        await File(sensorInfoPath).writeAsString(sensorInfo);
+        savedSensorPath = sensorInfoPath;
+      }
+
       await _showCaptureSummaryDialog(
         result: result,
         dirPath: baseDir.path,
         valuePath: valuePath,
         metaPath: metaPath,
         rawPath: savedRawPath,
+        sensorPath: savedSensorPath,
       );
     } catch (e, st) {
       debugPrint('측정 저장 실패: $e\n$st');
@@ -346,10 +355,18 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     required String valuePath,
     required String metaPath,
     required String? rawPath,
+    required String? sensorPath,
   }) async {
     if (!mounted) return;
-    final savedFiles = <String>[valuePath, metaPath, ?rawPath];
-    final fileNames = savedFiles.map((p) => p.split('/').last).toList();
+    final savedFiles = <String>[
+      valuePath,
+      metaPath,
+      ?rawPath,
+      ?sensorPath,
+    ];
+    final fileNames = savedFiles
+        .map((p) => p.replaceAll('\\', '/').split('/').last)
+        .toList();
     await showDialog<void>(
       context: context,
       barrierDismissible: false,

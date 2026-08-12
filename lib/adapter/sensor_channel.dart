@@ -123,4 +123,20 @@ class SensorChannelManager {
     }
     _parsedStream = null;
   }
+
+  /// 목적: 이 단말에 적용된 가속도·중력 센서 사양 텍스트를 안드로이드에서 받아온다.
+  Future<String?> getSensorInformation() async {
+    if (useMock) return null;
+    try {
+      return await _methodChannel.invokeMethod<String>('getSensorInformation');
+    } catch (error, stack) {
+      developer.log(
+        'getSensorInformation 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+      return null;
+    }
+  }
 }

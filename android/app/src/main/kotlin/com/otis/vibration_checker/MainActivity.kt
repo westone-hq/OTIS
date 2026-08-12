@@ -95,6 +95,9 @@ class MainActivity : FlutterActivity() {
                         // noiseCaptureHandler.stop() // M-01: 소음 캡처 비활성화
                         result.success(recordPath)
                     }
+                    "getSensorInformation" -> {
+                        result.success(sensorStreamHandler.buildSensorInformationText())
+                    }
                     else -> {
                         result.notImplemented()
                     }
