@@ -1,3 +1,6 @@
+// 작성: 2026-08-18 18:17:48
+// 작성자: 박건준
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -16,10 +19,15 @@ import '../shared/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
-/// S4 측정 중 (라이브)
-/// - 경과 시간 표시. 멀리서도 읽히게 초대형 UI
-/// - 어르신 UX: 대비 높은 Navy 어두운 배경, 72sp 속도 표시, 56dp+ 확인 버튼
+/// 클래스: MeasuringScreen
+/// 목적: 측정이 진행되는 동안 보여주는 라이브 화면.
+///       - 멀리서도 보이게 경과 시간을 크게 표시한다
+///       - 어르신도 잘 보이도록 어두운 남색 배경에 밝은 글자, 72sp
+///         크기의 속도 표시, 56dp 이상의 확인 버튼을 쓴다
 class MeasuringScreen extends StatefulWidget {
+  /// 테스트에서 가짜(mock) 센서 관리자를 주입하기 위한 값. null이면
+  /// 화면이 실제 `SensorChannelManager`(안드로이드 쪽 센서와 주고받는
+  /// 통신을 담당하는 클래스)를 새로 만들어 쓴다
   final SensorChannelManager? sensorManager;
   const MeasuringScreen({super.key, this.sensorManager});
 
@@ -27,10 +35,14 @@ class MeasuringScreen extends StatefulWidget {
   State<MeasuringScreen> createState() => _MeasuringScreenState();
 }
 
-/// S4 측정 저장 전 검증 게이트 판정 결과
+/// 측정을 저장해도 되는지 판정한 결과. ok(저장 가능),
+/// siteInvalid(현장 정보 누락 · 오류), noSamples(유효 샘플 부족)
 enum _CaptureGateResult { ok, siteInvalid, noSamples }
 
-/// 라이브 측정 화면의 상태 및 생명주기(센서 수집, 타이머, 백그라운드 전환 등)를 관리합니다.
+/// 클래스: _MeasuringScreenState
+/// 목적: 라이브 측정 화면의 상태를 관리한다. 센서 데이터 수집, 경과
+///       시간 · 카운트다운 타이머, 앱이 백그라운드로 전환됐을 때의
+///       중단 처리를 담당한다.
 class _MeasuringScreenState extends State<MeasuringScreen>
     with WidgetsBindingObserver {
   late final SensorChannelManager _sensorManager =
@@ -52,20 +64,30 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   bool _isFinished = false;
   bool _isFinishing = false;
 
+  /// 함수: initState
+  /// 목적: 이 화면이 새로 만들어질 때 한 번만 실행된다.
+  ///       - 전화가 오는 등 앱이 화면 밖으로 밀려나는 순간을 이 화면이
+  ///         알아챌 수 있도록 미리 준비해둔다
+  ///       - 시작 전 대기 시간이 있으면 카운트다운부터 시작하고, 없으면
+  ///         곧바로 센서 수집을 시작한다
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    final delay = MeasurementSession.instance.delaySec;
+    final delay = MeasurementSession.instance.delaySec; // 시작 전 대기 시간 (초)
     if (delay > 0) {
       _countdownSec = delay;
       _isCountingDown = true;
-      _startCountdown();
+      _startCountdown(); // → 로직 이동: _startCountdown()
     } else {
-      _initCaptureAndTimers();
+      _initCaptureAndTimers(); // → 로직 이동: _initCaptureAndTimers()
     }
   }
 
+  /// 함수: _startCountdown
+  /// 목적: 1초마다 카운트다운 숫자를 하나씩 줄이는 타이머를 시작한다.
+  ///       0에 도달하면 타이머를 멈추고 실제 측정 준비로 넘어간다. 화면이
+  ///       이미 사라졌으면(`mounted`가 false) 그대로 타이머만 멈춘다.
   void _startCountdown() {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
@@ -79,48 +101,50 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           _countdownSec = 0;
           _isCountingDown = false;
           timer.cancel();
-          _initCaptureAndTimers();
+          _initCaptureAndTimers(); // → 로직 이동: _initCaptureAndTimers()
         }
       });
     });
   }
 
+  /// 함수: _initCaptureAndTimers
+  /// 목적: 카운트다운이 끝난 뒤(또는 대기 시간이 없으면 곧바로) 실제
+  ///       측정을 준비하고 시작한다. 순서대로 다섯 단계를 거친다.
+  ///       1. 화면이 꺼지지 않도록 화면 꺼짐 방지를 켠다. 100ms 안에
+  ///          응답이 없어도 그냥 넘어간다 — 느려도 측정 자체를
+  ///          막지 않는다
+  ///       2. 마이크 권한을 요청한다. 거부돼도 진동 측정은 계속하고,
+  ///          결과에서 소음 항목만 "해당 없음"으로 표시한다
+  ///       3. 1초마다 경과 시간을 올리는 타이머를 시작한다
+  ///       4. 센서가 실제로 있는지 확인하고, 있으면(가짜 모드가
+  ///          아니면) 측정을 시작해 센서 데이터를 구독한다
+  ///       5. 3초 안에 센서 데이터가 하나도 안 오면 측정을 중단하고
+  ///          실패 안내를 띄운다. 개발용 빌드와 실제 배포판이 똑같이
+  ///          동작해야, 이 문제를 개발 중에 미리 발견할 수 있다
   Future<void> _initCaptureAndTimers() async {
-    // 1. wakelock 활성화 (D2)
+    // 1) 화면 꺼짐 방지
     try {
       await WakelockPlus.enable()
           .timeout(const Duration(milliseconds: 100))
           .catchError((_) {});
     } catch (_) {}
 
-    // 2. 오디오 권한 요청 (거부 시 소음 N/A 처리용 안내)
+    // 2) 오디오 권한 요청 (거부해도 진동 측정은 계속 진행)
+    // → 로직 이동: SensorChannelManager.requestAudioPermission()
     await _sensorManager.requestAudioPermission();
-    // M-01: 소음 캡처 비활성화로 스낵바 표출 무시
-    /*
-    if (!audioGranted && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '소음 제외 측정: 마이크 권한이 거부되어 진동만 측정합니다. (결과에 소음 N/A 표기)\n권한 요청 창이 다시 나타나지 않으면 휴대폰 설정 > 애플리케이션 > OTIS 진동측정 > 권한에서 마이크를 허용해 주세요.',
-            style: AppText.body.copyWith(color: Colors.white),
-          ),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-    */
 
-    // 3. 경과 시간 카운트 (1초 간격)
+    // 3) 경과 시간 카운트 (1초 간격)
     _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() => _elapsedSeconds++);
       }
     });
 
-    // 4. 센서 가용성 검증 및 단일 스트림 명시적 구독
+    // 4) 센서 가용성 확인 후 있으면 측정 시작 및 데이터 구독
+    // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
     final bool available = await _sensorManager.checkSensorsAvailable();
     if (available && !_sensorManager.useMock) {
+      // → 로직 이동: SensorChannelManager.startCapture()
       await _sensorManager.startCapture();
       _sensorSub = _sensorManager.nativeEventStream.listen((event) {
         _receivedRealSample = true;
@@ -128,17 +152,18 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       });
     }
 
-    // 3초간 수신 없으면 측정 중단 및 복귀 (저장 없음).
-    // 디버그·릴리즈 동일하게 동작해야 문제를 개발 단계에서 발견할 수 있다 (B-2).
+    // 5) 3초간 센서 응답이 없으면 측정을 포기하고 되돌아간다 (저장 없음)
     _releaseTimeoutTimer = Timer(const Duration(seconds: 3), () async {
       if (mounted && !_receivedRealSample) {
         _isFinished = true;
-        await _cleanup();
-        final cause = _sensorManager.lastCaptureError;
+        await _cleanup(); // → 로직 이동: _cleanup()
+        final cause = _sensorManager.lastCaptureError; // 실패 원인 문구, 없으면 null
         final message = cause == null
             ? '센서 응답이 없습니다. 측정을 중단합니다.'
             : '센서 응답이 없습니다. 측정을 중단합니다.\n$cause';
-        await _showMeasureFailDialog(message);
+        await _showMeasureFailDialog(
+          message,
+        ); // → 로직 이동: _showMeasureFailDialog()
       }
     });
   }
@@ -542,7 +567,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-
                         Text(
                           '측정 중',
                           style: AppText.bodyBold.copyWith(
