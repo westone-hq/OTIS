@@ -1,3 +1,6 @@
+// 작성: 2026-08-17 13:31:30
+// 작성자: 박건준
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,56 +11,113 @@ import 'package:vibration_checker/adapter/sensor_channel.dart';
 import '../shared/measurement_session.dart';
 import 'placement_sheet.dart';
 
-/// S3 측정 시작 화면
-/// - 카운트다운 대기 시간을 고르고 측정을 시작
-/// - 어르신 UX: 고정 높이 72dp 선택 카드, 64dp 시작 버튼, 색+아이콘+텍스트 3중 상태
+/// 클래스: StartScreen
+/// 목적: 카운트다운 대기 시간을 고르고 측정을 시작하는 화면.
+///       - 어르신도 쓰기 쉽도록 선택 카드 높이 72dp, 시작 버튼 높이 64dp로
+///         맞춘다
+///       - 상태(선택됨 · 비활성 등)는 색·아이콘·문구 세 가지를 함께 표시한다
 class StartScreen extends StatefulWidget {
+  /// 테스트에서 가짜(mock) 센서 관리자를 주입하기 위한 값. null이면
+  /// 화면이 실제 `SensorChannelManager`(네이티브 가속도 · 중력 센서와
+  /// 주고받는 통신을 담당하는 관리자 클래스)를 새로 만들어 쓴다
   final SensorChannelManager? sensorManager;
   const StartScreen({super.key, this.sensorManager});
 
-  /// 센서 가용 여부 및 디버그 모드에 따른 측정 시작 가능 여부를 판정합니다.
+  /// 함수: canStartMeasure
+  /// 목적: 센서 가용 여부와 디버그 모드 여부를 보고 측정을 시작해도
+  ///       되는지 판정한다. 디버그 모드면 센서가 없어도 시작을 허용해,
+  ///       센서 없는 개발 환경에서도 나머지 흐름을 테스트할 수 있게 한다.
+  /// 인자: available — 가속도 · 중력 센서가 실제로 잡히는지 여부
+  ///       isDebug — 디버그 모드로 실행 중인지 여부
+  /// 반환: 측정 시작 버튼을 활성화해도 되면 true
   @visibleForTesting
-  static bool canStartMeasure({required bool available, required bool isDebug}) =>
-      available || isDebug;
+  static bool canStartMeasure({
+    required bool available,
+    required bool isDebug,
+  }) => available || isDebug;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
 }
 
-/// 측정 준비 화면의 상태, 지연 시간 선택, 센서 가용성 확인 및 거치 방법 바텀 시트 호출을 관리합니다.
+/// 클래스: _StartScreenState
+/// 목적: 측정 준비 화면의 상태를 관리한다.
+///       - 센서 가용 여부(`_sensorsAvailable`)를 비동기로 확인해 저장한다
+///       - 카운트다운 대기 시간(`_selectedSeconds`)을 고르게 한다
+///       - 거치 방법 안내 바텀 시트(bottom sheet, 화면 아래에서 위로
+///         올라오는 패널)를 앱 실행 중 한 번만 자동으로 띄우기 위해
+///         `_hasSeenPlacementSheet`를 static 필드로 기억해둔다
 class _StartScreenState extends State<StartScreen> {
+  /// 실제로 쓰는 센서 관리자. `widget.sensorManager`가 없으면 새로 만든다
   late final SensorChannelManager _sensorManager =
       widget.sensorManager ?? SensorChannelManager();
+
+  /// 가속도 · 중력 센서 사용 가능 여부
   bool _sensorsAvailable = true;
 
-  // static 변수로만 유지되어 앱을 재시작하면 초기화된다.
-  // PrefsStore 는 이 값을 저장하지 않는다.
+  /// 이 화면을 앱 실행 중 한 번이라도 보여준 적이 있는지 여부. 거치 방법
+  /// 안내 바텀 시트를 최초 1회만 자동으로 띄우는 데 쓴다. static 필드라
+  /// 앱을 재시작하면 초기화되고, `PrefsStore`에도 저장하지 않는다
   static bool _hasSeenPlacementSheet = false;
 
+  /// 사용자가 고른 카운트다운 대기 시간 (초)
   int _selectedSeconds = 5;
+
+  /// 선택 가능한 대기 시간 목록 (초)
   final List<int> _timeOptions = const [0, 5, 10, 15];
 
+  /// 함수: initState
+  /// 목적: `initState`(이 화면이 새로 만들어질 때, 화면을 그리기 전에
+  ///       Flutter가 딱 한 번만 불러주는 생명주기(lifecycle, "만들어짐
+  ///       → 화면에 나타남 → 다시 그려짐 → 사라짐"처럼 정해진 순서로
+  ///       불리는 함수들) 메서드다. 이 화면에서는 두 가지를 준비한다.
+  ///       - `_checkSensors()`로 센서 가용 여부를 비동기로 확인한다
+  ///       - 이 화면을 처음 보여주는 경우에만, 첫 프레임이 그려진 뒤 거치
+  ///         방법 안내 바텀 시트(`_showPlacementSheet`)를 자동으로 띄운다
   @override
   void initState() {
     super.initState();
-    _checkSensors();
+    _checkSensors(); // → 로직 이동: _checkSensors()
     if (!_hasSeenPlacementSheet) {
       _hasSeenPlacementSheet = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _showPlacementSheet();
+          _showPlacementSheet(); // → 로직 이동: _showPlacementSheet()
         }
       });
     }
   }
 
+  /// 함수: _checkSensors
+  /// 목적: 가속도 · 중력 센서를 실제로 쓸 수 있는지 비동기로 확인해
+  ///       `_sensorsAvailable`에 반영한다.
+  ///       - 이 확인이 끝나기 전에 사용자가 다른 화면으로 넘어가는 등,
+  ///         이 화면이 사라지면 `mounted`(이 화면이 아직 떠 있는지
+  ///         여부)가 false로 바뀐다
+  ///       - 이미 사라진 화면에 결과를 반영하려고 `setState`를 부르면
+  ///         오류가 나므로, `mounted`가 true일 때만 반영한다
   Future<void> _checkSensors() async {
-    final available = await _sensorManager.checkSensorsAvailable();
+    // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
+    final available = await _sensorManager.checkSensorsAvailable(); // 센서 가용 여부
     if (mounted) {
       setState(() => _sensorsAvailable = available);
     }
   }
 
+  /// 함수: _showPlacementSheet
+  /// 목적: `showModalBottomSheet`(화면 아래에서 위로 올라오는 바텀
+  ///       시트를 띄우는 Flutter 함수)로 `PlacementSheet`(휴대폰을
+  ///       엘리베이터 바닥 어디에 어느 방향으로 놓을지부터, 측정을
+  ///       시작하고 끝내는 방법까지 4단계 그림으로 안내하는 위젯)를
+  ///       띄운다. 각 인자의 역할은 다음과 같다.
+  ///       - `context` — 어느 화면 위에 띄울지 알려주는 위치 정보
+  ///       - `isScrollControlled` — true로 주면 시트가 내용 길이에 맞춰
+  ///         화면 위쪽 끝까지 늘어날 수 있다. 기본값(false)이면 화면
+  ///         절반 높이로 제한돼 안내문 4단계가 다 안 보일 수 있다
+  ///       - `backgroundColor` — 시트 바탕색
+  ///       - `shape` — 시트의 위쪽 두 모서리만 둥글게 깎는 테두리 모양
+  ///       - `builder` — 시트 안에 실제로 그릴 위젯을 돌려주는 함수.
+  ///         여기서는 `PlacementSheet`를 그대로 띄운다
   void _showPlacementSheet() {
     showModalBottomSheet<void>(
       context: context,
@@ -68,21 +128,32 @@ class _StartScreenState extends State<StartScreen> {
           top: Radius.circular(AppDims.radius),
         ),
       ),
+      // → 로직 이동: PlacementSheet.build()
       builder: (_) => const PlacementSheet(),
     );
   }
 
+  /// 함수: _buildTimeCard
+  /// 목적: 대기 시간 선택 카드 하나를 만든다. 선택된 카드는 파란
+  ///       배경 · 체크 아이콘으로, 나머지는 기본 배경 · 빈 원으로
+  ///       구별해서 보여준다.
+  /// 인자: seconds — 이 카드가 나타내는 대기 시간 (초)
+  /// 반환: 대기 시간 선택 카드 위젯
   Widget _buildTimeCard(int seconds) {
-    final isSelected = _selectedSeconds == seconds;
+    final isSelected = _selectedSeconds == seconds; // 이 카드가 현재 선택된 시간인지
     return Expanded(
+      // 가로 폭을 다른 카드와 균등하게 나눔
       child: Semantics(
+        // 화면 낭독기 등 보조기술에 버튼·선택 상태를 알려줌
         button: true,
         selected: isSelected,
         label: '$seconds초',
         child: InkWell(
+          // 누르면 이 시간을 선택하도록 반응
           onTap: () => setState(() => _selectedSeconds = seconds),
           borderRadius: BorderRadius.circular(AppDims.radius),
           child: Container(
+            // 카드 배경과 테두리
             height: 72,
             decoration: BoxDecoration(
               color: isSelected ? AppColors.blue : AppColors.surface,
@@ -94,6 +165,7 @@ class _StartScreenState extends State<StartScreen> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: AppDims.gap2),
             child: Row(
+              // 아이콘 + 초 표시 텍스트를 가로로 배치
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -118,22 +190,37 @@ class _StartScreenState extends State<StartScreen> {
     );
   }
 
+  /// 함수: build
+  /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
+  ///       - `appBar` — 제목만 있는 간단한 상단 바
+  ///       - `body` — 스크롤 가능한 안내 영역. 디버그 모드에서 센서 없이
+  ///         우회 중이면 경고 배너를 먼저 보여준 뒤, 거치 안내 카드 →
+  ///         대기 시간 선택 카드 4개 → 선택한 시간 요약 문구 순으로
+  ///         보여준다
+  ///       - `bottomNavigationBar` — 센서를 못 쓰면 오류 안내를 보여주고,
+  ///         그 아래 측정(또는 카운트다운) 시작 버튼을 둔다
+  /// 인자: context — 이 화면이 어디에 놓이는지 알려주는 값. 시작 버튼을
+  ///       눌러 `/measuring`으로 넘어갈 때 쓴다
+  /// 반환: 측정 준비 화면 전체를 담는 위젯
   @override
   Widget build(BuildContext context) {
+    // 측정 시작 버튼을 눌러도 되는지
     final bool canStart = StartScreen.canStartMeasure(
       available: _sensorsAvailable,
       isDebug: kDebugMode,
     );
+    // 센서가 없는데 디버그 모드라 시작을 우회 허용 중인지
     final bool isDebugBypassed = !_sensorsAvailable && kDebugMode;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('측정 시작'),
-      ),
+      appBar: AppBar(title: const Text('측정 시작')),
       body: SafeArea(
+        // 시스템 UI를 피해서 배치
         child: SingleChildScrollView(
+          // 안내 내용이 길면 스크롤
           padding: const EdgeInsets.all(AppDims.screenPad),
           child: ConstrainedBox(
+            // 넓은 화면에서 폭이 과하게 늘어나지 않게 제한
             constraints: const BoxConstraints(maxWidth: 600),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -141,6 +228,7 @@ class _StartScreenState extends State<StartScreen> {
                 const SizedBox(height: AppDims.gap),
                 if (isDebugBypassed) ...[
                   Container(
+                    // 디버그 모드 센서 우회 경고 배너
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppDims.gap2,
                       vertical: AppDims.gap,
@@ -161,7 +249,9 @@ class _StartScreenState extends State<StartScreen> {
                         Expanded(
                           child: Text(
                             '디버그: 센서 체크 우회',
-                            style: AppText.bodyBold.copyWith(color: AppColors.gold),
+                            style: AppText.bodyBold.copyWith(
+                              color: AppColors.gold,
+                            ),
                           ),
                         ),
                       ],
@@ -201,6 +291,7 @@ class _StartScreenState extends State<StartScreen> {
                         alignment: Alignment.centerRight,
                         child: AppDialogButton(
                           label: '거치 방법 보기',
+                          // → 로직 이동: _showPlacementSheet()
                           onPressed: _showPlacementSheet,
                           primary: false,
                           icon: Icons.help_outline,
@@ -252,6 +343,7 @@ class _StartScreenState extends State<StartScreen> {
         ),
       ),
       bottomNavigationBar: SafeArea(
+        // 하단 고정 영역, 시스템 UI를 피해서 배치
         child: Padding(
           padding: const EdgeInsets.all(AppDims.screenPad),
           child: Column(
@@ -260,6 +352,7 @@ class _StartScreenState extends State<StartScreen> {
             children: [
               if (!canStart) ...[
                 Container(
+                  // 센서 없어서 측정 불가 안내
                   padding: const EdgeInsets.all(AppDims.gap2),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
@@ -277,7 +370,9 @@ class _StartScreenState extends State<StartScreen> {
                       Expanded(
                         child: Text(
                           '이 기기는 가속도 또는 중력 센서가 없어 측정을 지원하지 않습니다.',
-                          style: AppText.bodyBold.copyWith(color: AppColors.red),
+                          style: AppText.bodyBold.copyWith(
+                            color: AppColors.red,
+                          ),
                         ),
                       ),
                     ],
@@ -288,8 +383,11 @@ class _StartScreenState extends State<StartScreen> {
               ElevatedButton(
                 onPressed: canStart
                     ? () {
+                        // → 로직 이동: MeasurementSession.instance.delaySec
                         MeasurementSession.instance.delaySec = _selectedSeconds;
-                        context.push('/measuring');
+                        context.push(
+                          '/measuring',
+                        ); // → 로직 이동: MeasuringScreen.build()
                       }
                     : null,
                 child: Text(_selectedSeconds == 0 ? '측정 시작' : '카운트다운 시작'),

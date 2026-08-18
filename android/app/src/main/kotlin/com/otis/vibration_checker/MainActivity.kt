@@ -1,3 +1,7 @@
+/*
+ * 작성: 2026-08-17 15:43:39
+ * 작성자: 박건준
+ */
 package com.otis.vibration_checker
 
 import android.Manifest
@@ -13,21 +17,55 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
+/**
+ * 클래스: MainActivity
+ * 목적: 안드로이드(네이티브, Flutter 쪽에서 부르는 안드로이드 코틀린
+ *       코드) 진입점. Flutter와 채널 두 개로 연결된다.
+ *       - `MethodChannel`(요청 하나 · 응답 하나짜리 통로)로 센서 확인 ·
+ *         마이크 권한 요청 · 측정 시작 · 종료 명령을 받아 처리한다
+ *       - `EventChannel`(계속 흘려보내는 통로)은 `SensorStreamHandler`
+ *         에게 맡겨 센서 원본 데이터를 Flutter로 흘려보낸다
+ */
 class MainActivity : FlutterActivity() {
     companion object {
+        // Flutter 쪽 lib/adapter/sensor_channel.dart 의 _methodChannel 과
+        // 문자열이 반드시 같아야 한다. 컴파일러가 대신 검사해주는 연결이
+        // 아니라서, 둘 중 하나만 바뀌면 컴파일은 되지만 요청이 반대편에
+        // 닿지 않고 조용히 실패한다
         private const val METHOD_CHANNEL = "com.otis.vibration_checker/sensors_method"
+        // 위와 같은 이유로 sensor_channel.dart 의 _eventChannel 과 문자열이
+        // 반드시 같아야 한다
         private const val STREAM_CHANNEL = "com.otis.vibration_checker/sensors_stream"
+        // onRequestPermissionsResult 에서 마이크 권한 응답과 고속 샘플링
+        // 권한 응답을 구분하기 위한 임의의 요청 코드
         private const val REQ_AUDIO_PERMISSION = 1001
         private const val REQ_HIGH_RATE_PERMISSION = 1002
     }
 
+    // 소음(마이크) 원본 캡처 담당. configureFlutterEngine 에서 만들어지고
+    // onDestroy 에서 정리된다. 소음 캡처 기능 자체가 꺼져 있어 start()를
+    // 부르는 곳은 없고, 정리 차원에서 stop()만 부른다
     private lateinit var noiseCaptureHandler: NoiseCaptureHandler
+
+    // 가속도 · 중력 센서 원본 캡처 담당. startCapture/stopCapture 요청을
+    // 이 핸들러에 그대로 위임한다
     private lateinit var sensorStreamHandler: SensorStreamHandler
+
+    // 마이크 권한 요청 결과를 돌려줄 콜백. 요청을 보낸 동안만 값이 있고,
+    // onRequestPermissionsResult 에서 쓰고 나면 다시 null 로 비운다
     private var permissionCallback: MethodChannel.Result? = null
 
-    // 고속 샘플링 권한 승인 후 이어서 실행할 수집 시작 동작
+    // 고속 샘플링 권한 승인을 기다리는 동안 미뤄둔, 승인 후 이어서 실행할
+    // 수집 시작 동작. 권한 요청 중이 아니면 null
     private var pendingStartCapture: (() -> Unit)? = null
 
+    /**
+     * 함수: configureFlutterEngine
+     * 목적: Flutter 엔진이 뜰 때 핸들러 2개를 만들고, 채널 2개
+     *       (`METHOD_CHANNEL`, `STREAM_CHANNEL`)를 등록해 Flutter와
+     *       안드로이드를 연결한다.
+     * 인자: flutterEngine — Flutter 쪽에서 넘겨주는 엔진 인스턴스
+     */
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -40,18 +78,61 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    /**
+                     * 함수: checkAvailable
+                     * 목적: Flutter의 sensor_channel.dart 가 보낸
+                     *       "checkAvailable" 요청에 응답한다. 이 기기에
+                     *       가속도 · 중력 센서가 실제로 달려있는지 확인한다.
+                     *       - `getSystemService(Context.SENSOR_SERVICE)`로
+                     *         `SensorManager`(기기에 달린 센서 목록을
+                     *         관리하고 값 구독을 열어주는 안드로이드 시스템
+                     *         서비스)를 받아온다
+                     *       - `SensorManager.getDefaultSensor(타입)`으로 그
+                     *         타입의 센서가 이 기기에 있는지 물어본다. 값을
+                     *         읽어보는 게 아니라 존재 여부만 조회하는
+                     *         것이라, 있으면 센서 정보 객체를, 하드웨어
+                     *         자체가 없으면 null을 곧바로 돌려준다
+                     *       - `TYPE_GRAVITY`(중력 센서)는 따로 달린
+                     *         부품이 아니라 센서 허브가 가속도 · 자이로
+                     *         값을 계산해 합성해 내보내는 값이다. 그래도
+                     *         `getDefaultSensor`로 존재 여부는 물어볼 수
+                     *         있다
+                     *       - 진동값은 가속도 원본에서 중력을 뺀 값
+                     *         (raw − gravity)으로만 계산하도록 정해져
+                     *         있어서, 둘 중 하나라도 없으면 계산 자체가
+                     *         안 된다. 그래서 두 센서가 다 있어야 측정
+                     *         가능으로 판단한다
+                     * 반환: result.success(Boolean) 으로 응답. 가속도계와
+                     *       중력 센서가 둘 다 있으면 true
+                     */
                     "checkAvailable" -> {
-                        // 계약: 가속도계와 중력 센서가 모두 있어야 측정 가능 (RD-6)
+                        // 센서 목록 조회 · 구독을 담당하는 시스템 서비스.
+                        // 이론상 못 가져올 수도 있어 널 허용 타입으로 받는다
                         val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager?
+                        // 가속도 센서. 이 기기에 없으면 null
                         val accel = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+                        // 중력 센서(합성값). 이 기기에 없으면 null
                         val gravity = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
                         result.success(accel != null && gravity != null)
                     }
+                    /**
+                     * 함수: requestAudioPermission
+                     * 목적: Flutter의 sensor_channel.dart 가 보낸
+                     *       "requestAudioPermission" 요청에 응답한다.
+                     *       마이크 권한이 이미 있으면 곧바로 성공을
+                     *       돌려주고, 없으면 시스템 권한 대화상자를 띄운
+                     *       뒤 사용자 응답을 기다린다.
+                     * 반환: result.success(Boolean) 으로 응답. 이미
+                     *       승인된 상태면 즉시 true, 아니면 사용자가
+                     *       응답할 때까지 기다렸다가 아래
+                     *       onRequestPermissionsResult 가 대신 응답한다
+                     */
                     "requestAudioPermission" -> {
                         if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                             result.success(true)
                         } else {
                             permissionCallback = result
+                            // → 로직 이동: onRequestPermissionsResult
                             ActivityCompat.requestPermissions(
                                 this@MainActivity,
                                 arrayOf(Manifest.permission.RECORD_AUDIO),
@@ -59,26 +140,41 @@ class MainActivity : FlutterActivity() {
                             )
                         }
                     }
+                    /**
+                     * 함수: startCapture
+                     * 목적: Flutter의 sensor_channel.dart 가 보낸
+                     *       "startCapture" 요청에 응답한다. 가속도 · 중력
+                     *       센서 캡처를 시작한다.
+                     *       - Android 12(S) 이상은 고속 샘플링 권한이
+                     *         없으면 먼저 요청하고, 응답이 온 뒤 시작한다
+                     *         (`pendingStartCapture`에 맡겨둔다)
+                     *       - 이미 권한이 있거나 Android 12 미만이면
+                     *         곧바로 시작한다
+                     * 반환: result.success(null) 로 즉시 응답한다. 실제로
+                     *       캡처가 시작됐는지는 기다리지 않는다
+                     * 근거: 측정 — SENSOR_DELAY_FASTEST 로 요청해도 실제
+                     *       수신 속도는 단말 하드웨어 주기라 200Hz 를
+                     *       넘는다(동일 단말 raw 실측 421Hz). Android 12+
+                     *       에서는 고속 샘플링 권한이 없으면 이 속도가
+                     *       제한된다
+                     */
                     "startCapture" -> {
-                        // 실제 수집 시작 동작
+                        // 고속 샘플링 권한이 확보된 뒤(또는 이미 있어서
+                        // 곧바로) 실행할, 실제 수집을 시작하는 동작
                         val begin = {
-                            // 소음 보정값은 계측 경로에서 전달하지 않는다 (RD-39). 첫 인자는 기본값이
-                            // 없어 기존과 같은 0.0 을 넘기고, 두 번째는 생략해 클래스 기본값을 쓴다.
-                            // noiseCaptureHandler.start(0.0) // M-01: 소음 캡처 비활성화
                             sensorStreamHandler.start()
                         }
 
-                        // SENSOR_DELAY_FASTEST 로 받으므로 실제 수신 속도는
-                        // 단말 하드웨어 주기이며 200Hz 를 넘는다. 따라서 Android 12+
-                        // 에서는 항상 고속 샘플링 권한 확보를 먼저 시도한다.
-                        // 근거: 측정 — 동일 단말 FASTEST 조건 raw 실측 421Hz
+                        // Android 12 이상 여부
                         val needsHighRate = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        // 고속 샘플링 권한 이름
                         val permName = "android.permission.HIGH_SAMPLING_RATE_SENSORS"
                         if (needsHighRate &&
                             ContextCompat.checkSelfPermission(this@MainActivity, permName)
                                 != PackageManager.PERMISSION_GRANTED
                         ) {
                             pendingStartCapture = begin
+                            // → 로직 이동: onRequestPermissionsResult
                             ActivityCompat.requestPermissions(
                                 this@MainActivity,
                                 arrayOf(permName),
@@ -89,19 +185,42 @@ class MainActivity : FlutterActivity() {
                         }
                         result.success(null)
                     }
+                    /**
+                     * 함수: stopCapture
+                     * 목적: Flutter의 sensor_channel.dart 가 보낸
+                     *       "stopCapture" 요청에 응답한다. 캡처를 멈추고
+                     *       원본 기록 파일 경로를 돌려준다.
+                     * 반환: result.success(String?) 로 응답. 저장된 파일
+                     *       경로, 저장하지 못했으면 null
+                     */
                     "stopCapture" -> {
-                        // 계약: 원본 기록 파일 경로를 돌려준다
+                        // 저장된 원본 파일 경로, 없으면 null
                         val recordPath = sensorStreamHandler.stop()
-                        // noiseCaptureHandler.stop() // M-01: 소음 캡처 비활성화
                         result.success(recordPath)
                     }
                     else -> {
+                        // 정의되지 않은 메서드 이름이면 미구현으로 응답한다
                         result.notImplemented()
                     }
                 }
             }
     }
 
+    /**
+     * 함수: onRequestPermissionsResult
+     * 목적: 시스템 권한 대화상자에 대한 사용자 응답을 받아, 기다리고
+     *       있던 쪽에 결과를 이어준다.
+     *       - 마이크 권한 응답이면 대기 중이던 `permissionCallback`에
+     *         승인 여부를 돌려준다
+     *       - 고속 샘플링 권한 응답이면, 승인 여부와 무관하게 대기 중이던
+     *         `pendingStartCapture`(캡처 시작 동작)를 실행한다. 미승인이면
+     *         저속으로라도 캡처는 계속 진행하되 경고를 로그로 남긴다
+     * 인자: requestCode — 어떤 권한 요청에 대한 응답인지 구분하는 값
+     *       (`REQ_AUDIO_PERMISSION` 또는 `REQ_HIGH_RATE_PERMISSION`)
+     *       permissions — 요청했던 권한 이름 목록. 여기서는 안 쓴다
+     *       grantResults — 각 권한에 대한 승인 결과. 인덱스가
+     *       permissions 와 대응한다
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -109,10 +228,12 @@ class MainActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_AUDIO_PERMISSION) {
+            // 마이크 권한 승인 여부
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
             permissionCallback?.success(granted)
             permissionCallback = null
         } else if (requestCode == REQ_HIGH_RATE_PERMISSION) {
+            // 고속 샘플링 권한 승인 여부
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
             if (!granted) {
                 android.util.Log.w(
@@ -126,6 +247,11 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * 함수: onDestroy
+     * 목적: 액티비티가 완전히 종료될 때 센서 · 소음 캡처 핸들러를
+     *       정리해, 자원을 계속 붙들고 있지 않게 한다.
+     */
     override fun onDestroy() {
         super.onDestroy()
         if (::sensorStreamHandler.isInitialized) {
