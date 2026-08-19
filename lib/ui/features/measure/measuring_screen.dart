@@ -79,13 +79,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   /// 중단시킨다
   bool _receivedRealSample = false;
 
-  /// 격자로 환산할 때 쓸 설정값. `_resampler`를 만들 때 한 번만 쓰인다
+  /// 격자(일정한 시간 간격으로 줄 세운 표의 각 행)로 환산할 때 쓸
+  /// 설정값. `_resampler`를 만들 때 한 번만 쓰인다
   static const CaptureConfig _captureConfig = CaptureConfig();
 
-  /// 수신한 센서 이벤트를 모아뒀다가, 측정이 끝나면 일정한 시간
-  /// 간격의 표(격자)로 환산하는 객체. `_sensorSub`가 데이터를 받을
-  /// 때마다 이벤트가 쌓이고, `_finishMeasurement()`에서 `resample()`을
-  /// 불러 최종 환산한다
+  /// 수신한 센서 이벤트를 모아뒀다가, 측정이 끝나면 격자로 환산하는
+  /// 객체. `_sensorSub`가 데이터를 받을 때마다 이벤트가 쌓이고,
+  /// `_finishMeasurement()`에서 `resample()`을 불러 최종 환산한다
   final GridResampler _resampler = GridResampler(config: _captureConfig);
 
   /// 화면에 보여줄, 남은 카운트다운 시간(초). `_startCountdown()`이
@@ -695,8 +695,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         '$minutes:${seconds.toString().padLeft(2, '0')}'; // 화면에 보여줄 "분:초"
 
     return PopScope(
-      // `PopScope`(기기 뒤로가기 제스처·버튼을 가로채는 위젯)로, 확인
-      // 없이 곧바로 화면을 나가지 못하게 막는다
+      // `PopScope`(기기 뒤로가기 제스처·버튼을 가로채는 위젯(widget,
+      // 화면을 이루는 구성 요소 하나하나를 부르는 말))로, 확인 없이
+      // 곧바로 화면을 나가지 못하게 막는다
       canPop: false, // 기본 뒤로가기 동작을 막는다 — 직접 처리해야 나갈 수 있다
       onPopInvokedWithResult: (didPop, _) async {
         // 기기 뒤로가기를 눌렀을 때 실행된다. didPop이 이미 true면

@@ -61,7 +61,8 @@ class SensorChannelManager {
   /// 목적: 안드로이드에서 배치(batch, 여러 개를 묶은 덩어리)로 보내는
   ///       원본 데이터를 센서 이벤트 스트림(stream, 값이 시간차를 두고
   ///       하나씩 계속 흘러나오는 것)으로 풀어 그대로 내보낸다.
-  ///       가공(보간 · 필터 · 보정)은 하지 않는다.
+  ///       가공(보간(양옆 실측값 사이를 비례로 채워 넣는 계산) · 필터 ·
+  ///       보정)은 하지 않는다.
   /// 반환: `NativeEvent`(센서 원본 이벤트 하나를 담는 자료형) 스트림.
   ///       형태가 깨진 데이터는 걸러내고 `droppedMapCount`만 늘린다
   Stream<NativeEvent> get nativeEventStream {

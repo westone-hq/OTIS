@@ -6,7 +6,8 @@ import 'dart:io';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 
 /// 클래스: VibrationFileWriter
-/// 목적: 격자 환산 결과를 참조 파일과 같은 구조의 텍스트 파일로 기록한다.
+/// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과를
+///       참조 파일과 같은 구조의 텍스트 파일로 기록한다.
 ///
 ///       참조 파일(H6N1AP65.txt)에서 확인한 구조:
 ///       1줄  포맷 식별자
@@ -46,7 +47,8 @@ class VibrationFileWriter {
     // gridIntervalNs는 격자 행 사이 시간 간격(나노초)이다. 1초(10억
     // 나노초)를 이 값으로 나누면 1초에 몇 행이 들어가는지가 나온다
     final rateHz = 1000000000 ~/ result.gridIntervalNs;
-    final buffer = StringBuffer(); // 완성할 문자열을 쌓아갈 버퍼
+    // 완성할 문자열을 쌓아갈 버퍼(값을 잠시 담아 두는 임시 저장 공간)
+    final buffer = StringBuffer();
     buffer.write(formatId);
     buffer.write(lineEnding);
     buffer.write('$rateHz');

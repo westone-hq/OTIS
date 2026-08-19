@@ -48,7 +48,8 @@ class NoiseCaptureHandler(private val context: Context) {
      *  정리한 뒤에는 null */
     private var audioRecord: AudioRecord? = null
 
-    /** 지금 녹음 중인지 여부. false로 바뀌면 배경 스레드의 반복이 끝난다 */
+    /** 지금 녹음 중인지 여부. false로 바뀌면 배경 스레드(thread, 동시에
+     *  실행되는 작업의 흐름 하나)의 반복이 끝난다 */
     private var isRecording = false
 
     /** 소리를 계속 읽어 dBA를 계산하는 배경 스레드. 없으면 null */

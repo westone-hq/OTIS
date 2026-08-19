@@ -12,7 +12,8 @@ class CaptureConfig {
     this.normalIntervalMaxUs = defaultNormalIntervalMaxUs,
   });
 
-  /// 목적: 격자 환산의 목표 수집 속도다. 네이티브에는 전달하지 않는다 — 네이티브는
+  /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산의 목표
+  ///       수집 속도다. 네이티브에는 전달하지 않는다 — 네이티브는
   ///       SENSOR_DELAY_FASTEST 로 받고, 이 값은 Dart 쪽 격자 계산에만 쓴다.
   final int targetSampleRateHz;
 

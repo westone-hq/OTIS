@@ -6,8 +6,10 @@ import 'dart:io';
 ///       - linear: OS가 자체적으로 중력을 제거한 선형 가속도 (당사에서는 부정확하여 미사용)
 enum NativeEventType { accel, gravity, linear }
 
-/// 목적: 안드로이드 센서 콜백에서 도착한 가공되지 않은 1건의 센서 이벤트를 담는다.
-///       값에 대한 어떠한 가공(보간, 필터, 보정)도 이 단계에서는 수행하지 않는다.
+/// 목적: 안드로이드 센서 콜백(callback, 값이 준비되면 시스템이 대신
+///       불러주는 함수)에서 도착한 가공되지 않은 1건의 센서 이벤트를
+///       담는다. 값에 대한 어떠한 가공(보간(양옆 실측값 사이를 비례로
+///       채워 넣는 계산), 필터, 보정)도 이 단계에서는 수행하지 않는다.
 class NativeEvent {
   const NativeEvent({
     required this.type,
@@ -73,6 +75,7 @@ class NativeEvent {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
   }
 
+  /// 함수: fromChannelMap
   /// 목적: 안드로이드 네이티브(EventChannel)에서 쏘아준 딕셔너리(Map) 형태의 데이터를 NativeEvent 객체로 조립한다.
   /// 인자: map — 안드로이드에서 전달받은 Map 데이터
   /// 반환: 파싱된 NativeEvent 객체. 데이터 타입이 안 맞거나 누락되면 null을 반환하여 유령 샘플을 차단한다.

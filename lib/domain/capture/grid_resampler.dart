@@ -6,7 +6,8 @@ import 'dart:math' as math;
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
-/// 목적: 격자 한 행의 진동값을 담는다. 시각은 담지 않는다.
+/// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 한 행의 진동값을
+///       담는다. 시각은 담지 않는다.
 ///       출력 파일에 시간 열이 없으므로 시각은 행 번호로만 결정된다
 ///       (t = t0Ns + 행번호 x gridIntervalNs). 시각을 행마다 들고 다니면
 ///       등간격이 아닌 값이 섞여 들어갈 여지가 생긴다.
@@ -184,6 +185,7 @@ class GridResampler {
   /// 목적: 누적된 gravity 이벤트 수를 반환한다 (진행 표시용).
   int get gravityCount => _gravity.length;
 
+  /// 함수: onEvent
   /// 목적: 네이티브에서 올라온 원본 이벤트 1건을 종류별로 누적한다.
   ///       가공은 하지 않고, 환산에 쓸 수 없는 것만 걸러 집계한다.
   /// 인자: event — 네이티브에서 도착한 원본 이벤트
@@ -218,7 +220,8 @@ class GridResampler {
   /// 목적: 한 종류의 목록에 이벤트를 넣되, 환산에 쓸 수 없는 두 경우를 걸러낸다.
   /// 인자: target — 누적할 목록
   ///       event — 검사할 이벤트
-  /// 근거: 측정 — 측정 시작 직후 센서 버퍼가 채워지기 전 전 축 0 이 올라오는 사례 확인.
+  /// 근거: 측정 — 측정 시작 직후 센서 버퍼(값을 잠시 담아 두는 임시
+  ///       저장 공간)가 채워지기 전 전 축 0 이 올라오는 사례 확인.
   ///       이 값을 그대로 쓰면 motion = 0 - 1000 = -1000 mg 의 없는 진동이 만들어진다
   void _accept(List<NativeEvent> target, NativeEvent event) {
     if (event.xMg == 0.0 && event.yMg == 0.0 && event.zMg == 0.0) {
