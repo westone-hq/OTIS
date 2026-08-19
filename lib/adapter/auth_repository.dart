@@ -1,9 +1,14 @@
+// 작성: 2026-08-19 10:35:09
+// 작성자: 박건준
+
+/// 클래스: AuthRepository
 /// 목적: 앱 내의 로그인, 로그아웃, 사용자 세션 관리 등 인증 관련 기능을 정의하는 인터페이스(설계도)
 ///       현재는 서버 연동이 미정이라 임시로 항상 로그인된 것처럼 우회 처리되어 있다.
 /// 근거: 미정 — 서버 로그인 API 연동 방식이 정해지면 원복 및 재작성 필요
 abstract class AuthRepository {
   static AuthRepository instance = LocalAuthRepository();
 
+  /// 목적: 지금 로그인된 사용자의 식별자를 돌려준다. 로그인하지 않았으면 null
   String? get currentUserId;
 
   /// 목적: 앱을 켰을 때 이전에 로그인한 기록(자동 로그인)이 남아있는지 확인하고 아이디를 가져온다.
@@ -19,7 +24,12 @@ abstract class AuthRepository {
   Future<void> logout();
 }
 
+/// 클래스: LocalAuthRepository
+/// 목적: `AuthRepository`의 임시 구현체. 서버 로그인이 아직 연동되지
+///       않아, 실제 인증 없이 항상 성공·로그인된 것처럼 동작한다.
 class LocalAuthRepository implements AuthRepository {
+  /// 목적: 서버 로그인이 아직 연동되지 않아, 실제 로그인 여부와 관계없이
+  ///       항상 같은 임시 아이디를 돌려준다
   @override
   String? get currentUserId => 'T00000';
 
@@ -40,6 +50,5 @@ class LocalAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> logout() async {
-  }
+  Future<void> logout() async {}
 }

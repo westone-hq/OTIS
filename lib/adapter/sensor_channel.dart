@@ -157,6 +157,7 @@ class SensorChannelManager {
   ///       시간 초과되면 null을 담는다
   Future<void> stopCapture() async {
     try {
+      // → 로직 이동: MainActivity.kt의 stopCapture
       final String? path = await _methodChannel
           .invokeMethod<String>('stopCapture')
           .timeout(const Duration(milliseconds: 500)); // 응답 대기 한도
