@@ -1,6 +1,8 @@
 /*
- * 작성: 2026-08-19 08:32:13
- * 작성자: 박건준
+ * 작성: 2026-08-19 10:35:00
+ * 작성자: 박희정
+ * 수정: 2026-08-19 13:25:00
+ * 수정자: 박희정
  */
 package com.otis.vibration_checker
 
@@ -19,44 +21,14 @@ import java.io.File
 import java.io.FileWriter
 
 /**
- * 클래스: SensorStreamHandler
- * 목적: 안드로이드 가속도·중력 센서 원본 이벤트 수집기.
+ * 폰의 흔들림·중력 센서 값을 받아 처리하는 담당입니다.
  *
- * - TYPE_ACCELEROMETER(raw)와 TYPE_GRAVITY 두 종류만 구독한다.
- *   TYPE_LINEAR_ACCELERATION(안드로이드가 raw에서 자체 계산한 중력값을
- *   이미 빼서 내보내는 합성 센서)은 쓰지 않는다. 아래 중력 채널
- *   설명처럼 안드로이드의 합성 계산식은 공개되어 있지 않다. 그래서 이
- *   프로젝트는 그 합성값을 그대로 믿는 대신, raw와 gravity를 각각
- *   따로 받아 직접 뺀 값을 진동으로 쓴다.
- * - 요청 주기는 SENSOR_DELAY_FASTEST 로 고정한다. 목표 주기(256Hz)는
- *   Dart 격자에서 정하며, 여기서 특정 Hz 를 요청하면 시스템이 하드웨어
- *   주기의 정수배로 솎아 내려보내 최대 속도를 잃는다.
- * - 이 클래스는 보간·리샘플을 하지 않는다. 콜백으로 도착한 값을 그대로
- *   파일에 기록하고 채널로 보낸다. 등간격으로 맞추는 계산은 Dart 쪽
- *   `GridResampler`가 측정이 끝난 뒤 한다.
+ * 값이 오면 그대로 파일에 적고,
+ * 조금씩 모아서 화면(Flutter)으로도 보냅니다.
+ * 값을 예쁘게 고치거나 사이를 메우지는 않습니다.
  *
- * 안드로이드 센서 검출 방식
- * - 센서는 하드웨어에 고정된 주기로 값을 만든다. 앱이 이 주기를 올릴 수 없다.
- *   registerListener 의 요청 주기는 상한이 아니라 희망값이며, 시스템은
- *   하드웨어 주기의 정수배로만 내려준다. 하드웨어보다 빠르게 달라는 요청은
- *   무시되고 하드웨어 주기가 그대로 온다.
- * - 콜백은 등록할 때 넘긴 Handler 의 스레드에서 실행된다. 넘기지 않으면
- *   메인 스레드에서 실행되며, 2종 센서 합쳐 초당 수백 회 호출이 화면 갱신을
- *   막는다. 그래서 전용 HandlerThread 를 만들어 넘긴다.
- * - 하드웨어 주기는 기기마다 다르다. 특정 값을 전제한 처리를 하지 않는다.
- *   실측: 검증 기기 2374.785us(421.2Hz), 대상 기기 2124.5us(470.7Hz).
- *
- * 중력 채널(TYPE_GRAVITY) 의 성질
- * - 물리 센서가 아니다. 센서 허브가 가속도와 회전 정보를 합쳐 계산해 내보내는
- *   가상 센서다. 산출식은 공개되어 있지 않다.
- * - 실측 성질: 벡터 크기가 정확히 1000mg 로 고정된다(변동 2.8e-4 mg).
- *   즉 크기 정보가 없는 정규화된 방향 벡터이며, 어느 쪽이 아래인지만 알려준다.
- *   근거: 측정 — 20260809-170017_raw.txt
- * - 방향이 변하는 속도는 5ms 당 평균 0.063도(초당 12.7도) 수준으로 1Hz 미만의
- *   저역이다. 그래서 격자 간격(3.906ms)보다 느린 주기로 받아도 두 실측 사이를
- *   선형 보간해 쓸 수 있다.
- * - 가속도 채널과의 주기 비율은 기기마다 다르다. 검증 기기는 가속도의 정확히
- *   절반이었으나 대상 기기는 2.35 배로 무관하다. 비율을 가정하지 않는다.
+ * 중력 값은 따로 달린 부품이 아니라,
+ * 폰이 계산해서 알려 주는 “아래 방향”에 가깝습니다.
  */
 class SensorStreamHandler(
     private val context: Context,
@@ -64,178 +36,287 @@ class SensorStreamHandler(
 ) : EventChannel.StreamHandler, SensorEventListener {
 
     companion object {
+        /**
+         * 기록장에서 이 담당 메시지를 찾을 때 쓰는 이름입니다.
+         */
         private const val TAG = "SensorStreamHandler"
 
-        /** m/s² → mg 환산. 근거: 표준 — 표준 중력 9.80665, 1000 / 9.80665 */
+        /**
+         * 폰이 주는 단위(m/s²)를 우리가 쓰는 단위(mg)로 바꿀 때 곱하는 수입니다.
+         */
         private const val MPS2_TO_MG = 101.97162129779283
 
-        /** 채널 전송 배치 크기. 근거: 측정 — 기존 구현에서 채널 오버헤드 대책으로 검증됨 */
+        /**
+         * 화면에 한 번에 보낼 샘플 개수입니다.
+         * 하나하나 보내면 너무 바쁘니까 32개씩 묶습니다.
+         */
         private const val BATCH_SIZE = 32
 
+        /**
+         * 흔들림(가속도) 값을 적을 때 쓰는 이름입니다.
+         */
         private const val TYPE_ACCEL = "accel"
+
+        /**
+         * 중력 값을 적을 때 쓰는 이름입니다.
+         */
         private const val TYPE_GRAVITY = "gravity"
     }
 
-    /** 센서 목록 조회·구독을 담당하는 시스템 서비스. `start()`가 채우고 `stop()`이 등록을 해제한다 */
+    /**
+     * 센서를 켜고 끄는 관리자입니다.
+     * 시작 전에는 비어 있습니다.
+     */
     private var sensorManager: SensorManager? = null
+
+    /**
+     * 흔들림 센서입니다. 없으면 비어 있습니다.
+     */
     private var accelSensor: Sensor? = null
+
+    /**
+     * 중력 센서입니다. 없으면 비어 있습니다.
+     */
     private var gravitySensor: Sensor? = null
-    /** Flutter로 데이터를 흘려보낼 통로. `onListen()`이 연결하고 `onCancel()`이 끊는다 */
+
+    /**
+     * 화면으로 값을 밀어 넣는 출구입니다.
+     * 화면이 “듣기 시작”했을 때만 채워집니다.
+     */
     private var eventSink: EventChannel.EventSink? = null
-    /** 메인(UI) 스레드에서 실행할 작업을 예약하는 핸들러. 센서 콜백은
-     *  별도 스레드에서 오므로, Flutter로 값을 보낼 때는 이걸 거쳐 메인
-     *  스레드로 옮긴다 */
+
+    /**
+     * 화면 쪽 일꾼에게 일을 맡길 때 씁니다.
+     * 값을 화면으로 보낼 때 여기를 거칩니다.
+     */
     private val mainHandler = Handler(Looper.getMainLooper())
-    /** 센서 콜백을 처리하는 전용 스레드. `start()`가 만들고 `stop()`이 정리한다 */
+
+    /**
+     * 센서 값을 받을 전용 배경 작업입니다.
+     * 멈추면 비웁니다.
+     */
     private var sensorThread: HandlerThread? = null
-    /** `sensorThread`에서 실행되는 핸들러. 센서 등록·해제에 쓴다 */
+
+    /**
+     * 위 배경 작업에 일을 넣는 도구입니다.
+     * 센서 등록할 때 넘깁니다.
+     */
     private var sensorHandler: Handler? = null
 
+    /**
+     * 직전에 받은 흔들림 값의 시각입니다.
+     * 간격(얼마나 떨어졌는지)을 계산할 때 씁니다.
+     */
     private var lastAccelTsNs: Long = 0L
+
+    /**
+     * 직전에 받은 중력 값의 시각입니다.
+     */
     private var lastGravityTsNs: Long = 0L
 
-    /** Flutter로 아직 못 보낸 이벤트를 모아두는 버퍼. `BATCH_SIZE`만큼 차면 한 번에 내보낸다 */
+    /**
+     * 화면으로 보내기 전에 샘플을 모아 두는 바구니입니다.
+     * 한 칸에는 type, 시각, x/y/z 같은 정보가 들어갑니다.
+     */
     private val batchBuffer = ArrayList<Map<String, Any>>(BATCH_SIZE)
 
-    /** 지금 기록 중인 원본 파일. 열려 있지 않으면 null */
+    /**
+     * 지금 열고 있는 원본 기록 파일입니다.
+     * 안 열었거나 닫으면 비어 있습니다.
+     */
     private var recordFile: File? = null
-    /** `recordFile`에 쓰는 버퍼링된 writer. 열려 있지 않으면 null */
+
+    /**
+     * 위 파일에 글을 쓰는 펜입니다.
+     */
     private var recordWriter: BufferedWriter? = null
-    /** 가장 최근에 닫은 기록 파일의 경로. `stop()`이 중복 호출됐을 때
-     *  다시 정지시키지 않고 이 값을 그대로 돌려준다 */
+
+    /**
+     * 직전에 닫은 파일의 위치(경로)입니다.
+     * 정지를 두 번 불러도 위치를 다시 알려 줄 수 있게 보관합니다.
+     */
     private var lastClosedRecordPath: String? = null
 
     /**
-     * 수집을 시작한다. 요청 주기는 단말이 줄 수 있는 최대 속도로 고정한다.
+     * 센서 수집을 시작합니다.
      *
-     * 목표 주기(256Hz)는 Dart 격자에서 정한다. 여기서 특정 Hz 를 요청하면
-     * 시스템이 하드웨어 주기의 정수배로 솎아 내려보내 최대 속도를 잃는다.
-     * 근거: 측정 — 동일 단말 요청 주기별 검증에서 128Hz 요청 시 210Hz,
-     * 64Hz 요청 시 70Hz 로 수신됨 확인 (하드웨어 주기 2374.785us 의 정수배)
+     * 파일을 열고, 흔들림·중력 센서를 “가장 빠르게” 받도록 등록합니다.
+     * 실제 속도는 폰이 정합니다.
      */
     fun start() {
+        // 센서 관리자를 가져옵니다
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager?
+        // 흔들림 센서를 찾습니다
         accelSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        // 중력 센서를 찾습니다
         gravitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
 
+        // 둘 중 하나라도 없으면
         if (accelSensor == null || gravitySensor == null) {
-            Log.e(TAG, "Required sensors missing. accel=${accelSensor != null}, gravity=${gravitySensor != null}")
+            // 오류를 기록하고 시작하지 않습니다
+            Log.e(
+                TAG,
+                "Required sensors missing. accel=${accelSensor != null}, " +
+                    "gravity=${gravitySensor != null}"
+            )
             return
         }
 
+        // 직전 시각을 초기화합니다
         lastAccelTsNs = 0L
         lastGravityTsNs = 0L
+        // 이전 측정 경로 기억을 지웁니다
         lastClosedRecordPath = null
+        // 바구니 비웁니다 (다른 작업과 겹치지 않게 잠깐 잠급니다)
         synchronized(batchBuffer) { batchBuffer.clear() }
+        // 새 기록 파일을 엽니다
         openRecordFile()
 
+        // 센서 전용 배경 작업을 만들고 시작합니다
         val thread = HandlerThread("otis-sensor").also { it.start() }
+        // 그 작업에 일을 넣을 도구를 만듭니다
         val handler = Handler(thread.looper)
+        // 나중에 끌 수 있게 보관합니다
         sensorThread = thread
         sensorHandler = handler
 
+        // 흔들림 센서를 등록합니다 (가장 빠른 주기, 배경 작업에서 받음)
         sensorManager?.registerListener(
             this, accelSensor, SensorManager.SENSOR_DELAY_FASTEST, 0, handler,
         )
+        // 중력 센서도 같은 방식으로 등록합니다
         sensorManager?.registerListener(
             this, gravitySensor, SensorManager.SENSOR_DELAY_FASTEST, 0, handler,
         )
+        // 시작했다고 기록합니다
         Log.i(TAG, "started: SENSOR_DELAY_FASTEST, dedicated handler thread")
     }
 
     /**
-     * 함수: stop
-     * 목적: 센서 수집을 멈추고 지금까지 쌓인 값을 마무리해 파일로
-     *       확정한다. Flutter의 stopCapture 요청과, 화면이 완전히
-     *       종료될 때 안전망으로 도는 MainActivity.onDestroy() 양쪽에서
-     *       부를 수 있다. 이미 한 번 정지 처리를 마친 뒤 다시
-     *       불리면(안전망이 뒤늦게 도는 경우) 센서를 다시 건드리지
-     *       않고 저장해 둔 경로를 그대로 돌려준다.
-     * 반환: 이번 측정의 원본 기록 파일 절대 경로. 기록에 실패했으면 null
+     * 센서 수집을 멈춥니다.
+     *
+     * 남은 샘플을 화면에 보내고, 파일을 닫은 뒤
+     * 파일 위치를 돌려줍니다. 없으면 비어 있는 값을 줍니다.
      */
     fun stop(): String? {
-        // 이미 정지 처리를 마쳤다면(recordWriter가 비어 있고 경로를
-        // 저장해 뒀다면) 다시 정지시키지 않고 그 경로를 그대로 돌려준다
+        // 이미 닫혀 있고 예전 위치만 있으면 그 위치를 다시 줍니다
         if (recordWriter == null && lastClosedRecordPath != null) {
             return lastClosedRecordPath
         }
 
+        // 센서 알림을 끊습니다
         sensorManager?.unregisterListener(this)
+        // 배경 작업에 종료를 요청합니다
         sensorThread?.quitSafely()
+        // 최대 0.5초까지 기다리니다
         sensorThread?.join(500)
+        // 자리를 비웁니다
         sensorThread = null
         sensorHandler = null
 
-        // 채널로 아직 못 보낸 배치 잔여분이 있으면 마저 내보낸다.
-        // 그냥 두면 이번 측정의 마지막 값 몇 개가 유실된다
+        // 바구니에 32개보다 적게 남은 것도 화면에 보냅니다
+        // remainder: 남은 샘플 목록 (없으면 비어 있음)
         var remainder: List<Map<String, Any>>? = null
+        // 바구니 잠깐 잠급니다
         synchronized(batchBuffer) {
+            // 남은 게 있으면
             if (batchBuffer.isNotEmpty()) {
+                // 복사본을 만들고
                 remainder = ArrayList(batchBuffer)
+                // 원본 바구니는 비웁니다
                 batchBuffer.clear()
             }
         }
+        // 남은 게 있으면 화면 쪽으로 보냅니다
         remainder?.let { batch ->
             mainHandler.post { eventSink?.success(batch) }
         }
 
-        // → 로직 이동: closeRecordFile()
-        val path = closeRecordFile() // 기록 파일을 닫고 받은 경로
+        // 파일을 닫고 위치를 받습니다
+        val path = closeRecordFile()
+        // 다음에 쓸 수 있게 위치를 기억합니다
         lastClosedRecordPath = path
+        // 정지했다고 기록합니다
         Log.i(TAG, "stopped. record=$path")
+        // 위치를 돌려줍니다
         return path
     }
 
+    /**
+     * 화면이 “센서 값 듣기 시작”할 때 불립니다.
+     *
+     * 출구를 저장하고, 듣기 전에 바구니 쌓인 값이 있으면 바로 보냅니다.
+     */
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+        // 앞으로 값을 넣을 출구를 보관합니다
         this.eventSink = events
-        // 구독 전에 도착해 버퍼에 쌓인 이벤트를 즉시 내보낸다 (유실 방지).
+        // pending: 듣기 전에 쌓여 있던 샘플 (없으면 비어 있음)
         var pending: List<Map<String, Any>>? = null
+        // 바구니 잠깐 잠급니다
         synchronized(batchBuffer) {
+            // 쌓인 게 있으면
             if (batchBuffer.isNotEmpty()) {
+                // 복사본을 만들고
                 pending = ArrayList(batchBuffer)
+                // 원본은 비웁니다
                 batchBuffer.clear()
             }
         }
+        // 쌓여 있던 게 있으면 바로 보냅니다
         pending?.let { batch ->
             mainHandler.post { events?.success(batch) }
         }
     }
 
     /**
-     * 함수: onCancel
-     * 목적: `EventChannel` 구독이 끊길 때(Flutter 쪽이 스트림을 그만
-     *       듣기로 했을 때) 호출된다. 여기서는 파일을 닫지 않는다 —
-     *       Flutter는 구독 해제와 stopCapture 요청을 함께 실행하는데,
-     *       여기서 먼저 파일을 닫아버리면 뒤이어 오는 stopCapture
-     *       요청이 돌려줄 파일 경로가 이미 비워진 뒤라 null이 된다.
-     *       실제 정지·파일 마무리는 `stop()`에서만 한다.
-     * 인자: arguments — Flutter가 넘긴 부가 인자. 여기서는 쓰지 않는다
+     * 화면이 “듣기 그만”할 때 불립니다.
+     *
+     * 출구만 끊습니다. 여기서 측정까지 멈추지 않습니다.
+     * (화면이 따로 “멈춰”를 부를 때 파일 위치를 받아야 해서입니다.)
      */
     override fun onCancel(arguments: Any?) {
+        // 출구를 비웁니다
         this.eventSink = null
     }
 
+    /**
+     * 센서에서 새 값이 올 때마다 불립니다.
+     *
+     * 파일에 한 줄 적고, 바구니에 넣은 뒤
+     * 32개가 차면 화면으로 보냅니다.
+     */
     override fun onSensorChanged(event: SensorEvent?) {
+        // 값이 비어 있으면 끝냅니다
         if (event == null) return
 
+        // 흔들림인지 중력인지 이름으로 바꿉니다
         val type = when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> TYPE_ACCEL
             Sensor.TYPE_GRAVITY -> TYPE_GRAVITY
+            // 둘 다 아니면 무시합니다
             else -> return
         }
 
+        // 이번 값의 시각입니다
         val tsNs = event.timestamp
+        // 같은 종류의 직전 시각입니다
         val prevNs = if (type == TYPE_ACCEL) lastAccelTsNs else lastGravityTsNs
+        // 직전과 이번 사이 간격입니다 (첫 값이면 0)
         val dtUs = if (prevNs > 0L && tsNs > prevNs) (tsNs - prevNs) / 1000L else 0L
+        // 이번 시각을 직전으로 기억합니다
         if (type == TYPE_ACCEL) lastAccelTsNs = tsNs else lastGravityTsNs = tsNs
 
+        // x/y/z를 우리가 쓰는 단위로 바꿉니다
         val xMg = event.values[0] * MPS2_TO_MG
         val yMg = event.values[1] * MPS2_TO_MG
         val zMg = event.values[2] * MPS2_TO_MG
+        // 시각도 더 큰 단위로 바꿉니다
         val tsUs = tsNs / 1000L
 
+        // 원본 파일에 한 줄을 적습니다
         appendRecordLine(type, tsUs, xMg, yMg, zMg, dtUs)
 
+        // 화면으로 보낼 한 점의 정보 묶음입니다
         val sampleMap = mapOf<String, Any>(
             "type" to type,
             "tsUs" to tsUs,
@@ -246,61 +327,71 @@ class SensorStreamHandler(
             "noiseDba" to noiseCaptureHandler.latestDba
         )
 
+        // 지금 화면에 보낼 묶음 (없으면 비어 있음)
         var readyBatch: List<Map<String, Any>>? = null
+        // 바구니 잠깐 잠급니다
         synchronized(batchBuffer) {
+            // 이번 샘플을 바구니에 넣습니다
             batchBuffer.add(sampleMap)
-            // sink 미연결 상태에서 버퍼가 무한정 커지지 않도록 상한.
-            // 초과 시 가장 오래된 배치 크기만큼 버린다.
+            // 화면이 안 듣는데 너무 많이 쌓이면 오래된 것부터 일부 버립니다
             if (eventSink == null && batchBuffer.size > BATCH_SIZE * 8) {
                 batchBuffer.subList(0, BATCH_SIZE).clear()
             }
-            // sink 가 있고 한 배치가 찼으면 내보낼 배치를 뜬다.
+            // 화면이 듣고 있고 32개가 찼으면 보낼 묶음을 만듭니다
             if (eventSink != null && batchBuffer.size >= BATCH_SIZE) {
                 readyBatch = ArrayList(batchBuffer)
                 batchBuffer.clear()
             }
         }
+        // 보낼 묶음이 있으면 화면으로 보냅니다
         readyBatch?.let { batch ->
             mainHandler.post { eventSink?.success(batch) }
         }
     }
 
+    /**
+     * 센서 정확도가 바뀌었을 때 불립니다.
+     * 이 앱에서는 쓰지 않습니다.
+     */
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // 사용하지 않음
+        // 사용하지 않습니다
     }
 
     /**
-     * 함수: openRecordFile
-     * 목적: 원본 기록 파일을 앱 전용 영속 저장소에 새로 연다. 안드로이드의
-     *       캐시 폴더(cacheDir)는 시스템이 저장 공간이 부족하면 사용자
-     *       동의 없이 그 안의 파일을 임의로 지울 수 있어, 측정 원본을
-     *       거기에 두면 안전하게 보관되지 않는다. 그래서 캐시 폴더 대신
-     *       외장 저장소(없으면 앱 전용 내부 저장소)를 쓴다.
+     * 원본 기록 파일을 새로 엽니다.
+     * 오래 남는 앱 폴더에 저장합니다.
      */
     private fun openRecordFile() {
-        // 혹시 이전에 열린 채로 남은 파일이 있으면 먼저 정리한다
-        // → 로직 이동: closeRecordFile()
+        // 예전 파일이 열려 있으면 먼저 닫습니다
         closeRecordFile()
         try {
-            // 외장 저장소가 없으면 앱 전용 내부 저장소를 쓴다
+            // 저장할 폴더를 정합니다 (밖 폴더, 없으면 안쪽 폴더)
             val dir = context.getExternalFilesDir(null) ?: context.filesDir
-            // 새로 만들 기록 파일
+            // 파일 이름에 시각을 넣어 겹치지 않게 합니다
             val file = File(dir, "raw_native_${System.currentTimeMillis()}.txt")
-            val writer = BufferedWriter(FileWriter(file)) // 이 파일에 쓸 writer
+            // 파일에 쓸 펜을 만듭니다
+            val writer = BufferedWriter(FileWriter(file))
+            // 맨 위에 설명 줄을 적습니다
             writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트\n")
             writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")
             writer.write("# type: accel | gravity\n")
             writer.write("# request: SENSOR_DELAY_FASTEST (목표 주기는 Dart 격자에서 결정)\n")
+            // 당장 파일에 반영합니다
             writer.flush()
+            // 파일과 펜을 보관합니다
             recordFile = file
             recordWriter = writer
         } catch (e: Exception) {
+            // 실패하면 기록하고 비웁니다
             Log.e(TAG, "Failed to open record file", e)
             recordFile = null
             recordWriter = null
         }
     }
 
+    /**
+     * 원본 파일에 한 줄을 추가합니다.
+     */
     private fun appendRecordLine(
         type: String,
         tsUs: Long,
@@ -309,32 +400,36 @@ class SensorStreamHandler(
         zMg: Double,
         dtUs: Long
     ) {
+        // 펜이 없으면 그냥 끝냅니다
         val writer = recordWriter ?: return
         try {
+            // 타입 시각 x y z 간격 한 줄을 적습니다
             writer.write("$type $tsUs $xMg $yMg $zMg $dtUs\n")
         } catch (e: Exception) {
+            // 쓰기 실패면 기록합니다
             Log.e(TAG, "Failed to append record line", e)
         }
     }
 
     /**
-     * 함수: closeRecordFile
-     * 목적: 열려 있는 원본 기록 파일을 마무리한다. 버퍼에 남아 있던
-     *       내용을 디스크에 쓰고(flush) 파일을 닫는다. 닫는 도중
-     *       예외가 나도 무시하고 계속 진행한다 — 이미 flush 된
-     *       내용까지는 파일에 남아 있으므로, 닫기 실패 때문에 측정
-     *       전체를 실패로 만들 이유가 없다.
-     * 반환: 방금 닫은 파일의 절대 경로. 파일을 연 적이 없으면 null
+     * 파일을 닫고 전체 위치(경로)를 돌려줍니다.
      */
     private fun closeRecordFile(): String? {
         try {
+            // 남은 글을 밀어 넣고
             recordWriter?.flush()
+            // 펜을 닫습니다
             recordWriter?.close()
         } catch (_: Exception) {
+            // 닫다 실패해도 아래 정리는 계속합니다
         }
+        // 펜을 비웁니다
         recordWriter = null
-        val path = recordFile?.absolutePath // 지금 닫은 파일의 경로
+        // 파일 위치를 받습니다
+        val path = recordFile?.absolutePath
+        // 파일을 비웁니다
         recordFile = null
+        // 위치를 돌려줍니다
         return path
     }
 }
