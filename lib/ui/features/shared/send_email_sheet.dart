@@ -1,6 +1,3 @@
-// 작성: 2026-08-19 10:33:43
-// 작성자: 박건준
-
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -16,6 +13,7 @@ import 'package:vibration_checker/adapter/measurement_repository.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
 
+/// 작성: 2026-08-19 10:33:43 · 박건준
 /// 함수: showSendEmailSheet
 /// 목적: 이메일 발송 화면을 `showModalBottomSheet`(화면 아래에서 위로
 ///       올라오는 바텀 시트를 띄우는 Flutter 함수)로 띄운다. 측정
@@ -63,6 +61,7 @@ Future<void> showSendEmailSheet(
   );
 }
 
+/// 작성: 2026-08-19 10:33:43 · 박건준
 /// 클래스: SendEmailSheet
 /// 목적: 이메일 발송 바텀 시트 위젯. 등록된 수신자를 보여주고, 보낼
 ///       항목을 선택받아 기기의 메일 앱을 띄운다. 어르신도 쓰기
@@ -81,10 +80,6 @@ class SendEmailSheet extends StatefulWidget {
   /// 메일 본문. attachmentPaths 경로에서만 쓰인다
   final String? body;
 
-  /// 위젯 테스트 등에서 실제 기기 메일 앱 호출을 가로채 대신 실행할
-  /// 함수. 지정하지 않으면(null) 실제 `FlutterEmailSender.send()`를 쓴다
-  static Future<void> Function(Email email)? overrideEmailSender;
-
   const SendEmailSheet({
     super.key,
     this.jobId,
@@ -97,6 +92,7 @@ class SendEmailSheet extends StatefulWidget {
   State<SendEmailSheet> createState() => _SendEmailSheetState();
 }
 
+/// 작성: 2026-08-19 10:33:43 · 박건준
 /// 클래스: _SendEmailSheetState
 /// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신자를
 ///       확인하고, 보낼 항목을 선택받아 발송을 실행한다.
@@ -125,6 +121,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 채우고, `_send()`가 이 값을 보고 등록 안내를 띄울지 정한다
   bool _isEmailSet = false;
 
+  /// 작성: 2026-08-19 10:33:43 · 박건준
   /// 함수: initState
   /// 목적: 이 시트가 화면에 나타날 때 한 번, 저장된 수신자 이메일을
   ///       불러와 화면에 표시한다.
@@ -135,6 +132,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     _loadRecipient();
   }
 
+  /// 작성: 2026-08-19 10:33:43 · 박건준
   /// 함수: _loadRecipient
   /// 목적: 지금 로그인된 사용자 앞으로 저장된 수신 이메일을 불러와
   ///       화면에 표시할 상태를 채운다. 로그인 정보가 없거나, 이메일을
@@ -161,6 +159,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     });
   }
 
+  /// 작성: 2026-08-19 10:33:43 · 박건준
   /// 함수: _send
   /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 등록되지
   ///       않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
@@ -170,10 +169,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       이미 설치된 메일 앱(Gmail 등)의 작성 화면을 그 내용으로
   ///       미리 채워서 띄운다. 실제 발송 버튼은 사용자가 그 메일
   ///       앱에서 직접 눌러야 한다 — 이 함수가 메일을 대신 보내주는
-  ///       것은 아니다. 자동화된 위젯 테스트에서는 실제 메일 앱을
-  ///       띄우면 테스트가 거기서 멈춰버리므로, `overrideEmailSender`를
-  ///       지정해 그 자리에서 대신 테스트 코드가 만든 함수가
-  ///       실행되게 한다.
+  ///       것은 아니다.
   Future<void> _send() async {
     if (!_isEmailSet) {
       showDialog(
@@ -214,12 +210,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
           // → 로직 이동: _buildJobEmail()
           : await _buildJobEmail(widget.jobId!);
 
-      if (SendEmailSheet.overrideEmailSender != null) {
-        await SendEmailSheet.overrideEmailSender!(email);
-      } else {
-        // → 로직 이동: 기기 메일 앱(외부)
-        await FlutterEmailSender.send(email);
-      }
+      // → 로직 이동: 기기 메일 앱(외부)
+      await FlutterEmailSender.send(email);
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -255,6 +247,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     }
   }
 
+  /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다 (기존 경로, 동작 변경 없음).
   Future<Email> _buildJobEmail(String jobId) async {
     var result = await MeasurementRepository.instance.load(jobId);
@@ -318,6 +312,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     );
   }
 
+  /// 작성: 2026-08-19 10:33:43 · 박건준
   /// 함수: _buildAttachmentEmail
   /// 목적: 전달받은 첨부 경로로 메일의 제목·본문·수신자·첨부파일
   ///       목록을 정한다. 저장소 조회나 측정 결과 객체 생성 과정을

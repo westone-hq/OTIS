@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:vibration_checker/model/sensor_sample.dart';
 
+/// 클래스: MeasurementResult
 /// 목적: 진동 분석 엔진이 계산을 마친 최종 측정 결과 데이터를 담는다.
 class MeasurementResult {
   final String id;
@@ -313,26 +314,31 @@ class MeasurementResult {
   factory MeasurementResult.fromJson(String source) =>
       MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
+  /// 함수: xExceeded
   /// 목적: X축 진동이 위험 기준치를 넘었는지 확인한다.
   /// 반환: 기준치(10.0mg) 초과 시 true
   /// 근거: 측정 — 기준 초과 알림 로직
   bool get xExceeded => xPtp > 10.0;
-  
+
+  /// 함수: yExceeded
   /// 목적: Y축 진동이 위험 기준치를 넘었는지 확인한다.
   /// 반환: 기준치(10.0mg) 초과 시 true
   /// 근거: 측정 — 기준 초과 알림 로직
   bool get yExceeded => yPtp > 10.0;
-  
+
+  /// 함수: zExceeded
   /// 목적: Z축 진동이 위험 기준치를 넘었는지 확인한다.
   /// 반환: 기준치(15.0mg) 초과 시 true
   /// 근거: 측정 — 기준 초과 알림 로직
   bool get zExceeded => zPtp > 15.0;
-  
+
+  /// 함수: noiseExceeded
   /// 목적: 최대 소음이 위험 기준치를 넘었는지 확인한다.
   /// 반환: 기준치(50.0dBA) 초과 시 true
   /// 근거: 측정 — 기준 초과 알림 로직
   bool get noiseExceeded => noiseMax > 50.0;
 
+  /// 함수: mock
   /// 목적: UI 화면 디자인 및 테스트를 위한 가상의 측정 결과 데이터를 생성한다.
   ///       실제 센서 측정 없이도 그래프와 결과 화면이 잘 뜨는지 확인하기 위해 쓴다.
   /// 인자: 없음
@@ -405,6 +411,7 @@ class MeasurementResult {
     );
   }
 
+  /// 함수: mockList
   /// 목적: 과거 측정 이력 화면(리스트)을 테스트하기 위한 가상의 결과 목록을 생성한다.
   /// 인자: 없음
   /// 반환: 3개의 가상 측정 결과를 담은 목록

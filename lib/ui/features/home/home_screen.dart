@@ -1,6 +1,3 @@
-// 작성: 2026-08-17 12:40:41
-// 작성자: 박건준
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +7,7 @@ import '../../core/widgets/app_dialog.dart';
 import '../shared/measurement_session.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 
+/// 작성: 2026-08-17 12:40:41 · 박건준
 /// 클래스: HomeScreen
 /// 목적: 이번 측정의 현장 정보(제번, 현장명, 층수, 운전 방향, 기종)를
 ///       입력받고 측정을 시작하는 홈 화면.
@@ -24,6 +22,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// 작성: 2026-08-17 12:40:41 · 박건준
 /// 클래스: _HomeScreenState
 /// 목적: 홈 화면의 입력 상태를 관리한다.
 ///       - 입력 컨트롤러 4개(제번·현장명·최하층·최상층)와 포커스 노드로
@@ -81,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 층수 입력 오류 문구. null이면 오류 없음
   String? _floorError;
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: initState
   /// 목적: `initState`(이 화면이 새로 만들어질 때, 화면을 그리기 전에
   ///       Flutter가 딱 한 번만 불러주는 생명주기(lifecycle, "만들어짐
@@ -92,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadSavedInputs(); // → 로직 이동: _loadSavedInputs()
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _loadSavedInputs
   /// 목적: `PrefsStore`(기기에 값을 저장·불러오는 저장소 클래스)에 저장된
   ///       마지막 현장 정보를 불러와 입력 필드를 채운다.
@@ -121,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: dispose
   /// 목적: `dispose`(이 화면이 완전히 사라질 때 Flutter가 마지막으로
   ///       한 번 불러주는 생명주기 메서드. `initState`의 반대 시점)다.
@@ -139,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _startMeasure
   /// 목적: 입력값을 검증하고, 통과하면 측정을 시작한다.
   ///       - 포커스를 해제하고 제번 · 현장명 · 최하층 · 최상층 값을 다듬는다
@@ -244,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
     context.push('/start'); // → 로직 이동: StartScreen.initState()
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _errorBorder
   /// 목적: 입력 필드에 오류가 있을 때 보여줄 빨간 테두리를 만든다.
   OutlineInputBorder _errorBorder() {
@@ -253,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _buildErrorBox
   /// 목적: 오류 문구를 아이콘 · 빨간 박스와 함께 보여주는 위젯을 만든다.
   /// 인자: message — 화면에 보여줄 오류 문구
@@ -282,6 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _buildActionBtn
   /// 목적: 앱바 오른쪽에 쓰는 아이콘 + 문구 버튼을 만든다.
   /// 인자: onPressed — 버튼을 눌렀을 때 실행할 동작
@@ -307,6 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _buildJobNoField
   /// 목적: 제번 입력 필드를 만든다. 값을 고치면 오류 표시를 지운다.
   /// 반환: 제번 입력 영역 위젯
@@ -344,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _buildSiteNameField
   /// 목적: 현장명 입력 필드를 만든다. 값을 고치면 오류 표시를 지운다.
   /// 반환: 현장명 입력 영역 위젯
@@ -381,6 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _buildFloorFields
   /// 목적: 최하층 · 최상층 입력 필드 2개를 나란히 만든다. 숫자만 입력받고,
   ///       값을 고치면 오류 표시를 지운다.
@@ -468,6 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _buildDirectionSelector
   /// 목적: 운전 방향(하부 → 상부 / 상부 → 하부)을 고르는 버튼 2개를 만든다.
   /// 반환: 운전 방향 선택 위젯
@@ -516,6 +526,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _buildModelSelector
   /// 목적: 기종(Gen2 / 기타)을 고르는 드롭다운을 만든다.
   /// 반환: 기종 선택 위젯
@@ -559,6 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: build
   /// 목적: 홈 화면(현장 정보 입력) 레이아웃을 구성한다.
   ///       - `appBar` — 화면 제목과, 설정·저장 결과 화면으로 이동하는

@@ -1,6 +1,3 @@
-// 작성: 2026-08-18 18:17:48
-// 작성자: 박건준
-
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -19,6 +16,7 @@ import '../shared/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
+/// 작성: 2026-08-18 18:17:48 · 박건준
 /// 클래스: MeasuringScreen
 /// 목적: 측정이 진행되는 동안 보여주는 라이브 화면.
 ///       - 멀리서도 보이게 경과 시간을 크게 표시한다
@@ -39,6 +37,7 @@ class MeasuringScreen extends StatefulWidget {
 /// siteInvalid(현장 정보 누락 · 오류), noSamples(유효 샘플 부족)
 enum _CaptureGateResult { ok, siteInvalid, noSamples }
 
+/// 작성: 2026-08-18 18:17:48 · 박건준
 /// 클래스: _MeasuringScreenState
 /// 목적: 라이브 측정 화면의 상태를 관리한다. 센서 데이터 수집, 경과
 ///       시간 · 카운트다운 타이머, 앱이 백그라운드로 전환됐을 때의
@@ -118,6 +117,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   /// 동안 버튼을 비활성화해 중복 실행을 막는다
   bool _isFinishing = false;
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: initState
   /// 목적: 이 화면이 새로 만들어질 때 한 번만 실행된다.
   ///       - 전화가 오는 등 앱이 화면 밖으로 밀려나는 순간을 이 화면이
@@ -140,6 +140,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _startCountdown
   /// 목적: 1초마다 카운트다운 숫자를 하나씩 줄이는 타이머를 시작한다.
   ///       0에 도달하면 타이머를 멈추고 실제 측정 준비로 넘어간다. 화면이
@@ -163,18 +164,17 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     });
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _initCaptureAndTimers
   /// 목적: 카운트다운이 끝난 뒤(또는 대기 시간이 없으면 곧바로) 실제
-  ///       측정을 준비하고 시작한다. 순서대로 다섯 단계를 거친다.
+  ///       측정을 준비하고 시작한다. 순서대로 네 단계를 거친다.
   ///       1. 화면이 꺼지지 않도록 화면 꺼짐 방지를 켠다. 100ms 안에
   ///          응답이 없어도 그냥 넘어간다 — 느려도 측정 자체를
   ///          막지 않는다
-  ///       2. 마이크 권한을 요청한다. 거부돼도 진동 측정은 계속하고,
-  ///          결과에서 소음 항목만 "해당 없음"으로 표시한다
-  ///       3. 1초마다 경과 시간을 올리는 타이머를 시작한다
-  ///       4. 센서가 실제로 있는지 확인하고, 있으면(가짜 모드가
-  ///          아니면) 측정을 시작해 센서 데이터를 구독한다
-  ///       5. 3초 안에 센서 데이터가 하나도 안 오면 측정을 중단하고
+  ///       2. 1초마다 경과 시간을 올리는 타이머를 시작한다
+  ///       3. 센서가 실제로 있는지 확인하고, 있으면 측정을 시작해
+  ///          센서 데이터를 구독한다
+  ///       4. 3초 안에 센서 데이터가 하나도 안 오면 측정을 중단하고
   ///          실패 안내를 띄운다. 개발용 빌드와 실제 배포판이 똑같이
   ///          동작해야, 이 문제를 개발 중에 미리 발견할 수 있다
   Future<void> _initCaptureAndTimers() async {
@@ -185,30 +185,27 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           .catchError((_) {});
     } catch (_) {}
 
-    // 2) 오디오 권한 요청 (거부해도 진동 측정은 계속 진행)
-    // → 로직 이동: SensorChannelManager.requestAudioPermission()
-    await _sensorManager.requestAudioPermission();
-
-    // 3) 경과 시간 카운트 (1초 간격)
+    // 2) 경과 시간 카운트 (1초 간격)
     _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() => _elapsedSeconds++);
       }
     });
 
-    // 4) 센서 가용성 확인 후 있으면 측정 시작 및 데이터 구독
+    // 3) 센서 가용성 확인 후 있으면 측정 시작 및 데이터 구독
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
     final bool available = await _sensorManager.checkSensorsAvailable();
-    if (available && !_sensorManager.useMock) {
+    if (available) {
       // → 로직 이동: SensorChannelManager.startCapture()
       await _sensorManager.startCapture();
       _sensorSub = _sensorManager.nativeEventStream.listen((event) {
         _receivedRealSample = true;
+        // → 로직 이동: GridResampler.onEvent()
         _resampler.onEvent(event);
       });
     }
 
-    // 5) 3초간 센서 응답이 없으면 측정을 포기하고 되돌아간다 (저장 없음).
+    // 4) 3초간 센서 응답이 없으면 측정을 포기하고 되돌아간다 (저장 없음).
     //    이 3초 안에 사용자가 뒤로가기를 눌러 측정을 중단하면(확인 대화
     //    상자에서 "중단하기" 선택 → _cleanup() 호출), 이 타이머도 함께
     //    취소되어 아래 실패 안내는 뜨지 않는다.
@@ -228,6 +225,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     });
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _cleanup
   /// 목적: 진행 중이던 타이머, 센서 구독, 화면 꺼짐 방지를 전부
   ///       정리한다. 측정을 중단하거나 끝낼 때, 화면이 사라질 때 등
@@ -267,6 +265,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     } catch (_) {}
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _ignoreSlowCleanup
   /// 목적: 정리 작업이 0.5초 안에 안 끝나거나 오류가 나도 무시하고
   ///       넘어간다. 응답이 늦어 화면 나가기가 멈추는 걸 막는다.
@@ -277,6 +276,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     } catch (_) {}
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: dispose
   /// 목적: 이 화면이 완전히 사라질 때 한 번만 실행된다.
   ///       - `initState`에서 걸어둔 앱 상태 감시(`WidgetsBinding`이
@@ -294,6 +294,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     super.dispose();
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: didChangeAppLifecycleState
   /// 목적: 앱이 화면 밖으로 밀려나거나(전화 수신, 홈 버튼 등) 다시
   ///       돌아올 때 Flutter가 불러주는 함수다. 측정 중 앱이 밀려나면
@@ -317,6 +318,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _showAbortedDialog
   /// 목적: 측정 중 전화가 오는 등 앱이 화면 밖으로 밀려나면 측정이
   ///       중단된다. 앱으로 다시 돌아왔을 때, 이 대화상자로 측정이
@@ -347,6 +349,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _hasValidSite
   /// 목적: 지금 저장된 현장 정보(`MeasurementSession`)가 있고, 시작 ·
   ///       도착 층이 숫자로 제대로 들어있는지 확인한다.
@@ -358,6 +361,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         int.tryParse(site.topFloor) != null;
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _evaluateCaptureGate
   /// 목적: 측정을 저장해도 되는 상태인지 판정한다.
   /// 반환: 진행 가능하면 ok, 현장 정보 누락이면 siteInvalid,
@@ -370,6 +374,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     return _CaptureGateResult.ok;
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _showMeasureFailDialog
   /// 목적: 측정 실패를 알리는 대화상자를 띄운다. "확인"을 누르면
   ///       `/start` 화면으로 돌아간다. 화면이 이미 사라졌으면
@@ -396,6 +401,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _resolveCaptureDirectory
   /// 목적: 이번 측정 산출물을 저장할 디렉터리를 확보한다.
   ///       `MeasurementRepository.getBaseDirectory()`가 기기의 외장
@@ -407,6 +413,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     return MeasurementRepository.instance.getBaseDirectory();
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _finishMeasurement
   /// 목적: "테스트 완료" 버튼을 눌렀을 때 측정을 마무리한다. 순서대로
   ///       진행한다.
@@ -457,6 +464,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     final stamp = DateFormat(
       'yyyyMMdd-HHmmss',
     ).format(DateTime.now()); // 파일명에 쓸 시각 문자열
+    // → 로직 이동: GridResampler.resample()
     final result = _resampler.resample(); // 격자로 환산한 결과
 
     // 5) 결과 파일 저장 및 완료 요약 대화상자 표시
@@ -466,6 +474,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       final metaPath = '${baseDir.path}/${stamp}_meta.txt'; // 집계 파일 경로
 
       try {
+        // → 로직 이동: VibrationFileWriter.writeMeta()
         await VibrationFileWriter.writeMeta(metaPath, result);
       } catch (e, st) {
         // 집계 파일은 참고용이라 실패해도 저장 자체는 계속 진행한다
@@ -480,6 +489,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       }
 
       final valuePath = '${baseDir.path}/$stamp.txt'; // 값 파일 경로
+      // → 로직 이동: VibrationFileWriter.write()
       await VibrationFileWriter.write(valuePath, result);
 
       // 안드로이드가 저장해둔 원본은 여기와 다른 위치에 자체 시각
@@ -514,6 +524,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _showCaptureSummaryDialog
   /// 목적: 측정이 끝난 뒤 저장 위치 · 파일 목록과 환산 집계 수치를
   ///       보여주는 대화상자를 띄운다.
@@ -596,6 +607,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _showExitDialog
   /// 목적: "측정을 중단할까요?" 확인 대화상자를 띄운다. 저장 없이
   ///       중단된다는 것을 함께 알린다.
@@ -626,6 +638,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _confirmAndExit
   /// 목적: 기기 뒤로가기(제스처 · 버튼)를 눌렀을 때와 앱바의 뒤로가기
   ///       버튼을 눌렀을 때, 둘 다 이 함수가 실행된다.

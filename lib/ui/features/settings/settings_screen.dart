@@ -1,6 +1,3 @@
-// 작성: 2026-08-19 10:57:06
-// 작성자: 박건준
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
@@ -9,6 +6,7 @@ import 'package:vibration_checker/adapter/auth_repository.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
 
+/// 작성: 2026-08-19 10:57:06 · 박건준
 /// 클래스: SettingsScreen
 /// 목적: 설정 화면. 사용자 프로필 정보, 결과 수신 이메일 등록, 앱
 ///       버전 확인, 로그아웃을 한 화면에서 처리한다. 어르신도 쓰기
@@ -21,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+/// 작성: 2026-08-19 10:57:06 · 박건준
 /// 클래스: _SettingsScreenState
 /// 목적: 설정 화면의 상태를 관리한다. 로그인된 사용자 아이디를 기준으로
 ///       이메일 등록값을 불러오고 저장하며, 로그아웃 처리를 한다.
@@ -39,6 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// 이메일 입력창 아래에 보여줄 오류 문구. 오류가 없으면 null
   String? _error;
 
+  /// 작성: 2026-08-19 10:57:06 · 박건준
   /// 함수: initState
   /// 목적: 이 화면이 나타날 때 한 번, 입력 컨트롤러를 만들고 저장된
   ///       이메일을 불러와 입력창에 채운다.
@@ -50,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadEmail();
   }
 
+  /// 작성: 2026-08-19 10:57:06 · 박건준
   /// 함수: _loadEmail
   /// 목적: 지금 로그인된 사용자 앞으로 저장된 이메일이 있으면 불러와
   ///       입력창에 채운다. 로그인 정보가 없거나 저장된 적이 없으면
@@ -71,6 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  /// 작성: 2026-08-19 10:57:06 · 박건준
   /// 함수: _save
   /// 목적: "저장" 버튼을 눌렀을 때 실행된다. 입력한 이메일이
   ///       `name@example.com`처럼 "@" 앞뒤에 글자가 있고 "@" 뒤에
@@ -110,15 +112,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.navy,
-      ),
-    );
-  }
-
-  void _showReadyNotice() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('준비 중'),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -194,45 +187,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildListTile({
-    required String title,
-    String? trailingText,
-    IconData? trailingIcon,
-    VoidCallback? onTap,
-  }) {
+  Widget _buildListTile({required String title, required String trailingText}) {
     return Container(
       constraints: const BoxConstraints(minHeight: 64),
       alignment: Alignment.center,
-      child: Material(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDims.gap2,
+        vertical: AppDims.gap,
+      ),
+      decoration: BoxDecoration(
         color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(AppDims.radius),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppDims.radius),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDims.gap2,
-              vertical: AppDims.gap,
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppDims.radius),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: AppText.body),
-                if (trailingText != null)
-                  Text(
-                    trailingText,
-                    style: AppText.bodyBold.copyWith(color: AppColors.textSub),
-                  ),
-                if (trailingIcon != null)
-                  Icon(trailingIcon, color: AppColors.textSub),
-              ],
-            ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: AppText.body),
+          Text(
+            trailingText,
+            style: AppText.bodyBold.copyWith(color: AppColors.textSub),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -278,14 +254,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: AppDims.gap3),
 
-              // 3. 앱 버전 및 문의하기
+              // 3. 앱 버전
               _buildListTile(title: '앱 버전', trailingText: '1.0.0'),
-              const SizedBox(height: AppDims.gap),
-              _buildListTile(
-                title: '문의하기',
-                trailingIcon: Icons.chevron_right,
-                onTap: _showReadyNotice,
-              ),
               const SizedBox(height: 48),
 
               // 4. 맨 아래 로그아웃 버튼

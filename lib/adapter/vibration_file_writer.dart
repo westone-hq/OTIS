@@ -1,10 +1,8 @@
-// 작성: 2026-08-18 23:43:06
-// 작성자: 박건준
-
 import 'dart:io';
 
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 
+/// 작성: 2026-08-18 23:43:06 · 박건준
 /// 클래스: VibrationFileWriter
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과를
 ///       참조 파일과 같은 구조의 텍스트 파일로 기록한다.
@@ -20,22 +18,31 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 ///       쓰는 표준 데이터 포맷) 이 아니다.
 ///       소음 열이 붙어 4열이 되는 시점에 formatId 와 columnCount 만 바꾸면 된다.
 class VibrationFileWriter {
+  /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 변수: formatId
   /// 목적: 이번 산출물의 포맷 식별자. 소음 열이 없어 EVIMP1 을 쓰지 않는다.
   /// 근거: 인용 — 참조 파일 H6N1AP65.txt 1줄이 EVIMP1, 4열(X Y Z 소음) 구조.
   ///       3열 파일에 같은 식별자를 쓰면 판독 측이 4열로 읽어 어긋난다
   static const String formatId = 'OTIS-VIB3';
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 변수: columnCount
   /// 목적: 이번 산출물의 열 수 (X Y Z)
   static const int columnCount = 3;
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 변수: decimalDigits
   /// 목적: 값 하나의 소수점 자리 수
   /// 근거: 인용 — 참조 파일 값의 소수점 자리가 최대 3자리
   static const int decimalDigits = 3;
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 변수: lineEnding
   /// 목적: 줄바꿈 문자
   /// 근거: 인용 — 참조 파일의 줄바꿈 문자가 이 두 글자(`\r\n`)와 같다
   static const String lineEnding = '\r\n';
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 함수: encode
   /// 목적: 격자 환산 결과를 참조 파일과 같은 구조의 문자열로 만든다.
   ///       1줄에 포맷 식별자, 2줄에 초당 행 수를 쓰고, 그 뒤로 격자
@@ -67,6 +74,7 @@ class VibrationFileWriter {
     return buffer.toString();
   }
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 함수: formatValue
   /// 목적: 값 하나(mg)를 참조 파일과 같은 표기로 바꾼다. 소수점 3자리로
   ///       자른 뒤, 뒤에 남는 0 은 떼어낸다. 표기 예시는 참조 파일
@@ -88,6 +96,7 @@ class VibrationFileWriter {
     return text;
   }
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 함수: write
   /// 목적: 격자 환산 결과를 값 파일로 기록한다. `writeMeta()`와 달리
   ///       환산이 실패한 결과는 기록하지 않고 예외를 던진다 — 값이
@@ -106,6 +115,7 @@ class VibrationFileWriter {
     return file;
   }
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 함수: encodeMeta
   /// 목적: 환산 과정에서 폐기되거나 특이하게 처리된 표본 수를 모아
   ///       사람이 읽을 수 있는 집계 문자열로 만든다. 값 파일(`encode()`
@@ -157,6 +167,7 @@ class VibrationFileWriter {
     return buffer.toString();
   }
 
+  /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 함수: writeMeta
   /// 목적: 집계 파일을 기록한다. 격자 환산이 실패하면 `result`에는
   ///       표본 없이 실패 사유(`failureReason`)만 담겨 오는데, 이때도

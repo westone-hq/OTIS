@@ -1,11 +1,13 @@
 import 'dart:io';
 
+/// 클래스: NativeEventType
 /// 목적: 스마트폰 하드웨어 센서에서 직접 올라오는 원시(Raw) 데이터의 3가지 종류를 정의한다.
 ///       - accel: 중력이 포함된 가속도계 원본 데이터
 ///       - gravity: 스마트폰이 추정한 중력 방향 데이터
 ///       - linear: OS가 자체적으로 중력을 제거한 선형 가속도 (당사에서는 부정확하여 미사용)
 enum NativeEventType { accel, gravity, linear }
 
+/// 클래스: NativeEvent
 /// 목적: 안드로이드 센서 콜백(callback, 값이 준비되면 시스템이 대신
 ///       불러주는 함수)에서 도착한 가공되지 않은 1건의 센서 이벤트를
 ///       담는다. 값에 대한 어떠한 가공(보간(양옆 실측값 사이를 비례로
@@ -23,6 +25,7 @@ class NativeEvent {
   /// 이벤트 종류
   final NativeEventType type;
 
+  /// 변수: tsUs
   /// 목적: 센서가 데이터를 측정한 시점의 타임스탬프 (단위: 마이크로초)
   /// 근거: 인용 — 안드로이드 SensorEvent.timestamp 기준 단조증가(Monotonically increasing) 시간
   final int tsUs;
@@ -36,10 +39,12 @@ class NativeEvent {
   /// Z축 가속도 (밀리지)
   final double zMg;
 
+  /// 변수: dtUs
   /// 목적: 바로 이전 데이터와 현재 데이터 사이의 시간 간격 (단위: 마이크로초)
   ///       안드로이드(Native) 단에서 넘겨준 값을 그대로 들고 와서 지연/유실 검증에 쓴다.
   final int dtUs;
 
+  /// 함수: fromRecordLine
   /// 목적: 텍스트 파일에 기록된 데이터 한 줄을 다시 NativeEvent 객체로 복원(역직렬화)한다.
   /// 인자: line — 파싱할 문자열 한 줄 (type, tsUs, xMg, yMg, zMg, dtUs 값이 공백으로 구분됨)
   /// 반환: 파싱된 NativeEvent 객체. 형식이 하나라도 어긋나면 null을 반환하여 잘못된 데이터(유령 샘플) 섞임을 막는다.
@@ -70,6 +75,7 @@ class NativeEvent {
     );
   }
 
+  /// 함수: toRecordLine
   /// 목적: NativeEvent 객체를 텍스트 파일에 기록하기 좋게 공백으로 구분된 한 줄의 문자열로 변환(직렬화)한다.
   String toRecordLine() {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
@@ -106,9 +112,11 @@ class NativeEvent {
   }
 }
 
+/// 클래스: NativeEventRecord
 /// 목적: 스마트폰에서 수집한 순수 원본 센서 이벤트를 `.txt` 파일로 저장하고,
 ///       나중에 다시 이 파일을 읽어서 앱 화면에 띄우거나 테스트할 수 있게 도와준다.
 class NativeEventRecord {
+  /// 함수: encode
   /// 목적: 여러 개의 NativeEvent 객체들이 들어있는 리스트를 통째로 텍스트 파일 형태의 긴 문자열로 변환한다.
   /// 인자: events — 저장할 센서 이벤트 리스트
   ///       targetSampleRateHz — 측정 시 설정했던 목표 주파수(Hz) (파일 머리말 기록용)
@@ -128,6 +136,7 @@ class NativeEventRecord {
     return buffer.toString();
   }
 
+  /// 함수: decode
   /// 목적: 통짜 텍스트 파일 문자열을 줄 단위로 쪼개어 읽으면서 다시 NativeEvent 리스트로 복원한다.
   /// 인자: text — 텍스트 파일 전체 문자열 (주석 `#`은 무시)
   /// 반환: 복원된 이벤트 리스트(events)와 파싱에 실패하여 버려진 줄 수(skippedLineCount)를 담은 레코드
@@ -149,6 +158,7 @@ class NativeEventRecord {
     return (events: events, skippedLineCount: skipped);
   }
 
+  /// 함수: readFile
   /// 목적: 디바이스 저장소에 있는 .txt 파일을 읽어와 이벤트 리스트로 복원한다.
   static Future<({List<NativeEvent> events, int skippedLineCount})> readFile(
     String path,

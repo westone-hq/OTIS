@@ -1,10 +1,10 @@
-// 작성: 2026-08-19 08:04:05
-// 작성자: 박건준
-
+/// 작성: 2026-08-19 08:04:05 · 박건준
 /// 클래스: CaptureConfig
 /// 목적: 스마트폰 센서 데이터 수집에 쓰는 속도(Hz)와 불량 판정 기준(us)을 이 파일에서만 정의한다.
 ///       다른 파일에 같은 수치를 하드코딩하지 않는다.
 class CaptureConfig {
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: CaptureConfig
   /// 목적: 수집 설정 객체를 생성한다. 값을 지정하지 않으면 기본값이 적용된다.
   const CaptureConfig({
     this.targetSampleRateHz = defaultTargetSampleRateHz,
@@ -12,11 +12,15 @@ class CaptureConfig {
     this.normalIntervalMaxUs = defaultNormalIntervalMaxUs,
   });
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 변수: targetSampleRateHz
   /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산의 목표
   ///       수집 속도다. 네이티브에는 전달하지 않는다 — 네이티브는
   ///       SENSOR_DELAY_FASTEST 로 받고, 이 값은 Dart 쪽 격자 계산에만 쓴다.
   final int targetSampleRateHz;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 변수: normalIntervalMinUs
   /// 목적: 정상 수신 간격의 하한이다. 이보다 짧은 간격은 지연 폭주로 보고 집계한다.
   /// 근거: 인용 — 도입 시 목표 주기 간격의 절반과 두 배 수준으로 임시 설정했다.
   ///       계산상 절반·두 배와 일치한다.
@@ -28,6 +32,8 @@ class CaptureConfig {
   ///       현재 앱 동작에는 영향이 없다. 이 판정은 명령줄 도구의 출력에만 쓰인다.
   final int normalIntervalMinUs;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 변수: normalIntervalMaxUs
   /// 목적: 정상 수신 간격의 상한이다. 이보다 긴 간격은 수신 지연·유실로 보고 집계한다.
   /// 근거: 인용 — 도입 시 목표 주기 간격의 절반과 두 배 수준으로 임시 설정했다.
   ///       계산상 절반·두 배와 일치한다.
@@ -39,15 +45,23 @@ class CaptureConfig {
   ///       현재 앱 동작에는 영향이 없다. 이 판정은 명령줄 도구의 출력에만 쓰인다.
   final int normalIntervalMaxUs;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 변수: defaultTargetSampleRateHz
   /// 목적: targetSampleRateHz 기본값이다.
   static const int defaultTargetSampleRateHz = 256;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 변수: defaultNormalIntervalMinUs
   /// 목적: normalIntervalMinUs 기본값이다.
   static const int defaultNormalIntervalMinUs = 1950;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 변수: defaultNormalIntervalMaxUs
   /// 목적: normalIntervalMaxUs 기본값이다.
   static const int defaultNormalIntervalMaxUs = 7900;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: idealIntervalUs
   /// 목적: 목표 주기를 마이크로초 간격으로 역계산한 값이다. 표시·통계용이며,
   ///       격자 계산에는 idealIntervalNs 를 쓴다 — 마이크로초는 소수점이 손실된다.
   /// 식: 1,000,000 / targetSampleRateHz
@@ -56,6 +70,7 @@ class CaptureConfig {
     return 1000000 ~/ targetSampleRateHz;
   }
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: idealIntervalNs
   /// 목적: 격자 한 칸의 간격을 나노초로 반환한다. `GridResampler`가
   ///       격자 행 시각을 정할 때 이 값을 쓴다. 마이크로초 단위로
@@ -67,6 +82,7 @@ class CaptureConfig {
   /// 식: 1,000,000,000 / targetSampleRateHz
   int get idealIntervalNs => 1000000000 ~/ targetSampleRateHz;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: isGridExact
   /// 목적: 목표 주기가 나노초 정수 간격으로 나뉘는지 알려준다. 나뉘지
   ///       않으면 등간격 격자를 만들 수 없으므로 `GridResampler.resample()`

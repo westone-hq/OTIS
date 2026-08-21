@@ -1,10 +1,8 @@
-// 작성: 2026-08-17 18:55:14
-// 작성자: 박건준
-
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
 
+/// 작성: 2026-08-17 18:55:14 · 박건준
 /// 클래스: PlacementSheet
 /// 목적: 휴대폰을 엘리베이터 카 바닥 중앙에 Y축 방향으로 맞춰 놓으라고
 ///       안내하는 바텀 시트.
@@ -13,6 +11,7 @@ import '../../core/widgets/app_dialog.dart';
 class PlacementSheet extends StatelessWidget {
   const PlacementSheet({super.key});
 
+  /// 작성: 2026-08-17 18:55:14 · 박건준
   /// 함수: _buildStepItem
   /// 목적: 안내 단계 하나를 번호 뱃지 + 문구 형태로 만든다.
   /// 인자: stepNumber — 단계 번호 (원형 뱃지에 표시)
@@ -49,6 +48,7 @@ class PlacementSheet extends StatelessWidget {
     );
   }
 
+  /// 작성: 2026-08-17 18:55:14 · 박건준
   /// 함수: build
   /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다.
   ///       - 상단 헤더 — 제목과 닫기 버튼
@@ -159,6 +159,7 @@ class PlacementSheet extends StatelessWidget {
     );
   }
 
+  /// 작성: 2026-08-17 18:55:14 · 박건준
   /// 함수: _buildDiagram
   /// 목적: 엘리베이터 카 안에서 휴대폰을 어느 위치에 어느 방향으로
   ///       놓을지 보여주는 도식을 만든다. 출입구 라벨, 카 바닥 테두리,

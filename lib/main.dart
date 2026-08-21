@@ -1,11 +1,9 @@
-// 작성: 2026-08-17 11:15:41
-// 작성자: 박건준
-
 import 'package:flutter/material.dart';
 
 import 'ui/core/router.dart';
 import 'ui/core/theme.dart';
 
+/// 작성: 2026-08-17 11:15:41 · 박건준
 /// 함수: main
 /// 목적: 앱 실행 진입점.
 ///       - `WidgetsFlutterBinding.ensureInitialized()` — 프레임워크 바인딩
@@ -19,11 +17,13 @@ void main() {
   runApp(const VibrationCheckerApp()); // → 로직 이동: VibrationCheckerApp.build()
 }
 
+/// 작성: 2026-08-17 11:15:41 · 박건준
 /// 클래스: VibrationCheckerApp
 /// 목적: 앱의 최상위 위젯. 실제 구성은 `build()`에서 한다.
 class VibrationCheckerApp extends StatelessWidget {
   const VibrationCheckerApp({super.key});
 
+  /// 작성: 2026-08-17 11:15:41 · 박건준
   /// 함수: build
   /// 목적: 앱의 최상위 설정을 구성한다. 화면 전환 자체는 `appRouter`
   ///       (앱 라우터. GoRouter 패키지로 만든 것으로, URL 경로 하나하나를

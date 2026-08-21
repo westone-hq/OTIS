@@ -1,12 +1,10 @@
-// 작성: 2026-08-18 23:29:46
-// 작성자: 박건준
-
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
 import 'package:vibration_checker/model/measurement_result.dart';
 
+/// 작성: 2026-08-18 23:29:46 · 박건준
 /// 클래스: MeasurementRepository
 /// 목적: 완성된 측정 결과를 기기에 파일 형태로 저장하거나, 목록을
 ///       불러오고, 삭제하는 저장소 역할을 한다.
@@ -19,6 +17,7 @@ class MeasurementRepository {
   static final MeasurementRepository instance = MeasurementRepository._();
   MeasurementRepository._();
 
+  /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 함수: getBaseDirectory
   /// 목적: 측정 산출물을 저장할 기준 폴더를 확보한다. 기기의 외장
   ///       저장소가 있으면 그 안에, 없으면 앱 전용 문서 폴더 안에
@@ -34,32 +33,66 @@ class MeasurementRepository {
     return dir;
   }
 
+  /// 작성: 2026-08-18 23:29:46 · 박건준
+  /// 함수: save
   /// 목적: 새롭게 계산된 측정 결과를 기기에 저장한다.
+  /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다. 히스토리
+  ///       화면(history_screen.dart)의 예시 데이터 저장 버튼이 이를
+  ///       잡아 "측정 기록 저장" 요청이 실패했다는 스낵바를 띄운다.
   Future<Directory> save(MeasurementResult result) async {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }
 
+  /// 작성: 2026-08-18 23:29:46 · 박건준
+  /// 함수: list
   /// 목적: 기기에 저장되어 있는 모든 과거 측정 결과 목록을 불러온다.
+  /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다.
+  ///       히스토리 화면의 `_loadItems()`가 이를 잡아, 디버그 모드면
+  ///       예시 데이터(`MeasurementResult.mockList`)로, 배포 모드면
+  ///       빈 목록과 조회 실패 안내로 대신한다.
   Future<List<MeasurementResult>> list() async {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }
 
+  /// 작성: 2026-08-18 23:29:46 · 박건준
+  /// 함수: load
   /// 목적: 특정 ID의 측정 결과 파일 하나만 찾아서 읽어온다.
+  /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다. 메일 발송
+  ///       시트(send_email_sheet.dart)의 `_buildJobEmail()`이 이 값을
+  ///       받아 null이면 임시 데이터로 대신하도록 짜여 있으나, 실제로는
+  ///       null이 아니라 예외가 던져지므로 그 대체 코드는 실행되지
+  ///       않는다. `_send()`의 바깥 try/catch가 대신 잡아 "저장·출력
+  ///       기능은 아직 구현되지 않았습니다" 스낵바를 띄운다.
   Future<MeasurementResult?> load(String id) async {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }
 
+  /// 작성: 2026-08-18 23:29:46 · 박건준
+  /// 함수: delete
   /// 목적: 특정 ID의 측정 결과를 기기에서 완전히 삭제한다.
+  /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다. 히스토리
+  ///       화면의 삭제 버튼이 이를 잡아 "측정 기록 삭제" 요청이
+  ///       실패했다는 스낵바를 띄운다.
   Future<bool> delete(String id) async {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }
 
+  /// 작성: 2026-08-18 23:29:46 · 박건준
+  /// 함수: ensureReportPdf
   /// 목적: 특정 측정 결과에 대한 PDF 보고서 파일을 생성하거나 이미 있으면 가져온다.
+  /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다.
+  ///       `_buildJobEmail()`에서 `load()`가 먼저 던지므로 실제로는
+  ///       이 지점까지 도달하지 않는다.
   Future<File?> ensureReportPdf(String id) async {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }
 
+  /// 작성: 2026-08-18 23:29:46 · 박건준
+  /// 함수: ensureRawExcelFiles
   /// 목적: 측정 결과에 딸린 엑셀 데이터 원본 파일을 생성하거나 이미 있으면 가져온다.
+  /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다.
+  ///       `_buildJobEmail()`에서 `load()`가 먼저 던지므로 실제로는
+  ///       이 지점까지 도달하지 않는다.
   Future<List<File>> ensureRawExcelFiles(String id) async {
     throw UnimplementedError('저장·출력 계층 리빌딩에서 구현');
   }

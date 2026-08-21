@@ -31,6 +31,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _loadItems();
   }
 
+  /// 함수: _showMockFailure
   /// 목적: 저장·출력 계층 미구현 실패를 사용자가 이해할 수 있는 문구로 화면에 보여준다.
   /// 인자: request — 시도한 동작을 설명하는 한국어 문구
   /// 반환: 없음

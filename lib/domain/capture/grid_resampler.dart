@@ -1,11 +1,10 @@
-// 작성: 2026-08-19 08:04:05
-// 작성자: 박건준
-
 import 'dart:math' as math;
 
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
+/// 작성: 2026-08-19 08:04:05 · 박건준
+/// 클래스: GridSample
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 한 행의 진동값을
 ///       담는다. 시각은 담지 않는다.
 ///       출력 파일에 시간 열이 없으므로 시각은 행 번호로만 결정된다
@@ -24,6 +23,8 @@ class GridSample {
   final double zMg;
 }
 
+/// 작성: 2026-08-19 08:04:05 · 박건준
+/// 클래스: GridResampleResult
 /// 목적: 격자 환산 결과와 환산 과정에서 폐기·이상으로 집계된 수치를 함께 담는다.
 ///       실측되지 않은 값을 0 등으로 대신 채우면 실제 측정처럼 보여
 ///       구분할 수 없게 된다. 그래서 값을 채우는 대신 몇 개나
@@ -46,6 +47,8 @@ class GridResampleResult {
     this.failureReason,
   });
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: GridResampleResult.failure
   /// 목적: 환산이 불가능한 조건에서 빈 결과와 사유만 담아 반환한다.
   factory GridResampleResult.failure(
     String reason, {
@@ -118,12 +121,18 @@ class GridResampleResult {
   /// 환산 실패 사유. 성공 시 null
   final String? failureReason;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: isSuccess
   /// 목적: 환산이 성공했는지 알려준다.
   bool get isSuccess => failureReason == null && samples.isNotEmpty;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: rowCount
   /// 목적: 격자 행 수를 반환한다.
   int get rowCount => samples.length;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: tsNsAt
   /// 목적: 지정 행의 시각을 계산한다. 저장하지 않고 매번 계산한다.
   /// 인자: index — 행 번호 (0부터)
   /// 반환: 해당 행의 시각 (나노초)
@@ -132,12 +141,16 @@ class GridResampleResult {
   ///       속도와 거리를 구하려면 시각이 필요하므로 분석 계층에서 쓴다.
   int tsNsAt(int index) => t0Ns + index * gridIntervalNs;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: durationSec
   /// 목적: 격자가 덮는 총 시간을 초 단위로 반환한다.
   /// 식: (행 수 - 1) x 격자간격 / 1e9
   double get durationSec =>
       rowCount < 2 ? 0.0 : (rowCount - 1) * gridIntervalNs / 1000000000.0;
 }
 
+/// 작성: 2026-08-19 08:04:05 · 박건준
+/// 클래스: GridResampler
 /// 용어
 ///   raw      가속도 원본. 중력과 승강기 가속과 진동이 모두 섞인 값
 ///   gravity  중력 방향 성분. 센서 허브가 계산해 내보내는 값이며 크기는 1000mg 고정
@@ -179,12 +192,17 @@ class GridResampler {
   /// linear 종류라서 쓰지 않고 버린 이벤트 수
   int _droppedLinearCount = 0;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: rawCount
   /// 목적: 누적된 raw 이벤트 수를 반환한다 (진행 표시용).
   int get rawCount => _raw.length;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: gravityCount
   /// 목적: 누적된 gravity 이벤트 수를 반환한다 (진행 표시용).
   int get gravityCount => _gravity.length;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: onEvent
   /// 목적: 네이티브에서 올라온 원본 이벤트 1건을 종류별로 누적한다.
   ///       가공은 하지 않고, 환산에 쓸 수 없는 것만 걸러 집계한다.
@@ -197,25 +215,17 @@ class GridResampler {
         _droppedLinearCount++;
         return;
       case NativeEventType.accel:
+        // → 로직 이동: _accept()
         _accept(_raw, event);
         return;
       case NativeEventType.gravity:
+        // → 로직 이동: _accept()
         _accept(_gravity, event);
         return;
     }
   }
 
-  /// 목적: 다음 측정을 위해 누적분과 집계값을 모두 비운다.
-  ///       현재 호출되지 않는다. 측정 화면이 매번 새로 만들어져 인스턴스도
-  ///       새로 생기기 때문이다. 같은 화면에서 재측정하는 흐름이 붙으면 필요하다.
-  void reset() {
-    _raw.clear();
-    _gravity.clear();
-    _droppedZeroCount = 0;
-    _droppedBackwardCount = 0;
-    _droppedLinearCount = 0;
-  }
-
+  /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: _accept
   /// 목적: 한 종류의 목록에 이벤트를 넣되, 환산에 쓸 수 없는 두 경우를 걸러낸다.
   /// 인자: target — 누적할 목록
@@ -235,6 +245,7 @@ class GridResampler {
     target.add(event);
   }
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: resample
   /// 목적: 센서에서 들어오는 raw(가속도 원본) · gravity(중력 성분) 값은
   ///       일정한 시간 간격으로 오지 않는다. 이 함수는 그 값들을 갖고,
@@ -313,7 +324,9 @@ class GridResampler {
 
     for (var n = 0; n < rowCount; n++) {
       final tNs = t0Ns + n * intervalNs; // 표의 n번째 행이 나타내는 시각
+      // → 로직 이동: _ChannelCursor.valueAt()
       final rawPoint = rawCursor.valueAt(tNs); // 그 시각의 raw 값(비례 계산)
+      // → 로직 이동: _ChannelCursor.valueAt()
       final gravityPoint = gravityCursor.valueAt(tNs); // 그 시각의 gravity 값(비례 계산)
       if (rawPoint == null || gravityPoint == null) {
         // 범위 계산이 맞다면 도달하지 않는다. 도달했다면 직전 값으로 메우지 않고
@@ -351,6 +364,7 @@ class GridResampler {
   }
 }
 
+/// 작성: 2026-08-19 08:04:05 · 박건준
 /// 클래스: _ChannelCursor
 /// 목적: 한 센서(raw 또는 gravity)에서 들어온 값 목록을 갖고 있다가,
 ///       임의의 시각에 그 센서가 어떤 값을 냈을지를 앞뒤 실측값 사이
@@ -371,6 +385,7 @@ class _ChannelCursor {
   /// 앞뒤 시각이 같아 비례 계산이 불가능했던 횟수
   int degenerateSpanCount = 0;
 
+  /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: valueAt
   /// 목적: 지정한 시각에 이 센서가 어떤 값을 냈을지 계산한다. 그
   ///       시각을 감싸는 앞뒤 두 실측값을 직선으로 잇고, 그 직선

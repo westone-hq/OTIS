@@ -1,6 +1,3 @@
-// 작성: 2026-08-17 15:35:02
-// 작성자: 박건준
-
 import 'dart:async';
 import 'dart:developer' as developer;
 
@@ -11,6 +8,7 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 
 export 'package:vibration_checker/model/sensor_sample.dart';
 
+/// 작성: 2026-08-17 15:35:02 · 박건준
 /// 클래스: SensorChannelManager
 /// 목적: Flutter(UI)와 안드로이드(하드웨어) 사이에서 센서 데이터를
 ///       주고받는 다리 역할을 한다.
@@ -38,12 +36,6 @@ class SensorChannelManager {
     'com.otis.vibration_checker/sensors_stream',
   );
 
-  /// 테스트 · 개발용 가짜 모드 여부. true면 안드로이드에 실제로 묻지
-  /// 않고 정해둔 값만 돌려준다
-  final bool useMock;
-
-  SensorChannelManager({this.useMock = false});
-
   Stream<NativeEvent>? _parsedStream;
 
   /// 안드로이드가 보낸 데이터 중 형태가 깨졌거나 이상해서 버린 개수
@@ -57,6 +49,7 @@ class SensorChannelManager {
   /// 아직 측정한 적 없거나 실패했으면 null
   String? lastRecordPath;
 
+  /// 작성: 2026-08-17 15:35:02 · 박건준
   /// 함수: nativeEventStream
   /// 목적: 안드로이드에서 배치(batch, 여러 개를 묶은 덩어리)로 보내는
   ///       원본 데이터를 센서 이벤트 스트림(stream, 값이 시간차를 두고
@@ -91,18 +84,16 @@ class SensorChannelManager {
     return _parsedStream!;
   }
 
+  /// 작성: 2026-08-17 15:35:02 · 박건준
   /// 함수: checkSensorsAvailable
   /// 목적: 이 기기에 가속도 · 중력 센서가 실제로 있는지 안드로이드에
   ///       물어봐서 확인한다.
-  ///       - `useMock`이면 안드로이드에 묻지 않고 항상 false를 돌려준다
   ///       - 정상 응답이 오면 그 값을 그대로 돌려준다
   ///       - 안드로이드 쪽에서 예외가 나면 원인은 로그로만 남기고,
   ///         `lastCaptureError`에 화면에 보여줄 문구를 채운 뒤 false를
   ///         돌려준다
-  /// 반환: 센서를 실제로 쓸 수 있으면 true. `useMock`이거나 확인 요청이
-  ///       실패하면 false
+  /// 반환: 센서를 실제로 쓸 수 있으면 true. 확인 요청이 실패하면 false
   Future<bool> checkSensorsAvailable() async {
-    if (useMock) return false;
     try {
       // → 로직 이동: MainActivity.kt의 checkAvailable
       final bool? available = await _methodChannel.invokeMethod<bool>(
@@ -123,15 +114,7 @@ class SensorChannelManager {
     }
   }
 
-  /// 함수: requestAudioPermission
-  /// 목적: 소음 측정을 위해 폰의 마이크 사용 권한을 사용자에게 물어본다.
-  ///       현재는 소음 캡처 기능 자체가 꺼져 있어, 실제 요청 없이 항상
-  ///       성공(true)만 돌려준다.
-  /// 반환: 항상 true
-  Future<bool> requestAudioPermission() async {
-    return true;
-  }
-
+  /// 작성: 2026-08-17 15:35:02 · 박건준
   /// 함수: startCapture
   /// 목적: 안드로이드에게 지정된 속도(Hz)로 센서 데이터를 쏴 달라고
   ///       명령을 내린다. 시작 전에 이전 측정 기록(폐기 개수 · 오류
@@ -150,6 +133,7 @@ class SensorChannelManager {
     }
   }
 
+  /// 작성: 2026-08-17 15:35:02 · 박건준
   /// 함수: stopCapture
   /// 목적: 안드로이드에게 그만 보내고 지금까지 모은 걸 파일로 저장해
   ///       경로를 알려달라고 명령을 내린다. 0.5초 안에 응답이 없거나

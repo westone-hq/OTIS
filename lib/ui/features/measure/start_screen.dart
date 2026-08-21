@@ -1,7 +1,3 @@
-// 작성: 2026-08-17 13:31:30
-// 작성자: 박건준
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +7,7 @@ import 'package:vibration_checker/adapter/sensor_channel.dart';
 import '../shared/measurement_session.dart';
 import 'placement_sheet.dart';
 
+/// 작성: 2026-08-17 13:31:30 · 박건준
 /// 클래스: StartScreen
 /// 목적: 카운트다운 대기 시간을 고르고 측정을 시작하는 화면.
 ///       - 어르신도 쓰기 쉽도록 선택 카드 높이 72dp, 시작 버튼 높이 64dp로
@@ -23,23 +20,11 @@ class StartScreen extends StatefulWidget {
   final SensorChannelManager? sensorManager;
   const StartScreen({super.key, this.sensorManager});
 
-  /// 함수: canStartMeasure
-  /// 목적: 센서 가용 여부와 디버그 모드 여부를 보고 측정을 시작해도
-  ///       되는지 판정한다. 디버그 모드면 센서가 없어도 시작을 허용해,
-  ///       센서 없는 개발 환경에서도 나머지 흐름을 테스트할 수 있게 한다.
-  /// 인자: available — 가속도 · 중력 센서가 실제로 잡히는지 여부
-  ///       isDebug — 디버그 모드로 실행 중인지 여부
-  /// 반환: 측정 시작 버튼을 활성화해도 되면 true
-  @visibleForTesting
-  static bool canStartMeasure({
-    required bool available,
-    required bool isDebug,
-  }) => available || isDebug;
-
   @override
   State<StartScreen> createState() => _StartScreenState();
 }
 
+/// 작성: 2026-08-17 13:31:30 · 박건준
 /// 클래스: _StartScreenState
 /// 목적: 측정 준비 화면의 상태를 관리한다.
 ///       - 센서 가용 여부(`_sensorsAvailable`)를 비동기로 확인해 저장한다
@@ -66,6 +51,7 @@ class _StartScreenState extends State<StartScreen> {
   /// 선택 가능한 대기 시간 목록 (초)
   final List<int> _timeOptions = const [0, 5, 10, 15];
 
+  /// 작성: 2026-08-17 13:31:30 · 박건준
   /// 함수: initState
   /// 목적: `initState`(이 화면이 새로 만들어질 때, 화면을 그리기 전에
   ///       Flutter가 딱 한 번만 불러주는 생명주기(lifecycle, "만들어짐
@@ -88,6 +74,7 @@ class _StartScreenState extends State<StartScreen> {
     }
   }
 
+  /// 작성: 2026-08-17 13:31:30 · 박건준
   /// 함수: _checkSensors
   /// 목적: 가속도 · 중력 센서를 실제로 쓸 수 있는지 비동기로 확인해
   ///       `_sensorsAvailable`에 반영한다.
@@ -104,6 +91,7 @@ class _StartScreenState extends State<StartScreen> {
     }
   }
 
+  /// 작성: 2026-08-17 13:31:30 · 박건준
   /// 함수: _showPlacementSheet
   /// 목적: `showModalBottomSheet`(화면 아래에서 위로 올라오는 바텀
   ///       시트를 띄우는 Flutter 함수)로 `PlacementSheet`(휴대폰을
@@ -133,6 +121,7 @@ class _StartScreenState extends State<StartScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 13:31:30 · 박건준
   /// 함수: _buildTimeCard
   /// 목적: 대기 시간 선택 카드 하나를 만든다. 선택된 카드는 파란
   ///       배경 · 체크 아이콘으로, 나머지는 기본 배경 · 빈 원으로
@@ -190,13 +179,12 @@ class _StartScreenState extends State<StartScreen> {
     );
   }
 
+  /// 작성: 2026-08-17 13:31:30 · 박건준
   /// 함수: build
   /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
   ///       - `appBar` — 제목만 있는 간단한 상단 바
-  ///       - `body` — 스크롤 가능한 안내 영역. 디버그 모드에서 센서 없이
-  ///         우회 중이면 경고 배너를 먼저 보여준 뒤, 거치 안내 카드 →
-  ///         대기 시간 선택 카드 4개 → 선택한 시간 요약 문구 순으로
-  ///         보여준다
+  ///       - `body` — 스크롤 가능한 안내 영역. 거치 안내 카드 → 대기
+  ///         시간 선택 카드 4개 → 선택한 시간 요약 문구 순으로 보여준다
   ///       - `bottomNavigationBar` — 센서를 못 쓰면 오류 안내를 보여주고,
   ///         그 아래 측정(또는 카운트다운) 시작 버튼을 둔다
   /// 인자: context — 이 화면이 어디에 놓이는지 알려주는 값. 시작 버튼을
@@ -205,12 +193,7 @@ class _StartScreenState extends State<StartScreen> {
   @override
   Widget build(BuildContext context) {
     // 측정 시작 버튼을 눌러도 되는지
-    final bool canStart = StartScreen.canStartMeasure(
-      available: _sensorsAvailable,
-      isDebug: kDebugMode,
-    );
-    // 센서가 없는데 디버그 모드라 시작을 우회 허용 중인지
-    final bool isDebugBypassed = !_sensorsAvailable && kDebugMode;
+    final bool canStart = _sensorsAvailable;
 
     return Scaffold(
       appBar: AppBar(title: const Text('측정 시작')),
@@ -226,39 +209,6 @@ class _StartScreenState extends State<StartScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: AppDims.gap),
-                if (isDebugBypassed) ...[
-                  Container(
-                    // 디버그 모드 센서 우회 경고 배너
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDims.gap2,
-                      vertical: AppDims.gap,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppDims.radius),
-                      border: Border.all(color: AppColors.gold, width: 1.5),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.warning_amber_rounded,
-                          color: AppColors.gold,
-                          size: 24,
-                        ),
-                        const SizedBox(width: AppDims.gap),
-                        Expanded(
-                          child: Text(
-                            '디버그: 센서 체크 우회',
-                            style: AppText.bodyBold.copyWith(
-                              color: AppColors.gold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppDims.gap2),
-                ],
                 // 리마인더 카드
                 Container(
                   padding: const EdgeInsets.all(AppDims.gap2),

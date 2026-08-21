@@ -1,7 +1,3 @@
-/*
- * 작성: 2026-08-19 08:32:13
- * 작성자: 박건준
- */
 package com.otis.vibration_checker
 
 import android.content.Context
@@ -19,6 +15,7 @@ import java.io.File
 import java.io.FileWriter
 
 /**
+ * 작성: 2026-08-19 08:32:13 · 박건준
  * 클래스: SensorStreamHandler
  * 목적: 안드로이드 가속도·중력 센서 원본 이벤트 수집기.
  *
@@ -63,8 +60,7 @@ import java.io.FileWriter
  *   절반이었으나 대상 기기는 2.35 배로 무관하다. 비율을 가정하지 않는다.
  */
 class SensorStreamHandler(
-    private val context: Context, // 센서 서비스에 접근할 때 쓰는 안드로이드 컨텍스트
-    private val noiseCaptureHandler: NoiseCaptureHandler // 소음값을 함께 실어 보내기 위해 참조
+    private val context: Context // 센서 서비스에 접근할 때 쓰는 안드로이드 컨텍스트
 ) : EventChannel.StreamHandler, SensorEventListener {
 
     companion object {
@@ -115,6 +111,7 @@ class SensorStreamHandler(
     private var lastClosedRecordPath: String? = null
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: start
      * 목적: 센서 수집을 시작한다. 요청 주기는 단말이 줄 수 있는 최대
      *       속도로 고정한다. 목표 주기(256Hz)는 Dart 격자에서 정하며,
@@ -156,6 +153,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: stop
      * 목적: 센서 수집을 멈추고 지금까지 쌓인 값을 마무리해 파일로
      *       확정한다. Flutter의 stopCapture 요청과, 화면이 완전히
@@ -199,6 +197,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: onListen
      * 목적: Flutter가 `EventChannel`(계속 흘려보내는 통로) 구독을 시작할
      *       때 호출된다. 앞으로 값을 내보낼 출구(`eventSink`)를 저장하고,
@@ -223,6 +222,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: onCancel
      * 목적: `EventChannel` 구독이 끊길 때(Flutter 쪽이 스트림을 그만
      *       듣기로 했을 때) 호출된다. 여기서는 파일을 닫지 않는다 —
@@ -237,6 +237,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: onSensorChanged
      * 목적: 가속도 또는 중력 센서에서 새 값이 올 때마다 안드로이드가
      *       부른다. 원본 파일에 한 줄 적고, 배치 버퍼에 담아 뒀다가
@@ -274,8 +275,7 @@ class SensorStreamHandler(
             "xMg" to xMg,
             "yMg" to yMg,
             "zMg" to zMg,
-            "dtUs" to dtUs,
-            "noiseDba" to noiseCaptureHandler.latestDba
+            "dtUs" to dtUs
         )
 
         var readyBatch: List<Map<String, Any>>? = null // 이번에 내보낼 배치
@@ -298,6 +298,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: onAccuracyChanged
      * 목적: 센서 정확도가 바뀔 때 안드로이드가 부른다. 이 앱에서는 쓰지 않는다.
      */
@@ -306,6 +307,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: openRecordFile
      * 목적: 원본 기록 파일을 앱 전용 영속 저장소에 새로 연다. 안드로이드의
      *       캐시 폴더(cacheDir)는 시스템이 저장 공간이 부족하면 사용자
@@ -338,6 +340,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: appendRecordLine
      * 목적: 원본 기록 파일에 값 한 줄을 추가한다. 파일이 열려 있지
      *       않으면(`recordWriter`가 null) 조용히 넘어간다.
@@ -363,6 +366,7 @@ class SensorStreamHandler(
     }
 
     /**
+     * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: closeRecordFile
      * 목적: 열려 있는 원본 기록 파일을 마무리한다. 버퍼에 남아 있던
      *       내용을 디스크에 쓰고(flush) 파일을 닫는다. 닫는 도중
