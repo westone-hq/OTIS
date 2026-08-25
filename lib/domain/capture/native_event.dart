@@ -32,7 +32,7 @@ class NativeEvent {
 
   /// 변수: tsUs
   /// 목적: 센서가 데이터를 측정한 시점의 타임스탬프 (단위: 마이크로초)
-  /// 근거: 인용 — 안드로이드 SensorEvent.timestamp 기준 단조증가(Monotonically increasing) 시간
+  /// 근거: 표준 — 안드로이드 SensorEvent.timestamp API 계약상 단조증가(Monotonically increasing) 시간
   final int tsUs;
 
   /// X축 가속도 (mg)

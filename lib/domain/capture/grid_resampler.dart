@@ -417,7 +417,7 @@ class _ChannelCursor {
   /// 반환: 계산된 X/Y/Z 값. 지정 시각을 감싸는 앞뒤 실측값이 없으면 null
   /// 식: alpha = (t - t_앞) / (t_뒤 - t_앞)
   ///     값 = 값_앞 + alpha x (값_뒤 - 값_앞)
-  /// 근거: 인용 — 두 점 사이 선형 보간 공식
+  /// 근거: 표준 — 두 점 사이 선형 보간(linear interpolation) 공식
   ({double x, double y, double z})? valueAt(int tNs) {
     // 이 함수는 매번 이전 호출보다 나중 시각으로 불리므로, 커서를
     // 뒤로 되돌릴 필요 없이 앞으로만 옮기면 된다. events[_index]가

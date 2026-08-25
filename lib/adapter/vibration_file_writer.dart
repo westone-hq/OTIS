@@ -7,7 +7,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과를
 ///       참조 파일과 같은 구조의 텍스트 파일로 기록한다.
 ///
-///       참조 파일(H6N1AP65.txt)에서 확인한 구조:
+///       참조한 OTIS 데이터 텍스트 파일에서 확인한 구조:
 ///       1줄  포맷 식별자
 ///       2줄  초당 행 수
 ///       3줄~ 값들, 공백 구분, 소수점 최대 3자리(뒤 0 제거), 줄 끝은
@@ -21,7 +21,7 @@ class VibrationFileWriter {
   /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 변수: formatId
   /// 목적: 이번 산출물의 포맷 식별자. 소음 열이 없어 EVIMP1 을 쓰지 않는다.
-  /// 근거: 인용 — 참조 파일 H6N1AP65.txt 1줄이 EVIMP1, 4열(X Y Z 소음) 구조.
+  /// 근거: 인용 — 참조한 OTIS 데이터 텍스트 파일 1줄이 EVIMP1, 4열(X Y Z 소음) 구조.
   ///       3열 파일에 같은 식별자를 쓰면 판독 측이 4열로 읽어 어긋난다
   static const String formatId = 'OTIS-VIB3';
 
@@ -75,8 +75,8 @@ class VibrationFileWriter {
   /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 함수: formatValue
   /// 목적: 값 하나(mg)를 참조 파일과 같은 표기로 바꾼다. 소수점 3자리로
-  ///       자른 뒤, 뒤에 남는 0 은 떼어낸다. 표기 예시는 참조 파일
-  ///       (H6N1AP65.txt)을 참고한다.
+  ///       자른 뒤, 뒤에 남는 0 은 떼어낸다. 표기 예시는 참조한 OTIS
+  ///       데이터 텍스트 파일을 참고한다.
   /// 인자: value — 기록할 값 (mg)
   /// 반환: 표기 문자열. 숫자가 아니거나(NaN) 무한대면 '0'
   static String formatValue(double value) {
