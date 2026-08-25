@@ -35,11 +35,11 @@ class VibrationCheckerApp extends StatelessWidget {
   ///       - `routerConfig` — 화면 라우팅 설정 (`appRouter`)
   ///       - `debugShowCheckedModeBanner` — 디버그 모드 "DEBUG" 배너 숨김
   ///         (false)
-  /// 인자: context — 위젯 트리 상 빌드 위치 정보. `StatelessWidget.build`를
+  /// 인자: context — 이 화면이 어디에 놓이는지 알려주는 값. `StatelessWidget.build`를
   ///       오버라이드(override, 상위 클래스가 정해둔 메서드를 하위 클래스가
   ///       자신의 내용으로 다시 정의하는 것)하는 시그니처(signature, 함수의
   ///       이름·매개변수·반환 타입 등 겉모습)라 항상 받아야 하는 인자라서
-  ///       적혀 있을 뿐, 이 함수 내부에서는 실제로 쓰지 않는다
+  ///       적혀 있다. 이 함수 내부에서는 실제로 쓰지 않는다
   /// 반환: 앱 루트로 쓰이는 `MaterialApp.router` 위젯
   @override
   Widget build(BuildContext context) {

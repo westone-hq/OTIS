@@ -8,8 +8,9 @@ import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
 /// 클래스: HistoryScreen
-/// 목적: - 폰에 저장된 과거 측정 결과 목록 표시 및 관리
-///       - MeasurementRepository.instance.list() 로 로컬 디스크 조회 및 개별/전체 삭제
+/// 목적: - 폰에 저장된 과거 측정 결과 목록을 보여주고 개별 삭제한다.
+///       `MeasurementRepository`가 아직 미구현이라 목록 조회·삭제
+///       요청은 항상 실패로 끝난다 (아래 `_loadItems`·`_confirmDelete` 참고)
 ///       - 어르신 UX: 88dp 이상의 큰 터치 영역 행, 색+텍스트 3중 상태 표출, 대형 빈 상태 안내
 class HistoryScreen extends StatefulWidget {
   /// 작성: 2026-07-03 15:21:58 · 박건준

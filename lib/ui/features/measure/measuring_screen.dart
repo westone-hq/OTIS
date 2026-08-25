@@ -170,7 +170,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   /// 목적: 카운트다운이 끝난 뒤(또는 대기 시간이 없으면 곧바로) 실제
   ///       측정을 준비하고 시작한다. 순서대로 네 단계를 거친다.
   ///       1. 화면이 꺼지지 않도록 화면 꺼짐 방지를 켠다. 100ms 안에
-  ///          응답이 없어도 그냥 넘어간다 — 느려도 측정 자체를
+  ///          응답이 없어도 무시하고 진행한다 — 느려도 측정 자체를
   ///          막지 않는다
   ///       2. 1초마다 경과 시간을 올리는 타이머를 시작한다
   ///       3. 센서가 실제로 있는지 확인하고, 있으면 측정을 시작해
@@ -179,21 +179,18 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///          실패 안내를 띄운다. 개발용 빌드와 실제 배포판이 똑같이
   ///          동작해야, 이 문제를 개발 중에 미리 발견할 수 있다
   Future<void> _initCaptureAndTimers() async {
-    // 1) 화면 꺼짐 방지
     try {
       await WakelockPlus.enable()
           .timeout(const Duration(milliseconds: 100))
           .catchError((_) {});
     } catch (_) {}
 
-    // 2) 경과 시간 카운트 (1초 간격)
     _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() => _elapsedSeconds++);
       }
     });
 
-    // 3) 센서 가용성 확인 후 있으면 측정 시작 및 데이터 구독
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
     final bool available = await _sensorManager.checkSensorsAvailable(); // 센서 가용 여부
     if (available) {
@@ -206,10 +203,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       });
     }
 
-    // 4) 3초간 센서 응답이 없으면 측정을 포기하고 되돌아간다 (저장 없음).
-    //    이 3초 안에 사용자가 뒤로가기를 눌러 측정을 중단하면(확인 대화
-    //    상자에서 "중단하기" 선택 → _cleanup() 호출), 이 타이머도 함께
-    //    취소되어 아래 실패 안내는 뜨지 않는다.
+    // 이 3초 안에 사용자가 뒤로가기를 눌러 측정을 중단하면(확인 대화
+    // 상자에서 "중단하기" 선택 → _cleanup() 호출), 이 타이머도 함께
+    // 취소되어 아래 실패 안내는 뜨지 않는다.
     _releaseTimeoutTimer = Timer(const Duration(seconds: 3), () async {
       if (mounted && !_receivedRealSample) {
         _isFinished = true;
@@ -255,7 +251,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     // 구독을 먼저 끊으면 onCancel 이 eventSink 를 비워 잔여분이 버려진다.
     // → 로직 이동: SensorChannelManager.stopCapture()
     await _ignoreSlowCleanup(_sensorManager.stopCapture());
-    // 잔여 배치는 네이티브 메인 루퍼에 post 되어 stopCapture 응답 이후 도착한다.
+    // 잔여 배치는 안드로이드 메인 스레드에 예약되어 stopCapture 응답 이후 도착한다.
     // 도착 대기 없이 구독을 끊으면 같은 유실이 재발한다.
     await Future.delayed(const Duration(milliseconds: 300));
     if (sensorSub != null) {
@@ -437,7 +433,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   Future<void> _finishMeasurement() async {
     if (_isFinishing || _isFinished) return; // 이미 진행 중이면 중복 실행 방지
 
-    // 1) 마무리 중 상태 표시
     if (mounted) {
       setState(() => _isFinishing = true);
     } else {
@@ -445,10 +440,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
     _isFinished = true;
 
-    // 2) 자원 해제
     await _cleanup(); // → 로직 이동: _cleanup()
 
-    // 3) 저장 가능 여부 확인
     final preGate = _evaluateCaptureGate(); // 저장해도 되는 상태인지
     if (preGate == _CaptureGateResult.siteInvalid) {
       await _showMeasureFailDialog('현장 정보가 없습니다. 홈에서 다시 시작해 주세요.');
@@ -461,14 +454,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       return;
     }
 
-    // 4) 원본을 격자 형태로 환산
     final stamp = DateFormat(
       'yyyyMMdd-HHmmss',
     ).format(DateTime.now()); // 파일명에 쓸 시각 문자열
     // → 로직 이동: GridResampler.resample()
     final result = _resampler.resample(); // 격자로 환산한 결과
 
-    // 5) 결과 파일 저장 및 완료 요약 대화상자 표시
     try {
       // → 로직 이동: _resolveCaptureDirectory()
       final baseDir = await _resolveCaptureDirectory(); // 저장할 폴더
@@ -519,7 +510,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         rawPath: savedRawPath,
       );
     } catch (e, st) {
-      // 6) 저장 중 예상 못 한 오류
       debugPrint('측정 저장 실패: $e\n$st');
       await _showMeasureFailDialog('측정 저장 중 오류가 발생했습니다.\n$e');
     }

@@ -107,7 +107,7 @@ class SensorChannelManager {
       ); // 안드로이드가 돌려준 값. 요청 자체가 실패하면 null
       return available ?? false;
     } catch (error, stack) {
-      // 원인을 삼키지 않고 로그로 남긴다. 반환 동작(false)은 유지.
+      // 원인을 숨기지 않고 로그로 남긴다. 반환 동작(false)은 유지.
       developer.log(
         'checkSensorsAvailable 실패',
         name: 'SensorChannel',

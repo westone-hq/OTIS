@@ -1,7 +1,7 @@
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 클래스: ReportGenerator
-/// 목적: 측정 결과를 바탕으로 이메일 본문에 들어갈 텍스트나 PDF 보고서를 예쁘게 만들어주는 역할을 한다.
+/// 목적: 측정 결과를 바탕으로 이메일 본문에 들어갈 요약 텍스트를 만든다.
 /// 미구현: 1개 메서드(generateSummaryText) 전부 미구현이며 호출하면
 ///       UnimplementedError 가 발생한다. 메일 시트에서 이 동작을 실행하면
 ///       실패한다. 리포트 계층 리빌딩에서 구현한다.

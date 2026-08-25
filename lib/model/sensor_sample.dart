@@ -85,7 +85,7 @@ class SensorSample {
       if (map.containsKey('tsUs')) {
         timestampUs = ts.toInt();
       } else {
-        // 기존 timestamp 밀리초(ms) 규격을 us로 환산
+        // timestamp 필드의 밀리초(ms) 값을 us로 환산
         timestampUs = (ts.toDouble() * 1000.0).round();
       }
     }

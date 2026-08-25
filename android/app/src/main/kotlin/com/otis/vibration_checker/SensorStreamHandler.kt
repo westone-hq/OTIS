@@ -117,7 +117,7 @@ class SensorStreamHandler(
 
     /** 지금 기록 중인 원본 파일. 열려 있지 않으면 null */
     private var recordFile: File? = null
-    /** `recordFile`에 쓰는 버퍼링된 writer. 열려 있지 않으면 null */
+    /** `recordFile`에 쓰는, 값을 잠시 모았다가 한 번에 디스크에 쓰는 writer. 열려 있지 않으면 null */
     private var recordWriter: BufferedWriter? = null
     /** 가장 최근에 닫은 기록 파일의 경로. `stop()`이 중복 호출됐을 때
      *  다시 정지시키지 않고 이 값을 그대로 돌려준다 */
@@ -189,7 +189,7 @@ class SensorStreamHandler(
         sensorHandler = null
 
         // 채널로 아직 못 보낸 배치 잔여분이 있으면 마저 내보낸다.
-        // 그냥 두면 이번 측정의 마지막 값 몇 개가 유실된다
+        // 내보내지 않으면 이번 측정의 마지막 값 몇 개가 유실된다
         var remainder: List<Map<String, Any>>? = null
         synchronized(batchBuffer) {
             if (batchBuffer.isNotEmpty()) {
@@ -220,7 +220,6 @@ class SensorStreamHandler(
      */
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         this.eventSink = events
-        // 구독 전에 도착해 버퍼에 쌓인 이벤트를 즉시 내보낸다 (유실 방지).
         var pending: List<Map<String, Any>>? = null // 구독 전에 쌓여 있던 값
         synchronized(batchBuffer) {
             if (batchBuffer.isNotEmpty()) {
@@ -337,7 +336,7 @@ class SensorStreamHandler(
         try {
             val dir = context.getExternalFilesDir(null) ?: context.filesDir // 외장 없으면 앱 전용 내부 저장소
             val file = File(dir, "raw_native_${System.currentTimeMillis()}.txt") // 새로 만들 기록 파일
-            val writer = BufferedWriter(FileWriter(file)) // 이 파일에 쓸 writer
+            val writer = BufferedWriter(FileWriter(file)) // 이 파일에 쓸 기록기
             writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트\n")
             writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")
             writer.write("# type: accel | gravity\n")

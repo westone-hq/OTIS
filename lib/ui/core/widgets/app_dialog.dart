@@ -4,25 +4,26 @@ import '../theme.dart';
 /// 작성: 2026-08-06 15:59:06 · 박건준
 /// 클래스: AppDialogButton
 /// 목적: 어르신 UX(최소 터치 타깃 56dp)를 준수하는 공용 다이얼로그/액션
-///       버튼이다. Semantics(button: true, label)와
+///       버튼이다. Semantics(화면 낭독기 등 보조기술에 역할·상태를
+///       알려주는 Flutter 위젯)(button: true, label)와
 ///       SizedBox(height: AppDims.touchMin)를 자동으로 감싼다.
 class AppDialogButton extends StatelessWidget {
   /// 버튼 라벨 문자열 (Semantics 및 텍스트 표시에 사용)
   final String label;
 
-  /// 클릭 시 동작 콜백
+  /// 눌렀을 때 실행할 동작
   final VoidCallback? onPressed;
 
-  /// 주 행동(ElevatedButton) 여부. false이면 보조 행동(TextButton)으로 렌더링.
+  /// 주 행동(ElevatedButton) 여부. false이면 보조 행동(TextButton)으로 그려진다.
   final bool primary;
 
   /// 위험/삭제/중단 등 경고성 행동 여부. true일 경우 빨간 배경 또는 글자색 적용.
   final bool isDestructive;
 
-  /// 커스텀 텍스트 색상 (지정하지 않을 시 primary/isDestructive에 맞게 기본값 적용)
+  /// 따로 지정하는 텍스트 색상 (지정하지 않으면 primary/isDestructive에 맞게 기본값 적용)
   final Color? textColor;
 
-  /// 좌측 아이콘 (지정 시 icon 버튼 형태로 렌더링)
+  /// 좌측 아이콘 (지정 시 icon 버튼 형태로 그려진다)
   final IconData? icon;
 
   /// 좌측 아이콘 색상
@@ -31,10 +32,10 @@ class AppDialogButton extends StatelessWidget {
   /// 아이콘 크기
   final double? iconSize;
 
-  /// 커스텀 텍스트 스타일 (지정하지 않을 시 AppText.bodyBold 기준)
+  /// 따로 지정하는 텍스트 스타일 (지정하지 않으면 AppText.bodyBold 기준)
   final TextStyle? textStyle;
 
-  /// 내부 패딩 커스텀 (지정하지 않을 시 기본 좌우 gap2)
+  /// 따로 지정하는 내부 패딩 (지정하지 않으면 기본 좌우 gap2)
   final EdgeInsetsGeometry? padding;
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
@@ -60,7 +61,7 @@ class AppDialogButton extends StatelessWidget {
   /// 작성: 2026-08-06 15:59:06 · 박건준
   /// 함수: build
   /// 목적: primary·isDestructive·icon 여부에 따라 ElevatedButton 또는
-  ///       TextButton으로 렌더링한다.
+  ///       TextButton으로 그린다.
   @override
   Widget build(BuildContext context) {
     final Color defaultColor = isDestructive // isDestructive·primary 조합별 기본 글자색
@@ -154,7 +155,7 @@ class AppDialogIconButton extends StatelessWidget {
   /// Semantics 라벨 및 툴팁 문자열
   final String label;
 
-  /// 클릭 시 동작 콜백
+  /// 눌렀을 때 실행할 동작
   final VoidCallback? onPressed;
 
   /// 아이콘 색상
@@ -163,7 +164,7 @@ class AppDialogIconButton extends StatelessWidget {
   /// 아이콘 크기 (기본값 28)
   final double size;
 
-  /// 커스텀 툴팁 (지정하지 않을 시 label 사용)
+  /// 따로 지정하는 툴팁 (지정하지 않으면 label 사용)
   final String? tooltip;
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
@@ -205,7 +206,7 @@ class AppDialogIconButton extends StatelessWidget {
 /// 작성: 2026-08-06 15:59:06 · 박건준
 /// 함수: showAppConfirmDialog
 /// 목적: 반복되는 barrierDismissible: false + AlertDialog 골격을 간편하게
-///       띄우는 확인 다이얼로그 헬퍼이다.
+///       띄우는 확인 다이얼로그 함수이다.
 /// 인자: context — 다이얼로그를 띄울 화면의 BuildContext
 ///       title — 다이얼로그 제목 위젯
 ///       content — 다이얼로그 본문 위젯

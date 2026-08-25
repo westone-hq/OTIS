@@ -52,7 +52,7 @@ class NativeEvent {
   /// 함수: fromRecordLine
   /// 목적: 텍스트 파일에 기록된 데이터 한 줄을 다시 NativeEvent 객체로 복원(역직렬화)한다.
   /// 인자: line — 파싱할 문자열 한 줄 (type, tsUs, xMg, yMg, zMg, dtUs 값이 공백으로 구분됨)
-  /// 반환: 파싱된 NativeEvent 객체. 형식이 하나라도 어긋나면 null을 반환하여 잘못된 데이터(유령 샘플) 섞임을 막는다.
+  /// 반환: 파싱된 NativeEvent 객체. 형식이 하나라도 어긋나면 null을 반환하여 잘못된 데이터가 섞이는 것을 막는다.
   static NativeEvent? fromRecordLine(String line) {
     final parts = line.trim().split(RegExp(r'\s+')); // 공백으로 나눈 필드 조각들
     if (parts.length != 6) return null;
@@ -90,7 +90,7 @@ class NativeEvent {
   /// 함수: fromChannelMap
   /// 목적: 안드로이드 네이티브(EventChannel)에서 쏘아준 딕셔너리(Map) 형태의 데이터를 NativeEvent 객체로 조립한다.
   /// 인자: map — 안드로이드에서 전달받은 Map 데이터
-  /// 반환: 파싱된 NativeEvent 객체. 데이터 타입이 안 맞거나 누락되면 null을 반환하여 유령 샘플을 차단한다.
+  /// 반환: 파싱된 NativeEvent 객체. 데이터 타입이 안 맞거나 누락되면 null을 반환하여 잘못된 데이터가 섞이는 것을 막는다.
   /// 근거: 인용 — 네이티브 채널 데이터 통신 규약
   static NativeEvent? fromChannelMap(Map<dynamic, dynamic> map) {
     final type = NativeEventType.values.asNameMap()[map['type']]; // 이름이 안 맞으면 null

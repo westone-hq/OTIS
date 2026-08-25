@@ -126,7 +126,8 @@ class MeasurementResult {
   /// 전체 대비 정속 구간 비율 (0~1)
   final double constantSpeedRatio;
 
-  /// RAW 센서 데이터 보관 (EVIMP1 저장용). 없으면 null
+  /// 원본 센서 데이터 보관 (EVIMP1, 회사 EVA 진동측정 장비가 쓰는
+  /// 표준 데이터 포맷 저장용). 없으면 null
   final List<SensorSample>? rawSamples;
 
   /// 움직임 미감지 경고 여부
@@ -165,7 +166,7 @@ class MeasurementResult {
   ///       constantSpeedSampleCount — 정속 구간 샘플 수, 기본 0
   ///       totalVibrationSampleCount — 진동 분석 전체 샘플 수, 기본 0
   ///       constantSpeedRatio — 전체 대비 정속 구간 비율, 기본 0.0
-  ///       rawSamples — RAW 데이터 보관, 없으면 null
+  ///       rawSamples — 원본 데이터 보관, 없으면 null
   ///       lowMotionWarning — 움직임 미감지 경고 여부, 기본 false
   ///       debugMetrics — 실측 진단용 임시 지표, 기본 빈 Map
   const MeasurementResult({

@@ -248,7 +248,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
   /// 함수: _buildJobEmail
-  /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다 (기존 경로, 동작 변경 없음).
+  /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
@@ -270,14 +270,12 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       }
     }
     if (_sendRaw) {
-      // 1) 센서 원본 raw.txt
       final rawFile = File('${baseDir.path}/$jobId/raw.txt'); // 센서 원본 파일 경로
       if (await rawFile.exists()) {
         attachments.add(rawFile.path);
         attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
       }
-      // 2) 초별 분리 엑셀 (256 / 128 / 64Hz)
-      final excelFiles = await repo.ensureRawExcelFiles(jobId); // 생성되거나 이미 있던 엑셀 파일 목록
+      final excelFiles = await repo.ensureRawExcelFiles(jobId); // 초별 분리 엑셀(256/128/64Hz), 생성되거나 이미 있던 파일 목록
       for (final excel in excelFiles) {
         if (await excel.exists()) {
           attachments.add(excel.path);
