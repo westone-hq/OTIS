@@ -44,6 +44,8 @@ class MeasurementRepository {
   /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 함수: save
   /// 목적: 새롭게 계산된 측정 결과를 기기에 저장한다.
+  /// 인자: result — 저장할 측정 결과
+  /// 반환: 저장된 파일이 위치한 디렉터리
   /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다. 히스토리
   ///       화면(history_screen.dart)의 예시 데이터 저장 버튼이 이를
   ///       잡아 "측정 기록 저장" 요청이 실패했다는 스낵바를 띄운다.
@@ -54,6 +56,7 @@ class MeasurementRepository {
   /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 함수: list
   /// 목적: 기기에 저장되어 있는 모든 과거 측정 결과 목록을 불러온다.
+  /// 반환: 저장된 측정 결과 목록
   /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다.
   ///       히스토리 화면의 `_loadItems()`가 이를 잡아, 디버그 모드면
   ///       예시 데이터(`MeasurementResult.mockList`)로, 배포 모드면
@@ -65,6 +68,8 @@ class MeasurementRepository {
   /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 함수: load
   /// 목적: 특정 ID의 측정 결과 파일 하나만 찾아서 읽어온다.
+  /// 인자: id — 조회할 측정 결과 식별자
+  /// 반환: 조회된 측정 결과. 없으면 null
   /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다. 메일 발송
   ///       시트(send_email_sheet.dart)의 `_buildJobEmail()`이 이 값을
   ///       받아 null이면 임시 데이터로 대신하도록 짜여 있으나, 실제로는
@@ -78,6 +83,8 @@ class MeasurementRepository {
   /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 함수: delete
   /// 목적: 특정 ID의 측정 결과를 기기에서 완전히 삭제한다.
+  /// 인자: id — 삭제할 측정 결과 식별자
+  /// 반환: 삭제에 성공하면 true
   /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다. 히스토리
   ///       화면의 삭제 버튼이 이를 잡아 "측정 기록 삭제" 요청이
   ///       실패했다는 스낵바를 띄운다.
@@ -88,6 +95,8 @@ class MeasurementRepository {
   /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 함수: ensureReportPdf
   /// 목적: 특정 측정 결과에 대한 PDF 보고서 파일을 생성하거나 이미 있으면 가져온다.
+  /// 인자: id — 측정 결과 식별자
+  /// 반환: 생성되거나 이미 있던 PDF 파일. 실패하면 null
   /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다.
   ///       `_buildJobEmail()`에서 `load()`가 먼저 던지므로 실제로는
   ///       이 지점까지 도달하지 않는다.
@@ -98,6 +107,8 @@ class MeasurementRepository {
   /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 함수: ensureRawExcelFiles
   /// 목적: 측정 결과에 딸린 엑셀 데이터 원본 파일을 생성하거나 이미 있으면 가져온다.
+  /// 인자: id — 측정 결과 식별자
+  /// 반환: 생성되거나 이미 있던 엑셀 파일 목록
   /// 미구현: 저장 계층이 없어 UnimplementedError 를 던진다.
   ///       `_buildJobEmail()`에서 `load()`가 먼저 던지므로 실제로는
   ///       이 지점까지 도달하지 않는다.

@@ -6,6 +6,9 @@ class CaptureConfig {
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: CaptureConfig
   /// 목적: 수집 설정 객체를 생성한다. 값을 지정하지 않으면 기본값이 적용된다.
+  /// 인자: targetSampleRateHz — 격자 환산의 목표 수집 속도 (Hz), 기본 256
+  ///       normalIntervalMinUs — 정상 수신 간격의 하한 (마이크로초)
+  ///       normalIntervalMaxUs — 정상 수신 간격의 상한 (마이크로초)
   const CaptureConfig({
     this.targetSampleRateHz = defaultTargetSampleRateHz,
     this.normalIntervalMinUs = defaultNormalIntervalMinUs,
@@ -67,7 +70,6 @@ class CaptureConfig {
   ///       반올림하면 1,000,000 / 256 = 3906.25처럼 소수점이 남아
   ///       등간격 격자를 만들 수 없다. 나노초는 3,906,250으로
   ///       정확히 나뉜다.
-  /// 인자: 없음 (targetSampleRateHz 사용)
   /// 반환: 격자 간격 (나노초)
   /// 식: 1,000,000,000 / targetSampleRateHz
   int get idealIntervalNs => 1000000000 ~/ targetSampleRateHz;
@@ -77,7 +79,6 @@ class CaptureConfig {
   /// 목적: 목표 주기가 나노초 정수 간격으로 나뉘는지 알려준다. 나뉘지
   ///       않으면 등간격 격자를 만들 수 없으므로 `GridResampler.resample()`
   ///       은 이 값이 false면 환산을 거부하고 실패 결과를 반환한다.
-  /// 인자: 없음 (targetSampleRateHz 사용)
   /// 반환: 정확히 나뉘면 true
   bool get isGridExact => 1000000000 % targetSampleRateHz == 0;
 }

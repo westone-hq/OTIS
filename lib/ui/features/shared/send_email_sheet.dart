@@ -249,6 +249,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 작성: 2026-08-19 10:33:43 · 박건준
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다 (기존 경로, 동작 변경 없음).
+  /// 인자: jobId — 첨부할 측정 결과의 식별자
+  /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
     final result = await MeasurementRepository.instance.load(jobId);
     if (result == null) {

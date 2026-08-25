@@ -82,6 +82,7 @@ class NativeEvent {
 
   /// 함수: toRecordLine
   /// 목적: NativeEvent 객체를 텍스트 파일에 기록하기 좋게 공백으로 구분된 한 줄의 문자열로 변환(직렬화)한다.
+  /// 반환: "종류 tsUs xMg yMg zMg dtUs" 형태의 공백 구분 한 줄 문자열
   String toRecordLine() {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
   }

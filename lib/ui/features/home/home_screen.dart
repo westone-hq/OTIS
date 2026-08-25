@@ -250,6 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 작성: 2026-08-17 12:40:41 · 박건준
   /// 함수: _errorBorder
   /// 목적: 입력 필드에 오류가 있을 때 보여줄 빨간 테두리를 만든다.
+  /// 반환: 빨간 테두리 스타일
   OutlineInputBorder _errorBorder() {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppDims.radius),

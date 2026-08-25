@@ -309,6 +309,8 @@ class SensorStreamHandler(
      * 작성: 2026-08-19 08:32:13 · 박건준
      * 함수: onAccuracyChanged
      * 목적: 센서 정확도가 바뀔 때 안드로이드가 부른다. 이 앱에서는 쓰지 않는다.
+     * 인자: sensor — 정확도가 바뀐 센서
+     *       accuracy — 새로 바뀐 정확도 값
      */
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         // 사용하지 않음

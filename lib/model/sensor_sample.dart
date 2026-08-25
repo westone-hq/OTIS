@@ -41,6 +41,8 @@ class SensorSample {
 
   /// 함수: SensorSample.fromMps2
   /// 목적: m/s² 단위로 들어오는 외부 센서 데이터를 앱 내부 표준인 mg 단위로 자동 변환하여 샘플을 생성한다.
+  /// 인자: tsUs — 타임스탬프 (마이크로초)
+  ///       xMps2, yMps2, zMps2 — 세 축 가속도 값 (m/s²)
   factory SensorSample.fromMps2({
     required int tsUs,
     required double xMps2,
@@ -57,6 +59,7 @@ class SensorSample {
 
   /// 함수: SensorSample.fromMap
   /// 목적: 안드로이드 네이티브(EventChannel)나 JSON 문자열에서 넘어온 Map 데이터를 SensorSample 객체로 조립한다.
+  /// 인자: map — 안드로이드 또는 JSON에서 전달받은 Map 데이터
   factory SensorSample.fromMap(Map<dynamic, dynamic> map) {
     final num? ts = map['tsUs'] as num? ?? map['timestamp'] as num?;
     int timestampUs = 0;

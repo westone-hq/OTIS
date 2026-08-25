@@ -73,6 +73,14 @@ class GridResampleResult {
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: GridResampleResult.failure
   /// 목적: 환산이 불가능한 조건에서 빈 결과와 사유만 담아 반환한다.
+  /// 인자: reason — 환산 실패 사유
+  ///       gridIntervalNs — 격자 간격 (나노초)
+  ///       rawUsedCount — 환산에 사용된 raw 유효 이벤트 수
+  ///       gravityUsedCount — 환산에 사용된 gravity 유효 이벤트 수
+  ///       droppedZeroCount — 전 축이 0이어서 폐기한 이벤트 수
+  ///       droppedBackwardCount — 시각이 거꾸로 와서 폐기한 이벤트 수
+  ///       droppedLinearCount — linear 종류라서 버린 이벤트 수
+  /// 반환: 표 없이 사유와 집계값만 담긴 실패 결과
   factory GridResampleResult.failure(
     String reason, {
     required int gridIntervalNs,
@@ -270,8 +278,7 @@ class GridResampler {
   ///       받을 때마다 `onEvent()`를 불러 이미 쌓아 둔 값이다. 표의
   ///       각 행 값은 그 시각의 raw 값에서 gravity 값을 뺀
   ///       것(motion, 중력을 뺀 순수 진동)이다. 결과 하나를 만들고
-  ///       나면 다시 부르지 않는다.
-  /// 인자: 없음 (누적된 `_raw`, `_gravity` 사용)
+  ///       나면 다시 부르지 않는다. 누적된 `_raw`, `_gravity`를 쓴다.
   /// 반환: 표 행 목록과 집계값을 담은 결과. 표를 만들 수 없는 조건을
   ///       만나면 표 없이 사유만 담긴 실패 결과를 대신 반환한다
   /// 식: t(n) = t0Ns + n x gridIntervalNs
