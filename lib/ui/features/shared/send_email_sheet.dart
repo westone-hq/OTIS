@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/adapter/auth_repository.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/adapter/report_generator.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 
@@ -251,18 +250,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다 (기존 경로, 동작 변경 없음).
   Future<Email> _buildJobEmail(String jobId) async {
-    var result = await MeasurementRepository.instance.load(jobId);
+    final result = await MeasurementRepository.instance.load(jobId);
     if (result == null) {
-      result = MeasurementResult.mock;
-      final baseDir = await MeasurementRepository.instance.getBaseDirectory();
-      final targetDir = Directory('${baseDir.path}/$jobId');
-      if (!await targetDir.exists()) await targetDir.create(recursive: true);
-      final pdfFile = File('${targetDir.path}/report.pdf');
-      if (!await pdfFile.exists()) {
-        await pdfFile.writeAsBytes([0x25, 0x50, 0x44, 0x46]);
-      }
-      final rawFile = File('${targetDir.path}/raw.txt');
-      if (!await rawFile.exists()) await rawFile.writeAsString('EVIMP1\n256\n');
+      throw StateError('측정 결과를 찾을 수 없다: $jobId');
     }
 
     final baseDir = await MeasurementRepository.instance.getBaseDirectory();

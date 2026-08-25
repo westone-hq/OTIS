@@ -12,21 +12,6 @@ abstract class AuthRepository {
   String? get currentUserId;
 
   /// 작성: 2026-08-19 10:35:09 · 박건준
-  /// 함수: getAutoLoginId
-  /// 목적: 앱을 켰을 때 이전에 로그인한 기록(자동 로그인)이 남아있는지 확인하고 아이디를 가져온다.
-  Future<String?> getAutoLoginId();
-
-  /// 작성: 2026-08-19 10:35:09 · 박건준
-  /// 함수: login
-  /// 목적: 입력받은 아이디와 비밀번호로 로그인을 시도한다.
-  Future<bool> login(String id, String pw);
-
-  /// 작성: 2026-08-19 10:35:09 · 박건준
-  /// 함수: isEnabled
-  /// 목적: 해당 사용자 아이디가 현재 사용 정지(비활성화) 상태가 아닌지 서버에 물어본다.
-  Future<bool> isEnabled(String id);
-
-  /// 작성: 2026-08-19 10:35:09 · 박건준
   /// 함수: logout
   /// 목적: 로그아웃 처리 후 저장된 로그인 정보를 지운다.
   Future<void> logout();
@@ -45,22 +30,6 @@ class LocalAuthRepository implements AuthRepository {
   ///       서버 로그인 API 연동 시 원복 필요
   @override
   String? get currentUserId => 'T00000';
-
-  @override
-  Future<String?> getAutoLoginId() async {
-    return 'T00000';
-  }
-
-  @override
-  Future<bool> login(String id, String pw) async {
-    return true;
-  }
-
-  @override
-  Future<bool> isEnabled(String id) async {
-    // 서버 연동 전이므로 임시로 무조건 활성화(true) 상태로 넘긴다.
-    return true;
-  }
 
   /// 작성: 2026-08-19 10:35:09 · 박건준
   /// 함수: logout

@@ -74,17 +74,6 @@ class SensorSample {
     );
   }
 
-  double get motionX =>
-      rawX != null && gravityX != null ? rawX! - gravityX! : x;
-  double get motionY =>
-      rawY != null && gravityY != null ? rawY! - gravityY! : y;
-  double get motionZ =>
-      rawZ != null && gravityZ != null ? rawZ! - gravityZ! : z;
-
-  /// 함수: timestamp
-  /// 목적: 구형 UI 코드와의 호환성을 위해 마이크로초(us)를 밀리초(ms)로 환산하여 반환한다.
-  double get timestamp => tsUs / 1000.0;
-
   @override
   String toString() =>
       'SensorSample(tsUs: $tsUs, x: ${x.toStringAsFixed(2)} mg, y: ${y.toStringAsFixed(2)} mg, z: ${z.toStringAsFixed(2)} mg)';

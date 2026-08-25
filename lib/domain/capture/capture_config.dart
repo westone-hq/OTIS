@@ -61,16 +61,6 @@ class CaptureConfig {
   static const int defaultNormalIntervalMaxUs = 7900;
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
-  /// 함수: idealIntervalUs
-  /// 목적: 목표 주기를 마이크로초 간격으로 역계산한 값이다. 표시·통계용이며,
-  ///       격자 계산에는 idealIntervalNs 를 쓴다 — 마이크로초는 소수점이 손실된다.
-  /// 식: 1,000,000 / targetSampleRateHz
-  int get idealIntervalUs {
-    if (targetSampleRateHz <= 0) return 0;
-    return 1000000 ~/ targetSampleRateHz;
-  }
-
-  /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: idealIntervalNs
   /// 목적: 격자 한 칸의 간격을 나노초로 반환한다. `GridResampler`가
   ///       격자 행 시각을 정할 때 이 값을 쓴다. 마이크로초 단위로

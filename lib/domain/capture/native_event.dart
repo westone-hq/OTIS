@@ -1,5 +1,3 @@
-import 'dart:io';
-
 /// 클래스: NativeEventType
 /// 목적: 스마트폰 하드웨어 센서에서 직접 올라오는 원시(Raw) 데이터의 3가지 종류를 정의한다.
 ///       - accel: 중력이 포함된 가속도계 원본 데이터
@@ -156,13 +154,5 @@ class NativeEventRecord {
       }
     }
     return (events: events, skippedLineCount: skipped);
-  }
-
-  /// 함수: readFile
-  /// 목적: 디바이스 저장소에 있는 .txt 파일을 읽어와 이벤트 리스트로 복원한다.
-  static Future<({List<NativeEvent> events, int skippedLineCount})> readFile(
-    String path,
-  ) async {
-    return decode(await File(path).readAsString());
   }
 }

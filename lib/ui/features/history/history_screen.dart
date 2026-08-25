@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,7 +20,7 @@ class HistoryScreen extends StatefulWidget {
 
 /// 저장된 측정 결과 목록의 비동기 로드, 이메일 발송 연결 및 개별 삭제 상태를 관리합니다.
 class _HistoryScreenState extends State<HistoryScreen> {
-  List<MeasurementResult> _items = kDebugMode ? MeasurementResult.mockList : [];
+  List<MeasurementResult> _items = [];
 
   bool _loadFailed = false;
 
@@ -50,12 +49,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final list = await MeasurementRepository.instance.list();
       if (mounted) {
         setState(() {
-          _items = list.isNotEmpty ? list : (kDebugMode ? MeasurementResult.mockList : []);
+          _items = list;
           _loadFailed = false;
         });
       }
     } catch (_) {
-      if (mounted && !kDebugMode) {
+      if (mounted) {
         setState(() {
           _items = [];
           _loadFailed = true;
@@ -285,42 +284,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('저장된 결과'),
-        actions: [
-          // 테스트 및 QA 편의를 위한 목록 비우기/복원 토글 버튼 (디버그 모드 한정)
-          if (kDebugMode)
-            Semantics(
-            button: true,
-            label: _items.isEmpty ? '샘플 복원' : '목록 비우기',
-            child: IconButton(
-              icon: Icon(_items.isEmpty ? Icons.restore : Icons.delete_outline),
-              onPressed: () async {
-                if (_items.isEmpty) {
-                  setState(() => _items = MeasurementResult.mockList);
-                  try {
-                    await MeasurementRepository.instance.save(MeasurementResult.mock);
-                    final list = await MeasurementRepository.instance.list();
-                    if (mounted && list.isNotEmpty) setState(() => _items = list);
-                  } catch (_) {
-                    _showMockFailure('측정 기록 저장');
-                  }
-                } else {
-                  final oldItems = List<MeasurementResult>.from(_items);
-                  setState(() => _items = []);
-                  var anyDeleteFailed = false;
-                  for (final item in oldItems) {
-                    try {
-                      await MeasurementRepository.instance.delete(item.id);
-                    } catch (_) {
-                      anyDeleteFailed = true;
-                    }
-                  }
-                  if (anyDeleteFailed) _showMockFailure('측정 기록 삭제');
-                }
-              },
-              tooltip: _items.isEmpty ? '샘플 복원' : '목록 비우기',
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: _items.isEmpty
