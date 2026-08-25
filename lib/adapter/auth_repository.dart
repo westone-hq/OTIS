@@ -32,6 +32,9 @@ class LocalAuthRepository implements AuthRepository {
   ///       항상 같은 임시 아이디를 돌려준다
   /// 근거: 미정 — 로그인 화면이 빠지면서 임시 고정 아이디로 우회 중.
   ///       서버 로그인 API 연동 시 원복 필요
+  /// 미구현: 실제 로그인 여부와 관계없이 항상 같은 고정 아이디
+  ///       ('T00000')를 돌려준다. 로그인 상태를 흉내만 낼 뿐, 서버
+  ///       인증 연동 전까지는 이 값이 실제 로그인 여부를 뜻하지 않는다.
   @override
   String? get currentUserId => 'T00000';
 
