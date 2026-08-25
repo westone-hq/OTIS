@@ -35,13 +35,13 @@ class NativeEvent {
   /// 근거: 인용 — 안드로이드 SensorEvent.timestamp 기준 단조증가(Monotonically increasing) 시간
   final int tsUs;
 
-  /// X축 가속도 (밀리지)
+  /// X축 가속도 (mg)
   final double xMg;
 
-  /// Y축 가속도 (밀리지)
+  /// Y축 가속도 (mg)
   final double yMg;
 
-  /// Z축 가속도 (밀리지)
+  /// Z축 가속도 (mg)
   final double zMg;
 
   /// 변수: dtUs
@@ -54,14 +54,14 @@ class NativeEvent {
   /// 인자: line — 파싱할 문자열 한 줄 (type, tsUs, xMg, yMg, zMg, dtUs 값이 공백으로 구분됨)
   /// 반환: 파싱된 NativeEvent 객체. 형식이 하나라도 어긋나면 null을 반환하여 잘못된 데이터(유령 샘플) 섞임을 막는다.
   static NativeEvent? fromRecordLine(String line) {
-    final parts = line.trim().split(RegExp(r'\s+'));
+    final parts = line.trim().split(RegExp(r'\s+')); // 공백으로 나눈 필드 조각들
     if (parts.length != 6) return null;
-    final type = NativeEventType.values.asNameMap()[parts[0]];
-    final tsUs = int.tryParse(parts[1]);
-    final xMg = double.tryParse(parts[2]);
-    final yMg = double.tryParse(parts[3]);
-    final zMg = double.tryParse(parts[4]);
-    final dtUs = int.tryParse(parts[5]);
+    final type = NativeEventType.values.asNameMap()[parts[0]]; // 형식 안 맞으면 null
+    final tsUs = int.tryParse(parts[1]); // 형식 안 맞으면 null
+    final xMg = double.tryParse(parts[2]); // 형식 안 맞으면 null
+    final yMg = double.tryParse(parts[3]); // 형식 안 맞으면 null
+    final zMg = double.tryParse(parts[4]); // 형식 안 맞으면 null
+    final dtUs = int.tryParse(parts[5]); // 형식 안 맞으면 null
     if (type == null ||
         tsUs == null ||
         xMg == null ||
@@ -93,12 +93,12 @@ class NativeEvent {
   /// 반환: 파싱된 NativeEvent 객체. 데이터 타입이 안 맞거나 누락되면 null을 반환하여 유령 샘플을 차단한다.
   /// 근거: 인용 — 네이티브 채널 데이터 통신 규약
   static NativeEvent? fromChannelMap(Map<dynamic, dynamic> map) {
-    final type = NativeEventType.values.asNameMap()[map['type']];
-    final tsUs = map['tsUs'];
-    final xMg = map['xMg'];
-    final yMg = map['yMg'];
-    final zMg = map['zMg'];
-    final dtUs = map['dtUs'];
+    final type = NativeEventType.values.asNameMap()[map['type']]; // 이름이 안 맞으면 null
+    final tsUs = map['tsUs']; // 타입 검사는 아래에서 한다
+    final xMg = map['xMg']; // 타입 검사는 아래에서 한다
+    final yMg = map['yMg']; // 타입 검사는 아래에서 한다
+    final zMg = map['zMg']; // 타입 검사는 아래에서 한다
+    final dtUs = map['dtUs']; // 타입 검사는 아래에서 한다
     if (type == null ||
         tsUs is! int ||
         xMg is! num ||
@@ -149,12 +149,12 @@ class NativeEventRecord {
   static ({List<NativeEvent> events, int skippedLineCount}) decode(
     String text,
   ) {
-    final events = <NativeEvent>[];
-    var skipped = 0;
+    final events = <NativeEvent>[]; // 복원에 성공한 이벤트를 쌓을 목록
+    var skipped = 0; // 형식이 맞지 않아 버린 줄 수
     for (final line in text.split('\n')) {
-      final trimmed = line.trim();
+      final trimmed = line.trim(); // 앞뒤 공백을 지운 한 줄
       if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
-      final event = NativeEvent.fromRecordLine(trimmed);
+      final event = NativeEvent.fromRecordLine(trimmed); // 복원 실패 시 null
       if (event == null) {
         skipped++;
       } else {

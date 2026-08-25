@@ -96,7 +96,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   ///       해당 항목을 지운 뒤 화면 목록에서도 제거한다.
   /// 인자: item — 삭제할 측정 결과
   Future<void> _confirmDelete(MeasurementResult item) async {
-    final bool? confirmed = await showDialog<bool>(
+    final bool? confirmed = await showDialog<bool>( // 사용자 선택. "삭제"면 true
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('측정 결과 삭제'),
@@ -150,10 +150,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '$y-$m-$d';
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: _getSummaryText
+  /// 목적: 목록 한 줄에 보여줄 요약 문구를 만든다. 기준 초과 항목이
+  ///       없으면 "전 지표 정상", 있으면 초과한 항목만 나열한다.
+  /// 인자: item — 요약할 측정 결과
+  /// 반환: 요약 문구
   String _getSummaryText(MeasurementResult item) {
-    final isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded;
+    final isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded; // 하나라도 초과했는지
     if (!isExceeded) return '전 지표 정상';
-    final List<String> reasons = [];
+    final List<String> reasons = []; // 초과한 항목 문구를 모을 목록
     if (item.xExceeded) reasons.add('X ${item.xPtp.toStringAsFixed(1)}mg');
     if (item.yExceeded) reasons.add('Y ${item.yPtp.toStringAsFixed(1)}mg');
     if (item.zExceeded) reasons.add('Z ${item.zPtp.toStringAsFixed(1)}mg');
@@ -163,6 +169,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
 
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: _buildEmptyState
+  /// 목적: 저장된 결과가 없거나 조회에 실패했을 때 보여줄 빈 상태
+  ///       화면을 만든다.
+  /// 반환: 빈 상태 안내 위젯
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -212,10 +223,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: _buildListItem
+  /// 목적: 목록 한 행(상태 표시 + 요약 + 이메일/삭제 버튼)을 만든다.
+  /// 인자: item — 표시할 측정 결과
+  /// 반환: 목록 한 행 위젯
   Widget _buildListItem(MeasurementResult item) {
-    final bool isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded;
-    final Color statusColor = isExceeded ? AppColors.red : AppColors.green;
-    final String statusLabel = isExceeded ? '초과' : '정상';
+    final bool isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded; // 하나라도 초과했는지
+    final Color statusColor = isExceeded ? AppColors.red : AppColors.green; // 상태 점·글자 색
+    final String statusLabel = isExceeded ? '초과' : '정상'; // 상태 문구
 
     return Material(
       color: AppColors.surface,

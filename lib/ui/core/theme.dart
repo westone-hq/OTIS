@@ -5,15 +5,34 @@ import 'package:flutter/material.dart';
 /// 목적: 디자인 토큰 - 앱의 모든 색은 여기만 참조한다. 화면 코드에서
 ///       Color(0x...) 숫자 하드코딩을 금지한다.
 abstract final class AppColors {
-  static const navy = Color(0xFF1F3864); // primary
-  static const blue = Color(0xFF2E75B6); // action
-  static const red = Color(0xFFC00000); // alert / 기준 초과
-  static const green = Color(0xFF2E7D32); // pass / 정상
-  static const gold = Color(0xFFBF9000); // warning (절제 사용)
+  /// 기본 브랜드 색 (앱바, 주요 버튼 배경 등)
+  static const navy = Color(0xFF1F3864);
+
+  /// 보조 행동 색 (보조 버튼, 강조 텍스트 등)
+  static const blue = Color(0xFF2E75B6);
+
+  /// 경고·기준 초과 색
+  static const red = Color(0xFFC00000);
+
+  /// 정상·통과 색
+  static const green = Color(0xFF2E7D32);
+
+  /// 주의 색 (절제해서 사용)
+  static const gold = Color(0xFFBF9000);
+
+  /// 기본 본문 글자색
   static const text = Color(0xFF1A1A1A);
+
+  /// 보조 설명 글자색
   static const textSub = Color(0xFF595959);
+
+  /// 화면 배경색
   static const bg = Color(0xFFFFFFFF);
+
+  /// 카드 등 표면 배경색
   static const surface = Color(0xFFF4F6F8);
+
+  /// 테두리·구분선 색
   static const border = Color(0xFFD9D9D9);
 }
 
@@ -33,8 +52,10 @@ abstract final class AppDims {
   /// 모서리 - 전부 12 고정
   static const radius = 12.0;
 
-  /// 터치 타깃 최소 / 주 버튼 높이
+  /// 터치 타깃 최소 높이 (dp)
   static const touchMin = 56.0;
+
+  /// 주 버튼 높이 (dp)
   static const buttonH = 64.0;
 
   /// 입력 필드 높이
@@ -47,16 +68,29 @@ abstract final class AppDims {
 ///       코드에서 스타일 하드코딩을 금지한다.
 abstract final class AppText {
   // 어르신 UX: 본문 18 미만 금지, 캡션 최소 16
+  /// 캡션(부가 설명) 글자 스타일. 16sp
   static const caption = TextStyle(fontSize: 16, color: AppColors.textSub);
+
+  /// 본문 글자 스타일. 18sp
   static const body = TextStyle(fontSize: 18, color: AppColors.text);
+
+  /// 강조 본문 글자 스타일. 18sp, 굵게
   static const bodyBold =
       TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.text);
+
+  /// 소제목 글자 스타일. 22sp, 굵게
   static const subhead =
       TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.text);
+
+  /// 제목 글자 스타일. 28sp, 굵게, navy 색
   static const title =
       TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.navy);
+
+  /// 큰 숫자(경과 시간 등) 글자 스타일. 44sp, 굵게
   static const bigNumber =
       TextStyle(fontSize: 44, fontWeight: FontWeight.w700, color: AppColors.text);
+
+  /// 버튼 글자 스타일. 20sp, 굵게, 흰색
   static const button =
       TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white);
 }

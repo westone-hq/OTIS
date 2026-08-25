@@ -8,7 +8,7 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 void main() {
   group('NativeEvent 왕복', () {
     test('기록 후 판독하면 모든 값이 보존된다', () {
-      const original = NativeEvent(
+      const original = NativeEvent( // 기록 전 원본 이벤트
         type: NativeEventType.linear,
         tsUs: 123456789,
         xMg: -1.5,
@@ -16,7 +16,7 @@ void main() {
         zMg: 1001.75,
         dtUs: 3921,
       );
-      final restored = NativeEvent.fromRecordLine(original.toRecordLine());
+      final restored = NativeEvent.fromRecordLine(original.toRecordLine()); // 왕복 후 복원된 이벤트
       expect(restored, isNotNull);
       expect(restored!.type, original.type);
       expect(restored.tsUs, original.tsUs);
@@ -27,7 +27,7 @@ void main() {
     });
 
     test('encode 후 decode 하면 개수와 순서가 보존된다', () {
-      const events = [
+      const events = [ // 인코딩할 원본 이벤트 3개(종류가 각각 다름)
         NativeEvent(
           type: NativeEventType.accel,
           tsUs: 100,
@@ -53,8 +53,8 @@ void main() {
           dtUs: 0,
         ),
       ];
-      final text = NativeEventRecord.encode(events, targetSampleRateHz: 256);
-      final result = NativeEventRecord.decode(text);
+      final text = NativeEventRecord.encode(events, targetSampleRateHz: 256); // 인코딩된 텍스트
+      final result = NativeEventRecord.decode(text); // 다시 디코딩한 결과
       expect(result.skippedLineCount, 0);
       expect(result.events.length, 3);
       expect(result.events[0].type, NativeEventType.accel);
@@ -66,7 +66,7 @@ void main() {
 
   group('NativeEvent.fromChannelMap', () {
     test('정상 Map 을 판독하고 여분 키는 무시한다', () {
-      final event = NativeEvent.fromChannelMap({
+      final event = NativeEvent.fromChannelMap({ // 여분 키(noiseDba)가 섞인 정상 Map
         'type': 'accel',
         'tsUs': 12345,
         'xMg': 1.5,
@@ -111,8 +111,8 @@ void main() {
 
   group('NativeEventRecord.decode 방어', () {
     test('주석과 빈 줄은 폐기 집계에 넣지 않는다', () {
-      const text = '# 주석\n\nlinear 100 1.0 2.0 3.0 0\n# 또 주석\n';
-      final result = NativeEventRecord.decode(text);
+      const text = '# 주석\n\nlinear 100 1.0 2.0 3.0 0\n# 또 주석\n'; // 주석·빈 줄 섞인 입력
+      final result = NativeEventRecord.decode(text); // 디코딩 결과
       expect(result.events.length, 1);
       expect(result.skippedLineCount, 0);
     });
@@ -122,8 +122,8 @@ void main() {
           'linear 100 1.0 2.0 3.0 0\n'
           '깨진 줄\n'
           'linear abc 1.0 2.0 3.0 0\n'
-          'linear 200 1.0 2.0 3.0 0\n';
-      final result = NativeEventRecord.decode(text);
+          'linear 200 1.0 2.0 3.0 0\n'; // 깨진 줄이 섞인 입력
+      final result = NativeEventRecord.decode(text); // 디코딩 결과
       expect(result.events.length, 2);
       expect(result.skippedLineCount, 2);
       expect(result.events[0].tsUs, 100);
@@ -137,8 +137,8 @@ void main() {
           '# columns: type tsUs x_mg y_mg z_mg dtUs\n'
           '# type: accel | gravity | linear\n'
           'accel 1000 -0.929 0.919 -1.267 0\n'
-          'accel 4921 -0.155 0.342 0.036 3921\n';
-      final result = NativeEventRecord.decode(text);
+          'accel 4921 -0.155 0.342 0.036 3921\n'; // develop 브랜치 실제 머리말 형식
+      final result = NativeEventRecord.decode(text); // 디코딩 결과
       expect(result.events.length, 2);
       expect(result.skippedLineCount, 0);
       expect(result.events[1].dtUs, 3921);

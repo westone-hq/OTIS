@@ -3,15 +3,33 @@
 class SensorSample {
   /// 타임스탬프 (마이크로초 us)
   final int tsUs;
-  final double x; // X축 linear acceleration (mg)
-  final double y; // Y축 linear acceleration (mg)
-  final double z; // Z축 linear acceleration (mg)
-  final double? rawX; // X축 accelerometer 원값 (mg, 중력 포함)
-  final double? rawY; // Y축 accelerometer 원값 (mg, 중력 포함)
-  final double? rawZ; // Z축 accelerometer 원값 (mg, 중력 포함)
-  final double? gravityX; // X축 gravity 추정값 (mg)
-  final double? gravityY; // Y축 gravity 추정값 (mg)
-  final double? gravityZ; // Z축 gravity 추정값 (mg)
+
+  /// X축 진동값. 중력을 뺀 순가속도 (mg)
+  final double x;
+
+  /// Y축 진동값. 중력을 뺀 순가속도 (mg)
+  final double y;
+
+  /// Z축 진동값. 중력을 뺀 순가속도 (mg)
+  final double z;
+
+  /// X축 가속도 원값. 중력 포함, 없으면 null (mg)
+  final double? rawX;
+
+  /// Y축 가속도 원값. 중력 포함, 없으면 null (mg)
+  final double? rawY;
+
+  /// Z축 가속도 원값. 중력 포함, 없으면 null (mg)
+  final double? rawZ;
+
+  /// X축 중력 추정값, 없으면 null (mg)
+  final double? gravityX;
+
+  /// Y축 중력 추정값, 없으면 null (mg)
+  final double? gravityY;
+
+  /// Z축 중력 추정값, 없으면 null (mg)
+  final double? gravityZ;
 
   /// 작성: 2026-07-04 10:36:25 · 박건준
   /// 함수: SensorSample

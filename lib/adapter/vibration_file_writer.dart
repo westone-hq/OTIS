@@ -51,18 +51,16 @@ class VibrationFileWriter {
   ///       하나씩, 원본 가속도에서 중력 성분을 뺀 진동 값이 들어있다
   /// 반환: 머리말 2줄과 값 행들이 `lineEnding`으로 이어진 문자열
   static String encode(GridResampleResult result) {
-    // gridIntervalNs는 격자 행 사이 시간 간격(나노초)이다. 1초(10억
-    // 나노초)를 이 값으로 나누면 1초에 몇 행이 들어가는지가 나온다
-    final rateHz = 1000000000 ~/ result.gridIntervalNs;
-    // 완성할 문자열을 쌓아갈 버퍼(값을 잠시 담아 두는 임시 저장 공간)
-    final buffer = StringBuffer();
+    final rateHz = 1000000000 ~/ result.gridIntervalNs; // 1초(10억 나노초)를 격자
+    // 간격(나노초)으로 나눈 값 — 1초에 몇 행이 들어가는지
+    final buffer = StringBuffer(); // 완성할 문자열을 쌓아갈 버퍼
     buffer.write(formatId);
     buffer.write(lineEnding);
     buffer.write('$rateHz');
     buffer.write(lineEnding);
     for (final s in result.samples) {
-      // s: 격자 행 하나의 진동 값(X Y Z, mg). GridResampler가 그
-      // 시각의 원본 가속도값에서 중력값을 뺀 결과다
+      // s: 격자 행 하나의 진동 값(X Y Z, mg). GridResampler가 그 시각의
+      // 원본 가속도값에서 중력값을 뺀 결과다
       // → 로직 이동: formatValue()
       buffer.write(formatValue(s.xMg));
       buffer.write(' ');

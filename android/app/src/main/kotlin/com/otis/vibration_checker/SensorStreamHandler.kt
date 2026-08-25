@@ -64,6 +64,7 @@ class SensorStreamHandler(
 ) : EventChannel.StreamHandler, SensorEventListener {
 
     companion object {
+        /** 로그 태그 (Log.e/Log.i 호출 시 출처를 이 이름으로 남긴다) */
         private const val TAG = "SensorStreamHandler"
 
         /**
@@ -81,7 +82,10 @@ class SensorStreamHandler(
          */
         private const val BATCH_SIZE = 32
 
+        /** Flutter로 보낼 때 가속도 이벤트를 나타내는 문자열 값 */
         private const val TYPE_ACCEL = "accel"
+
+        /** Flutter로 보낼 때 중력 이벤트를 나타내는 문자열 값 */
         private const val TYPE_GRAVITY = "gravity"
     }
 
@@ -145,8 +149,7 @@ class SensorStreamHandler(
         // → 로직 이동: openRecordFile()
         openRecordFile()
 
-        // 센서 콜백 전용 스레드
-        val thread = HandlerThread("otis-sensor").also { it.start() }
+        val thread = HandlerThread("otis-sensor").also { it.start() } // 센서 콜백 전용 스레드
         val handler = Handler(thread.looper) // 그 스레드에 일을 넣는 핸들러
         sensorThread = thread
         sensorHandler = handler
@@ -263,10 +266,8 @@ class SensorStreamHandler(
         }
 
         val tsNs = event.timestamp // 이번 값의 시각(나노초)
-        // 같은 종류의 직전 값 시각
-        val prevNs = if (type == TYPE_ACCEL) lastAccelTsNs else lastGravityTsNs
-        // 직전 값과의 시간 간격(마이크로초). 첫 값이면 0
-        val dtUs = if (prevNs > 0L && tsNs > prevNs) (tsNs - prevNs) / 1000L else 0L
+        val prevNs = if (type == TYPE_ACCEL) lastAccelTsNs else lastGravityTsNs // 같은 종류의 직전 값 시각
+        val dtUs = if (prevNs > 0L && tsNs > prevNs) (tsNs - prevNs) / 1000L else 0L // 직전 값과의 간격(us). 첫 값이면 0
         if (type == TYPE_ACCEL) lastAccelTsNs = tsNs else lastGravityTsNs = tsNs
 
         val xMg = event.values[0] * MPS2_TO_MG // X축 값(mg)
@@ -289,12 +290,12 @@ class SensorStreamHandler(
         var readyBatch: List<Map<String, Any>>? = null // 이번에 내보낼 배치
         synchronized(batchBuffer) {
             batchBuffer.add(sampleMap)
-            // sink 미연결 상태에서 버퍼가 무한정 커지지 않도록 상한.
+            // eventSink 미연결 상태에서 버퍼가 무한정 커지지 않도록 상한.
             // 초과 시 가장 오래된 배치 크기만큼 버린다.
             if (eventSink == null && batchBuffer.size > BATCH_SIZE * 8) {
                 batchBuffer.subList(0, BATCH_SIZE).clear()
             }
-            // sink 가 있고 한 배치가 찼으면 내보낼 배치를 뜬다.
+            // eventSink 가 있고 한 배치가 찼으면 내보낼 배치를 뜬다.
             if (eventSink != null && batchBuffer.size >= BATCH_SIZE) {
                 readyBatch = ArrayList(batchBuffer)
                 batchBuffer.clear()
@@ -330,10 +331,8 @@ class SensorStreamHandler(
         // → 로직 이동: closeRecordFile()
         closeRecordFile()
         try {
-            // 외장 저장소가 없으면 앱 전용 내부 저장소를 쓴다
-            val dir = context.getExternalFilesDir(null) ?: context.filesDir
-            // 새로 만들 기록 파일
-            val file = File(dir, "raw_native_${System.currentTimeMillis()}.txt")
+            val dir = context.getExternalFilesDir(null) ?: context.filesDir // 외장 없으면 앱 전용 내부 저장소
+            val file = File(dir, "raw_native_${System.currentTimeMillis()}.txt") // 새로 만들 기록 파일
             val writer = BufferedWriter(FileWriter(file)) // 이 파일에 쓸 writer
             writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트\n")
             writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")

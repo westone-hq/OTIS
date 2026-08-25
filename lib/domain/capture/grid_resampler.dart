@@ -327,15 +327,13 @@ class GridResampler {
     }
 
     final rowCount = (tEndNs - t0Ns) ~/ intervalNs + 1; // 만들 표 행 수
+    final headTrimmedRows = // 못 넣은 앞쪽 행 수
+        (t0Ns - math.min(rawFirstNs, gravityFirstNs)) ~/ intervalNs;
     // raw와 gravity 중 한쪽이 다른 쪽보다 늦게 시작했다면, 둘 다 값이
     // 있어야 하는 조건 때문에 그 차이만큼 앞부분은 표에 넣지 못한다.
-    // 그렇게 못 넣은 앞쪽 행 수
-    final headTrimmedRows =
-        (t0Ns - math.min(rawFirstNs, gravityFirstNs)) ~/ intervalNs;
-    // 마찬가지로 한쪽이 먼저 끝났다면 그 차이만큼 뒷부분을 표에 넣지
-    // 못한다. 그렇게 못 넣은 뒤쪽 행 수
-    final tailTrimmedRows =
+    final tailTrimmedRows = // 못 넣은 뒤쪽 행 수
         (math.max(rawLastNs, gravityLastNs) - tEndNs) ~/ intervalNs;
+    // 마찬가지로 한쪽이 먼저 끝났다면 그 차이만큼 뒷부분을 표에 넣지 못한다.
 
     final rawCursor = _ChannelCursor(_raw); // raw에서 임의 시각의 값을 구해주는 객체
     final gravityCursor = _ChannelCursor(

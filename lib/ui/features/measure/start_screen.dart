@@ -192,8 +192,7 @@ class _StartScreenState extends State<StartScreen> {
   /// 반환: 측정 준비 화면 전체를 담는 위젯
   @override
   Widget build(BuildContext context) {
-    // 측정 시작 버튼을 눌러도 되는지
-    final bool canStart = _sensorsAvailable;
+    final bool canStart = _sensorsAvailable; // 측정 시작 버튼을 눌러도 되는지
 
     return Scaffold(
       appBar: AppBar(title: const Text('측정 시작')),

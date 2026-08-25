@@ -2,11 +2,22 @@
 /// 클래스: SiteInfo
 /// 목적: 측정 현장 정보 (홈 화면에서 입력)
 class SiteInfo {
+  /// 제번
   final String jobNo;
+
+  /// 현장명
   final String siteName;
+
+  /// 최하층. 숫자 문자열 (예: "1", "-1")
   final String bottomFloor;
+
+  /// 최상층. 숫자 문자열 (예: "8")
   final String topFloor;
+
+  /// 운전 방향. "하부 → 상부" 또는 "상부 → 하부" 중 하나
   final String direction;
+
+  /// 엘리베이터 기종. "Gen2" 또는 "기타" 중 하나
   final String model;
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
@@ -70,6 +81,9 @@ class MeasurementSession {
   ///       하나만 쓰도록 강제한다.
   MeasurementSession._();
 
+  /// 홈 화면에서 입력한 이번 측정의 현장 정보. 아직 입력 전이면 null
   SiteInfo? currentSite;
+
+  /// 측정 시작 전 카운트다운 대기 시간 (초). 0이면 카운트다운 없이 곧바로 시작
   int delaySec = 0;
 }

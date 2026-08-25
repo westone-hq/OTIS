@@ -63,25 +63,25 @@ class AppDialogButton extends StatelessWidget {
   ///       TextButton으로 렌더링한다.
   @override
   Widget build(BuildContext context) {
-    final Color defaultColor = isDestructive
+    final Color defaultColor = isDestructive // isDestructive·primary 조합별 기본 글자색
         ? (primary ? Colors.white : AppColors.red)
         : (primary ? Colors.white : AppColors.navy);
-    final Color effectiveColor = textColor ?? defaultColor;
+    final Color effectiveColor = textColor ?? defaultColor; // 실제로 쓸 글자색
 
     final TextStyle effectiveStyle = (textStyle ?? AppText.bodyBold).copyWith(
       color: effectiveColor,
-    );
+    ); // 실제로 쓸 텍스트 스타일
 
-    final Widget textWidget = Text(
+    final Widget textWidget = Text( // 라벨 텍스트 위젯
       label,
       style: !primary || isDestructive || textColor != null || textStyle != null
           ? effectiveStyle
           : null,
     );
 
-    Widget buttonWidget;
+    Widget buttonWidget; // 최종적으로 반환할 버튼 위젯
     if (primary) {
-      final style = ElevatedButton.styleFrom(
+      final style = ElevatedButton.styleFrom( // primary 버튼 스타일
         backgroundColor: isDestructive ? AppColors.red : AppColors.blue,
         padding: padding ?? const EdgeInsets.symmetric(horizontal: AppDims.gap2),
       );

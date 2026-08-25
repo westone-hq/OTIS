@@ -127,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ///       후 `context.go('/login')`을 불러도 실제로는 아무 화면도
   ///       뜨지 않는다.
   Future<void> _confirmLogout() async {
-    final confirm = await showDialog<bool>(
+    final confirm = await showDialog<bool>( // 사용자 선택. "로그아웃"이면 true
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('로그아웃', style: AppText.subhead),
@@ -159,7 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// 목적: 로그인된 사용자 아이디를 보여주는 프로필 카드 위젯을 만든다.
   /// 반환: 프로필 카드 위젯
   Widget _buildProfileCard() {
-    final userId = AuthRepository.instance.currentUserId ?? '미로그인';
+    final userId = AuthRepository.instance.currentUserId ?? '미로그인'; // 로그인 사용자 아이디
     return Container(
       padding: const EdgeInsets.all(AppDims.gap2),
       decoration: BoxDecoration(

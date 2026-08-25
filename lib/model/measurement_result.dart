@@ -4,54 +4,136 @@ import 'package:vibration_checker/model/sensor_sample.dart';
 /// 클래스: MeasurementResult
 /// 목적: 진동 분석 엔진이 계산을 마친 최종 측정 결과 데이터를 담는다.
 class MeasurementResult {
+  /// 결과 식별자
   final String id;
-  final String jobNo; // 제번
-  final String siteName; // 현장명
-  final int bottomFloor; // 최하층
-  final int topFloor; // 최상층
-  final String direction; // 방향
-  final DateTime dateTime; // 일시
 
-  final double xPtp; // X 진동 P2P (mg)
-  final double yPtp; // Y 진동 P2P (mg)
-  final double zPtp; // Z 진동 P2P (mg)
-  final double noiseMax; // 소음 최대 (dBA)
-  final double distance; // 운행거리 (m)
-  final double maxSpeed; // 최대속도 (m/s)
-  final double fullXPtp; // 전체 주행 구간 X P-P (mg)
-  final double fullYPtp; // 전체 주행 구간 Y P-P (mg)
-  final double fullZPtp; // 전체 주행 구간 Z P-P (mg)
-  final double constantXPtp; // 정속 구간 X P-P (mg)
-  final double constantYPtp; // 정속 구간 Y P-P (mg)
-  final double constantZPtp; // 정속 구간 Z P-P (mg)
-  final double preFilterFullXPtp; // 필터 전 전체 주행 구간 X P-P (mg)
-  final double preFilterFullYPtp; // 필터 전 전체 주행 구간 Y P-P (mg)
-  final double preFilterFullZPtp; // 필터 전 전체 주행 구간 Z P-P (mg)
-  final double preFilterConstantXPtp; // 필터 전 정속 구간 X P-P (mg)
-  final double preFilterConstantYPtp; // 필터 전 정속 구간 Y P-P (mg)
-  final double preFilterConstantZPtp; // 필터 전 정속 구간 Z P-P (mg)
+  /// 제번
+  final String jobNo;
 
-  // 시계열 List들 (mock 또는 실제 파싱 데이터)
+  /// 현장명
+  final String siteName;
+
+  /// 최하층
+  final int bottomFloor;
+
+  /// 최상층
+  final int topFloor;
+
+  /// 운전 방향
+  final String direction;
+
+  /// 측정 일시
+  final DateTime dateTime;
+
+  /// X축 진동 P2P (mg)
+  final double xPtp;
+
+  /// Y축 진동 P2P (mg)
+  final double yPtp;
+
+  /// Z축 진동 P2P (mg)
+  final double zPtp;
+
+  /// 소음 최대값 (dBA)
+  final double noiseMax;
+
+  /// 운행 거리 (m)
+  final double distance;
+
+  /// 최대 속도 (m/s)
+  final double maxSpeed;
+
+  /// 전체 주행 구간 X축 P-P (mg)
+  final double fullXPtp;
+
+  /// 전체 주행 구간 Y축 P-P (mg)
+  final double fullYPtp;
+
+  /// 전체 주행 구간 Z축 P-P (mg)
+  final double fullZPtp;
+
+  /// 정속 구간 X축 P-P (mg)
+  final double constantXPtp;
+
+  /// 정속 구간 Y축 P-P (mg)
+  final double constantYPtp;
+
+  /// 정속 구간 Z축 P-P (mg)
+  final double constantZPtp;
+
+  /// 필터 적용 전 전체 주행 구간 X축 P-P (mg)
+  final double preFilterFullXPtp;
+
+  /// 필터 적용 전 전체 주행 구간 Y축 P-P (mg)
+  final double preFilterFullYPtp;
+
+  /// 필터 적용 전 전체 주행 구간 Z축 P-P (mg)
+  final double preFilterFullZPtp;
+
+  /// 필터 적용 전 정속 구간 X축 P-P (mg)
+  final double preFilterConstantXPtp;
+
+  /// 필터 적용 전 정속 구간 Y축 P-P (mg)
+  final double preFilterConstantYPtp;
+
+  /// 필터 적용 전 정속 구간 Z축 P-P (mg)
+  final double preFilterConstantZPtp;
+
+  // 시계열 목록 (실제 측정 파싱 데이터)
+  /// X축 진동 시계열 (mg)
   final List<double> xSeries;
+
+  /// Y축 진동 시계열 (mg)
   final List<double> ySeries;
+
+  /// Z축 진동 시계열 (mg)
   final List<double> zSeries;
+
+  /// 소음 시계열 (dBA)
   final List<double> noiseSeries;
+
+  /// 위치(운행 거리) 시계열 (m)
   final List<double> positionSeries;
+
+  /// 속도 시계열 (m/s)
   final List<double> speedSeries;
+
+  /// 가속도 시계열. 단위 미확인 — 코드에서 확인되지 않는다
   final List<double> accelSeries;
+
+  /// 저크(가속도 변화율) 시계열. 단위 미확인 — 코드에서 확인되지 않는다
   final List<double> jerkSeries;
 
   // 분석 상세·진단용 확장 필드 (정속 구간 검출, 실측 샘플레이트 등)
-  final double sampleRate; // 실측 샘플레이트 (Hz)
-  final bool usedDetectedRideSegment; // 주행 자동 검출 성공 여부
-  final String constantSpeedRange; // 정속 구간 시간 범위 요약
-  final bool usedDetectedConstantSpeed; // 정속 구간 자동 검출 성공 여부
-  final int constantSpeedSampleCount; // 정속 구간 샘플 수
-  final int totalVibrationSampleCount; // 진동 분석 전체 샘플 수
-  final double constantSpeedRatio; // 전체 대비 정속 구간 비율
-  final List<SensorSample>? rawSamples; // RAW 데이터 보관 (EVIMP1 저장용)
-  final bool lowMotionWarning; // 움직임 미감지 경고 플래그
-  final Map<String, double> debugMetrics; // 실측 진단용 임시 지표
+  /// 실측 샘플레이트 (Hz)
+  final double sampleRate;
+
+  /// 주행 구간 자동 검출 성공 여부
+  final bool usedDetectedRideSegment;
+
+  /// 정속 구간 시간 범위 요약 문구
+  final String constantSpeedRange;
+
+  /// 정속 구간 자동 검출 성공 여부
+  final bool usedDetectedConstantSpeed;
+
+  /// 정속 구간 샘플 수
+  final int constantSpeedSampleCount;
+
+  /// 진동 분석 전체 샘플 수
+  final int totalVibrationSampleCount;
+
+  /// 전체 대비 정속 구간 비율 (0~1)
+  final double constantSpeedRatio;
+
+  /// RAW 센서 데이터 보관 (EVIMP1 저장용). 없으면 null
+  final List<SensorSample>? rawSamples;
+
+  /// 움직임 미감지 경고 여부
+  final bool lowMotionWarning;
+
+  /// 실측 진단용 임시 지표
+  final Map<String, double> debugMetrics;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 함수: MeasurementResult

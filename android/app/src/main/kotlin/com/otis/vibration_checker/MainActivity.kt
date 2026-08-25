@@ -30,29 +30,33 @@ class MainActivity : FlutterActivity() {
      *       전역에서 쓰는 상수를 모아둔다.
      */
     companion object {
-        // Flutter 쪽 lib/adapter/sensor_channel.dart 의 _methodChannel 과
-        // 문자열이 반드시 같아야 한다. 컴파일러가 대신 검사해주는 연결이
-        // 아니라서, 둘 중 하나만 바뀌면 컴파일은 되지만 요청이 반대편에
-        // 닿지 않고 조용히 실패한다
+        /**
+         * Flutter 쪽 lib/adapter/sensor_channel.dart 의 _methodChannel 과
+         * 문자열이 반드시 같아야 한다. 컴파일러가 대신 검사해주는 연결이
+         * 아니라서, 둘 중 하나만 바뀌면 컴파일은 되지만 요청이 반대편에
+         * 닿지 않고 조용히 실패한다
+         */
         private const val METHOD_CHANNEL =
             "com.otis.vibration_checker/sensors_method"
 
-        // 위와 같은 이유로 sensor_channel.dart 의 _eventChannel 과 문자열이
-        // 반드시 같아야 한다
+        /**
+         * 위와 같은 이유로 sensor_channel.dart 의 _eventChannel 과 문자열이
+         * 반드시 같아야 한다
+         */
         private const val STREAM_CHANNEL =
             "com.otis.vibration_checker/sensors_stream"
 
-        // onRequestPermissionsResult 에서 어떤 권한 요청에 대한 응답인지
-        // 구분하기 위한 임의의 요청 코드
+        /** onRequestPermissionsResult 에서 어떤 권한 요청에 대한 응답인지 구분하기 위한 임의의 요청 코드 */
         private const val REQ_HIGH_RATE_PERMISSION = 1002
     }
 
-    // 가속도 · 중력 센서 원본 캡처 담당. startCapture/stopCapture 요청을
-    // 이 핸들러에 그대로 위임한다
+    /** 가속도 · 중력 센서 원본 캡처 담당. startCapture/stopCapture 요청을 이 핸들러에 그대로 위임한다 */
     private lateinit var sensorStreamHandler: SensorStreamHandler
 
-    // 고속 샘플링 권한 승인을 기다리는 동안 미뤄둔, 승인 후 이어서 실행할
-    // 수집 시작 동작. 권한 요청 중이 아니면 null
+    /**
+     * 고속 샘플링 권한 승인을 기다리는 동안 미뤄둔, 승인 후 이어서 실행할
+     * 수집 시작 동작. 권한 요청 중이 아니면 null
+     */
     private var pendingStartCapture: (() -> Unit)? = null
 
     /**
@@ -106,15 +110,11 @@ class MainActivity : FlutterActivity() {
                      *       중력 센서가 둘 다 있으면 true
                      */
                     "checkAvailable" -> {
-                        // 센서 목록 조회 · 구독을 담당하는 시스템 서비스.
-                        // 이론상 못 가져올 수도 있어 널 허용 타입으로 받는다
-                        val sensorManager =
+                        val sensorManager = // 센서 목록 조회·구독 담당 시스템 서비스. 못 가져오면 null
                             getSystemService(Context.SENSOR_SERVICE) as SensorManager?
-                        // 가속도 센서. 이 기기에 없으면 null
-                        val accel =
+                        val accel = // 가속도 센서. 이 기기에 없으면 null
                             sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                        // 중력 센서(합성값). 이 기기에 없으면 null
-                        val gravity =
+                        val gravity = // 중력 센서(합성값). 이 기기에 없으면 null
                             sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
                         result.success(accel != null && gravity != null)
                     }
@@ -139,18 +139,14 @@ class MainActivity : FlutterActivity() {
                      *       제한된다
                      */
                     "startCapture" -> {
-                        // 고속 샘플링 권한이 확보된 뒤(또는 이미 있어서
-                        // 곧바로) 실행할, 실제 수집을 시작하는 동작
-                        val begin = {
+                        val begin = { // 권한 확보 후(또는 이미 있어서 곧바로) 실행할 수집 시작 동작
                             // → 로직 이동: SensorStreamHandler.start()
                             sensorStreamHandler.start()
                         }
 
-                        // Android 12 이상 여부
-                        val needsHighRate =
+                        val needsHighRate = // Android 12 이상 여부
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                        // 고속 샘플링 권한 이름
-                        val permName =
+                        val permName = // 고속 샘플링 권한 이름
                             "android.permission.HIGH_SAMPLING_RATE_SENSORS"
                         if (needsHighRate &&
                             ContextCompat.checkSelfPermission(
@@ -182,8 +178,7 @@ class MainActivity : FlutterActivity() {
                      */
                     "stopCapture" -> {
                         // → 로직 이동: SensorStreamHandler.stop()
-                        // 저장된 원본 파일 경로, 없으면 null
-                        val recordPath = sensorStreamHandler.stop()
+                        val recordPath = sensorStreamHandler.stop() // 저장된 원본 파일 경로, 없으면 null
                         result.success(recordPath)
                     }
                     /**
@@ -219,8 +214,7 @@ class MainActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_HIGH_RATE_PERMISSION) {
-            // 고속 샘플링 권한 승인 여부
-            val granted =
+            val granted = // 고속 샘플링 권한 승인 여부
                 grantResults.isNotEmpty() &&
                     grantResults[0] == PackageManager.PERMISSION_GRANTED
             if (!granted) {

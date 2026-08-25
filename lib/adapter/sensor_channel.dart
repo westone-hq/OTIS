@@ -104,8 +104,7 @@ class SensorChannelManager {
       // → 로직 이동: MainActivity.kt의 checkAvailable
       final bool? available = await _methodChannel.invokeMethod<bool>(
         'checkAvailable',
-      );
-      // available: 안드로이드가 돌려준 값. 요청 자체가 실패하면 null
+      ); // 안드로이드가 돌려준 값. 요청 자체가 실패하면 null
       return available ?? false;
     } catch (error, stack) {
       // 원인을 삼키지 않고 로그로 남긴다. 반환 동작(false)은 유지.

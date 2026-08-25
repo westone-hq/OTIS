@@ -252,18 +252,18 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
-    final result = await MeasurementRepository.instance.load(jobId);
+    final result = await MeasurementRepository.instance.load(jobId); // 조회된 측정 결과, 없으면 null
     if (result == null) {
       throw StateError('측정 결과를 찾을 수 없다: $jobId');
     }
 
-    final baseDir = await MeasurementRepository.instance.getBaseDirectory();
-    final repo = MeasurementRepository.instance;
-    final List<String> attachments = [];
-    final List<String> attachmentDescriptions = [];
+    final baseDir = await MeasurementRepository.instance.getBaseDirectory(); // 산출물 저장 폴더
+    final repo = MeasurementRepository.instance; // 저장소 인스턴스
+    final List<String> attachments = []; // 실제로 첨부할 파일 경로
+    final List<String> attachmentDescriptions = []; // 본문에 나열할 첨부 설명 줄
 
     if (_sendPdf) {
-      final pdfFile = await repo.ensureReportPdf(jobId);
+      final pdfFile = await repo.ensureReportPdf(jobId); // 생성되거나 이미 있던 PDF, 실패 시 null
       if (pdfFile != null && await pdfFile.exists()) {
         attachments.add(pdfFile.path);
         attachmentDescriptions.add('- report.pdf: 앱 측정 결과(가공값)');
@@ -271,25 +271,25 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     }
     if (_sendRaw) {
       // 1) 센서 원본 raw.txt
-      final rawFile = File('${baseDir.path}/$jobId/raw.txt');
+      final rawFile = File('${baseDir.path}/$jobId/raw.txt'); // 센서 원본 파일 경로
       if (await rawFile.exists()) {
         attachments.add(rawFile.path);
         attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
       }
       // 2) 초별 분리 엑셀 (256 / 128 / 64Hz)
-      final excelFiles = await repo.ensureRawExcelFiles(jobId);
+      final excelFiles = await repo.ensureRawExcelFiles(jobId); // 생성되거나 이미 있던 엑셀 파일 목록
       for (final excel in excelFiles) {
         if (await excel.exists()) {
           attachments.add(excel.path);
-          final name = excel.path.replaceAll('\\', '/').split('/').last;
+          final name = excel.path.replaceAll('\\', '/').split('/').last; // 경로에서 파일명만
           attachmentDescriptions.add('- $name');
         }
       }
     }
 
-    final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(result.dateTime);
-    final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr';
-    final body = _sendSummary
+    final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(result.dateTime); // 메일 제목에 쓸 날짜 문구
+    final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
+    final body = _sendSummary // 메일 본문
         ? ReportGenerator.generateSummaryText(result)
         : 'OTIS 승강기 진동 측정 리포트입니다.\n'
               '${attachmentDescriptions.join('\n')}\n'

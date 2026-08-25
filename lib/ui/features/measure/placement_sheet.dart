@@ -60,8 +60,7 @@ class PlacementSheet extends StatelessWidget {
   /// 반환: 화면 높이의 75%를 차지하는 바텀 시트 위젯
   @override
   Widget build(BuildContext context) {
-    // 이 시트 높이를 화면 비율로 잡기 위한 화면 전체 높이
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenHeight = MediaQuery.of(context).size.height; // 시트 높이를 비율로 잡을 화면 전체 높이
     return SizedBox(
       // 시트 전체 높이를 화면의 75%로 고정
       height: screenHeight * 0.75,

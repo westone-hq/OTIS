@@ -195,7 +195,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
 
     // 3) 센서 가용성 확인 후 있으면 측정 시작 및 데이터 구독
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
-    final bool available = await _sensorManager.checkSensorsAvailable();
+    final bool available = await _sensorManager.checkSensorsAvailable(); // 센서 가용 여부
     if (available) {
       // → 로직 이동: SensorChannelManager.startCapture()
       await _sensorManager.startCapture();
