@@ -74,7 +74,7 @@ class MainActivity : FlutterActivity() {
         sensorStreamHandler = SensorStreamHandler(this)
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, STREAM_CHANNEL)
-            // → 로직 이동: SensorStreamHandler
+            // → 로직 이동: SensorStreamHandler.onListen()
             .setStreamHandler(sensorStreamHandler)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
@@ -155,7 +155,7 @@ class MainActivity : FlutterActivity() {
                             ) != PackageManager.PERMISSION_GRANTED
                         ) {
                             pendingStartCapture = begin
-                            // → 로직 이동: onRequestPermissionsResult
+                            // → 로직 이동: onRequestPermissionsResult()
                             ActivityCompat.requestPermissions(
                                 this@MainActivity,
                                 arrayOf(permName),

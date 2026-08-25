@@ -29,12 +29,16 @@ final appRouter = GoRouter(
     GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
     // → 로직 이동: StartScreen.build()
     GoRoute(path: '/start', builder: (_, _) => const StartScreen()),
+    // → 로직 이동: MeasuringScreen.build()
     GoRoute(path: '/measuring', builder: (_, _) => const MeasuringScreen()),
+    // → 로직 이동: ResultScreen.build()
     GoRoute(
       path: '/result/:id',
       builder: (_, s) => ResultScreen(id: s.pathParameters['id'] ?? 'demo'),
     ),
+    // → 로직 이동: HistoryScreen.build()
     GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
+    // → 로직 이동: SettingsScreen.build()
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
   ],
 );

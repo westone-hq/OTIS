@@ -47,7 +47,7 @@ class VibrationCheckerApp extends StatelessWidget {
       title: 'OTIS 진동 측정',
       color: AppColors.bg,
       theme: buildAppTheme(),
-      routerConfig: appRouter, // → 로직 이동: router.dart의 appRouter
+      routerConfig: appRouter, // → 로직 이동: appRouter
       debugShowCheckedModeBanner: false,
     );
   }

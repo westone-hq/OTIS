@@ -101,7 +101,7 @@ class SensorChannelManager {
   /// 반환: 센서를 실제로 쓸 수 있으면 true. 확인 요청이 실패하면 false
   Future<bool> checkSensorsAvailable() async {
     try {
-      // → 로직 이동: MainActivity.kt의 checkAvailable
+      // → 로직 이동: MainActivity.checkAvailable
       final bool? available = await _methodChannel.invokeMethod<bool>(
         'checkAvailable',
       ); // 안드로이드가 돌려준 값. 요청 자체가 실패하면 null
@@ -147,7 +147,7 @@ class SensorChannelManager {
   ///       시간 초과되면 null을 담는다
   Future<void> stopCapture() async {
     try {
-      // → 로직 이동: MainActivity.kt의 stopCapture
+      // → 로직 이동: MainActivity.stopCapture
       final String? path = await _methodChannel
           .invokeMethod<String>('stopCapture')
           .timeout(const Duration(milliseconds: 500)); // 응답 대기 한도
