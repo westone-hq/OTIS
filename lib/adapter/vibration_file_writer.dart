@@ -125,6 +125,9 @@ class VibrationFileWriter {
   /// 반환: 집계 항목이 줄바꿈으로 이어진 문자열
   static String encodeMeta(GridResampleResult result) {
     final buffer = StringBuffer(); // 집계 문자열을 쌓아갈 버퍼
+    /// 함수: line
+    /// 목적: 한 줄을 쓰고 줄바꿈 문자를 붙여 버퍼에 담는다.
+    /// 인자: text — 추가할 한 줄 내용
     void line(String text) {
       buffer.write(text);
       buffer.write(lineEnding);

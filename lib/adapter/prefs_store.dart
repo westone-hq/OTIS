@@ -4,14 +4,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 클래스: PrefsStore
 /// 목적: 앱 설정(이메일 주소, 마지막 현장 정보 등)을 기기에 저장하고
 ///       불러오는 역할을 한다.
-/// 현재 상태: `loadEmail()`과 `saveEmail()`만 실제로 저장·조회한다.
+/// 미구현: `loadEmail()`과 `saveEmail()`만 실제로 저장·조회한다.
 ///       나머지(최근 현장 정보를 다루는 `loadLastSite()`,
 ///       `saveLastSite()`)는 예외를 던지지 않고 null 또는 빈 값을
 ///       그대로 돌려준다 — 저장한 것처럼 보이지만 실제로는 저장되지
 ///       않는다. 호출하는 곳에서 실패 여부를 알 수 없으므로, 구현
 ///       전까지 그 값을 신뢰하면 안 된다.
 class PrefsStore {
+  /// 작성: 2026-07-05 08:15:28 · 박건준
+  /// 변수: instance
+  /// 목적: 앱 전역에서 공유하는 단일 저장소 인스턴스.
   static final PrefsStore instance = PrefsStore._();
+
+  /// 작성: 2026-07-05 08:15:28 · 박건준
+  /// 함수: PrefsStore._
+  /// 목적: 외부에서 직접 생성하지 못하게 막는 전용 생성자. `instance`
+  ///       하나만 쓰도록 강제한다.
   PrefsStore._();
 
   /// 작성: 2026-08-19 10:35:27 · 박건준

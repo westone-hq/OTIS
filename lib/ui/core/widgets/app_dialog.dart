@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
-/// 어르신 UX(최소 터치 타깃 56dp)를 준수하는 공용 다이얼로그/액션 버튼 헬퍼.
-///
-/// Semantics(button: true, label) 및 SizedBox(height: AppDims.touchMin)를
-/// 자동으로 감싸줍니다.
+/// 작성: 2026-08-06 15:59:06 · 박건준
+/// 클래스: AppDialogButton
+/// 목적: 어르신 UX(최소 터치 타깃 56dp)를 준수하는 공용 다이얼로그/액션
+///       버튼이다. Semantics(button: true, label)와
+///       SizedBox(height: AppDims.touchMin)를 자동으로 감싼다.
 class AppDialogButton extends StatelessWidget {
   /// 버튼 라벨 문자열 (Semantics 및 텍스트 표시에 사용)
   final String label;
@@ -36,6 +37,12 @@ class AppDialogButton extends StatelessWidget {
   /// 내부 패딩 커스텀 (지정하지 않을 시 기본 좌우 gap2)
   final EdgeInsetsGeometry? padding;
 
+  /// 작성: 2026-08-06 15:59:06 · 박건준
+  /// 함수: AppDialogButton
+  /// 목적: 버튼에 필요한 값을 받아 위젯을 만든다. 각 인자의 의미는 위
+  ///       필드 설명을 따른다.
+  /// 인자: label, onPressed, primary, isDestructive, textColor, icon,
+  ///       iconColor, iconSize, textStyle, padding
   const AppDialogButton({
     super.key,
     required this.label,
@@ -50,6 +57,10 @@ class AppDialogButton extends StatelessWidget {
     this.padding,
   });
 
+  /// 작성: 2026-08-06 15:59:06 · 박건준
+  /// 함수: build
+  /// 목적: primary·isDestructive·icon 여부에 따라 ElevatedButton 또는
+  ///       TextButton으로 렌더링한다.
   @override
   Widget build(BuildContext context) {
     final Color defaultColor = isDestructive
@@ -132,7 +143,10 @@ class AppDialogButton extends StatelessWidget {
   }
 }
 
-/// 어르신 UX(최소 터치 타깃 56dp x 56dp)를 준수하는 아이콘 전용 버튼 헬퍼.
+/// 작성: 2026-08-06 15:59:06 · 박건준
+/// 클래스: AppDialogIconButton
+/// 목적: 어르신 UX(최소 터치 타깃 56dp x 56dp)를 준수하는 아이콘 전용
+///       버튼이다.
 class AppDialogIconButton extends StatelessWidget {
   /// 아이콘 종류
   final IconData icon;
@@ -152,6 +166,11 @@ class AppDialogIconButton extends StatelessWidget {
   /// 커스텀 툴팁 (지정하지 않을 시 label 사용)
   final String? tooltip;
 
+  /// 작성: 2026-08-06 15:59:06 · 박건준
+  /// 함수: AppDialogIconButton
+  /// 목적: 아이콘 버튼에 필요한 값을 받아 위젯을 만든다. 각 인자의
+  ///       의미는 위 필드 설명을 따른다.
+  /// 인자: icon, label, onPressed, color, size, tooltip
   const AppDialogIconButton({
     super.key,
     required this.icon,
@@ -162,6 +181,9 @@ class AppDialogIconButton extends StatelessWidget {
     this.tooltip,
   });
 
+  /// 작성: 2026-08-06 15:59:06 · 박건준
+  /// 함수: build
+  /// 목적: 최소 터치 영역을 보장하는 SizedBox로 IconButton을 감싼다.
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -180,7 +202,20 @@ class AppDialogIconButton extends StatelessWidget {
   }
 }
 
-/// 반복되는 barrierDismissible: false + AlertDialog 골격을 간편하게 띄우는 확인 다이얼로그 헬퍼.
+/// 작성: 2026-08-06 15:59:06 · 박건준
+/// 함수: showAppConfirmDialog
+/// 목적: 반복되는 barrierDismissible: false + AlertDialog 골격을 간편하게
+///       띄우는 확인 다이얼로그 헬퍼이다.
+/// 인자: context — 다이얼로그를 띄울 화면의 BuildContext
+///       title — 다이얼로그 제목 위젯
+///       content — 다이얼로그 본문 위젯
+///       confirmLabel — 확인 버튼 라벨
+///       cancelLabel — 취소 버튼 라벨. null이면 취소 버튼을 만들지 않는다
+///       onConfirm — 확인을 눌렀을 때 추가로 실행할 동작
+///       onCancel — 취소를 눌렀을 때 추가로 실행할 동작
+///       isDestructive — 확인 버튼을 위험 행동 색으로 표시할지 여부
+///       barrierDismissible — 바깥을 눌러 닫을 수 있는지 여부, 기본 false
+/// 반환: 사용자가 확인을 누르면 true, 취소나 바깥을 눌러 닫으면 false/null
 Future<T?> showAppConfirmDialog<T>({
   required BuildContext context,
   required Widget title,

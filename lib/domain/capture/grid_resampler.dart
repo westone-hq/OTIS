@@ -11,6 +11,12 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 ///       (t = t0Ns + 행번호 x gridIntervalNs). 시각을 행마다 들고 다니면
 ///       등간격이 아닌 값이 섞여 들어갈 여지가 생긴다.
 class GridSample {
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: GridSample
+  /// 목적: 격자 한 행의 X/Y/Z 진동값을 그대로 담는 생성자.
+  /// 인자: xMg — X축 진동값 (mg)
+  ///       yMg — Y축 진동값 (mg)
+  ///       zMg — Z축 진동값 (mg)
   const GridSample({required this.xMg, required this.yMg, required this.zMg});
 
   /// X축 motion (mg)
@@ -30,6 +36,23 @@ class GridSample {
 ///       구분할 수 없게 된다. 그래서 값을 채우는 대신 몇 개나
 ///       폐기됐는지만 집계해 결과에 함께 싣는다.
 class GridResampleResult {
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: GridResampleResult
+  /// 목적: 격자 환산 결과와 폐기·이상 집계값을 그대로 담는 생성자.
+  /// 인자: samples — 격자 행 목록
+  ///       t0Ns — 격자 0번 행의 시각 (나노초)
+  ///       gridIntervalNs — 격자 간격 (나노초)
+  ///       rawUsedCount — 환산에 사용된 raw 유효 이벤트 수
+  ///       gravityUsedCount — 환산에 사용된 gravity 유효 이벤트 수
+  ///       droppedZeroCount — 전 축이 0이어서 폐기한 이벤트 수
+  ///       droppedBackwardCount — 시각이 거꾸로 와서 폐기한 이벤트 수
+  ///       droppedLinearCount — linear 종류라서 버린 이벤트 수
+  ///       headTrimmedRows — 시작단에서 생성하지 않은 행 수
+  ///       tailTrimmedRows — 끝단에서 생성하지 않은 행 수
+  ///       rawMaxSpanNs — raw 이벤트 사이 최대 간격 (나노초)
+  ///       gravityMaxSpanNs — gravity 이벤트 사이 최대 간격 (나노초)
+  ///       degenerateSpanCount — 비례 계산이 불가능했던 횟수
+  ///       failureReason — 환산 실패 사유. 성공 시 null
   const GridResampleResult({
     required this.samples,
     required this.t0Ns,
@@ -141,26 +164,27 @@ class GridResampleResult {
 
 /// 작성: 2026-08-19 08:04:05 · 박건준
 /// 클래스: GridResampler
-/// 용어
-///   raw      가속도 원본. 중력과 승강기 가속과 진동이 모두 섞인 값
-///   gravity  중력 방향 성분. 센서 허브가 계산해 내보내는 값이며 크기는 1000mg 고정
-///   motion   raw - gravity. 중력을 뺀 뒤 남는 승강기 가속과 진동
-///   격자      출력 파일의 등간격 행. 간격은 CaptureConfig.idealIntervalNs 로 정한다
-///   단위는 전부 mg(밀리지, 1000mg = 중력가속도 1개분)
-///
-/// 이 클래스는 raw 와 gravity 를 각각 격자에 맞춘 뒤 빼서 motion 을 만든다.
-///
 /// 목적: 수신한 원본 이벤트를 모아두었다가, 측정 종료 시 등간격 격자로 환산한다.
 ///       raw 와 gravity 를 각각 따로 격자에 맞춘 뒤 빼서 motion 을 만든다.
 ///
-///       설계 근거가 되는 세 결정:
-///       - 격자 시각은 센서 시각에서 유도하지 않고 t0 에서 일정량을 더해서만 정한다.
-///         출력 파일에 시간 열이 없어 등간격이 필수이기 때문이다.
-///       - raw 와 gravity 를 각각 환산한 뒤 뺀다. 직전 gravity 값을 재사용하면
-///         결과에 계단 성분이 남고 이후 환산으로 제거되지 않는다.
-///       - 앞뒤를 감싸는 실측값이 없는 격자점은 만들지 않는다. 직전 값 복사는
-///         파일에서 실측과 구분할 수 없게 만든다.
+///       용어
+///         raw      가속도 원본. 중력과 승강기 가속과 진동이 모두 섞인 값
+///         gravity  중력 방향 성분. 센서 허브가 계산해 내보내는 값이며 크기는 1000mg 고정
+///         motion   raw - gravity. 중력을 뺀 뒤 남는 승강기 가속과 진동
+///         격자      출력 파일의 등간격 행. 간격은 CaptureConfig.idealIntervalNs 로 정한다
+///         단위는 전부 mg(밀리지, 1000mg = 중력가속도 1개분)
+///
+///       격자 시각은 센서 시각에서 유도하지 않고 t0 에서 일정량을 더해서만
+///       정한다. 출력 파일에 시간 열이 없어 등간격이 필수이기 때문이다.
+///       raw 와 gravity 를 각각 환산한 뒤 뺀다. 직전 gravity 값을 재사용하면
+///       결과에 계단 성분이 남고 이후 환산으로 제거되지 않는다.
+///       앞뒤를 감싸는 실측값이 없는 격자점은 만들지 않는다. 직전 값 복사는
+///       파일에서 실측과 구분할 수 없게 만든다.
 class GridResampler {
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: GridResampler
+  /// 목적: 격자 환산 설정을 받아 빈 수집기를 만든다.
+  /// 인자: config — 격자 간격과 목표 주기를 담은 수집 설정
   GridResampler({required this.config});
 
   /// 격자 간격과 목표 주기를 담은 수집 설정
@@ -360,6 +384,10 @@ class GridResampler {
 ///       임의의 시각에 그 센서가 어떤 값을 냈을지를 앞뒤 실측값 사이
 ///       비례 계산으로 구해준다.
 class _ChannelCursor {
+  /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 함수: _ChannelCursor
+  /// 목적: 시각 순 이벤트 목록을 받아 커서를 처음 위치에 둔다.
+  /// 인자: events — 시각 순으로 정렬된 이벤트 목록
   _ChannelCursor(this.events);
 
   /// 시각 순으로 정렬된 이벤트 목록

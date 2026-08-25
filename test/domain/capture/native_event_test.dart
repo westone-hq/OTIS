@@ -1,7 +1,10 @@
-/// 목적: 안드로이드에서 쏴주는 센서 원본 데이터(NativeEvent)를 텍스트 파일로 저장했다가 다시 읽어들일 때, 데이터가 깨지지 않고 그대로 복원되는지 테스트한다.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
+/// 함수: main
+/// 목적: 안드로이드에서 쏴주는 센서 원본 데이터(NativeEvent)를 텍스트
+///       파일로 저장했다가 다시 읽어들일 때, 데이터가 깨지지 않고
+///       그대로 복원되는지 테스트한다.
 void main() {
   group('NativeEvent 왕복', () {
     test('기록 후 판독하면 모든 값이 보존된다', () {

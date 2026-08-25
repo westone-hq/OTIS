@@ -4,6 +4,10 @@
 ///       현재는 서버 연동이 미정이라 임시로 항상 로그인된 것처럼 우회 처리되어 있다.
 /// 근거: 미정 — 서버 로그인 API 연동 방식이 정해지면 원복 및 재작성 필요
 abstract class AuthRepository {
+  /// 작성: 2026-07-04 17:07:21 · 박건준
+  /// 변수: instance
+  /// 목적: 앱 전역에서 쓰는 단일 인증 저장소 인스턴스. 항상
+  ///       `LocalAuthRepository`(임시 구현체)를 가리킨다.
   static AuthRepository instance = LocalAuthRepository();
 
   /// 작성: 2026-08-19 10:35:09 · 박건준

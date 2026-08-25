@@ -24,6 +24,11 @@ import io.flutter.plugin.common.MethodChannel
  *         에게 맡겨 센서 원본 데이터를 Flutter로 흘려보낸다
  */
 class MainActivity : FlutterActivity() {
+    /**
+     * 클래스: Companion
+     * 목적: Flutter와 연결할 채널 이름, 권한 요청 코드 등 MainActivity
+     *       전역에서 쓰는 상수를 모아둔다.
+     */
     companion object {
         // Flutter 쪽 lib/adapter/sensor_channel.dart 의 _methodChannel 과
         // 문자열이 반드시 같아야 한다. 컴파일러가 대신 검사해주는 연결이
@@ -181,8 +186,11 @@ class MainActivity : FlutterActivity() {
                         val recordPath = sensorStreamHandler.stop()
                         result.success(recordPath)
                     }
+                    /**
+                     * 함수: else
+                     * 목적: 정의되지 않은 메서드 이름의 요청에 미구현으로 응답한다.
+                     */
                     else -> {
-                        // 정의되지 않은 메서드 이름이면 미구현으로 응답한다
                         result.notImplemented()
                     }
                 }

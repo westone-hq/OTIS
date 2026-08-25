@@ -11,6 +11,13 @@ enum NativeEventType { accel, gravity, linear }
 ///       담는다. 값에 대한 어떠한 가공(보간(양옆 실측값 사이를 비례로
 ///       채워 넣는 계산), 필터, 보정)도 이 단계에서는 수행하지 않는다.
 class NativeEvent {
+  /// 작성: 2026-08-06 14:47:52 · 박건준
+  /// 함수: NativeEvent
+  /// 목적: 네이티브에서 도착한 원본 이벤트 값들을 그대로 담는 생성자.
+  /// 인자: type — 이벤트 종류 (accel/gravity/linear)
+  ///       tsUs — 측정 시각 (마이크로초)
+  ///       xMg, yMg, zMg — 세 축 가속도 값 (mg)
+  ///       dtUs — 같은 종류 직전 값과의 시간 간격 (마이크로초)
   const NativeEvent({
     required this.type,
     required this.tsUs,

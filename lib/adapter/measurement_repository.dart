@@ -8,13 +8,21 @@ import 'package:vibration_checker/model/measurement_result.dart';
 /// 클래스: MeasurementRepository
 /// 목적: 완성된 측정 결과를 기기에 파일 형태로 저장하거나, 목록을
 ///       불러오고, 삭제하는 저장소 역할을 한다.
-/// 현재 상태: `getBaseDirectory()`만 구현되어 있다. 나머지 6개
-/// 메서드(save, list, load, delete, ensureReportPdf,
-/// ensureRawExcelFiles)는 추후 구현할 내용이라, 지금 부르면
-/// `UnimplementedError`(아직 못 만든 기능을 호출했을 때 Dart가 대신
-/// 던져주는 오류)가 발생한다.
+/// 미구현: `getBaseDirectory()`만 구현되어 있다. 나머지 6개
+///       메서드(save, list, load, delete, ensureReportPdf,
+///       ensureRawExcelFiles)는 추후 구현할 내용이라, 지금 부르면
+///       `UnimplementedError`(아직 못 만든 기능을 호출했을 때 Dart가 대신
+///       던져주는 오류)가 발생한다.
 class MeasurementRepository {
+  /// 작성: 2026-07-04 15:52:54 · 박건준
+  /// 변수: instance
+  /// 목적: 앱 전역에서 공유하는 단일 저장소 인스턴스.
   static final MeasurementRepository instance = MeasurementRepository._();
+
+  /// 작성: 2026-07-04 15:52:54 · 박건준
+  /// 함수: MeasurementRepository._
+  /// 목적: 외부에서 직접 생성하지 못하게 막는 전용 생성자. `instance`
+  ///       하나만 쓰도록 강제한다.
   MeasurementRepository._();
 
   /// 작성: 2026-08-18 23:29:46 · 박건준

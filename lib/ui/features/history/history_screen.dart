@@ -8,22 +8,37 @@ import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
 /// S5 저장 결과 목록 화면
-/// - 폰에 저장된 과거 측정 결과 목록 표시 및 관리
-/// - MeasurementRepository.instance.list() 로 로컬 디스크 조회 및 개별/전체 삭제
-/// - 어르신 UX: 88dp 이상의 큰 터치 영역 행, 색+텍스트 3중 상태 표출, 대형 빈 상태 안내
+/// 클래스: HistoryScreen
+/// 목적: - 폰에 저장된 과거 측정 결과 목록 표시 및 관리
+///       - MeasurementRepository.instance.list() 로 로컬 디스크 조회 및 개별/전체 삭제
+///       - 어르신 UX: 88dp 이상의 큰 터치 영역 행, 색+텍스트 3중 상태 표출, 대형 빈 상태 안내
 class HistoryScreen extends StatefulWidget {
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: HistoryScreen
+  /// 목적: 인자 없이 화면을 만든다.
   const HistoryScreen({super.key});
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: createState
+  /// 목적: 이 화면의 상태 객체(`_HistoryScreenState`)를 만든다.
+  /// 반환: 새로 만든 상태 객체
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-/// 저장된 측정 결과 목록의 비동기 로드, 이메일 발송 연결 및 개별 삭제 상태를 관리합니다.
+/// 클래스: _HistoryScreenState
+/// 목적: 저장된 측정 결과 목록의 비동기 로드, 이메일 발송 연결 및 개별
+///       삭제 상태를 관리한다.
 class _HistoryScreenState extends State<HistoryScreen> {
+  /// 화면에 표시 중인 측정 결과 목록. `_loadItems()`가 채운다
   List<MeasurementResult> _items = [];
 
+  /// 목록 조회가 실패했는지 여부. true면 빈 화면에 실패 안내를 덧붙인다
   bool _loadFailed = false;
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: initState
+  /// 목적: 이 화면이 나타날 때 한 번, 저장된 결과 목록을 불러온다.
   @override
   void initState() {
     super.initState();
@@ -44,6 +59,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  /// 작성: 2026-07-04 15:52:54 · 박건준
+  /// 함수: _loadItems
+  /// 목적: 저장소에서 측정 결과 목록을 불러와 화면 상태에 채운다.
+  ///       조회에 실패하면 빈 목록으로 두고 실패 상태를 표시한다.
   Future<void> _loadItems() async {
     try {
       final list = await MeasurementRepository.instance.list();
@@ -63,10 +82,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: _showSendEmailSheet
+  /// 목적: 해당 측정 결과를 첨부해 이메일 발송 시트를 띄운다.
+  /// 인자: jobId — 첨부할 측정 결과의 식별자
   void _showSendEmailSheet(String jobId) {
     showSendEmailSheet(context, jobId: jobId);
   }
 
+  /// 작성: 2026-07-04 15:52:54 · 박건준
+  /// 함수: _confirmDelete
+  /// 목적: 삭제 확인 대화상자를 띄우고, "삭제"를 선택하면 저장소에서
+  ///       해당 항목을 지운 뒤 화면 목록에서도 제거한다.
+  /// 인자: item — 삭제할 측정 결과
   Future<void> _confirmDelete(MeasurementResult item) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
@@ -110,6 +138,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: _formatDate
+  /// 목적: 날짜를 "YYYY-MM-DD" 형식 문자열로 바꾼다.
+  /// 인자: dt — 변환할 날짜/시각
+  /// 반환: "YYYY-MM-DD" 형식 문자열
   String _formatDate(DateTime dt) {
     final y = dt.year.toString();
     final m = dt.month.toString().padLeft(2, '0');
@@ -279,6 +312,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: build
+  /// 목적: 저장된 결과 목록 화면을 그린다. 목록이 비어 있으면 빈
+  ///       상태 안내를, 있으면 항목 리스트를 보여준다.
   @override
   Widget build(BuildContext context) {
     return Scaffold(

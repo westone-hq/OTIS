@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// 디자인 토큰 - 앱의 모든 색/치수/타이포는 여기만 참조한다.
-/// 화면 코드에서 Color(0x...) / 숫자 하드코딩 금지.
+/// 작성: 2026-08-06 15:59:06 · 박건준
+/// 클래스: AppColors
+/// 목적: 디자인 토큰 - 앱의 모든 색은 여기만 참조한다. 화면 코드에서
+///       Color(0x...) 숫자 하드코딩을 금지한다.
 abstract final class AppColors {
   static const navy = Color(0xFF1F3864); // primary
   static const blue = Color(0xFF2E75B6); // action
@@ -15,6 +17,10 @@ abstract final class AppColors {
   static const border = Color(0xFFD9D9D9);
 }
 
+/// 작성: 2026-08-06 15:59:06 · 박건준
+/// 클래스: AppDims
+/// 목적: 디자인 토큰 - 앱의 모든 치수는 여기만 참조한다. 화면 코드에서
+///       숫자 하드코딩을 금지한다.
 abstract final class AppDims {
   /// 8dp 그리드
   static const gap = 8.0;
@@ -35,6 +41,10 @@ abstract final class AppDims {
   static const fieldH = 64.0;
 }
 
+/// 작성: 2026-08-06 15:59:06 · 박건준
+/// 클래스: AppText
+/// 목적: 디자인 토큰 - 앱의 모든 글자 스타일은 여기만 참조한다. 화면
+///       코드에서 스타일 하드코딩을 금지한다.
 abstract final class AppText {
   // 어르신 UX: 본문 18 미만 금지, 캡션 최소 16
   static const caption = TextStyle(fontSize: 16, color: AppColors.textSub);
@@ -51,7 +61,11 @@ abstract final class AppText {
       TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white);
 }
 
-/// 앱 전역 ThemeData
+/// 작성: 2026-08-06 15:59:06 · 박건준
+/// 함수: buildAppTheme
+/// 목적: 앱 전역에서 쓰는 ThemeData를 만든다. 버튼·입력창·스낵바 등
+///       공용 위젯의 색과 모양을 여기서 한 번에 정한다.
+/// 반환: 완성된 ThemeData
 ThemeData buildAppTheme() {
   final base = ThemeData(
     useMaterial3: true,

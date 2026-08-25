@@ -53,6 +53,39 @@ class MeasurementResult {
   final bool lowMotionWarning; // 움직임 미감지 경고 플래그
   final Map<String, double> debugMetrics; // 실측 진단용 임시 지표
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: MeasurementResult
+  /// 목적: 측정 결과 값들을 그대로 담는 생성자. 확장 필드는 기본값을 갖는다.
+  /// 인자: id — 결과 식별자
+  ///       jobNo — 제번
+  ///       siteName — 현장명
+  ///       bottomFloor — 최하층
+  ///       topFloor — 최상층
+  ///       direction — 방향
+  ///       dateTime — 측정 일시
+  ///       xPtp, yPtp, zPtp — 축별 진동 P2P (mg)
+  ///       noiseMax — 소음 최대 (dBA)
+  ///       distance — 운행거리 (m)
+  ///       maxSpeed — 최대속도 (m/s)
+  ///       fullXPtp/fullYPtp/fullZPtp — 전체 주행 구간 축별 P-P (mg), 기본 0.0
+  ///       constantXPtp/constantYPtp/constantZPtp — 정속 구간 축별 P-P
+  ///       (mg), 기본 0.0
+  ///       preFilterFullXPtp/preFilterFullYPtp/preFilterFullZPtp — 필터 전
+  ///       전체 주행 구간 축별 P-P (mg), 기본 0.0
+  ///       preFilterConstantXPtp/preFilterConstantYPtp/preFilterConstantZPtp
+  ///       — 필터 전 정속 구간 축별 P-P (mg), 기본 0.0
+  ///       xSeries/ySeries/zSeries/noiseSeries/positionSeries/speedSeries/
+  ///       accelSeries/jerkSeries — 시계열 데이터 목록
+  ///       sampleRate — 실측 샘플레이트 (Hz), 기본 256.0
+  ///       usedDetectedRideSegment — 주행 구간 자동 검출 성공 여부, 기본 true
+  ///       constantSpeedRange — 정속 구간 시간 범위 요약, 기본 '전체 구간'
+  ///       usedDetectedConstantSpeed — 정속 구간 자동 검출 성공 여부, 기본 false
+  ///       constantSpeedSampleCount — 정속 구간 샘플 수, 기본 0
+  ///       totalVibrationSampleCount — 진동 분석 전체 샘플 수, 기본 0
+  ///       constantSpeedRatio — 전체 대비 정속 구간 비율, 기본 0.0
+  ///       rawSamples — RAW 데이터 보관, 없으면 null
+  ///       lowMotionWarning — 움직임 미감지 경고 여부, 기본 false
+  ///       debugMetrics — 실측 진단용 임시 지표, 기본 빈 Map
   const MeasurementResult({
     required this.id,
     required this.jobNo,
@@ -311,6 +344,11 @@ class MeasurementResult {
     );
   }
 
+  /// 작성: 2026-07-04 15:52:54 · 박건준
+  /// 함수: fromJson
+  /// 목적: JSON 문자열을 MeasurementResult 객체로 복원한다.
+  /// 인자: source — JSON 형식 문자열
+  /// 반환: 복원된 MeasurementResult 객체
   factory MeasurementResult.fromJson(String source) =>
       MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 

@@ -33,8 +33,9 @@ class MeasuringScreen extends StatefulWidget {
   State<MeasuringScreen> createState() => _MeasuringScreenState();
 }
 
-/// 측정을 저장해도 되는지 판정한 결과. ok(저장 가능),
-/// siteInvalid(현장 정보 누락 · 오류), noSamples(유효 샘플 부족)
+/// 클래스: _CaptureGateResult
+/// 목적: 측정을 저장해도 되는지 판정한 결과. ok(저장 가능),
+///       siteInvalid(현장 정보 누락 · 오류), noSamples(유효 샘플 부족)
 enum _CaptureGateResult { ok, siteInvalid, noSamples }
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
@@ -655,6 +656,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
   }
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 함수: build
+  /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자 카운트다운
+  ///       화면을, 아니면 경과 시간과 "테스트 완료" 버튼이 있는 실제
+  ///       측정 진행 화면을 보여준다.
   @override
   Widget build(BuildContext context) {
     if (_isCountingDown) {

@@ -66,6 +66,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: dispose
+  /// 목적: 화면이 사라질 때 입력 컨트롤러를 해제해 메모리 누수를 막는다.
   @override
   void dispose() {
     _emailCtl.dispose();
@@ -116,6 +119,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: _confirmLogout
+  /// 목적: 로그아웃 확인 대화상자를 띄우고, "로그아웃"을 선택하면
+  ///       로그아웃 처리 후 로그인 화면으로 이동한다.
+  /// 미구현: `/login` 경로가 router.dart 에 등록돼 있지 않아, 로그아웃
+  ///       후 `context.go('/login')`을 불러도 실제로는 아무 화면도
+  ///       뜨지 않는다.
   Future<void> _confirmLogout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -144,6 +154,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: _buildProfileCard
+  /// 목적: 로그인된 사용자 아이디를 보여주는 프로필 카드 위젯을 만든다.
+  /// 반환: 프로필 카드 위젯
   Widget _buildProfileCard() {
     final userId = AuthRepository.instance.currentUserId ?? '미로그인';
     return Container(
@@ -213,6 +227,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 함수: build
+  /// 목적: 설정 화면을 그린다. 프로필 카드, 이메일 등록, 앱 버전,
+  ///       로그아웃 버튼을 세로로 배치한다.
   @override
   Widget build(BuildContext context) {
     return Scaffold(

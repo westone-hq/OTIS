@@ -1,7 +1,8 @@
 /// 클래스: SensorSample
 /// 목적: 1초에 수백 번씩 찍히는 개별 센서 측정치 '한 점'의 데이터를 정의한다.
 class SensorSample {
-  final int tsUs; // 타임스탬프 (마이크로초 us)
+  /// 타임스탬프 (마이크로초 us)
+  final int tsUs;
   final double x; // X축 linear acceleration (mg)
   final double y; // Y축 linear acceleration (mg)
   final double z; // Z축 linear acceleration (mg)
@@ -12,6 +13,13 @@ class SensorSample {
   final double? gravityY; // Y축 gravity 추정값 (mg)
   final double? gravityZ; // Z축 gravity 추정값 (mg)
 
+  /// 작성: 2026-07-04 10:36:25 · 박건준
+  /// 함수: SensorSample
+  /// 목적: 센서 측정치 한 점의 값을 그대로 담는 생성자.
+  /// 인자: tsUs — 타임스탬프 (마이크로초)
+  ///       x, y, z — 세 축 진동값 (mg)
+  ///       rawX, rawY, rawZ — 세 축 가속도 원값, 없으면 null (mg)
+  ///       gravityX, gravityY, gravityZ — 세 축 중력 추정값, 없으면 null (mg)
   const SensorSample({
     required this.tsUs,
     required this.x,
@@ -74,6 +82,11 @@ class SensorSample {
     );
   }
 
+  /// 작성: 2026-07-04 10:36:25 · 박건준
+  /// 함수: toString
+  /// 목적: 로그에서 값을 바로 알아볼 수 있도록 사람이 읽기 좋은
+  ///       문자열로 바꾼다.
+  /// 반환: "SensorSample(tsUs: ..., x: ... mg, ...)" 형태의 문자열
   @override
   String toString() =>
       'SensorSample(tsUs: $tsUs, x: ${x.toStringAsFixed(2)} mg, y: ${y.toStringAsFixed(2)} mg, z: ${z.toStringAsFixed(2)} mg)';

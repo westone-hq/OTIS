@@ -36,6 +36,12 @@ class SensorChannelManager {
     'com.otis.vibration_checker/sensors_stream',
   );
 
+  /// 작성: 2026-08-10 11:44:47 · 박건준
+  /// 변수: _parsedStream
+  /// 목적: `nativeEventStream`이 만든 스트림을 캐시해 둔다. 값을 요청할
+  ///       때마다 새로 만들지 않고 이미 있으면 그대로 재사용한다.
+  ///       측정이 끝나면(`stopCapture()`) 비워서 다음 측정 때 새로
+  ///       만들게 한다. 아직 만든 적 없거나 비워졌으면 null
   Stream<NativeEvent>? _parsedStream;
 
   /// 안드로이드가 보낸 데이터 중 형태가 깨졌거나 이상해서 버린 개수
