@@ -58,15 +58,21 @@ class NoiseTestScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-09-21 · 박희정
+/// 수정: 2026-09-22 · 박희정
 /// 클래스: _NoiseTestScreenState
-/// 목적: 모드 선택·시작/정지·라이브 표시·4모드 연속 10초 실행을 관리한다.
+/// 목적: 모드 선택·시작/정지·라이브 표시·4모드 연속 2초(총 8초) 실행을 관리한다.
 class _NoiseTestScreenState extends State<NoiseTestScreen> {
+  /// 연속 테스트 때 모드당 측정 시간. 4모드 × 2초 = 최소 8초
+  static const Duration _batchModeDuration = Duration(seconds: 2);
+
   late final SensorChannelManager _sensors =
       widget.sensorManager ?? SensorChannelManager();
 
   String _selectedModeId = _kModes.first.id;
   bool _running = false;
   bool _batchRunning = false;
+  /// 연속 측정 중 현재 몇 번째 모드인지 (1부터). 아니면 0
+  int _batchModeIndex = 0;
   String? _error;
   String? _lastFileName;
   final List<String> _batchFilePaths = [];
@@ -175,10 +181,12 @@ class _NoiseTestScreenState extends State<NoiseTestScreen> {
   }
 
   /// 작성: 2026-09-21 · 박희정
-  /// 함수: _runBatch10s
-  /// 목적: 4모드를 순차적으로 각 10초씩 실행한다. 모드 사이에 반드시
-  ///       stop해 마이크·파일 충돌을 피한다.
-  Future<void> _runBatch10s() async {
+  /// 수정: 2026-09-22 · 박희정
+  /// 함수: _runBatch2sEach
+  /// 목적: 4모드를 순차적으로 각 2초씩 실행한다(총 최소 8초).
+  ///       한 번에 길게 재면 구분이 어려워, 짧게 나눠 비교한다.
+  ///       모드 사이에 반드시 stop해 마이크·파일 충돌을 피한다.
+  Future<void> _runBatch2sEach() async {
     if (_running || _batchRunning) return;
 
     final granted = await _sensors.requestAudioPermission();
@@ -189,13 +197,18 @@ class _NoiseTestScreenState extends State<NoiseTestScreen> {
 
     setState(() {
       _batchRunning = true;
+      _batchModeIndex = 0;
       _batchFilePaths.clear();
       _error = null;
     });
 
-    for (final mode in _kModes) {
+    for (var i = 0; i < _kModes.length; i++) {
+      final mode = _kModes[i];
       if (!mounted) break;
-      setState(() => _selectedModeId = mode.id);
+      setState(() {
+        _selectedModeId = mode.id;
+        _batchModeIndex = i + 1;
+      });
 
       final start = await _sensors.startNoiseTest(mode.id);
       if (!mounted) break;
@@ -203,6 +216,7 @@ class _NoiseTestScreenState extends State<NoiseTestScreen> {
         setState(() {
           _error = '${mode.id}: ${(start['error'] as String?) ?? '시작 실패'}';
           _batchRunning = false;
+          _batchModeIndex = 0;
         });
         return;
       }
@@ -220,7 +234,8 @@ class _NoiseTestScreenState extends State<NoiseTestScreen> {
         _elapsedMs = 0;
       });
 
-      await Future<void>.delayed(const Duration(seconds: 10));
+      // 모드당 2초 측정 (4모드 → 최소 8초)
+      await Future<void>.delayed(_batchModeDuration);
       if (!mounted) break;
 
       final stop = await _sensors.stopNoiseTest();
@@ -236,11 +251,14 @@ class _NoiseTestScreenState extends State<NoiseTestScreen> {
       });
 
       // 모드 전환 전 짧게 대기해 마이크 해제 여유를 둔다
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
     }
 
     if (!mounted) return;
-    setState(() => _batchRunning = false);
+    setState(() {
+      _batchRunning = false;
+      _batchModeIndex = 0;
+    });
   }
 
   bool get _rateMismatch =>
@@ -309,6 +327,14 @@ class _NoiseTestScreenState extends State<NoiseTestScreen> {
                       '경과 ${(_elapsedMs / 1000).toStringAsFixed(1)} 초',
                       style: AppText.body,
                     ),
+                    if (_batchRunning) ...[
+                      const SizedBox(height: AppDims.gap),
+                      Text(
+                        '연속 측정 $_batchModeIndex/${_kModes.length} · '
+                        '$_selectedModeId (모드당 2초)',
+                        style: AppText.bodyBold.copyWith(color: AppColors.navy),
+                      ),
+                    ],
                     const SizedBox(height: AppDims.gap2),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -394,16 +420,19 @@ class _NoiseTestScreenState extends State<NoiseTestScreen> {
               SizedBox(
                 height: AppDims.buttonH,
                 child: OutlinedButton(
-                  onPressed: busy ? null : _runBatch10s,
+                  onPressed: busy ? null : _runBatch2sEach,
                   child: Text(
-                    _batchRunning ? '연속 측정 중…' : '4모드 연속 10초',
+                    _batchRunning
+                        ? '연속 측정 중… ($_batchModeIndex/${_kModes.length})'
+                        : '4모드 연속 2초씩 (총 8초)',
                     style: AppText.button.copyWith(color: AppColors.navy),
                   ),
                 ),
               ),
               const SizedBox(height: AppDims.gap2),
               Text(
-                '파일은 앱 외부 저장소 noise_tests/ 아래에 저장됩니다. '
+                '연속 측정: rate40k → rate80k → aweight → slow 각 2초.\n'
+                '파일은 앱 외부 저장소 noise_tests/ 아래에 모드별로 따로 저장됩니다. '
                 'A가중은 근사 필터이며 실험실급이 아닙니다.',
                 style: AppText.caption,
               ),
