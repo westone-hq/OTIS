@@ -274,6 +274,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // 3. 앱 버전
               _buildListTile(title: '앱 버전', trailingText: '1.0.0'),
+              const SizedBox(height: AppDims.gap2),
+
+              // 3-1. 소음(dB) 전용 테스트 (EVIMP1과 별개)
+              Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppDims.radius),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppDims.radius),
+                  onTap: () => context.push('/noise-test'),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 64),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDims.gap2,
+                      vertical: AppDims.gap,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(AppDims.radius),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('소음(dB) 테스트', style: AppText.body),
+                        Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textSub,
+                          size: 28,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 48),
 
               // 4. 맨 아래 로그아웃 버튼

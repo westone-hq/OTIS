@@ -36,6 +36,12 @@ class SensorChannelManager {
     'com.otis.vibration_checker/sensors_stream',
   );
 
+  /// 소음(dB) 전용 테스트 라이브 스트림.
+  /// MainActivity 의 NOISE_TEST_STREAM_CHANNEL 과 문자열이 같아야 한다
+  static const EventChannel _noiseTestEventChannel = EventChannel(
+    'com.otis.vibration_checker/noise_test_stream',
+  );
+
   /// 작성: 2026-08-10 11:44:47 · 박건준
   /// 변수: _parsedStream
   /// 목적: `nativeEventStream`이 만든 스트림을 캐시해 둔다. 값을 요청할
@@ -120,18 +126,52 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
+  /// 함수: requestAudioPermission
+  /// 목적: 안드로이드에게 마이크(RECORD_AUDIO) 권한을 요청한다.
+  ///       이미 승인돼 있으면 즉시 true, 거부되면 false를 돌려준다.
+  /// 반환: 마이크 사용이 가능하면 true
+  Future<bool> requestAudioPermission() async {
+    try {
+      // → 로직 이동: MainActivity.requestAudioPermission
+      final bool? granted = await _methodChannel.invokeMethod<bool>(
+        'requestAudioPermission',
+      );
+      return granted ?? false;
+    } catch (error, stack) {
+      developer.log(
+        'requestAudioPermission 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+      lastCaptureError = '마이크 권한 요청이 실패했습니다.';
+      return false;
+    }
+  }
+
+  /// 작성: 2026-08-17 15:35:02 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 함수: startCapture
-  /// 목적: 안드로이드에게 지정된 속도(Hz)로 센서 데이터를 쏴 달라고
-  ///       명령을 내린다. 시작 전에 이전 측정 기록(폐기 개수 · 오류
-  ///       문구 · 저장 경로)을 모두 초기화한다.
+  /// 목적: 안드로이드에게 센서·소음 데이터를 쏴 달라고 명령을 내린다.
+  ///       시작 전에 이전 측정 기록(폐기 개수 · 오류 문구 · 저장 경로)을
+  ///       모두 초기화한다.
+  /// 인자: calibrationOffsetDba — 현장·기기 보정(dBA), 기본 0.0
+  ///       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 85.0 (OI-4)
   /// 반환: 없음. 요청이 실패하면 원인은 `debugPrint`로 남기고
   ///       `lastCaptureError`에 화면에 보여줄 문구를 채운다
-  Future<void> startCapture() async {
+  Future<void> startCapture({
+    double calibrationOffsetDba = 0.0,
+    double micDbfsToDbaOffset = 85.0,
+  }) async {
     droppedMapCount = 0;
     lastCaptureError = null;
     lastRecordPath = null;
     try {
-      await _methodChannel.invokeMethod('startCapture');
+      await _methodChannel.invokeMethod('startCapture', {
+        'calibrationOffset': calibrationOffsetDba,
+        'micDbfsToDbaOffset': micDbfsToDbaOffset,
+      });
     } catch (error) {
       debugPrint('startCapture 실패: $error');
       lastCaptureError = '측정 시작 요청이 실패했습니다.';
@@ -156,5 +196,91 @@ class SensorChannelManager {
       lastRecordPath = null;
     }
     _parsedStream = null; // 다음 측정을 위해 이전 스트림 캐시를 비운다
+  }
+
+  /// 작성: 2026-09-21 · 박희정
+  /// 함수: noiseTestStream
+  /// 목적: 소음(dB) 전용 테스트의 라이브 맵 스트림을 돌려준다.
+  /// 반환: modeId·dbLevel·requested/actual 샘플레이트 등이 담긴 Map 스트림
+  Stream<Map<String, dynamic>> get noiseTestStream {
+    return _noiseTestEventChannel.receiveBroadcastStream().map((event) {
+      if (event is Map) {
+        return Map<String, dynamic>.from(event);
+      }
+      return <String, dynamic>{};
+    });
+  }
+
+  /// 작성: 2026-09-21 · 박희정
+  /// 함수: startNoiseTest
+  /// 목적: 소음(dB) 전용 테스트를 시작한다.
+  /// 인자: modeId — rate40k | rate80k | aweight | slow
+  /// 반환: 네이티브가 돌려준 상태 맵 (ok, filePath, actualSampleRate 등)
+  Future<Map<String, dynamic>> startNoiseTest(String modeId) async {
+    try {
+      // → 로직 이동: MainActivity.startNoiseTest
+      final raw = await _methodChannel.invokeMethod<dynamic>(
+        'startNoiseTest',
+        {'modeId': modeId},
+      );
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      return {'ok': false, 'error': '응답 형식이 올바르지 않습니다.'};
+    } catch (error, stack) {
+      developer.log(
+        'startNoiseTest 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+      return {'ok': false, 'error': '소음 테스트 시작 요청이 실패했습니다.'};
+    }
+  }
+
+  /// 작성: 2026-09-21 · 박희정
+  /// 함수: stopNoiseTest
+  /// 목적: 소음(dB) 전용 테스트를 멈추고 요약(파일 경로 포함)을 받는다.
+  Future<Map<String, dynamic>> stopNoiseTest() async {
+    try {
+      // → 로직 이동: MainActivity.stopNoiseTest
+      final raw = await _methodChannel.invokeMethod<dynamic>('stopNoiseTest');
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      return {'ok': false, 'error': '응답 형식이 올바르지 않습니다.'};
+    } catch (error, stack) {
+      developer.log(
+        'stopNoiseTest 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+      return {'ok': false, 'error': '소음 테스트 종료 요청이 실패했습니다.'};
+    }
+  }
+
+  /// 작성: 2026-09-21 · 박희정
+  /// 함수: getNoiseTestStatus
+  /// 목적: 소음(dB) 전용 테스트의 현재 상태를 조회한다.
+  Future<Map<String, dynamic>> getNoiseTestStatus() async {
+    try {
+      // → 로직 이동: MainActivity.getNoiseTestStatus
+      final raw = await _methodChannel.invokeMethod<dynamic>(
+        'getNoiseTestStatus',
+      );
+      if (raw is Map) {
+        return Map<String, dynamic>.from(raw);
+      }
+      return {'ok': false, 'error': '응답 형식이 올바르지 않습니다.'};
+    } catch (error, stack) {
+      developer.log(
+        'getNoiseTestStatus 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+      return {'ok': false, 'error': '소음 테스트 상태 조회가 실패했습니다.'};
+    }
   }
 }

@@ -12,12 +12,19 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 ///       등간격이 아닌 값이 섞여 들어갈 여지가 생긴다.
 class GridSample {
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 함수: GridSample
-  /// 목적: 격자 한 행의 X/Y/Z 진동값을 그대로 담는 생성자.
+  /// 목적: 격자 한 행의 X/Y/Z 진동값과 소음값을 그대로 담는 생성자.
   /// 인자: xMg — X축 진동값 (mg)
   ///       yMg — Y축 진동값 (mg)
   ///       zMg — Z축 진동값 (mg)
-  const GridSample({required this.xMg, required this.yMg, required this.zMg});
+  ///       noiseDba — 그 시각에 붙인 소음 (dBA). 없으면 0.0
+  const GridSample({
+    required this.xMg,
+    required this.yMg,
+    required this.zMg,
+    this.noiseDba = 0.0,
+  });
 
   /// X축 motion (mg)
   final double xMg;
@@ -27,6 +34,9 @@ class GridSample {
 
   /// Z축 motion (mg)
   final double zMg;
+
+  /// 소음 (dBA). 앞뒤 accel 실측값 사이를 선형 보간한 값
+  final double noiseDba;
 }
 
 /// 작성: 2026-08-19 08:04:05 · 박건준
@@ -360,6 +370,8 @@ class GridResampler {
           xMg: rawPoint.x - gravityPoint.x,
           yMg: rawPoint.y - gravityPoint.y,
           zMg: rawPoint.z - gravityPoint.z,
+          // 소음도 XYZ 와 같이 앞뒤 raw 실측값 사이를 선형 보간한다
+          noiseDba: rawPoint.noiseDba,
         ),
       );
     }
@@ -409,16 +421,18 @@ class _ChannelCursor {
   int degenerateSpanCount = 0;
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-09-15 16:40:00 · 박희정
   /// 함수: valueAt
   /// 목적: 지정한 시각에 이 센서가 어떤 값을 냈을지 계산한다. 그
   ///       시각을 감싸는 앞뒤 두 실측값을 직선으로 잇고, 그 직선
   ///       위에서 지정한 시각에 해당하는 값을 구한다(선형 보간).
+  ///       소음(dBA)도 XYZ 와 동일하게 앞뒤 실측값 사이를 보간한다.
   /// 인자: tNs — 값을 구할 시각 (나노초)
-  /// 반환: 계산된 X/Y/Z 값. 지정 시각을 감싸는 앞뒤 실측값이 없으면 null
+  /// 반환: 계산된 X/Y/Z·소음. 지정 시각을 감싸는 앞뒤 실측값이 없으면 null
   /// 식: alpha = (t - t_앞) / (t_뒤 - t_앞)
   ///     값 = 값_앞 + alpha x (값_뒤 - 값_앞)
   /// 근거: 표준 — 두 점 사이 선형 보간(linear interpolation) 공식
-  ({double x, double y, double z})? valueAt(int tNs) {
+  ({double x, double y, double z, double noiseDba})? valueAt(int tNs) {
     // 이 함수는 매번 이전 호출보다 나중 시각으로 불리므로, 커서를
     // 뒤로 되돌릴 필요 없이 앞으로만 옮기면 된다. events[_index]가
     // tNs 이전의 마지막 실측값이 될 때까지 옮긴다
@@ -432,12 +446,19 @@ class _ChannelCursor {
     final beforeNs = before.tsUs * 1000; // before의 시각(나노초)
     final afterNs = after.tsUs * 1000; // after의 시각(나노초)
     final spanNs = afterNs - beforeNs; // 두 실측값 사이 시간 간격
+    final beforeNoise = before.noiseDba ?? 0.0;
+    final afterNoise = after.noiseDba ?? beforeNoise;
 
     if (spanNs > maxSpanNs) maxSpanNs = spanNs;
 
     if (spanNs <= 0) {
       degenerateSpanCount++;
-      return (x: before.xMg, y: before.yMg, z: before.zMg);
+      return (
+        x: before.xMg,
+        y: before.yMg,
+        z: before.zMg,
+        noiseDba: beforeNoise,
+      );
     }
     if (tNs < beforeNs || tNs > afterNs) return null;
 
@@ -446,6 +467,7 @@ class _ChannelCursor {
       x: before.xMg + alpha * (after.xMg - before.xMg),
       y: before.yMg + alpha * (after.yMg - before.yMg),
       z: before.zMg + alpha * (after.zMg - before.zMg),
+      noiseDba: beforeNoise + alpha * (afterNoise - beforeNoise),
     );
   }
 }

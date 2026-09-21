@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- OTIS 진동 측정 앱 필수 권한: 고속센서(256Hz 진동), 화면 유지 -->
+    <!-- OTIS 진동 측정 앱 필수 권한: 고속센서(256Hz 진동), 마이크(dBA), 화면 유지 -->
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
 
