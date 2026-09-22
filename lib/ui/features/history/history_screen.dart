@@ -151,19 +151,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 수정: 2026-09-15 13:08:37 · nada
   /// 함수: _getSummaryText
-  /// 목적: 목록 한 줄에 보여줄 요약 문구를 만든다. 기준 초과 항목이
-  ///       없으면 "전 지표 정상", 있으면 초과한 항목만 나열한다.
+  /// 목적: 목록 한 줄에 보여줄 요약 문구를 만든다. 초과한 항목이 있으면
+  ///       그 항목만 나열하고, 초과가 없으면 "전 지표 정상"을 쓴다.
+  ///       - 판정할 수 있는 지표가 하나도 없으면 "정상" 대신 미측정임을
+  ///         그대로 밝힌다. 아직 재지 않은 것을 통과로 읽히게 두면 안 된다
+  ///       - 일부만 쟀으면 몇 개가 미측정인지 함께 적는다
   /// 인자: item — 요약할 측정 결과
   /// 반환: 요약 문구
   String _getSummaryText(MeasurementResult item) {
-    final isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded; // 하나라도 초과했는지
-    if (!isExceeded) return '전 지표 정상';
+    final judged = <bool?>[
+      item.xExceeded,
+      item.yExceeded,
+      item.zExceeded,
+      item.noiseExceeded,
+    ]; // 세 축과 소음의 판정 결과. 아직 재지 않은 항목은 null
+    final unmeasured = judged.where((v) => v == null).length; // 미측정 항목 수
+    if (unmeasured == judged.length) return '미측정 (진동 · 소음 지표 없음)';
+
     final List<String> reasons = []; // 초과한 항목 문구를 모을 목록
-    if (item.xExceeded) reasons.add('X ${item.xPtp.toStringAsFixed(1)}mg');
-    if (item.yExceeded) reasons.add('Y ${item.yPtp.toStringAsFixed(1)}mg');
-    if (item.zExceeded) reasons.add('Z ${item.zPtp.toStringAsFixed(1)}mg');
-    if (item.noiseExceeded) reasons.add('소음 ${item.noiseMax.toStringAsFixed(1)}dBA');
+    if (item.xExceeded == true) {
+      reasons.add('X ${item.xPtp!.toStringAsFixed(1)}mg');
+    }
+    if (item.yExceeded == true) {
+      reasons.add('Y ${item.yPtp!.toStringAsFixed(1)}mg');
+    }
+    if (item.zExceeded == true) {
+      reasons.add('Z ${item.zPtp!.toStringAsFixed(1)}mg');
+    }
+    if (item.noiseExceeded == true) {
+      reasons.add('소음 ${item.noiseMax!.toStringAsFixed(1)}dBA');
+    }
+    if (reasons.isEmpty) {
+      return unmeasured == 0 ? '전 지표 정상' : '잰 지표는 정상 (미측정 $unmeasured개)';
+    }
     return '${reasons.join(', ')} 초과';
   }
 
@@ -224,14 +246,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 수정: 2026-09-15 13:08:37 · nada
   /// 함수: _buildListItem
   /// 목적: 목록 한 행(상태 표시 + 요약 + 이메일/삭제 버튼)을 만든다.
+  ///       상태는 초과(빨강) · 정상(초록) · 미측정(회색) 셋 중 하나다.
+  ///       재지 않은 결과를 초록 "정상"으로 보여주면 통과한 측정과
+  ///       구분할 수 없어 따로 나눈다.
   /// 인자: item — 표시할 측정 결과
   /// 반환: 목록 한 행 위젯
   Widget _buildListItem(MeasurementResult item) {
-    final bool isExceeded = item.xExceeded || item.yExceeded || item.zExceeded || item.noiseExceeded; // 하나라도 초과했는지
-    final Color statusColor = isExceeded ? AppColors.red : AppColors.green; // 상태 점·글자 색
-    final String statusLabel = isExceeded ? '초과' : '정상'; // 상태 문구
+    final bool hasExceeded = item.xExceeded == true ||
+        item.yExceeded == true ||
+        item.zExceeded == true ||
+        item.noiseExceeded == true; // 하나라도 기준을 넘었는지
+    final bool allUnmeasured = item.xExceeded == null &&
+        item.yExceeded == null &&
+        item.zExceeded == null &&
+        item.noiseExceeded == null; // 판정할 수 있는 지표가 하나도 없는지
+    final Color statusColor = hasExceeded
+        ? AppColors.red
+        : allUnmeasured
+            ? AppColors.textSub
+            : AppColors.green; // 상태 점·글자 색
+    final String statusLabel = hasExceeded
+        ? '초과'
+        : allUnmeasured
+            ? '미측정'
+            : '정상'; // 상태 문구
 
     return Material(
       color: AppColors.surface,

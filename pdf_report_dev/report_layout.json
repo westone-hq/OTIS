@@ -1,0 +1,362 @@
+{
+  "_comment": "모든 좌표는 템플릿 이미지 픽셀 좌표계(2256 x 3190, 좌상단 원점) 기준. 원본 리포트 페이지(924 x 1316)에서 측정한 뒤 K=2.44156 배로 변환했다. PDF 포인트 변환은 pt_per_px 를 곱하고 y 는 page_height_pt 에서 뺀다.",
+  "page": {
+    "width_px": 2256,
+    "height_px": 3190,
+    "width_pt": 595.276,
+    "height_pt": 841.89,
+    "pt_per_px_x": 0.263863475,
+    "pt_per_px_y": 0.263915361,
+    "_comment": "서식 이미지 비율 1.414007 이 A4 1.414285 와 미세하게 달라 하나의 환산 계수로는 두 축을 동시에 맞출 수 없다. 배경을 A4 전면에 늘려 깔기 때문에, 좌표도 축별 계수를 써야 배경의 늘어남과 일치한다. 단일 계수를 쓰면 페이지 아래쪽에서 0.16pt 어긋난다."
+  },
+  "colors": {
+    "navy": "#0D2B52",
+    "gold": "#C09B54",
+    "text": "#231F20",
+    "white": "#FFFFFF",
+    "judge_green": "#4CAF3E",
+    "judge_yellow": "#F5C324",
+    "judge_red": "#D93025",
+    "chart_line": "#0000CC",
+    "chart_marker": "#E03030",
+    "chart_guide": "#E03030",
+    "judge_unknown": "#B9BFC7",
+    "stripe_odd": "#E6E9EE",
+    "stripe_even": "#FAF6ED"
+  },
+  "page1": {
+    "background": "assets/tem_1.jpg",
+    "fields": [
+      {
+        "key": "measurement_id",
+        "x": 222,
+        "y": 79,
+        "size": 30,
+        "align": "left",
+        "weight": "bold",
+        "color": "navy",
+        "_src": "원본 x91-238, y27-38"
+      },
+      {
+        "key": "engineer_name",
+        "x": 1023,
+        "y": 100,
+        "size": 21,
+        "align": "left",
+        "weight": "regular",
+        "color": "navy",
+        "_src": "원본 x419-488, y37-45"
+      },
+      {
+        "key": "datetime",
+        "x": 2192,
+        "y": 80,
+        "size": 24,
+        "align": "right",
+        "weight": "bold",
+        "color": "navy",
+        "_src": "원본 x752-898, y28-38"
+      },
+      {
+        "key": "product",
+        "x": 1340,
+        "y": 219,
+        "size": 26,
+        "align": "left",
+        "weight": "regular",
+        "color": "white"
+      },
+      {
+        "key": "load",
+        "x": 1340,
+        "y": 260,
+        "size": 26,
+        "align": "left",
+        "weight": "regular",
+        "color": "white"
+      },
+      {
+        "key": "standard",
+        "x": 1340,
+        "y": 300,
+        "size": 26,
+        "align": "left",
+        "weight": "regular",
+        "color": "white"
+      },
+      {
+        "key": "test_type",
+        "x": 1340,
+        "y": 342,
+        "size": 26,
+        "align": "left",
+        "weight": "regular",
+        "color": "white"
+      },
+      {
+        "key": "direction",
+        "x": 1340,
+        "y": 382,
+        "size": 26,
+        "align": "left",
+        "weight": "regular",
+        "color": "white"
+      },
+      {
+        "key": "floors",
+        "x": 1340,
+        "y": 424,
+        "size": 26,
+        "align": "left",
+        "weight": "regular",
+        "color": "white"
+      },
+      {
+        "key": "building_name",
+        "x": 78,
+        "y": 655,
+        "size": 24,
+        "align": "left",
+        "weight": "regular",
+        "color": "text",
+        "_src": "원본 건물명 값, 골드 밴드 위"
+      },
+      {
+        "key": "address",
+        "x": 1062,
+        "y": 655,
+        "size": 24,
+        "align": "left",
+        "weight": "regular",
+        "color": "text",
+        "_src": "원본 x404-669 중 '주소:' 라벨 뒤"
+      }
+    ],
+    "metrics_table": {
+      "_comment": "행 y 는 텍스트 수직 중심. 마지막 두 행은 위 6행보다 행간이 좁으므로 균등 피치로 계산하지 말 것.",
+      "dot": {
+        "cx": 243,
+        "diameter": 30
+      },
+      "col": {
+        "category": 313,
+        "desc_label_start": 741,
+        "desc_label_end": 1004,
+        "value": 1016,
+        "value_no_label": 742,
+        "yellow": 1531,
+        "red": 1855
+      },
+      "rows": [
+        {
+          "key": "noise_avg",
+          "y": 995,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "noise_max",
+          "y": 1101,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "vert_avg",
+          "y": 1210,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "vert_max",
+          "y": 1320,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "horiz_avg",
+          "y": 1429,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "horiz_max",
+          "y": 1538,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "max_speed",
+          "y": 1648,
+          "judge": false,
+          "has_label": false
+        },
+        {
+          "key": "travel_distance",
+          "y": 1743,
+          "judge": false,
+          "has_label": false
+        }
+      ],
+      "value_size": 28,
+      "threshold_size": 28,
+      "stripes": [
+        "stripe_odd",
+        "stripe_even"
+      ],
+      "erase_red": {
+        "w": 150,
+        "h": 46
+      },
+      "col_align": {
+        "category": "left",
+        "value": "left",
+        "value_no_label": "left",
+        "yellow": "center",
+        "red": "center"
+      }
+    },
+    "analysis_table": {
+      "dot": {
+        "cx": 243,
+        "diameter": 30
+      },
+      "col": {
+        "category": 313,
+        "description": 1172
+      },
+      "rows": [
+        {
+          "key": "car_noise",
+          "y": 2098
+        },
+        {
+          "key": "machine",
+          "y": 2199
+        },
+        {
+          "key": "belts",
+          "y": 2300
+        },
+        {
+          "key": "guide_rail",
+          "y": 2401
+        },
+        {
+          "key": "transient_noise",
+          "y": 2504
+        },
+        {
+          "key": "idler_sheave",
+          "y": 2606
+        },
+        {
+          "key": "guide",
+          "y": 2707
+        }
+      ],
+      "description_size": 28,
+      "stripes": [
+        "stripe_odd",
+        "stripe_even"
+      ],
+      "col_align": {
+        "category": "left",
+        "description": "left"
+      }
+    }
+  },
+  "chart_page": {
+    "background": "assets/tem_2.jpg",
+    "title": {
+      "x": 317,
+      "y": 315,
+      "size": 70,
+      "align": "left",
+      "weight": "regular",
+      "color": "gold"
+    },
+    "fields": [
+      {
+        "key": "measurement_id",
+        "x": 222,
+        "y": 79,
+        "size": 30,
+        "align": "left",
+        "weight": "bold",
+        "color": "navy"
+      },
+      {
+        "key": "engineer_name",
+        "x": 1023,
+        "y": 100,
+        "size": 21,
+        "align": "left",
+        "weight": "regular",
+        "color": "navy"
+      },
+      {
+        "key": "datetime",
+        "x": 2192,
+        "y": 80,
+        "size": 24,
+        "align": "right",
+        "weight": "bold",
+        "color": "navy"
+      },
+      {
+        "key": "page_number",
+        "x": 2180,
+        "y": 3128,
+        "size": 22,
+        "align": "right",
+        "weight": "regular",
+        "color": "navy"
+      }
+    ],
+    "_comment": "slot 은 matplotlib figure 전체가 들어갈 영역(축 라벨·눈금 포함). plot_box 는 그 안에서 실제 축 프레임이 놓일 위치이며 원본 측정값이다.",
+    "slots": [
+      {
+        "index": 0,
+        "plot_box": {
+          "x": 283,
+          "y": 415,
+          "w": 1458,
+          "h": 198
+        }
+      },
+      {
+        "index": 1,
+        "plot_box": {
+          "x": 283,
+          "y": 896,
+          "w": 1458,
+          "h": 198
+        }
+      },
+      {
+        "index": 2,
+        "plot_box": {
+          "x": 283,
+          "y": 1377,
+          "w": 1458,
+          "h": 198
+        }
+      },
+      {
+        "index": 3,
+        "plot_box": {
+          "x": 283,
+          "y": 1858,
+          "w": 1458,
+          "h": 198
+        }
+      }
+    ],
+    "slot_margin": {
+      "left": 220,
+      "right": 60,
+      "top": 40,
+      "bottom": 150
+    }
+  }
+}

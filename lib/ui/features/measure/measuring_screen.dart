@@ -12,7 +12,8 @@ import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
-import '../shared/measurement_session.dart';
+import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/session/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
 import '../../core/widgets/app_dialog.dart';
 
@@ -454,9 +455,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       return;
     }
 
+    final site = MeasurementSession
+        .instance
+        .currentSite!; // 위 게이트가 null 이 아님을 이미 확인한 현장 정보
+    final measuredAt = DateTime.now(); // 이번 측정의 벽시계 시각
     final stamp = DateFormat(
       'yyyyMMdd-HHmmss',
-    ).format(DateTime.now()); // 파일명에 쓸 시각 문자열
+    ).format(measuredAt); // 파일명에 쓸 시각 문자열
     // → 로직 이동: GridResampler.resample()
     final result = _resampler.resample(); // 격자로 환산한 결과
 
@@ -483,6 +488,24 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       final valuePath = '${baseDir.path}/$stamp.txt'; // 값 파일 경로
       // → 로직 이동: VibrationFileWriter.write()
       await VibrationFileWriter.write(valuePath, result);
+
+      // 리포트가 읽을 수 있는 모델로 바꿔 세션에 실어 둔다. 저장 계층이
+      // 아직 없어 파일로 남기지는 못하고, 결과 화면과 리포트가 이 자리에서
+      // 꺼내 쓴다
+      // → 로직 이동: MeasurementAssembler.assemble()
+      final assembled = MeasurementAssembler.assemble(
+        grid: result,
+        site: site,
+        id: stamp,
+        measuredAt: measuredAt,
+      ); // 측정 결과 모델로 바꾼 결과. 실패했으면 사유만 들어있다
+      if (!assembled.isSuccess) {
+        await _showMeasureFailDialog(
+          '측정 결과 변환에 실패했습니다.\n사유: ${assembled.failureReason}',
+        );
+        return;
+      }
+      MeasurementSession.instance.lastResult = assembled.result;
 
       // 안드로이드가 저장해둔 원본은 여기와 다른 위치에 자체 시각
       // 이름으로 있다. 이번 측정의 다른 결과 파일(집계 · 값)과 한

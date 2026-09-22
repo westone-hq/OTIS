@@ -1,3 +1,4 @@
+import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 클래스: SiteInfo
 /// 목적: 측정 현장 정보 (홈 화면에서 입력)
@@ -83,6 +84,11 @@ class MeasurementSession {
 
   /// 홈 화면에서 입력한 이번 측정의 현장 정보. 아직 입력 전이면 null
   SiteInfo? currentSite;
+
+  /// 가장 최근 측정을 리포트가 쓰는 모델로 바꿔 둔 것.
+  /// `MeasurementAssembler.assemble()`이 만들어 넣고, 리포트·결과 화면이
+  /// 읽는다. 아직 측정한 적이 없거나 변환하지 못했으면 null
+  MeasurementResult? lastResult;
 
   /// 측정 시작 전 카운트다운 대기 시간 (초). 0이면 카운트다운 없이 곧바로 시작
   int delaySec = 0;

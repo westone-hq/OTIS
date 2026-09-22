@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
-import '../shared/measurement_session.dart';
+import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 
 /// 작성: 2026-08-17 12:40:41 · 박건준

@@ -46,3 +46,15 @@ app.*.map.json
 
 # Explanations for local use only
 script_explanations/
+
+# --- TUNE 리포트 계층 ---
+
+# 프로토타입의 자산·산출물은 저장소 다른 곳에 정본이 있다.
+# assets/report/ 와 docs/reference/ 에 이미 있으므로 사본을 두 번 담지 않는다.
+# 파이썬 소스와 README 는 재생성 능력을 잃지 않도록 커밋한다.
+pdf_report_dev/assets/
+pdf_report_dev/out/
+pdf_report_dev/ref/
+pdf_report_dev/*.pdf
+pdf_report_dev/**/__pycache__/
+pdf_report_dev/**/*.pyc
