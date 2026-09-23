@@ -15,16 +15,14 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * 작성: 2026-08-17 15:43:39 · 박건준
- * 수정: 2026-09-21 · 박희정
+ * 수정: 2026-09-23 · 박희정
  * 클래스: MainActivity
  * 목적: 안드로이드(네이티브, Flutter 쪽에서 부르는 안드로이드 코틀린
  *       코드) 진입점. Flutter와 채널로 연결된다.
  *       - `MethodChannel`(요청 하나 · 응답 하나짜리 통로)로 센서 확인 ·
- *         마이크 권한 · 측정 시작 · 종료 · 소음 테스트 명령을 받아 처리한다
+ *         마이크 권한 · 측정 시작 · 종료 명령을 받아 처리한다
  *       - `EventChannel`(계속 흘려보내는 통로)은 `SensorStreamHandler`
  *         에게 맡겨 센서 원본 데이터를 Flutter로 흘려보낸다
- *       - 소음(dB) 전용 테스트는 `NoiseTestCaptureHandler` + 별도
- *         EventChannel로 EVIMP1 진동+소음 측정과 분리한다
  */
 class MainActivity : FlutterActivity() {
     /**
@@ -49,12 +47,6 @@ class MainActivity : FlutterActivity() {
         private const val STREAM_CHANNEL =
             "com.otis.vibration_checker/sensors_stream"
 
-        /**
-         * 소음(dB) 전용 테스트 라이브 스트림.
-         * sensor_channel.dart 의 _noiseTestEventChannel 과 문자열이 같아야 한다
-         */
-        private const val NOISE_TEST_STREAM_CHANNEL =
-            "com.otis.vibration_checker/noise_test_stream"
 
         /** onRequestPermissionsResult 에서 마이크 권한 응답과 고속 샘플링
          *  권한 응답을 구분하기 위한 임의의 요청 코드 */
@@ -65,17 +57,10 @@ class MainActivity : FlutterActivity() {
     /** 소음(마이크) 원본 캡처 담당. startCapture/stopCapture·onDestroy에서 시작·정지한다 */
     private lateinit var noiseCaptureHandler: NoiseCaptureHandler
 
-    /** 소음(dB) 전용 테스트 캡처. EVIMP1 측정과 마이크를 공유하지 않도록 분리한다 */
-    private lateinit var noiseTestCaptureHandler: NoiseTestCaptureHandler
 
     /** 가속도 · 중력 센서 원본 캡처 담당. startCapture/stopCapture 요청을 이 핸들러에 그대로 위임한다 */
     private lateinit var sensorStreamHandler: SensorStreamHandler
 
-    /**
-     * EVIMP1 진동+소음 측정(startCapture)이 진행 중인지.
-     * true면 소음 전용 테스트를 시작하지 못하게 막는다.
-     */
-    private var vibrationCaptureActive: Boolean = false
 
     /** 마이크 권한 요청 결과를 알려줄 콜백. 요청을 보낸 동안에만 값이 있고,
      *  onRequestPermissionsResult 에서 쓰고 나면 다시 null 로 비운다 */
@@ -89,7 +74,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-09-21 · 박희정
+     * 수정: 2026-09-23 · 박희정
      * 함수: configureFlutterEngine
      * 목적: Flutter 엔진이 뜰 때 소음·센서·소음테스트 핸들러를 만들고,
      *       MethodChannel·EventChannel을 등록해 Flutter와 안드로이드를
@@ -100,27 +85,12 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         noiseCaptureHandler = NoiseCaptureHandler(this)
-        noiseTestCaptureHandler = NoiseTestCaptureHandler(this)
         sensorStreamHandler = SensorStreamHandler(this, noiseCaptureHandler)
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, STREAM_CHANNEL)
             // → 로직 이동: SensorStreamHandler.onListen()
             .setStreamHandler(sensorStreamHandler)
 
-        EventChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            NOISE_TEST_STREAM_CHANNEL,
-        ).setStreamHandler(object : EventChannel.StreamHandler {
-            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                noiseTestCaptureHandler.setLiveSink { map ->
-                    events?.success(map)
-                }
-            }
-
-            override fun onCancel(arguments: Any?) {
-                noiseTestCaptureHandler.setLiveSink(null)
-            }
-        })
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -199,11 +169,6 @@ class MainActivity : FlutterActivity() {
                         val micDbfsToDbaOffset =
                             call.argument<Double>("micDbfsToDbaOffset") ?: 85.0
                         val begin = {
-                            // 마이크 공유 충돌 방지: 소음 전용 테스트가 돌고 있으면 먼저 멈춘다
-                            if (noiseTestCaptureHandler.isRunning) {
-                                noiseTestCaptureHandler.stop()
-                            }
-                            vibrationCaptureActive = true
                             // → 로직 이동: NoiseCaptureHandler.start()
                             noiseCaptureHandler.start(
                                 calibrationOffset,
@@ -250,73 +215,7 @@ class MainActivity : FlutterActivity() {
                         val recordPath = sensorStreamHandler.stop()
                         // → 로직 이동: NoiseCaptureHandler.stop()
                         noiseCaptureHandler.stop()
-                        vibrationCaptureActive = false
                         result.success(recordPath)
-                    }
-                    /**
-                     * 작성: 2026-09-21 · 박희정
-                     * 함수: startNoiseTest
-                     * 목적: 소음(dB) 전용 테스트를 시작한다. EVIMP1 측정 중이거나
-                     *       이미 테스트가 돌고 있으면 거부한다. 시작 전에
-                     *       EVIMP1용 NoiseCaptureHandler를 멈춰 마이크를
-                     *       공유하지 않게 한다.
-                     * 인자: modeId — rate40k | rate80k | aweight | slow
-                     */
-                    "startNoiseTest" -> {
-                        val modeId = call.argument<String>("modeId") ?: ""
-                        if (vibrationCaptureActive) {
-                            result.success(
-                                mapOf(
-                                    "ok" to false,
-                                    "error" to "진동 측정이 진행 중이라 소음 테스트를 시작할 수 없습니다.",
-                                    "isRunning" to false,
-                                ),
-                            )
-                            return@setMethodCallHandler
-                        }
-                        if (noiseTestCaptureHandler.isRunning) {
-                            result.success(
-                                mapOf(
-                                    "ok" to false,
-                                    "error" to "이미 소음 테스트가 실행 중입니다.",
-                                    "isRunning" to true,
-                                ),
-                            )
-                            return@setMethodCallHandler
-                        }
-                        val mode = NoiseTestMode.fromId(modeId)
-                        if (mode == null) {
-                            result.success(
-                                mapOf(
-                                    "ok" to false,
-                                    "error" to "알 수 없는 modeId: $modeId",
-                                    "isRunning" to false,
-                                ),
-                            )
-                            return@setMethodCallHandler
-                        }
-                        // EVIMP1 소음 캡처가 마이크를 잡고 있지 않게 먼저 멈춘다
-                        noiseCaptureHandler.stop()
-                        // → 로직 이동: NoiseTestCaptureHandler.start()
-                        result.success(noiseTestCaptureHandler.start(mode))
-                    }
-                    /**
-                     * 작성: 2026-09-21 · 박희정
-                     * 함수: stopNoiseTest
-                     * 목적: 소음 전용 테스트를 멈추고 파일 경로·통계 요약을 돌려준다.
-                     */
-                    "stopNoiseTest" -> {
-                        // → 로직 이동: NoiseTestCaptureHandler.stop()
-                        result.success(noiseTestCaptureHandler.stop())
-                    }
-                    /**
-                     * 작성: 2026-09-21 · 박희정
-                     * 함수: getNoiseTestStatus
-                     * 목적: 소음 전용 테스트의 현재 상태·통계를 돌려준다.
-                     */
-                    "getNoiseTestStatus" -> {
-                        // → 로직 이동: NoiseTestCaptureHandler.getStatus()
-                        result.success(noiseTestCaptureHandler.getStatus())
                     }
                     /**
                      * 함수: else
@@ -377,7 +276,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-09-21 · 박희정
+     * 수정: 2026-09-23 · 박희정
      * 함수: onDestroy
      * 목적: 액티비티가 완전히 종료될 때 센서·소음·소음테스트 핸들러를
      *       정리해, 자원을 계속 붙들고 있지 않게 한다.
@@ -390,9 +289,5 @@ class MainActivity : FlutterActivity() {
         if (::noiseCaptureHandler.isInitialized) {
             noiseCaptureHandler.stop()
         }
-        if (::noiseTestCaptureHandler.isInitialized) {
-            noiseTestCaptureHandler.stop()
-        }
-        vibrationCaptureActive = false
     }
 }

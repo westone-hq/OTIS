@@ -13,17 +13,17 @@ import kotlin.math.sqrt
 
 /**
  * 작성: 2026-09-15 13:20:00 · 박희정
- * 수정: 2026-09-15 16:40:00 · 박희정
+ * 수정: 2026-09-23 · 박희정
  * 클래스: NoiseCaptureHandler
- * 목적: 마이크에서 주변 소음 크기(dBA)를 EVIMP1 격자(256 Hz)에 맞춰
- *       자주 갱신해 `latestDba`에 채운다. Fast(≈0.125초) 길이의
+ * 목적: 엘리베이터 본측정(EVIMP1) 때 마이크 소음(dBA)을 재서
+ *       `latestDba`에 채운다. 샘플레이트 44100 Hz, Slow(1.0초)
  *       슬라이딩 창 RMS를 쓰고, 창은 격자 간격(~1/256초)마다 민다.
  *       권한이 없거나 초기화에 실패해도 앱을 죽이지 않고 0.0으로 대체한다.
  * 식:   dBFS = 20 × log10(rms)
  *       dBA  = dBFS + micDbfsToDbaOffset + calibrationOffsetDba  (0~130으로 자름)
- * 근거: 인용 — OI-4 임시 오프셋. 기본 micDbfsToDbaOffset=85.0,
- *       기기·현장 보정은 calibrationOffsetDba.
- *       Fast 창 + 256 Hz 홉 → 참고 EVIMP1처럼 행마다 소음이 미세하게 변한다.
+ * 근거: 인용 — OI-4 임시 오프셋. 기본 micDbfsToDbaOffset=85.0.
+ *       현장 비교 테스트에서 Slow(1.0초)가 Fast(0.125초)보다 안정적이라
+ *       본측정 기본으로 채택.
  */
 class NoiseCaptureHandler(private val context: Context) {
     companion object {
@@ -34,8 +34,8 @@ class NoiseCaptureHandler(private val context: Context) {
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         /** 샘플 값을 16비트 정수로 받는다 */
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        /** Fast 계열 RMS 창 길이(초). ≈ IEC 61672 Fast */
-        private const val WINDOW_SEC = 0.125
+        /** Slow 계열 RMS 창 길이(초). ≈ IEC 61672 Slow */
+        private const val WINDOW_SEC = 1.0
         /** EVIMP1 행 주기(Hz). 창을 이 간격으로 밀어 행마다 값이 바뀌게 한다 */
         private const val HOP_HZ = 256
     }
@@ -55,7 +55,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-09-15 16:40:00 · 박희정
+     * 수정: 2026-09-23 · 박희정
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다.
      *       권한이 없거나 AudioRecord 초기화에 실패하면 예외 없이 0.0으로 둔다.
@@ -83,7 +83,7 @@ class NoiseCaptureHandler(private val context: Context) {
             return
         }
 
-        // Fast 창 ≈ 5512 샘플. 홉 ≈ 172 샘플(1/256초) → 초당 ~256회 갱신
+        // Slow 창 ≈ 44100 샘플. 홉 ≈ 172 샘플(1/256초) → 초당 ~256회 갱신
         val windowSamples = (SAMPLE_RATE * WINDOW_SEC).toInt().coerceAtLeast(1)
         val hopSamples = (SAMPLE_RATE / HOP_HZ).coerceAtLeast(1)
         val bufferSize = maxOf(minBufSize, windowSamples * 2)

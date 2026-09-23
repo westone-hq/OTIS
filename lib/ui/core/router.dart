@@ -4,12 +4,11 @@ import '../features/history/history_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/measure/measuring_screen.dart';
 import '../features/measure/start_screen.dart';
-import '../features/noise_test/noise_test_screen.dart';
 import '../features/result/result_screen.dart';
 import '../features/settings/settings_screen.dart';
 
 /// 작성: 2026-08-17 11:50:18 · 박건준
-/// 수정: 2026-09-21 · 박희정
+/// 수정: 2026-09-23 · 박희정
 /// 변수: appRouter
 /// 목적: 화면 전환을 URL 경로 기반으로 정의하는 앱 라우터. 경로 하나가
 ///       화면 하나에 대응한다. 로그인 화면은 라우트(route, 경로 하나와
@@ -22,7 +21,6 @@ import '../features/settings/settings_screen.dart';
 ///         저장된 결과 조회 화면을 함께 쓴다
 ///       - /history    저장 결과 목록
 ///       - /settings   설정
-///       - /noise-test 소음(dB) 전용 테스트 (EVIMP1과 별개)
 ///       - `initialLocation` — 앱을 켰을 때 처음 보여줄 화면. `/home`으로
 ///         지정돼 있다
 final appRouter = GoRouter(
@@ -43,7 +41,5 @@ final appRouter = GoRouter(
     GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),
     // → 로직 이동: SettingsScreen.build()
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
-    // → 로직 이동: NoiseTestScreen.build()
-    GoRoute(path: '/noise-test', builder: (_, _) => const NoiseTestScreen()),
   ],
 );
