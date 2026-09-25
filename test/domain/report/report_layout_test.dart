@@ -15,7 +15,7 @@ const _layoutJsonPath = 'docs/report_layout.json';
 /// 변수: _layoutJsonMd5
 /// 목적: 옮길 때 본 정본 기록의 md5. 정본이 바뀌면 이 값이 달라져,
 ///       사본을 함께 고쳐야 한다는 사실이 시험 실패로 드러난다.
-const _layoutJsonMd5 = '85f531f97400d6bd9b77be7ed043b870';
+const _layoutJsonMd5 = '38cde4c2b9730fa8ae66e84b902b175c';
 
 /// 작성: 2026-09-15 19:43:50 · nada
 /// 함수: _layout
@@ -98,8 +98,7 @@ void main() {
     });
 
     test('색이 모두 같다', () {
-      final colors =
-          _layout()['colors'] as Map<String, dynamic>; // json 의 색 목록
+      final colors = _layout()['colors'] as Map<String, dynamic>; // json 의 색 목록
       const moved = <String, int>{
         'navy': ReportColors.navy,
         'gold': ReportColors.gold,
@@ -110,6 +109,7 @@ void main() {
         'judge_red': ReportColors.judgeRed,
         'judge_unknown': ReportColors.judgeUnknown,
         'chart_line': ReportColors.chartLine,
+        'chart_grid': ReportColors.chartGrid,
         'chart_marker': ReportColors.chartMarker,
         'chart_guide': ReportColors.chartGuide,
         'stripe_odd': ReportColors.stripeOdd,
@@ -118,8 +118,7 @@ void main() {
 
       expect(moved.length, colors.length, reason: '색 개수');
       moved.forEach((key, value) {
-        final hex =
-            '#${value.toRadixString(16).toUpperCase().padLeft(6, '0')}';
+        final hex = '#${value.toRadixString(16).toUpperCase().padLeft(6, '0')}';
         expect(hex, colors[key], reason: key);
       });
     });
@@ -176,8 +175,7 @@ void main() {
         (table['erase_red'] as Map<String, dynamic>)['h'],
       );
 
-      final align =
-          table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
+      final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
       expect(ReportPage1.colCategoryAlign.name, align['category']);
       expect(ReportPage1.colValueAlign.name, align['value']);
       expect(ReportPage1.colValueNoLabelAlign.name, align['value_no_label']);
@@ -224,13 +222,9 @@ void main() {
         ReportPage1.analysisDescriptionX,
         (table['col'] as Map<String, dynamic>)['description'],
       );
-      expect(
-        ReportPage1.analysisDescriptionSize,
-        table['description_size'],
-      );
+      expect(ReportPage1.analysisDescriptionSize, table['description_size']);
 
-      final align =
-          table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
+      final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
       expect(ReportPage1.analysisCategoryAlign.name, align['category']);
       expect(ReportPage1.analysisDescriptionAlign.name, align['description']);
     });
@@ -252,27 +246,40 @@ void main() {
       expect(ReportChartPage.title.weight.name, title['weight']);
     });
 
-    test('차트 자리 4개와 여백이 같다', () {
+    test('배경 경로는 정본의 파일 이름에 자산 디렉터리를 붙인 것이다', () {
+      // 정본은 파일 이름만 갖고 디렉터리는 구현이 붙인다. 정본이 디렉터리를
+      // 함께 갖게 되면 이 시험이 먼저 깨진다
+      final page1 = _layout()['page1'] as Map<String, dynamic>; // json 의 1쪽
+      final chart =
+          _layout()['chart_page'] as Map<String, dynamic>; // json 의 차트 쪽
+
+      expect(
+        ReportPage1.background,
+        '${ReportLayout.assetDirectory}${page1['background']}',
+      );
+      expect(
+        ReportChartPage.background,
+        '${ReportLayout.assetDirectory}${chart['background']}',
+      );
+      expect(page1['background'], isNot(contains('/')), reason: '정본은 파일 이름만');
+      expect(chart['background'], isNot(contains('/')), reason: '정본은 파일 이름만');
+    });
+
+    test('차트 자리 4개가 같다', () {
       final chart = _layout()['chart_page'] as Map<String, dynamic>;
       final slots = chart['slots'] as List<dynamic>; // json 의 차트 자리 목록
-      final margin =
-          chart['slot_margin'] as Map<String, dynamic>; // json 의 여백
 
       expect(ReportChartPage.slots.length, slots.length);
       for (var i = 0; i < slots.length; i++) {
-        final box = (slots[i] as Map<String, dynamic>)['plot_box']
-            as Map<String, dynamic>; // json 의 그 자리
+        final box =
+            (slots[i] as Map<String, dynamic>)['plot_box']
+                as Map<String, dynamic>; // json 의 그 자리
         final moved = ReportChartPage.slots[i]; // 옮겨 적은 그 자리
         expect(moved.x, box['x'], reason: '$i번째 x');
         expect(moved.y, box['y'], reason: '$i번째 y');
         expect(moved.width, box['w'], reason: '$i번째 w');
         expect(moved.height, box['h'], reason: '$i번째 h');
       }
-
-      expect(ReportChartPage.slotMarginLeft, margin['left']);
-      expect(ReportChartPage.slotMarginRight, margin['right']);
-      expect(ReportChartPage.slotMarginTop, margin['top']);
-      expect(ReportChartPage.slotMarginBottom, margin['bottom']);
     });
   });
 

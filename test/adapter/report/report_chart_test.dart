@@ -189,6 +189,22 @@ void main() {
       expect(range.max, 2.0);
     });
 
+    test('조용한 운행은 소음 축 첫 단계에 그대로 머문다', () {
+      // 첫 단계는 원본 리포트와 같은 범위다. 원본과 똑같이 보여야 한다
+      final range = ReportChartAxes.noise.rangeFor(const <double>[41.0, 53.5]);
+
+      expect(range.min, 40.0);
+      expect(range.max, 54.0);
+    });
+
+    test('앱 실측 소음 범위는 두 번째 단계에 들어간다', () {
+      // `test/fixtures/app_measurement.xlsx` 의 `noiseDba` 열 양 끝값
+      final range = ReportChartAxes.noise.rangeFor(const <double>[44.8, 63.0]);
+
+      expect(range.min, 35.0);
+      expect(range.max, 70.0);
+    });
+
     test('가속도는 아래쪽 경계도 여유를 두고 견준다', () {
       final inside = ReportChartAxes.accel.rangeFor(const <double>[
         -0.61,
@@ -238,6 +254,12 @@ void main() {
             reason: '${spec.key} 단계 ${step.min}~${step.max} 의 마지막 눈금',
           );
         }
+      }
+    });
+
+    test('소음 축은 어느 단계에서나 눈금이 여덟 개다', () {
+      for (final step in ReportChartAxes.noise.steps) {
+        expect(step.ticks().length, 8, reason: '${step.min}~${step.max} 단계');
       }
     });
 

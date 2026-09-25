@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
+import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
@@ -27,27 +28,24 @@ class ReportPage1Renderer {
   /// 그림을 얹을 PDF 문서
   final PdfDocument document;
 
-  /// 본문용 한글 글꼴
-  final PdfFont regular;
-
-  /// 굵게 쓸 자리용 한글 글꼴
-  final PdfFont bold;
-
   /// A4 전면에 깔 서식 이미지
   final PdfImage background;
+
+  /// 서식 좌표에 글자를 찍는 도구
+  final ReportTextWriter textWriter;
 
   /// 작성: 2026-09-16 09:12:40 · nada
   /// 함수: ReportPage1Renderer
   /// 목적: 문서와 미리 읽어 둔 자산을 그대로 담는 생성자. 직접 부르지 말고
   ///       `load()` 를 쓴다.
   /// 인자: document — 그림을 얹을 PDF 문서
-  ///       regular, bold — 한글 글꼴 두 벌
   ///       background — 서식 이미지
+  ///       textWriter — 서식 좌표에 글자를 찍는 도구. 글꼴 두 벌을 갖고
+  ///       있어 이 클래스가 따로 들고 있지 않는다
   const ReportPage1Renderer({
     required this.document,
-    required this.regular,
-    required this.bold,
     required this.background,
+    required this.textWriter,
   });
 
   /// 작성: 2026-09-16 09:12:40 · nada
@@ -67,14 +65,15 @@ class ReportPage1Renderer {
       ReportPage1.background,
     ); // 서식 이미지 원본
 
+    final regular = PdfTtfFont(document, regularBytes); // 본문 글꼴
+    final bold = PdfTtfFont(document, boldBytes); // 굵은 글꼴
     return ReportPage1Renderer(
       document: document,
-      regular: PdfTtfFont(document, regularBytes),
-      bold: PdfTtfFont(document, boldBytes),
       background: PdfImage.file(
         document,
         bytes: backgroundBytes.buffer.asUint8List(),
       ),
+      textWriter: ReportTextWriter(regular: regular, bold: bold),
     );
   }
 
@@ -317,8 +316,9 @@ class ReportPage1Renderer {
 
   /// 작성: 2026-09-16 09:12:40 · nada
   /// 함수: _text
-  /// 목적: 글자 한 덩이를 서식 좌표에 찍는다. 세로 좌표는 글자의 수직
-  ///       중심이라 글자가 앉는 선(baseline)으로 내려 준다.
+  /// 목적: 글자 한 덩이를 서식 좌표에 찍는다. 찍는 일 자체는
+  ///       `ReportTextWriter` 가 하고, 여기서는 디버그 표식을 얹을지만
+  ///       가른다 — 표식은 1쪽에서만 쓴다.
   /// 인자: canvas — 그리기 도구
   ///       xPx, yPx — 서식 이미지 좌표 (픽셀)
   ///       text — 찍을 문구. 비어 있으면 아무것도 하지 않는다
@@ -328,9 +328,6 @@ class ReportPage1Renderer {
   ///       color — 글자색 (0xRRGGBB)
   ///       key — 디버그 표식에 쓸 이름
   ///       debug — 표식을 함께 찍을지
-  /// 식: baseline = y_pt - size_pt x 0.36
-  ///     0.36 은 글자 크기 대비 중심에서 내려야 하는 몫이다. 파이썬
-  ///     프로토타입이 원본 리포트와 맞춰 찾은 값을 그대로 쓴다
   void _text(
     PdfGraphics canvas, {
     required num xPx,
@@ -346,25 +343,17 @@ class ReportPage1Renderer {
     if (debug) {
       _debugMark(canvas, xPx: xPx, yPx: yPx, label: key);
     }
-    if (text.isEmpty) return;
-
-    final font = weight == LayoutWeight.bold ? bold : regular; // 쓸 글꼴
-    final size = ReportLayout.lengthToPoints(sizePx); // 글자 크기 (포인트)
-    final baseline =
-        ReportLayout.yToPoints(yPx) - size * 0.36; // 글자가 앉는 선 (포인트)
-    final width =
-        font.stringMetrics(text).advanceWidth * size; // 문구 전체 너비 (포인트)
-
-    var x = ReportLayout.xToPoints(xPx); // 찍기 시작할 가로 자리 (포인트)
-    if (align == LayoutAlign.right) {
-      x -= width;
-    } else if (align == LayoutAlign.center) {
-      x -= width / 2;
-    }
-
-    canvas
-      ..setFillColor(_color(color))
-      ..drawString(font, size, text, x, baseline);
+    // → 로직 이동: ReportTextWriter.drawAt()
+    textWriter.drawAt(
+      canvas,
+      xPx: xPx,
+      yPx: yPx,
+      text: text,
+      sizePx: sizePx,
+      align: align,
+      weight: weight,
+      color: color,
+    );
   }
 
   /// 작성: 2026-09-16 09:12:40 · nada
@@ -383,7 +372,7 @@ class ReportPage1Renderer {
   }) {
     final radius = ReportLayout.lengthToPoints(diameterPx) / 2; // 반지름 (포인트)
     canvas
-      ..setFillColor(_color(color))
+      ..setFillColor(reportPdfColor(color))
       ..drawEllipse(
         ReportLayout.xToPoints(centerXPx),
         ReportLayout.yToPoints(centerYPx),
@@ -410,7 +399,7 @@ class ReportPage1Renderer {
     required int color,
   }) {
     canvas
-      ..setFillColor(_color(color))
+      ..setFillColor(reportPdfColor(color))
       ..drawRect(
         ReportLayout.xToPoints(xPx),
         ReportLayout.yToPoints(yPx + heightPx),
@@ -443,15 +432,8 @@ class ReportPage1Renderer {
       ..drawLine(x, y - 4, x, y + 4)
       ..strokePath()
       ..setFillColor(_debugColor)
-      ..drawString(regular, 3.6, label, x + 5, y + 1.5);
+      ..drawString(textWriter.regular, 3.6, label, x + 5, y + 1.5);
   }
-
-  /// 작성: 2026-09-16 09:12:40 · nada
-  /// 함수: _color
-  /// 목적: `ReportColors` 의 0xRRGGBB 값을 PDF 색으로 바꾼다.
-  /// 인자: rgb — 색 값 (0xRRGGBB)
-  /// 반환: 불투명한 PDF 색
-  PdfColor _color(int rgb) => PdfColor.fromInt(0xFF000000 | rgb);
 
   /// 디버그 표식에 쓰는 자홍색. 서식에 없는 색이라 눈에 바로 띈다
   static final PdfColor _debugColor = PdfColor.fromInt(0xFFFF00AA);

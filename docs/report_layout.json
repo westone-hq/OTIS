@@ -22,10 +22,11 @@
     "chart_guide": "#E03030",
     "judge_unknown": "#B9BFC7",
     "stripe_odd": "#E6E9EE",
-    "stripe_even": "#FAF6ED"
+    "stripe_even": "#FAF6ED",
+    "chart_grid": "#555555"
   },
   "page1": {
-    "background": "assets/tem_1.jpg",
+    "background": "tem_1.jpg",
     "fields": [
       {
         "key": "measurement_id",
@@ -266,7 +267,7 @@
     }
   },
   "chart_page": {
-    "background": "assets/tem_2.jpg",
+    "background": "tem_2.jpg",
     "title": {
       "x": 317,
       "y": 315,
@@ -313,7 +314,7 @@
         "color": "navy"
       }
     ],
-    "_comment": "slot 은 matplotlib figure 전체가 들어갈 영역(축 라벨·눈금 포함). plot_box 는 그 안에서 실제 축 프레임이 놓일 위치이며 원본 측정값이다.",
+    "_comment": "slot 의 plot_box 는 축 프레임 자리다. y축 라벨과 눈금 라벨은 그 바깥에 놓이며, 고정 여백 대신 눈금 라벨의 실제 폭을 재서 자리를 잡는다. 범위가 바뀌어 라벨 폭이 달라져도 따라오게 하기 위해서다.",
     "slots": [
       {
         "index": 0,
@@ -351,12 +352,7 @@
           "h": 198
         }
       }
-    ],
-    "slot_margin": {
-      "left": 220,
-      "right": 60,
-      "top": 40,
-      "bottom": 150
-    }
-  }
+    ]
+  },
+  "_background_note": "background 는 파일 이름만 둔다. 놓이는 디렉터리는 구현마다 다르다 — 프로토타입은 assets/, Flutter 는 assets/report/."
 }

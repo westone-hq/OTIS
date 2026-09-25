@@ -5,8 +5,8 @@
 ///       좌표가 틀어지면 이 파일 한 곳만 고치면 된다.
 ///
 ///       옮겨온 곳
-///         `docs/report_layout.json` (md5 85f531f97400d6bd9b77be7ed043b870,
-///         2026-09-15 기준). 그 파일이 정본 기록이고 이 파일은 사람이 옮긴
+///         `docs/report_layout.json` (md5 38cde4c2b9730fa8ae66e84b902b175c,
+///         2026-09-25 기준). 그 파일이 정본 기록이고 이 파일은 사람이 옮긴
 ///         사본이다. json 을 실행 중에 읽지 않는 이유는, 읽지 않으면 자산을
 ///         못 찾아 실패하는 경로가 하나 줄고, 좌표가 틀리면 빌드가 아니라
 ///         결과물을 눈으로 보고 잡게 되기 때문이다. 옮기다 숫자가
@@ -27,6 +27,35 @@ class ReportLayout {
 
   /// A4 세로 (PDF 포인트)
   static const double pageHeightPt = 841.89;
+
+  /// 작성: 2026-09-25 09:30:00 · nada
+  /// 변수: assetDirectory
+  /// 목적: 서식 배경 이미지가 놓인 자산 디렉터리. 정본은 파일 이름만 갖고,
+  ///       디렉터리는 쓰는 쪽이 앞에 붙인다.
+  /// 근거: 인용 — `docs/report_layout.json` 의 `_background_note`. 같은
+  ///       서식 파일을 파이썬 프로토타입은 `assets/` 에, Flutter 는 이
+  ///       경로에 두기 때문에 디렉터리를 정본에서 뺐다
+  static const String assetDirectory = 'assets/report/';
+
+  /// 작성: 2026-09-25 09:30:00 · nada
+  /// 변수: textBaselineDropRatio
+  /// 목적: 글자 크기 대비, 글자 덩이의 세로 한가운데에서 앉는 선까지
+  ///       내려야 하는 몫. 서식의 세로 좌표가 글자의 수직 중심이라, 찍기
+  ///       전에 이만큼 내려야 한다.
+  /// 근거: 인용 — 파이썬 프로토타입
+  ///       `pdf_report_dev/tune_report/render.py` 의 92행이 원본 리포트와
+  ///       글자 자리를 맞춰 찾은 값이다. 1쪽과 차트 쪽, 프로토타입이 모두
+  ///       같은 몫을 써야 같은 자리에 찍히므로 이 값은 구현들 사이의
+  ///       약속이며, 바꾸면 참조 PDF
+  ///       (`docs/reference/sample_evimp.pdf`)와 글자 자리가 갈라진다
+  static const double textBaselineDropRatio = 0.36;
+
+  /// 작성: 2026-09-25 09:30:00 · nada
+  /// 변수: datetimePattern
+  /// 목적: 머리말 측정 일시의 표기 형식. 1쪽과 차트 쪽이 같은 자리에 같은
+  ///       문구를 찍어야 해서 한 곳에 둔다.
+  /// 근거: 인용 — 원본 리포트 머리말이 `14/01/2026 11:03:59 AM` 형태다
+  static const String datetimePattern = 'dd/MM/yyyy hh:mm:ss a';
 
   /// 작성: 2026-09-15 20:13:49 · nada
   /// 변수: ptPerPxX
@@ -125,10 +154,26 @@ class ReportColors {
   /// 차트 선 색
   static const int chartLine = 0x0000CC;
 
-  /// 차트 표시점 색
+  /// 차트 격자 선 색. 축 틀 · 눈금 · 라벨은 `text` 를 쓰고 격자만 이 색이다
+  static const int chartGrid = 0x555555;
+
+  /// 작성: 2026-09-23 09:40:00 · nada
+  /// 변수: chartMarker
+  /// 목적: 차트에서 최댓값 자리를 짚는 점의 색.
+  /// 미구현: 원본 리포트는 파형에서 가장 큰 값이 나온 자리에 이 색 점을
+  ///       찍고 그 값을 옆에 적는다. 그 최댓값은 저역통과 필터(빠르게
+  ///       흔들리는 성분을 깎아 내는 계산)를 거친 파형에서 나온 것이라,
+  ///       필터가 정해지기 전에는 찍을 값 자체가 없다. 차트를 그리는
+  ///       `report_chart.dart` 는 이 색을 쓰지 않고 파형만 그린다
   static const int chartMarker = 0xE03030;
 
-  /// 차트 기준선 색
+  /// 작성: 2026-09-23 09:40:00 · nada
+  /// 변수: chartGuide
+  /// 목적: 차트에 가로로 긋는 안내선의 색.
+  /// 미구현: 원본 리포트는 소음 차트에 A95(전체 시간의 95%가 그 아래에
+  ///       머무는 소음 크기) 안내선을 긋는다. 이 값도 필터가 정해져야
+  ///       나오므로 지금은 그을 선이 없다. `report_chart.dart` 는 이 색을
+  ///       쓰지 않고 축 틀과 격자만 그린다
   static const int chartGuide = 0xE03030;
 
   /// 표 홀수 행 바탕색
@@ -255,8 +300,9 @@ class LayoutPlotBox {
 ///       않고, 특히 마지막 한 칸이 뚜렷하게 좁다. 첫 행에서 일정 간격을
 ///       더해 가면 마지막 행이 12픽셀 넘게 어긋난다.
 class ReportPage1 {
-  /// 서식 배경 이미지 자산 경로
-  static const String background = 'assets/report/tem_1.jpg';
+  /// 서식 배경 이미지 자산 경로. 정본이 가진 파일 이름 앞에 자산
+  /// 디렉터리를 붙인 것이다
+  static const String background = '${ReportLayout.assetDirectory}tem_1.jpg';
 
   /// 측정 식별자 (제번)
   static const LayoutField measurementId = LayoutField(
@@ -581,8 +627,9 @@ class ReportPage1 {
 /// 목적: 차트 쪽의 자리들을 담는다. 머리말 네 칸과 차트 네 자리가 있다.
 ///       1쪽과 달리 쪽 번호 칸이 있고, 쪽 제목이 금색으로 들어간다.
 class ReportChartPage {
-  /// 서식 배경 이미지 자산 경로
-  static const String background = 'assets/report/tem_2.jpg';
+  /// 서식 배경 이미지 자산 경로. 정본이 가진 파일 이름 앞에 자산
+  /// 디렉터리를 붙인 것이다
+  static const String background = '${ReportLayout.assetDirectory}tem_2.jpg';
 
   /// 쪽 제목
   static const LayoutField title = LayoutField(
@@ -670,16 +717,4 @@ class ReportChartPage {
     LayoutPlotBox(x: slotX, y: 1377, width: slotWidth, height: slotHeight),
     LayoutPlotBox(x: slotX, y: 1858, width: slotWidth, height: slotHeight),
   ];
-
-  /// 차트 자리 왼쪽에 축 라벨 · 눈금용으로 비워 둘 너비 (픽셀)
-  static const int slotMarginLeft = 220;
-
-  /// 차트 자리 오른쪽에 비워 둘 너비 (픽셀)
-  static const int slotMarginRight = 60;
-
-  /// 차트 자리 위쪽에 비워 둘 높이 (픽셀)
-  static const int slotMarginTop = 40;
-
-  /// 차트 자리 아래쪽에 가로축 라벨용으로 비워 둘 높이 (픽셀)
-  static const int slotMarginBottom = 150;
 }

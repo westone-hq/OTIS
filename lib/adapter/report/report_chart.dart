@@ -5,6 +5,7 @@ import 'dart:math' as math;
 // `vector_math` 를 직접 의존성에 더하지 않아도 된다
 import 'package:flutter/widgets.dart' show Matrix4;
 import 'package:pdf/pdf.dart';
+import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
@@ -186,14 +187,24 @@ class ReportChartAxes {
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 변수: noise
-  /// 목적: 소음 차트의 세로축.
-  /// 근거: 인용 — 원본 리포트의 소음 차트 눈금이 40 부터 54 까지 2 씩
-  ///       놓여 있다
+  /// 목적: 소음 차트의 세로축. 단계형이다. 첫 단계를 원본 리포트와 똑같이
+  ///       둬서, 조용한 운행은 원본과 같은 눈금으로 보이고 넘칠 때만
+  ///       위 단계로 올라간다. 어느 단계에서나 눈금은 여덟 개다.
+  /// 근거: 인용 — 첫 단계는 원본 리포트의 소음 차트 눈금이 40 부터 54 까지
+  ///       2 씩 놓인 것을 그대로 옮겼다.
+  ///       측정 — 위 두 단계를 더한 이유는 앱 실측이 원본 범위를 크게
+  ///       넘기 때문이다. `test/fixtures/app_measurement.xlsx` 의
+  ///       `noiseDba` 열은 44.8 에서 63.0 dBA 사이이고, 40~54 하나만 두면
+  ///       값이 있는 표본 3,866 개 중 3,544 개(91.7%)가 축 밖으로 잘린다.
+  ///       35~70 단계에서는 하나도 잘리지 않는다. 25~95 는 그보다 시끄러운
+  ///       현장을 위해 한 칸 더 둔 것이다
   static const ChartAxisSpec noise = ChartAxisSpec(
     key: 'noise',
     label: 'Noise Level (dBA)',
     steps: <ChartAxisRange>[
       ChartAxisRange(min: 40.0, max: 54.0, tickStep: 2.0),
+      ChartAxisRange(min: 35.0, max: 70.0, tickStep: 5.0),
+      ChartAxisRange(min: 25.0, max: 95.0, tickStep: 10.0),
     ],
   );
 
@@ -623,7 +634,7 @@ class ReportChartRenderer {
     List<double> timeTicks,
   ) {
     canvas
-      ..setStrokeColor(_color(ReportColors.text))
+      ..setStrokeColor(reportPdfColor(ReportColors.chartGrid))
       ..setLineWidth(gridLineWidth)
       ..setLineDashPattern(gridDashPattern);
 
@@ -652,7 +663,7 @@ class ReportChartRenderer {
   ///       frame — 축 틀과 값 옮기기
   void _drawFrame(PdfGraphics canvas, _ChartFrame frame) {
     canvas
-      ..setStrokeColor(_color(ReportColors.text))
+      ..setStrokeColor(reportPdfColor(ReportColors.text))
       ..setLineWidth(frameLineWidth)
       ..drawRect(
         frame.left,
@@ -679,7 +690,7 @@ class ReportChartRenderer {
     String label,
   ) {
     canvas
-      ..setStrokeColor(_color(ReportColors.text))
+      ..setStrokeColor(reportPdfColor(ReportColors.text))
       ..setLineWidth(frameLineWidth);
     for (final tick in ticks) {
       final y = frame.yOfValue(tick); // 이 눈금의 세로 자리
@@ -726,7 +737,7 @@ class ReportChartRenderer {
     List<double> ticks,
   ) {
     canvas
-      ..setStrokeColor(_color(ReportColors.text))
+      ..setStrokeColor(reportPdfColor(ReportColors.text))
       ..setLineWidth(frameLineWidth);
     for (final tick in ticks) {
       final x = frame.xOfTime(tick); // 이 눈금의 가로 자리
@@ -798,7 +809,7 @@ class ReportChartRenderer {
         frame.top - frame.bottom,
       )
       ..clipPath()
-      ..setStrokeColor(_color(ReportColors.chartLine))
+      ..setStrokeColor(reportPdfColor(ReportColors.chartLine))
       ..setLineWidth(seriesLineWidth)
       ..setLineJoin(PdfLineJoin.miter)
       ..setLineCap(PdfLineCap.butt);
@@ -841,7 +852,7 @@ class ReportChartRenderer {
     final baseline =
         centerY - (metrics.top + metrics.bottom) / 2 * size; // 글자가 앉는 선
     canvas
-      ..setFillColor(_color(ReportColors.text))
+      ..setFillColor(reportPdfColor(ReportColors.text))
       ..drawString(font, size, text, x, baseline);
   }
 
@@ -878,7 +889,7 @@ class ReportChartRenderer {
           ..translateByDouble(tx, ty, 0.0, 1.0)
           ..rotateZ(math.pi / 2),
       )
-      ..setFillColor(_color(ReportColors.text))
+      ..setFillColor(reportPdfColor(ReportColors.text))
       ..drawString(font, size, text, 0, 0)
       ..restoreContext();
   }
@@ -908,11 +919,4 @@ class ReportChartRenderer {
     }
     return text == '-0' ? '0' : text;
   }
-
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 함수: _color
-  /// 목적: `ReportColors` 의 0xRRGGBB 값을 PDF 색으로 바꾼다.
-  /// 인자: rgb — 색 값 (0xRRGGBB)
-  /// 반환: 불투명한 PDF 색
-  PdfColor _color(int rgb) => PdfColor.fromInt(0xFF000000 | rgb);
 }
