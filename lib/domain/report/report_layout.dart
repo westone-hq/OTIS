@@ -37,6 +37,13 @@ class ReportLayout {
   ///       경로에 두기 때문에 디렉터리를 정본에서 뺐다
   static const String assetDirectory = 'assets/report/';
 
+  /// 본문용 한글 글꼴 자산 경로
+  static const String regularFontAsset =
+      '${assetDirectory}NanumGothic-Regular.ttf';
+
+  /// 굵게 쓸 자리용 한글 글꼴 자산 경로
+  static const String boldFontAsset = '${assetDirectory}NanumGothic-Bold.ttf';
+
   /// 작성: 2026-09-25 09:30:00 · nada
   /// 변수: textBaselineDropRatio
   /// 목적: 글자 크기 대비, 글자 덩이의 세로 한가운데에서 앉는 선까지

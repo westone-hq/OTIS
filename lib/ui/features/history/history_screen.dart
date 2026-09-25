@@ -9,8 +9,8 @@ import '../../core/widgets/app_dialog.dart';
 
 /// 클래스: HistoryScreen
 /// 목적: - 폰에 저장된 과거 측정 결과 목록을 보여주고 개별 삭제한다.
-///       `MeasurementRepository`가 아직 미구현이라 목록 조회·삭제
-///       요청은 항상 실패로 끝난다 (아래 `_loadItems`·`_confirmDelete` 참고)
+///       목록은 측정마다 저장된 요약 파일에서 읽으므로 시계열은 비어
+///       있다 — 이 화면이 쓰는 날짜와 판정은 요약에 다 들어 있다
 ///       - 어르신 UX: 88dp 이상의 큰 터치 영역 행, 색+텍스트 3중 상태 표출, 대형 빈 상태 안내
 class HistoryScreen extends StatefulWidget {
   /// 작성: 2026-07-03 15:21:58 · 박건준
@@ -45,17 +45,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _loadItems();
   }
 
-  /// 함수: _showMockFailure
-  /// 목적: 저장·출력 계층 미구현 실패를 사용자가 이해할 수 있는 문구로 화면에 보여준다.
-  /// 인자: request — 시도한 동작을 설명하는 한국어 문구
-  /// 반환: 없음
-  void _showMockFailure(String request) {
+  /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 수정: 2026-09-26 09:30:00 · nada
+  /// 함수: _showFailure
+  /// 목적: 저장소 작업이 실패했다는 사실을 사용자가 알아들을 수 있는
+  ///       문구로 보여준다.
+  /// 인자: message — 무엇을 못 했는지 설명하는 우리말 문구
+  void _showFailure(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('저장·출력 기능은 아직 구현되지 않았습니다.\n(요청: $request)'),
-        backgroundColor: AppColors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppColors.red),
     );
   }
 
@@ -96,11 +95,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
   ///       해당 항목을 지운 뒤 화면 목록에서도 제거한다.
   /// 인자: item — 삭제할 측정 결과
   Future<void> _confirmDelete(MeasurementResult item) async {
-    final bool? confirmed = await showDialog<bool>( // 사용자 선택. "삭제"면 true
+    final bool? confirmed = await showDialog<bool>(
+      // 사용자 선택. "삭제"면 true
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('측정 결과 삭제'),
-        content: Text('${item.jobNo} (${_formatDate(item.dateTime)}) 결과를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
+        content: Text(
+          '${item.jobNo} (${_formatDate(item.dateTime)}) 결과를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
+        ),
         actions: [
           AppDialogButton(
             label: '취소',
@@ -119,10 +121,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     if (confirmed != true) return;
 
+    bool removed; // 실제로 지웠으면 true
     try {
-      await MeasurementRepository.instance.delete(item.id);
+      // → 로직 이동: MeasurementRepository.delete()
+      removed = await MeasurementRepository.instance.delete(item.id);
     } catch (_) {
-      _showMockFailure('측정 기록 삭제');
+      _showFailure('측정 기록을 삭제하지 못했습니다.');
+      return;
+    }
+    if (!removed) {
+      // 화면에는 있는데 저장된 폴더가 없다. 목록을 다시 읽어 맞춘다
+      _showFailure('이미 지워진 기록입니다. 목록을 새로 고칩니다.');
+      await _loadItems();
       return;
     }
     if (mounted) {
@@ -189,8 +199,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return '${reasons.join(', ')} 초과';
   }
 
-
-
   /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 함수: _buildEmptyState
   /// 목적: 저장된 결과가 없거나 조회에 실패했을 때 보여줄 빈 상태
@@ -216,7 +224,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             if (_loadFailed) ...[
               const SizedBox(height: 4),
               Text(
-                '저장·출력 기능은 아직 구현되지 않았습니다.\n(요청: 측정 기록 목록 조회)',
+                '저장된 폴더를 읽는 중 문제가 생겼습니다.\n잠시 뒤 다시 시도해 주세요.',
                 textAlign: TextAlign.center,
                 style: AppText.caption.copyWith(color: AppColors.textSub),
               ),
@@ -255,24 +263,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
   /// 인자: item — 표시할 측정 결과
   /// 반환: 목록 한 행 위젯
   Widget _buildListItem(MeasurementResult item) {
-    final bool hasExceeded = item.xExceeded == true ||
+    final bool hasExceeded =
+        item.xExceeded == true ||
         item.yExceeded == true ||
         item.zExceeded == true ||
         item.noiseExceeded == true; // 하나라도 기준을 넘었는지
-    final bool allUnmeasured = item.xExceeded == null &&
+    final bool allUnmeasured =
+        item.xExceeded == null &&
         item.yExceeded == null &&
         item.zExceeded == null &&
         item.noiseExceeded == null; // 판정할 수 있는 지표가 하나도 없는지
     final Color statusColor = hasExceeded
         ? AppColors.red
         : allUnmeasured
-            ? AppColors.textSub
-            : AppColors.green; // 상태 점·글자 색
+        ? AppColors.textSub
+        : AppColors.green; // 상태 점·글자 색
     final String statusLabel = hasExceeded
         ? '초과'
         : allUnmeasured
-            ? '미측정'
-            : '정상'; // 상태 문구
+        ? '미측정'
+        : '정상'; // 상태 문구
 
     return Material(
       color: AppColors.surface,
@@ -336,7 +346,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-
                   ],
                 ),
               ),
@@ -376,9 +385,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('저장된 결과'),
-      ),
+      appBar: AppBar(title: const Text('저장된 결과')),
       body: SafeArea(
         child: _items.isEmpty
             ? _buildEmptyState()

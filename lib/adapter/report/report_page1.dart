@@ -56,10 +56,10 @@ class ReportPage1Renderer {
   /// 반환: 바로 그릴 수 있는 렌더러
   static Future<ReportPage1Renderer> load(PdfDocument document) async {
     final regularBytes = await rootBundle.load(
-      'assets/report/NanumGothic-Regular.ttf',
+      ReportLayout.regularFontAsset,
     ); // 본문 글꼴 원본
     final boldBytes = await rootBundle.load(
-      'assets/report/NanumGothic-Bold.ttf',
+      ReportLayout.boldFontAsset,
     ); // 굵은 글꼴 원본
     final backgroundBytes = await rootBundle.load(
       ReportPage1.background,

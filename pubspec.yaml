@@ -23,6 +23,9 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   crypto: ^3.0.7
+  # 저장소 시험에서 기준 폴더를 임시 폴더로 바꿔 끼우는 데만 쓴다.
+  # 제품 코드는 path_provider 만 쓰고 이 패키지를 직접 부르지 않는다
+  path_provider_platform_interface: ^2.1.3
 
 flutter:
   uses-material-design: true

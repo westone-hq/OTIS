@@ -211,7 +211,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
 
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
-    final bool available = await _sensorManager.checkSensorsAvailable(); // 센서 가용 여부
+    final bool available = await _sensorManager
+        .checkSensorsAvailable(); // 센서 가용 여부
     if (available) {
       // → 로직 이동: SensorChannelManager.startCapture()
       // micDbfsToDbaOffset 기본 85.0 — OI-4 임시 오프셋
@@ -423,14 +424,15 @@ class _MeasuringScreenState extends State<MeasuringScreen>
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 함수: _resolveCaptureDirectory
-  /// 목적: 이번 측정 산출물을 저장할 디렉터리를 확보한다.
-  ///       `MeasurementRepository.getBaseDirectory()`가 기기의 외장
-  ///       저장소(없으면 앱 전용 문서 폴더) 아래 `captures` 폴더를
-  ///       찾아, 없으면 만들어서 돌려준다.
-  /// 반환: 생성이 보장된 저장 디렉터리
-  Future<Directory> _resolveCaptureDirectory() async {
-    // → 로직 이동: MeasurementRepository.getBaseDirectory()
-    return MeasurementRepository.instance.getBaseDirectory();
+  /// 목적: 이번 측정 산출물을 저장할 디렉터리를 확보한다. 측정 한 건이
+  ///       폴더 하나이므로 `captures/<측정 ID>/` 를 받아 온다. 어디에
+  ///       무엇을 두는지는 저장소가 정한다 — 여기서 경로를 짜 맞추면
+  ///       읽는 쪽과 어긋난다.
+  /// 인자: id — 이번 측정의 식별자
+  /// 반환: 생성이 보장된 이번 측정의 폴더
+  Future<Directory> _resolveCaptureDirectory(String id) async {
+    // → 로직 이동: MeasurementRepository.jobDirectory()
+    return MeasurementRepository.instance.jobDirectory(id);
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
@@ -489,8 +491,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
 
     try {
       // → 로직 이동: _resolveCaptureDirectory()
-      final baseDir = await _resolveCaptureDirectory(); // 저장할 폴더
-      final metaPath = '${baseDir.path}/${stamp}_meta.txt'; // 집계 파일 경로
+      final jobDir = await _resolveCaptureDirectory(stamp); // 이번 측정의 폴더
+      final metaPath = '${jobDir.path}/meta.txt'; // 집계 파일 경로
 
       try {
         // → 로직 이동: VibrationFileWriter.writeMeta()
@@ -507,13 +509,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         return;
       }
 
-      final valuePath = '${baseDir.path}/$stamp.txt'; // 값 파일 경로
+      final valuePath = '${jobDir.path}/raw.txt'; // 측정값 파일 경로
       // → 로직 이동: VibrationFileWriter.write()
       await VibrationFileWriter.write(valuePath, result);
 
-      // 리포트가 읽을 수 있는 모델로 바꿔 세션에 실어 둔다. 저장 계층이
-      // 아직 없어 파일로 남기지는 못하고, 결과 화면과 리포트가 이 자리에서
-      // 꺼내 쓴다
+      // 리포트가 읽을 수 있는 모델로 바꿔 세션에 실어 두고, 같은 폴더에
+      // 파일로도 남긴다. 결과 화면은 세션에서 바로 꺼내 쓰고, 히스토리와
+      // 메일은 저장된 파일에서 읽는다
       // → 로직 이동: MeasurementAssembler.assemble()
       final assembled = MeasurementAssembler.assemble(
         grid: result,
@@ -527,7 +529,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         );
         return;
       }
-      MeasurementSession.instance.lastResult = assembled.result;
+      final model = assembled.result!; // 저장하고 그릴 측정 결과
+      MeasurementSession.instance.lastResult = model;
+      // → 로직 이동: MeasurementRepository.save()
+      await MeasurementRepository.instance.save(model);
 
       // 안드로이드가 저장해둔 원본은 여기와 다른 위치에 자체 시각
       // 이름으로 있다. 이번 측정의 다른 결과 파일(집계 · 값)과 한
@@ -535,7 +540,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       // 없으면(레코딩 실패 등) 그 사실만 집계 파일에 남겨둔다
       final rawPath =
           _sensorManager.lastRecordPath; // 안드로이드가 저장한 원본 경로, 없으면 null
-      final rawCopyPath = '${baseDir.path}/${stamp}_raw.txt'; // 원본 사본 경로
+      final rawCopyPath = '${jobDir.path}/native_raw.txt'; // 원본 사본 경로
       String? savedRawPath; // 복사해 저장한 원본 경로, 복사 못 했으면 null
       if (rawPath != null) {
         await File(rawPath).copy(rawCopyPath);
@@ -546,13 +551,29 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         ).writeAsString('rawRecordPath: null\n', mode: FileMode.append);
       }
 
+      // 리포트는 측정을 마칠 때 미리 만들어 둔다. 메일을 보낼 때 만들면
+      // 기다리는 시간이 그때 생기고, 그 자리에 실패하면 보내지 못한다.
+      // 여기서 실패해도 측정 자체는 이미 저장됐으므로 멈추지 않는다 —
+      // 나중에 `ensureReportPdf()` 가 다시 만든다
+      String? reportPath; // 만들어 둔 리포트 경로, 못 만들었으면 null
+      try {
+        // → 로직 이동: MeasurementRepository.ensureReportPdf()
+        final report = await MeasurementRepository.instance.ensureReportPdf(
+          model.id,
+        ); // 만들어진 리포트 파일, 밑천이 없으면 null
+        reportPath = report?.path;
+      } catch (e, st) {
+        debugPrint('리포트 PDF 생성 실패: $e\n$st');
+      }
+
       // → 로직 이동: _showCaptureSummaryDialog()
       await _showCaptureSummaryDialog(
         result: result,
-        dirPath: baseDir.path,
+        dirPath: jobDir.path,
         valuePath: valuePath,
         metaPath: metaPath,
         rawPath: savedRawPath,
+        reportPath: reportPath,
       );
     } catch (e, st) {
       debugPrint('측정 저장 실패: $e\n$st');
@@ -572,15 +593,22 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///       valuePath — 값 파일 경로
   ///       metaPath — 집계(메타) 파일 경로
   ///       rawPath — 원본 사본 경로, 없으면 null
+  ///       reportPath — 리포트 PDF 경로, 못 만들었으면 null
   Future<void> _showCaptureSummaryDialog({
     required GridResampleResult result,
     required String dirPath,
     required String valuePath,
     required String metaPath,
     required String? rawPath,
+    required String? reportPath,
   }) async {
     if (!mounted) return;
-    final savedFiles = <String>[valuePath, metaPath, ?rawPath]; // 메일 첨부용 전체 경로
+    final savedFiles = <String>[
+      ?reportPath,
+      valuePath,
+      metaPath,
+      ?rawPath,
+    ]; // 메일 첨부용 전체 경로. 리포트를 맨 앞에 둬 첨부 목록에서 먼저 보이게 한다
     final fileNames = savedFiles
         .map((p) => p.split('/').last)
         .toList(); // 화면 표시용 파일명만

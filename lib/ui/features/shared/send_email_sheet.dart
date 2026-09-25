@@ -236,7 +236,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     } catch (e) {
       if (!mounted) return;
       final message = widget.jobId != null
-          ? '저장·출력 기능은 아직 구현되지 않았습니다.\n(요청: 메일 첨부 자료 조회)'
+          ? '메일에 넣을 자료를 준비하지 못했습니다.\n$e'
           : '메일 작성창 호출 실패: $e'; // 화면에 보여줄 실패 안내 문구
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: AppColors.red),
@@ -252,18 +252,23 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
-    final result = await MeasurementRepository.instance.load(jobId); // 조회된 측정 결과, 없으면 null
+    final result = await MeasurementRepository.instance.load(
+      jobId,
+    ); // 조회된 측정 결과, 없으면 null
     if (result == null) {
       throw StateError('측정 결과를 찾을 수 없다: $jobId');
     }
 
-    final baseDir = await MeasurementRepository.instance.getBaseDirectory(); // 산출물 저장 폴더
+    final baseDir = await MeasurementRepository.instance
+        .getBaseDirectory(); // 산출물 저장 폴더
     final repo = MeasurementRepository.instance; // 저장소 인스턴스
     final List<String> attachments = []; // 실제로 첨부할 파일 경로
     final List<String> attachmentDescriptions = []; // 본문에 나열할 첨부 설명 줄
 
     if (_sendPdf) {
-      final pdfFile = await repo.ensureReportPdf(jobId); // 생성되거나 이미 있던 PDF, 실패 시 null
+      final pdfFile = await repo.ensureReportPdf(
+        jobId,
+      ); // 생성되거나 이미 있던 PDF, 실패 시 null
       if (pdfFile != null && await pdfFile.exists()) {
         attachments.add(pdfFile.path);
         attachmentDescriptions.add('- report.pdf: 앱 측정 결과(가공값)');
@@ -275,19 +280,27 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
         attachments.add(rawFile.path);
         attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
       }
-      final excelFiles = await repo.ensureRawExcelFiles(jobId); // 초별 분리 엑셀(256/128/64Hz), 생성되거나 이미 있던 파일 목록
+      final excelFiles = await repo.ensureRawExcelFiles(
+        jobId,
+      ); // 초별 분리 엑셀(256/128/64Hz), 생성되거나 이미 있던 파일 목록
       for (final excel in excelFiles) {
         if (await excel.exists()) {
           attachments.add(excel.path);
-          final name = excel.path.replaceAll('\\', '/').split('/').last; // 경로에서 파일명만
+          final name = excel.path
+              .replaceAll('\\', '/')
+              .split('/')
+              .last; // 경로에서 파일명만
           attachmentDescriptions.add('- $name');
         }
       }
     }
 
-    final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(result.dateTime); // 메일 제목에 쓸 날짜 문구
+    final dateStr = DateFormat(
+      'yyyy-MM-dd HH:mm',
+    ).format(result.dateTime); // 메일 제목에 쓸 날짜 문구
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
-    final body = _sendSummary // 메일 본문
+    final body =
+        _sendSummary // 메일 본문
         ? ReportGenerator.generateSummaryText(result)
         : 'OTIS 승강기 진동 측정 리포트입니다.\n'
               '${attachmentDescriptions.join('\n')}\n'
