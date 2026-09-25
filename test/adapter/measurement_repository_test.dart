@@ -169,7 +169,45 @@ void main() {
       expect(items.single.noiseMax, 65.6, reason: '판정에 쓰는 값은 있어야 한다');
     });
 
-    test('읽지 못하는 폴더가 있어도 나머지는 나온다', () async {
+    test('요약이 없으면 정본에서 다시 만들어 목록에 올린다', () async {
+      // 저장 도중 앱이 죽어 정본만 남은 경우다. 목록에서 빠뜨리면 있는
+      // 기록을 없는 것처럼 보여 주게 된다
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      final cache = File(
+        '${dir.path}/${MeasurementRepository.summaryFileName}',
+      ); // 목록용 캐시
+      await cache.delete();
+
+      final items = await repo.list(); // 저장된 목록
+
+      expect(items.single.id, '20260114-110359');
+      expect(items.single.noiseMax, 65.6);
+      expect(await cache.exists(), isTrue, reason: '캐시를 고쳐 써 둬야 한다');
+      expect(items.single.zSeries, isEmpty, reason: '목록은 시계열을 싣지 않는다');
+    });
+
+    test('요약이 깨져 있어도 정본에서 다시 만든다', () async {
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      final cache = File(
+        '${dir.path}/${MeasurementRepository.summaryFileName}',
+      ); // 목록용 캐시
+      await cache.writeAsString('이건 json 이 아니다');
+
+      final items = await repo.list(); // 저장된 목록
+
+      expect(items.single.id, '20260114-110359');
+      expect(
+        jsonDecode(await cache.readAsString()),
+        isA<Map<String, dynamic>>(),
+        reason: '깨진 캐시를 성한 것으로 덮어써야 한다',
+      );
+    });
+
+    test('정본까지 없으면 그 폴더만 건너뛴다', () async {
       // 한 건이 깨졌다고 목록 전체를 못 보게 되면 나머지 측정까지 손을
       // 못 대게 된다
       await repo.save(_result('20260114-110359', DateTime(2026, 1, 14)));
@@ -178,6 +216,9 @@ void main() {
       await File(
         '${broken.path}/${MeasurementRepository.summaryFileName}',
       ).writeAsString('이건 json 이 아니다');
+      await File(
+        '${broken.path}/${MeasurementRepository.resultFileName}',
+      ).writeAsString('정본도 깨졌다');
 
       final items = await repo.list(); // 저장된 목록
 

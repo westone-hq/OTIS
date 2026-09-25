@@ -65,14 +65,21 @@ MeasurementResult _result({
 ///       기록이며, 소음 회귀는 이 파일로 고정한다.
 const _fixturePath = 'test/fixtures/ride_reference.txt';
 
+/// 작성: 2026-09-26 14:10:00 · nada
+/// 변수: _warmupFixturePath
+/// 목적: 수집 주기를 44100Hz · 1초 창으로 고정한 뒤 뽑은 측정 기록의 경로.
+///       앞쪽에 0 구간이 있어, 0 을 거르는 규칙의 근거가 되는 파일이다.
+const _warmupFixturePath = 'test/fixtures/noise_warmup.txt';
+
 /// 작성: 2026-09-25 11:20:00 · nada
 /// 함수: _fixtureNoise
-/// 목적: 기준 측정 기록에서 소음 열만 뽑는다. EVIMP1 포맷이라 머리말이
-///       두 줄이고 그 뒤로 X Y Z 소음 네 열이 공백으로 구분돼 있다.
+/// 목적: 측정 기록에서 소음 열만 뽑는다. EVIMP1 포맷이라 머리말이 두
+///       줄이고 그 뒤로 X Y Z 소음 네 열이 공백으로 구분돼 있다.
+/// 인자: path — 읽을 기록 파일 경로. 안 주면 회귀 기준 기록
 /// 반환: 소음 값 목록 (dBA)
-List<double> _fixtureNoise() {
+List<double> _fixtureNoise([String path = _fixturePath]) {
   return const LineSplitter()
-      .convert(File(_fixturePath).readAsStringSync())
+      .convert(File(path).readAsStringSync())
       .where((line) => line.trim().isNotEmpty)
       .skip(2)
       .map((line) => double.parse(line.trim().split(RegExp(r'\s+'))[3]))
@@ -232,6 +239,32 @@ void main() {
       expect(metrics.noiseAvg.value!, closeTo(45.804380, 1e-6));
       expect(metrics.noiseAvg.display, '45.8dBA');
       expect(metrics.noiseMax.display, '65.6dBA');
+    });
+  });
+
+  group('워밍업 0 구간', () {
+    test('실측에서 0 은 앞쪽 43개뿐이다', () {
+      // `_withoutWarmupZeros()` 의 근거가 되는 값이다. 수집 설정이 바뀌어
+      // 이 수가 달라지면 그 근거를 다시 적어야 한다
+      final noise = _fixtureNoise(_warmupFixturePath); // 워밍업이 있는 소음 열
+      final leading = noise.takeWhile((v) => v == 0).length; // 앞쪽 연속 0 개수
+
+      expect(noise.length, 14530);
+      expect(leading, 43);
+      expect(
+        noise.where((v) => v == 0).length,
+        leading,
+        reason: '0 은 앞쪽에만 몰려 있어야 한다',
+      );
+    });
+
+    test('0 을 거르면 평균이 0 쪽으로 끌려 내려가지 않는다', () {
+      final noise = _fixtureNoise(_warmupFixturePath); // 워밍업이 있는 소음 열
+      final metrics = ReportMetrics.from(_result(noiseSeries: noise)); // 산출 지표
+      final rawAverage =
+          noise.reduce((a, b) => a + b) / noise.length; // 0 을 포함한 평균
+
+      expect(metrics.noiseAvg.value!, greaterThan(rawAverage));
     });
   });
 

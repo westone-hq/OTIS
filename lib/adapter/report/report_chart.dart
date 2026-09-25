@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart' show Matrix4;
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
+import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-17 10:05:00 · nada
@@ -92,16 +93,28 @@ class ChartAxisSpec {
   /// 좁은 것부터 차례로 늘어놓은 범위 단계. 하나뿐이면 고정 축이다
   final List<ChartAxisRange> steps;
 
+  /// 평균 기준선을 그을 때 값을 가져올 지표 행 이름. 기준선을 긋지 않는
+  /// 축은 null
+  final String? meanKey;
+
+  /// 최댓값 표시점을 찍을 때 값을 가져올 지표 행 이름. 표시점을 찍지
+  /// 않는 축은 null
+  final String? peakKey;
+
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 함수: ChartAxisSpec
   /// 목적: 축 하나의 이름 · 라벨 · 범위 단계를 그대로 담는 생성자.
   /// 인자: key — 축 이름
   ///       label — 세로축 라벨
   ///       steps — 좁은 것부터 늘어놓은 범위 단계
+  ///       meanKey — 평균 기준선 값을 가져올 지표 행 이름. 기본 null
+  ///       peakKey — 최댓값 표시점 값을 가져올 지표 행 이름. 기본 null
   const ChartAxisSpec({
     required this.key,
     required this.label,
     required this.steps,
+    this.meanKey,
+    this.peakKey,
   });
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -190,6 +203,9 @@ class ReportChartAxes {
   /// 목적: 소음 차트의 세로축. 단계형이다. 첫 단계를 원본 리포트와 똑같이
   ///       둬서, 조용한 운행은 원본과 같은 눈금으로 보이고 넘칠 때만
   ///       위 단계로 올라간다. 어느 단계에서나 눈금은 여덟 개다.
+  ///       평균 기준선과 최댓값 표시점도 이 축에만 붙는다. 값은 1쪽 표가
+  ///       쓰는 것과 같은 지표에서 가져와, 차트와 표가 다른 숫자를 말하지
+  ///       않게 한다.
   /// 근거: 인용 — 첫 단계는 원본 리포트의 소음 차트 눈금이 40 부터 54 까지
   ///       2 씩 놓인 것을 그대로 옮겼다.
   ///       측정 — 위 두 단계를 더한 이유는 앱 실측이 원본 범위를 크게
@@ -201,6 +217,8 @@ class ReportChartAxes {
   static const ChartAxisSpec noise = ChartAxisSpec(
     key: 'noise',
     label: 'Noise Level (dBA)',
+    meanKey: 'noise_avg',
+    peakKey: 'noise_max',
     steps: <ChartAxisRange>[
       ChartAxisRange(min: 40.0, max: 54.0, tickStep: 2.0),
       ChartAxisRange(min: 35.0, max: 70.0, tickStep: 5.0),
@@ -273,6 +291,38 @@ class ReportChartAxes {
       ChartAxisRange(min: -3.0, max: 3.0, tickStep: 1.0),
     ],
   );
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 변수: all
+  /// 목적: 축 사양 여덟 개를 모아 둔 것. 낱개 상수와 같은 값이며, 전부
+  ///       훑어야 할 때 쓴다.
+  static const List<ChartAxisSpec> all = <ChartAxisSpec>[
+    x,
+    y,
+    z,
+    noise,
+    position,
+    speed,
+    accel,
+    jerk,
+  ];
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 함수: longestSeriesLength
+  /// 목적: 이 측정이 가진 시계열 중 가장 긴 것의 표본 수를 센다. 차트
+  ///       여덟 개가 같은 가로축을 쓰게 하려고 둔다 — 축마다 제 시계열
+  ///       길이로 폭을 잡으면, 비어 있는 축만 다른 시간대를 그리게 된다.
+  /// 인자: result — 시계열을 가진 측정 결과
+  /// 반환: 가장 긴 시계열의 표본 수. 시계열이 하나도 없으면 0
+  static int longestSeriesLength(MeasurementResult result) {
+    var longest = 0; // 여기까지 본 것 중 가장 긴 표본 수
+    for (final spec in all) {
+      // → 로직 이동: seriesOf()
+      final length = seriesOf(spec, result).length; // 이 축의 표본 수
+      if (length > longest) longest = length;
+    }
+    return longest;
+  }
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 함수: seriesOf
@@ -466,6 +516,35 @@ class ReportChartRenderer {
   /// 파형 선 굵기 (포인트)
   static const double seriesLineWidth = 0.35;
 
+  /// 평균 기준선 굵기 (포인트)
+  static const double guideLineWidth = 0.4;
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 변수: guideDashPattern
+  /// 목적: 평균 기준선 점선의 켠 길이와 끈 길이 (포인트).
+  /// 근거: 미확인 — 원본 리포트의 기준선이 점선이라는 것은 확인했으나,
+  ///       점과 빈칸의 길이는 재지 못했다. 격자 점선과 구분되게 조금 길게
+  ///       잡았다
+  static const List<double> guideDashPattern = <double>[2.4, 1.6];
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 변수: markerRadius
+  /// 목적: 최댓값 표시점의 반지름 (포인트).
+  /// 근거: 인용 — 파이썬 프로토타입 `charts.py` 가 지름 1.6 포인트로 찍는다
+  static const double markerRadius = 0.8;
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 변수: markerLabelSize
+  /// 목적: 최댓값 옆에 적는 값의 글자 크기 (포인트).
+  /// 근거: 인용 — 프로토타입 `charts.py` 의 주석 글자 크기와 같다
+  static const double markerLabelSize = 5.2;
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 변수: markerLabelGap
+  /// 목적: 표시점과 그 값 사이의 간격 (포인트).
+  /// 근거: 인용 — 프로토타입 `charts.py` 가 점 위로 3 포인트 띄운다
+  static const double markerLabelGap = 3.0;
+
   /// 격자 점선의 켠 길이와 끈 길이 (포인트)
   static const List<double> gridDashPattern = <double>[1.2, 1.2];
 
@@ -556,7 +635,11 @@ class ReportChartRenderer {
       top: ReportLayout.yToPoints(box.y),
       bottom: ReportLayout.yToPoints(box.y + box.height),
       range: range,
-      timeSpanSec: _timeSpan(values.length, result.sampleRate),
+      timeSpanSec: _timeSpan(
+        // → 로직 이동: ReportChartAxes.longestSeriesLength()
+        ReportChartAxes.longestSeriesLength(result),
+        result.sampleRate,
+      ),
     ); // 이 차트의 축 틀과 값 옮기기
     final valueTicks = range.ticks(); // 세로축 눈금 값
     final timeTicks = _timeTicks(frame.timeSpanSec); // 가로축 눈금 시각 (초)
@@ -567,14 +650,101 @@ class ReportChartRenderer {
     _drawTimeAxis(canvas, frame, timeTicks);
     if (values.isNotEmpty) {
       _drawSeries(canvas, frame, values, box.width, result.sampleRate);
+      _drawAnnotations(canvas, frame, spec, values, result);
     }
+  }
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 함수: _drawAnnotations
+  /// 목적: 원본 리포트가 소음 차트에 붙이는 표시 둘을 그린다.
+  ///       - 평균 자리에 가로로 긋는 붉은 점선 한 줄
+  ///       - 최댓값이 나온 자리에 붉은 점과 그 값
+  ///       값은 이 자리에서 다시 세지 않고 1쪽 표가 쓰는 지표에서 꺼낸다.
+  ///       같은 값을 두 곳에서 세면 차트와 표가 다른 숫자를 말하게 된다.
+  ///       그릴 것이 없는 축은 사양에 지표 이름이 없어 바로 돌아간다.
+  /// 인자: canvas — 그리기 도구
+  ///       frame — 축 틀과 값 옮기기
+  ///       spec — 그리는 축의 사양
+  ///       values — 그린 시계열
+  ///       result — 지표를 낼 측정 결과
+  void _drawAnnotations(
+    PdfGraphics canvas,
+    _ChartFrame frame,
+    ChartAxisSpec spec,
+    List<double> values,
+    MeasurementResult result,
+  ) {
+    final meanKey = spec.meanKey; // 평균을 가져올 지표 이름, 없으면 null
+    final peakKey = spec.peakKey; // 최댓값을 가져올 지표 이름, 없으면 null
+    if (meanKey == null && peakKey == null) return;
+
+    // → 로직 이동: ReportMetrics.from()
+    final metrics = ReportMetrics.from(result); // 표에 올리는 지표 여덟 개
+
+    canvas
+      ..saveContext()
+      ..drawRect(
+        frame.left,
+        frame.bottom,
+        frame.right - frame.left,
+        frame.top - frame.bottom,
+      )
+      ..clipPath();
+
+    final mean = meanKey == null
+        ? null
+        : metrics.byKey(meanKey)?.value; // 평균 (그 축의 단위)
+    if (mean != null) {
+      final y = frame.yOfValue(mean); // 기준선의 세로 자리
+      canvas
+        ..setStrokeColor(reportPdfColor(ReportColors.chartGuide))
+        ..setLineWidth(guideLineWidth)
+        ..setLineDashPattern(guideDashPattern)
+        ..moveTo(frame.left, y)
+        ..lineTo(frame.right, y)
+        ..strokePath()
+        ..setLineDashPattern();
+    }
+
+    final peak = peakKey == null
+        ? null
+        : metrics.byKey(peakKey); // 최댓값 지표, 없으면 null
+    final peakValue = peak?.value; // 최댓값 (그 축의 단위)
+    // 표가 말하는 최댓값이 시계열 어디에서 나왔는지 찾는다. 못 찾으면
+    // 점을 찍지 않는다 — 엉뚱한 자리에 찍고 다른 값을 적느니 비운다
+    final at = peakValue == null
+        ? -1
+        : values.indexOf(peakValue); // 최댓값이 나온 자리, 못 찾으면 -1
+    if (peakValue != null && at >= 0) {
+      final x = frame.xOfTime(at / result.sampleRate); // 표시점의 가로 자리
+      final y = frame.yOfValue(peakValue); // 표시점의 세로 자리
+      canvas
+        ..setFillColor(reportPdfColor(ReportColors.chartMarker))
+        ..drawEllipse(x, y, markerRadius, markerRadius)
+        ..fillPath();
+      _drawText(
+        canvas,
+        text: peak!.display,
+        size: markerLabelSize,
+        x: x - _widthOf(peak.display, markerLabelSize) / 2,
+        centerY: y + markerLabelGap + markerLabelSize / 2,
+        color: ReportColors.chartMarker,
+      );
+    }
+
+    canvas.restoreContext();
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 함수: _timeSpan
   /// 목적: 가로축이 담을 시간 폭을 정한다. 마지막 표본이 축 오른쪽 끝에
   ///       딱 붙으면 파형 끝이 축 틀 선에 묻히므로 여유를 둔다.
-  /// 인자: sampleCount — 표본 개수
+  ///
+  ///       표본 수는 그리는 축의 것이 아니라 측정 전체에서 가장 긴
+  ///       시계열의 것을 받는다. 축마다 제 길이로 폭을 잡으면, 마이크
+  ///       권한이 꺼져 소음이 빈 측정에서 소음 차트만 다른 시간대를
+  ///       그린다 — 위 세 차트가 0~45초인데 소음만 0~1초가 된다.
+  /// 인자: sampleCount — 측정 전체에서 가장 긴 시계열의 표본 개수
   ///       sampleRate — 표본 주기 (Hz)
   /// 반환: 가로축이 담을 시간 폭 (초). 표본이 하나 이하면 하한을 쓴다
   /// 식: span = max(minTimeSpanSec, (sampleCount - 1) / sampleRate x
@@ -837,6 +1007,7 @@ class ReportChartRenderer {
   ///       size — 글자 크기 (포인트)
   ///       x — 찍기 시작할 가로 자리 (포인트)
   ///       centerY — 글자 덩이의 세로 한가운데 (포인트)
+  ///       color — 글자색 (0xRRGGBB). 안 주면 본문 글자색
   /// 식: baseline = centerY - (top + bottom) / 2 x size
   ///     `top` 과 `bottom` 은 글꼴이 알려 주는 글자 덩이의 아래 · 위 끝이다.
   ///     글자 크기 1 을 기준으로 한 값이라 크기를 곱해 쓴다
@@ -846,12 +1017,13 @@ class ReportChartRenderer {
     required double size,
     required double x,
     required double centerY,
+    int color = ReportColors.text,
   }) {
     final metrics = font.stringMetrics(text); // 이 문구가 차지하는 넓이
     final baseline =
         centerY - (metrics.top + metrics.bottom) / 2 * size; // 글자가 앉는 선
     canvas
-      ..setFillColor(reportPdfColor(ReportColors.text))
+      ..setFillColor(reportPdfColor(color))
       ..drawString(font, size, text, x, baseline);
   }
 

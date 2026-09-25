@@ -3,11 +3,14 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_chart_page.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart'
     show renderReportPage1;
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
+
+import 'pdf_probe.dart';
 
 /// 작성: 2026-09-26 09:30:00 · nada
 /// 변수: _outputPath
@@ -40,6 +43,10 @@ List<double> _series(double amplitude, double cycles) {
 ///       측정에 가장 가까운 모양으로 둔다.
 /// 반환: 리포트에 넣을 측정 결과
 MeasurementResult _result() {
+  final noise = _series(
+    8.0,
+    60,
+  ).map((v) => v + 50.0).toList(); // 42~58 dBA 를 오르내리는 소음
   return MeasurementResult(
     id: '20260114-110359',
     jobNo: '2025F 1234R01',
@@ -50,11 +57,13 @@ MeasurementResult _result() {
     dateTime: DateTime(2026, 1, 14, 11, 3, 59),
     maxSpeed: 1.743390961,
     distance: 57.093948064,
-    noiseMax: 65.6,
+    // 실제 경로에서는 어셈블러가 시계열에서 뽑으므로 늘 시계열 안의
+    // 값이다. 시험도 같은 관계를 지켜야 최댓값 표시점이 그려진다
+    noiseMax: noise.reduce(math.max),
     xSeries: _series(6.0, 120),
     ySeries: _series(9.0, 90),
     zSeries: _series(14.0, 150),
-    noiseSeries: _series(8.0, 60).map((v) => v + 50.0).toList(),
+    noiseSeries: noise,
     positionSeries: List<double>.generate(
       _sampleCount,
       (i) => 57.093948064 * i / _sampleCount,
@@ -107,6 +116,39 @@ void main() {
       final file = File(_outputPath); // 눈으로 열어 볼 파일
       await file.parent.create(recursive: true);
       await file.writeAsBytes(bytes);
+    });
+
+    test('2쪽 소음 차트에 평균선과 최댓값 표시점이 붙는다', () async {
+      // 원본 리포트가 소음 차트에만 붙이는 표시 둘이다. 눈으로만 보면
+      // 다음에 지워져도 모르므로 값으로 못박아 둔다
+      final bytes = await (await TuneReportBuilder.load()).build(
+        _result(),
+      ); // 만든 리포트
+      final charts = pdfChartStreams(bytes); // 차트가 그려진 쪽들
+
+      expect(charts.length, 2, reason: '차트 쪽은 둘');
+      final page2 = charts.first; // 소음 차트가 있는 쪽
+      expect(
+        ReportChartRenderer.guideDashPattern.length,
+        2,
+        reason: '아래 무늬 문자열이 이 상수에서 온다',
+      );
+      expect('[2.4 1.6] 0 d'.allMatches(page2).length, 1, reason: '평균 기준선 한 줄');
+      expect(
+        '$markerColorOperand RG'.allMatches(page2).length,
+        1,
+        reason: '평균선을 붉게 긋는다',
+      );
+      expect(
+        '$markerColorOperand rg'.allMatches(page2).length,
+        2,
+        reason: '표시점과 그 값 두 가지를 붉게 채운다',
+      );
+      expect(
+        '[2.4 1.6] 0 d'.allMatches(charts.last).length,
+        0,
+        reason: '3쪽 차트에는 붙지 않는다',
+      );
     });
 
     test('글꼴을 한 번만 심어 따로 만드는 것보다 가볍다', () async {

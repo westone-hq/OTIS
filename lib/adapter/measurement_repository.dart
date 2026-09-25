@@ -28,8 +28,15 @@ import 'package:vibration_checker/model/measurement_result.dart';
 ///         `result.json` 한 건이 시계열 때문에 1MB 를 넘는다. 목록 화면은
 ///         날짜와 판정만 있으면 되는데 그걸 보려고 전부 읽으면, 측정이
 ///         쌓일수록 화면 여는 데 시간이 걸린다. 그래서 목록이 읽을 몫만
-///         `summary.json` 으로 따로 떼어 둔다. 두 파일은 `save()` 가 같이
-///         쓰므로 어긋나지 않는다.
+///         `summary.json` 으로 따로 떼어 둔다.
+///
+///       두 파일의 관계
+///         `result.json` 이 정본이고 `summary.json` 은 거기서 시계열만
+///         덜어낸 파생 캐시다. 둘이 어긋나면 언제나 정본이 옳다. 저장
+///         도중에 앱이 죽어 한쪽만 남는 일이 있으므로, 목록을 읽을 때
+///         캐시가 없거나 깨져 있으면 정본에서 다시 만들어 둔다 — 그
+///         측정을 목록에서 조용히 빠뜨리면 있는 기록을 없는 것처럼
+///         보여 주게 된다.
 class MeasurementRepository {
   /// 작성: 2026-09-26 09:30:00 · nada
   /// 변수: resultFileName
@@ -116,13 +123,28 @@ class MeasurementRepository {
     final map = result.toMap(); // 저장할 항목 표
 
     await File('${dir.path}/$resultFileName').writeAsString(jsonEncode(map));
+    // → 로직 이동: _writeSummary()
+    await _writeSummary(dir, map);
+    return dir;
+  }
 
-    final summary = Map<String, dynamic>.from(map); // 시계열을 덜어낼 사본
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 함수: _writeSummary
+  /// 목적: 정본에서 시계열만 덜어내 목록용 캐시를 쓴다. 저장할 때와 캐시를
+  ///       고쳐 쓸 때가 같은 코드를 타야 두 자리의 결과가 갈라지지 않는다.
+  /// 인자: dir — 그 측정의 폴더
+  ///       full — 정본에 담은 항목 표
+  /// 반환: 시계열을 덜어낸 항목 표. 방금 쓴 캐시와 같은 내용이다
+  Future<Map<String, dynamic>> _writeSummary(
+    Directory dir,
+    Map<String, dynamic> full,
+  ) async {
+    final summary = Map<String, dynamic>.from(full); // 시계열을 덜어낼 사본
     summary.removeWhere((key, _) => seriesKeys.contains(key));
     await File(
       '${dir.path}/$summaryFileName',
     ).writeAsString(jsonEncode(summary));
-    return dir;
+    return summary;
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
@@ -131,9 +153,13 @@ class MeasurementRepository {
   /// 목적: 기기에 저장되어 있는 모든 과거 측정 결과 목록을 불러온다.
   ///       요약 파일만 읽으므로 시계열은 비어 있다 — 목록 화면이 쓰는
   ///       날짜와 판정은 요약에 다 들어 있다. 최근 측정이 앞에 온다.
-  ///
-  ///       읽지 못한 폴더는 건너뛰고 기록만 남긴다. 한 건이 깨졌다고
-  ///       목록 전체를 못 보게 되면 나머지 측정까지 손을 못 대게 된다.
+  ///       폴더마다 이렇게 읽는다.
+  ///       1. 요약 파일이 멀쩡하면 그것을 읽는다
+  ///       2. 없거나 깨졌으면 정본에서 다시 읽고, 요약을 고쳐 쓴다.
+  ///          다음부터는 1 로 끝난다
+  ///       3. 정본마저 못 읽으면 그 폴더만 건너뛰고 기록을 남긴다. 한 건이
+  ///          깨졌다고 목록 전체를 못 보게 되면 나머지 측정까지 손을 못
+  ///          대게 된다
   /// 반환: 저장된 측정 결과 목록. 최근 것부터
   Future<List<MeasurementResult>> list() async {
     // → 로직 이동: getBaseDirectory()
@@ -142,27 +168,59 @@ class MeasurementRepository {
 
     await for (final entry in base.list()) {
       if (entry is! Directory) continue;
-      final file = File('${entry.path}/$summaryFileName'); // 이 폴더의 요약 파일
-      if (!await file.exists()) continue;
-      try {
-        // → 로직 이동: MeasurementResult.fromMap()
-        items.add(
-          MeasurementResult.fromMap(
-            jsonDecode(await file.readAsString()) as Map<String, dynamic>,
-          ),
-        );
-      } catch (error, stack) {
-        developer.log(
-          '측정 요약을 읽지 못해 목록에서 건너뛴다: ${file.path}',
-          name: 'MeasurementRepository',
-          error: error,
-          stackTrace: stack,
-        );
-      }
+      // → 로직 이동: _readListEntry()
+      final item = await _readListEntry(entry); // 이 폴더의 측정 결과, 못 읽으면 null
+      if (item != null) items.add(item);
     }
 
     items.sort((a, b) => b.dateTime.compareTo(a.dateTime));
     return items;
+  }
+
+  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 함수: _readListEntry
+  /// 목적: 폴더 하나에서 목록에 올릴 측정 결과를 읽는다. 요약 캐시를 먼저
+  ///       보고, 없거나 깨졌으면 정본에서 다시 만든다.
+  /// 인자: dir — 측정 한 건의 폴더
+  /// 반환: 읽어 낸 측정 결과. 정본까지 못 읽으면 null
+  Future<MeasurementResult?> _readListEntry(Directory dir) async {
+    final summary = File('${dir.path}/$summaryFileName'); // 이 폴더의 요약 캐시
+    if (await summary.exists()) {
+      try {
+        // → 로직 이동: MeasurementResult.fromMap()
+        return MeasurementResult.fromMap(
+          jsonDecode(await summary.readAsString()) as Map<String, dynamic>,
+        );
+      } catch (error) {
+        developer.log(
+          '요약 캐시가 깨져 정본에서 다시 만든다: ${summary.path}',
+          name: 'MeasurementRepository',
+          error: error,
+        );
+      }
+    }
+
+    final result = File('${dir.path}/$resultFileName'); // 이 폴더의 정본
+    if (!await result.exists()) return null;
+    try {
+      final map =
+          jsonDecode(await result.readAsString())
+              as Map<String, dynamic>; // 정본에 담긴 항목 표
+      // 고쳐 쓴 캐시와 같은 내용으로 돌려준다. 정본을 그대로 넘기면 이
+      // 폴더만 시계열이 실려 나가, 목록이 폴더마다 다른 모양이 된다
+      // → 로직 이동: _writeSummary()
+      final summary = await _writeSummary(dir, map); // 시계열을 덜어낸 항목 표
+      // → 로직 이동: MeasurementResult.fromMap()
+      return MeasurementResult.fromMap(summary);
+    } catch (error, stack) {
+      developer.log(
+        '측정을 읽지 못해 목록에서 건너뛴다: ${result.path}',
+        name: 'MeasurementRepository',
+        error: error,
+        stackTrace: stack,
+      );
+      return null;
+    }
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준

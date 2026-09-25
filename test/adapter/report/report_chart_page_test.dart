@@ -7,6 +7,8 @@ import 'package:vibration_checker/adapter/report/report_chart_page.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
+import 'pdf_probe.dart';
+
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 변수: _outputPath
 /// 목적: 만들어 낸 차트 두 쪽을 남겨 둘 자리. 축 틀 자리를 참조 PDF 와
@@ -174,6 +176,25 @@ void main() {
       ); // 42~58 dBA 사이를 오르내리는 소음
 
       expect(withNoise.length, greaterThan(quiet.length));
+    });
+
+    test('소음이 비어도 눈금이 다른 차트와 같은 자리에 온다', () async {
+      // 축마다 제 시계열 길이로 폭을 잡으면 빈 소음만 0~1초가 된다.
+      // 그리는 세로 자리를 빼고 눈금 자리가 네 차트 모두 같아야 한다
+      final result = _result(); // 소음만 빈 측정 결과
+      final bytes = await renderReportChartPages(result: result); // 만든 PDF
+      final page2 = verticalGridLines(
+        pdfChartStreams(bytes).first,
+      ); // 2쪽 차트별 세로 격자선 자리
+
+      expect(page2.length, 4, reason: '차트 넷');
+      for (var i = 1; i < page2.length; i++) {
+        expect(
+          page2[i],
+          page2.first,
+          reason: '${i + 1}번째 차트의 눈금 자리가 첫 차트와 다르다',
+        );
+      }
     });
 
     test('소음 시계열이 비어도 2쪽은 그려진다', () async {

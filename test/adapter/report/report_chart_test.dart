@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
+import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-17 10:05:00 · nada
@@ -403,6 +404,62 @@ void main() {
         () => ReportChartAxes.seriesOf(unknown, _result()),
         throwsArgumentError,
       );
+    });
+  });
+
+  group('차트 주석 — 소음 평균선과 최댓값 표시점', () {
+    test('소음 축만 평균선과 표시점을 갖는다', () {
+      expect(ReportChartAxes.noise.meanKey, 'noise_avg');
+      expect(ReportChartAxes.noise.peakKey, 'noise_max');
+
+      for (final spec in ReportChartAxes.all) {
+        if (spec.key == 'noise') continue;
+        expect(spec.meanKey, isNull, reason: '${spec.key} 는 평균선이 없다');
+        expect(spec.peakKey, isNull, reason: '${spec.key} 는 표시점이 없다');
+      }
+    });
+
+    test('가리키는 지표가 실제로 표에 있는 이름이다', () {
+      // 이름이 어긋나면 조용히 아무것도 안 그린다. 표가 가진 이름과
+      // 맞는지 못박아 둔다
+      final metrics = ReportMetrics.from(_result()); // 표에 올리는 지표
+
+      expect(metrics.byKey(ReportChartAxes.noise.meanKey!), isNotNull);
+      expect(metrics.byKey(ReportChartAxes.noise.peakKey!), isNotNull);
+    });
+
+    test('주석이 붙으면 그만큼 내용이 늘어난다', () async {
+      final document = PdfDocument(); // 만들어 낼 PDF 문서
+      final fontBytes = await rootBundle.load(
+        ReportLayout.regularFontAsset,
+      ); // 눈금·라벨에 쓸 글꼴 원본
+      final renderer = ReportChartRenderer(
+        font: PdfTtfFont(document, fontBytes),
+      ); // 차트를 그릴 렌더러
+      final noisy = _result().copyWith(
+        noiseSeries: List<double>.generate(
+          _rideSampleCount,
+          (i) => 45.0 + (i == 3000 ? 12.0 : 0.0),
+        ),
+        noiseMax: 57.0,
+      ); // 3000번째에 봉우리가 있는 소음
+
+      final page = PdfPage(
+        document,
+        pageFormat: PdfPageFormat(
+          ReportLayout.pageWidthPt,
+          ReportLayout.pageHeightPt,
+        ),
+      ); // 차트를 얹을 쪽
+      renderer.draw(
+        page.getGraphics(),
+        spec: ReportChartAxes.noise,
+        box: ReportChartPage.slots.first,
+        result: noisy,
+      );
+      final bytes = await document.save(); // 만든 PDF
+
+      expect(bytes.length, greaterThan(1000));
     });
   });
 
