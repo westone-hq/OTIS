@@ -60,7 +60,8 @@ import java.io.FileWriter
  * 근거: 측정 — OTIS 데이터 텍스트 파일 실측
  */
 class SensorStreamHandler(
-    private val context: Context // 센서 서비스에 접근할 때 쓰는 안드로이드 컨텍스트
+    private val context: Context, // 센서 서비스에 접근할 때 쓰는 안드로이드 컨텍스트
+    private val noiseCaptureHandler: NoiseCaptureHandler, // 소음값을 함께 실어 보내기 위해 참조
 ) : EventChannel.StreamHandler, SensorEventListener {
 
     companion object {
@@ -284,7 +285,9 @@ class SensorStreamHandler(
             "xMg" to xMg,
             "yMg" to yMg,
             "zMg" to zMg,
-            "dtUs" to dtUs
+            "dtUs" to dtUs,
+            // 마이크 스레드가 채워 둔 최신 dBA. 권한 없거나 미시작이면 0.0
+            "noiseDba" to noiseCaptureHandler.latestDba,
         )
 
         var readyBatch: List<Map<String, Any>>? = null // 이번에 내보낼 배치

@@ -12,12 +12,14 @@ enum NativeEventType { accel, gravity, linear }
 ///       채워 넣는 계산), 필터, 보정)도 이 단계에서는 수행하지 않는다.
 class NativeEvent {
   /// 작성: 2026-08-06 14:47:52 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 함수: NativeEvent
   /// 목적: 네이티브에서 도착한 원본 이벤트 값들을 그대로 담는 생성자.
   /// 인자: type — 이벤트 종류 (accel/gravity/linear)
   ///       tsUs — 측정 시각 (마이크로초)
   ///       xMg, yMg, zMg — 세 축 가속도 값 (mg)
   ///       dtUs — 같은 종류 직전 값과의 시간 간격 (마이크로초)
+  ///       noiseDba — 같은 시각에 붙인 소음(dBA). 채널에 없으면 null
   const NativeEvent({
     required this.type,
     required this.tsUs,
@@ -25,6 +27,7 @@ class NativeEvent {
     required this.yMg,
     required this.zMg,
     required this.dtUs,
+    this.noiseDba,
   });
 
   /// 이벤트 종류
@@ -48,6 +51,11 @@ class NativeEvent {
   /// 목적: 바로 이전 데이터와 현재 데이터 사이의 시간 간격 (단위: 마이크로초)
   ///       안드로이드(Native) 단에서 넘겨준 값을 그대로 들고 와서 지연/유실 검증에 쓴다.
   final int dtUs;
+
+  /// 변수: noiseDba
+  /// 목적: 이 센서 이벤트와 함께 실려 온 최신 소음 크기(dBA).
+  ///       네이티브가 키를 안 보냈거나 권한이 없으면 null/0 취급한다.
+  final double? noiseDba;
 
   /// 함수: fromRecordLine
   /// 목적: 텍스트 파일에 기록된 데이터 한 줄을 다시 NativeEvent 객체로 복원(역직렬화)한다.
@@ -87,6 +95,8 @@ class NativeEvent {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
   }
 
+  /// 작성: 2026-08-06 14:47:52 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 함수: fromChannelMap
   /// 목적: 안드로이드 네이티브(EventChannel)에서 쏘아준 딕셔너리(Map) 형태의 데이터를 NativeEvent 객체로 조립한다.
   /// 인자: map — 안드로이드에서 전달받은 Map 데이터
@@ -99,6 +109,7 @@ class NativeEvent {
     final yMg = map['yMg']; // 타입 검사는 아래에서 한다
     final zMg = map['zMg']; // 타입 검사는 아래에서 한다
     final dtUs = map['dtUs']; // 타입 검사는 아래에서 한다
+    final noiseRaw = map['noiseDba']; // 없어도 됨. 있으면 num
     if (type == null ||
         tsUs is! int ||
         xMg is! num ||
@@ -107,6 +118,7 @@ class NativeEvent {
         dtUs is! int) {
       return null;
     }
+    if (noiseRaw != null && noiseRaw is! num) return null;
     return NativeEvent(
       type: type,
       tsUs: tsUs,
@@ -114,6 +126,7 @@ class NativeEvent {
       yMg: yMg.toDouble(),
       zMg: zMg.toDouble(),
       dtUs: dtUs,
+      noiseDba: noiseRaw is num ? noiseRaw.toDouble() : null,
     );
   }
 }

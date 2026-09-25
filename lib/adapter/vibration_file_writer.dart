@@ -14,21 +14,21 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 ///       참조 파일과 같은 줄바꿈 문자(`lineEnding` 참고)로 되어 있다.
 ///       시간 열은 없다. 시각은 행 번호로만 결정된다.
 ///
-///       이번 산출물은 소음 열이 없는 3열이므로 EVIMP1(회사 EVA 진동측정 장비가
-///       쓰는 표준 데이터 포맷) 이 아니다.
-///       소음 열이 붙어 4열이 되는 시점에 formatId 와 columnCount 만 바꾸면 된다.
+///       이번 산출물은 소음 열이 붙은 4열 EVIMP1(회사 EVA 진동측정 장비가
+///       쓰는 표준 데이터 포맷)이다.
 class VibrationFileWriter {
   /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 변수: formatId
-  /// 목적: 이번 산출물의 포맷 식별자. 소음 열이 없어 EVIMP1 을 쓰지 않는다.
+  /// 목적: 이번 산출물의 포맷 식별자. X Y Z 소음 4열이므로 EVIMP1 을 쓴다.
   /// 근거: 인용 — 참조한 OTIS 데이터 텍스트 파일 1줄이 EVIMP1, 4열(X Y Z 소음) 구조.
-  ///       3열 파일에 같은 식별자를 쓰면 판독 측이 4열로 읽어 어긋난다
-  static const String formatId = 'OTIS-VIB3';
+  static const String formatId = 'EVIMP1';
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 변수: columnCount
-  /// 목적: 이번 산출물의 열 수 (X Y Z)
-  static const int columnCount = 3;
+  /// 목적: 이번 산출물의 열 수 (X Y Z 소음)
+  static const int columnCount = 4;
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
   /// 변수: decimalDigits
@@ -43,12 +43,13 @@ class VibrationFileWriter {
   static const String lineEnding = '\r\n';
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 함수: encode
   /// 목적: 격자 환산 결과를 참조 파일과 같은 구조의 문자열로 만든다.
   ///       1줄에 포맷 식별자, 2줄에 초당 행 수를 쓰고, 그 뒤로 격자
-  ///       행마다 진동 값(X Y Z, mg)을 한 줄씩 이어붙인다.
+  ///       행마다 진동·소음 값(X Y Z 소음)을 한 줄씩 이어붙인다.
   /// 인자: result — 격자 환산 결과. `result.samples`에 격자 행마다
-  ///       하나씩, 원본 가속도에서 중력 성분을 뺀 진동 값이 들어있다
+  ///       하나씩, 원본 가속도에서 중력 성분을 뺀 진동 값과 소음이 들어있다
   /// 반환: 머리말 2줄과 값 행들이 `lineEnding`으로 이어진 문자열
   static String encode(GridResampleResult result) {
     final rateHz = 1000000000 ~/ result.gridIntervalNs; // 1초(10억 나노초)를 격자
@@ -59,14 +60,15 @@ class VibrationFileWriter {
     buffer.write('$rateHz');
     buffer.write(lineEnding);
     for (final s in result.samples) {
-      // s: 격자 행 하나의 진동 값(X Y Z, mg). GridResampler가 그 시각의
-      // 원본 가속도값에서 중력값을 뺀 결과다
+      // s: 격자 행 하나의 진동 값(X Y Z, mg)과 소음(dBA)
       // → 로직 이동: formatValue()
       buffer.write(formatValue(s.xMg));
       buffer.write(' ');
       buffer.write(formatValue(s.yMg));
       buffer.write(' ');
       buffer.write(formatValue(s.zMg));
+      buffer.write(' ');
+      buffer.write(formatValue(s.noiseDba));
       buffer.write(lineEnding);
     }
     return buffer.toString();

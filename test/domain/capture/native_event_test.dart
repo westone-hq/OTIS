@@ -65,8 +65,8 @@ void main() {
   });
 
   group('NativeEvent.fromChannelMap', () {
-    test('정상 Map 을 판독하고 여분 키는 무시한다', () {
-      final event = NativeEvent.fromChannelMap({ // 여분 키(noiseDba)가 섞인 정상 Map
+    test('정상 Map 을 판독하고 noiseDba 를 담는다', () {
+      final event = NativeEvent.fromChannelMap({
         'type': 'accel',
         'tsUs': 12345,
         'xMg': 1.5,
@@ -80,6 +80,20 @@ void main() {
       expect(event.tsUs, 12345);
       expect(event.yMg, -2.0);
       expect(event.dtUs, 3900);
+      expect(event.noiseDba, 45.2);
+    });
+
+    test('noiseDba 가 없어도 필수 키만 있으면 판독한다', () {
+      final event = NativeEvent.fromChannelMap({
+        'type': 'accel',
+        'tsUs': 1,
+        'xMg': 0,
+        'yMg': 0,
+        'zMg': 0,
+        'dtUs': 0,
+      });
+      expect(event, isNotNull);
+      expect(event!.noiseDba, isNull);
     });
 
     test('필수 키 누락·형식 불일치는 null (0값 대체 금지)', () {

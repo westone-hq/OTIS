@@ -192,11 +192,33 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       }
     });
 
+    // → 로직 이동: SensorChannelManager.requestAudioPermission()
+    final bool audioGranted = await _sensorManager.requestAudioPermission();
+    if (!audioGranted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '소음 제외 측정: 마이크 권한이 거절되어 진동만 측정합니다. '
+            '(결과 파일 소음 열은 0.0)\n'
+            '권한 설정 창이 다시 안 뜨면 휴대폰 설정 > 앱 > OTIS 진동 측정 > '
+            '권한에서 마이크를 허용해 주세요.',
+            style: AppText.body.copyWith(color: Colors.white),
+          ),
+          backgroundColor: AppColors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
     final bool available = await _sensorManager.checkSensorsAvailable(); // 센서 가용 여부
     if (available) {
       // → 로직 이동: SensorChannelManager.startCapture()
-      await _sensorManager.startCapture();
+      // micDbfsToDbaOffset 기본 85.0 — OI-4 임시 오프셋
+      await _sensorManager.startCapture(
+        calibrationOffsetDba: 0.0,
+        micDbfsToDbaOffset: 85.0,
+      );
       _sensorSub = _sensorManager.nativeEventStream.listen((event) {
         _receivedRealSample = true;
         // → 로직 이동: GridResampler.onEvent()

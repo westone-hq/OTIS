@@ -120,18 +120,52 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
+  /// 함수: requestAudioPermission
+  /// 목적: 안드로이드에게 마이크(RECORD_AUDIO) 권한을 요청한다.
+  ///       이미 승인돼 있으면 즉시 true, 거부되면 false를 돌려준다.
+  /// 반환: 마이크 사용이 가능하면 true
+  Future<bool> requestAudioPermission() async {
+    try {
+      // → 로직 이동: MainActivity.requestAudioPermission
+      final bool? granted = await _methodChannel.invokeMethod<bool>(
+        'requestAudioPermission',
+      );
+      return granted ?? false;
+    } catch (error, stack) {
+      developer.log(
+        'requestAudioPermission 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+      lastCaptureError = '마이크 권한 요청이 실패했습니다.';
+      return false;
+    }
+  }
+
+  /// 작성: 2026-08-17 15:35:02 · 박건준
+  /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 함수: startCapture
-  /// 목적: 안드로이드에게 지정된 속도(Hz)로 센서 데이터를 쏴 달라고
-  ///       명령을 내린다. 시작 전에 이전 측정 기록(폐기 개수 · 오류
-  ///       문구 · 저장 경로)을 모두 초기화한다.
+  /// 목적: 안드로이드에게 센서·소음 데이터를 쏴 달라고 명령을 내린다.
+  ///       시작 전에 이전 측정 기록(폐기 개수 · 오류 문구 · 저장 경로)을
+  ///       모두 초기화한다.
+  /// 인자: calibrationOffsetDba — 현장·기기 보정(dBA), 기본 0.0
+  ///       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 85.0 (OI-4)
   /// 반환: 없음. 요청이 실패하면 원인은 `debugPrint`로 남기고
   ///       `lastCaptureError`에 화면에 보여줄 문구를 채운다
-  Future<void> startCapture() async {
+  Future<void> startCapture({
+    double calibrationOffsetDba = 0.0,
+    double micDbfsToDbaOffset = 85.0,
+  }) async {
     droppedMapCount = 0;
     lastCaptureError = null;
     lastRecordPath = null;
     try {
-      await _methodChannel.invokeMethod('startCapture');
+      await _methodChannel.invokeMethod('startCapture', {
+        'calibrationOffset': calibrationOffsetDba,
+        'micDbfsToDbaOffset': micDbfsToDbaOffset,
+      });
     } catch (error) {
       debugPrint('startCapture 실패: $error');
       lastCaptureError = '측정 시작 요청이 실패했습니다.';
