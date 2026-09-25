@@ -40,7 +40,8 @@ class MeasurementResult {
   /// Z축 진동 P2P (mg). null 이면 아직 계산하지 않았다 — `xPtp` 와 같은 이유
   final double? zPtp;
 
-  /// 소음 최대값 (dBA). null 이면 미수집 — 소음 센서 수집 경로가 아직 없다
+  /// 소음 최대값 (dBA). null 이면 잴 수 있는 표본이 없었다 — 마이크
+  /// 권한이 없거나 소음이 0 으로만 들어온 측정이다
   final double? noiseMax;
 
   /// 운행 거리 (m). 방향과 무관한 누적 이동량이다. null 이면 수직
@@ -157,7 +158,7 @@ class MeasurementResult {
   ///       dateTime — 측정 일시
   ///       xPtp, yPtp, zPtp — 축별 진동 P2P (mg). 필터 미확정이라
   ///       지금은 null
-  ///       noiseMax — 소음 최대 (dBA). 수집 경로가 없어 지금은 null
+  ///       noiseMax — 소음 최대 (dBA). 잴 수 있는 표본이 없으면 null
   ///       distance — 운행거리 (m). 방향 무관 누적 이동량
   ///       maxSpeed — 최대속도 (m/s)
   ///       fullXPtp/fullYPtp/fullZPtp — 전체 주행 구간 축별 P-P (mg), 기본 0.0

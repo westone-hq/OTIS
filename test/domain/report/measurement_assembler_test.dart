@@ -62,8 +62,9 @@ List<List<String>> _fixtureFields() {
 
 /// 작성: 2026-09-15 19:14:22 · nada
 /// 함수: _fixtureRows
-/// 목적: 기준 데이터를 격자 행으로 만든다. 세 진동 열만 쓰고 소음 열은
-///       버린다 — 앱에 소음 수집 경로가 없어 변환이 소음을 받지 않는다.
+/// 목적: 기준 데이터를 격자 행으로 만든다. 진동 세 열과 소음 열을 모두
+///       싣는다 — 수집 계층이 격자 행에 소음을 실어 주므로 실제 경로와
+///       같은 모양이다.
 /// 반환: 격자 행 11,388개
 List<GridSample> _fixtureRows() {
   return _fixtureFields()
@@ -72,6 +73,7 @@ List<GridSample> _fixtureRows() {
           xMg: double.parse(fields[0]),
           yMg: double.parse(fields[1]),
           zMg: double.parse(fields[2]),
+          noiseDba: double.parse(fields[3]),
         ),
       )
       .toList();
@@ -200,8 +202,8 @@ void main() {
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.noiseSeries, isEmpty);
-      expect(model.noiseMax, isNull);
+      expect(model.noiseSeries, everyElement(0.0), reason: '격자에 소음이 없다');
+      expect(model.noiseMax, isNull, reason: '0 뿐이면 잰 것이 없다');
       expect(model.xPtp, isNull);
       expect(model.yPtp, isNull);
       expect(model.zPtp, isNull);
@@ -226,7 +228,7 @@ void main() {
       expect(model.speedSeries.length, 3);
       expect(model.accelSeries.length, 3);
       expect(model.jerkSeries.length, 3);
-      expect(model.noiseSeries, isEmpty);
+      expect(model.noiseSeries, everyElement(0.0));
       expect(model.maxSpeed, isNotNull);
       expect(model.distance, isNotNull);
     });
@@ -335,37 +337,61 @@ void main() {
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.noiseSeries, isEmpty);
+      expect(model.noiseSeries, everyElement(0.0));
       expect(model.noiseMax, isNull);
     });
 
-    test('소음 시계열만 주면 그 최대로 noiseMax 를 채운다', () {
-      // 수집 계층이 센서 최대를 못 실어 줄 때의 대비책이다
+    test('격자가 실어 온 소음을 그대로 옮기고 최대를 채운다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(const <GridSample>[
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 44.0),
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 48.0),
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 46.0),
+        ]),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
-        noiseSeries: const <double>[44.0, 48.0, 46.0],
       ).result!; // 변환된 측정 결과
 
       expect(model.noiseSeries, const <double>[44.0, 48.0, 46.0]);
       expect(model.noiseMax, closeTo(48.0, 1e-9));
     });
 
-    test('센서 최대를 주면 시계열 최대보다 그것을 앞세운다', () {
-      // 소음은 약 8Hz 라 격자 시계열이 표본 사이 봉우리를 잃는다.
-      // 센서가 본 최대가 있으면 그 값이 정본이다
+    test('마이크가 꺼진 측정을 "소음 정상" 으로 찍지 않는다', () {
+      // 권한이 거부되면 수집 계층이 0 만 내보낸다. 그 0 을 최대로 쓰면
+      // 기준치 아래라 초록 신호등이 찍혀, 재지도 않은 소음을 정상이라고
+      // 보고하게 된다
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(const <GridSample>[
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
+        ]),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
-        noiseSeries: const <double>[44.0, 48.0, 46.0],
-        noiseMax: 65.6,
       ).result!; // 변환된 측정 결과
 
-      expect(model.noiseMax, closeTo(65.6, 1e-9));
+      expect(model.noiseMax, isNull);
+      expect(model.noiseExceeded, isNull, reason: 'false 면 정상으로 읽힌다');
+    });
+
+    test('앞쪽 0 구간은 빼고 최대를 센다', () {
+      // 첫 창이 찰 때까지 수집 계층이 0 을 내보낸다. 시계열은 그대로 두고
+      // 최대만 0 아닌 표본에서 센다
+      final model = MeasurementAssembler.assemble(
+        grid: _grid(const <GridSample>[
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
+          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 41.5),
+        ]),
+        site: _site,
+        id: 'id',
+        measuredAt: measuredAt,
+      ).result!; // 변환된 측정 결과
+
+      expect(model.noiseSeries.length, 3, reason: '시계열은 자르지 않는다');
+      expect(model.noiseMax, closeTo(41.5, 1e-9));
     });
 
     test('격자 행이 세 개보다 적으면 0 을 지어내지 않고 사유를 올린다', () {
@@ -459,6 +485,22 @@ void main() {
         expect(model.speedSeries.last, closeTo(0.0, 1e-9));
       });
 
+      test('실측 소음이 원본 리포트에 인쇄된 값과 같다', () {
+        // 원본 TUNE 리포트 1쪽은 평균 45.8dBA · 최대 65.6dBA 로 적고
+        // 있다. 이 파일의 소음 열에서 그대로 나오는 값이라 소수점까지
+        // 고정한다. 흔들리면 소음이 격자를 타고 오는 경로가 바뀐 것이다
+        final model = MeasurementAssembler.assemble(
+          grid: _grid(_fixtureRows()),
+          site: _site,
+          id: 'id',
+          measuredAt: measuredAt,
+        ).result!; // 변환된 측정 결과
+
+        expect(model.noiseSeries.length, 11388);
+        expect(model.noiseMax!, closeTo(65.600000, 1e-6));
+        expect(model.noiseExceeded, isTrue, reason: '65.6 은 적색 기준 50 을 넘는다');
+      });
+
       test('원본 리포트 값과 1% 이내로 맞는다', () {
         // 원본 TUNE 리포트는 1.75 m/s · 57.3 m 로 적고 있다. 원본이 어떤
         // 반올림과 구간 산정을 썼는지 몰라 소수점까지 맞추지 않고,
@@ -470,8 +512,7 @@ void main() {
           measuredAt: measuredAt,
         ).result!; // 변환된 측정 결과
 
-        final speedGap =
-            (model.maxSpeed! - 1.75).abs() / 1.75; // 최대 속도가 어긋난 비율
+        final speedGap = (model.maxSpeed! - 1.75).abs() / 1.75; // 최대 속도가 어긋난 비율
         final distanceGap =
             (model.distance! - 57.3).abs() / 57.3; // 운행 거리가 어긋난 비율
 

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
@@ -52,10 +55,30 @@ MeasurementResult _result({
 /// 목적: 측정 결과에서 리포트 표 여덟 행을 만드는 산출 계층을 시험한다.
 ///       - 지금 낼 수 있는 두 값이 나오는지
 ///       - 아직 못 내는 값이 0 이 아니라 비어 있는지, 그 표시가 `—` 인지
-///       - 소음 수집이 붙으면 이 파일을 고치지 않고 값이 채워지는지
+///       - 소음이 격자를 타고 들어오면 이 계층이 값을 내는지
 ///       - 진동 필터가 정해지면 마찬가지로 채워지는지
 ///       - 수평 행이 큰 쪽 값을 싣고 두 축을 함께 적는지
 ///       - 판정이 `ReportThresholds` 를 따르는지
+/// 작성: 2026-09-25 11:20:00 · nada
+/// 변수: _fixturePath
+/// 목적: 기준 측정 기록의 경로. 원본 TUNE 리포트를 만든 실제 현장
+///       기록이며, 소음 회귀는 이 파일로 고정한다.
+const _fixturePath = 'test/fixtures/ride_reference.txt';
+
+/// 작성: 2026-09-25 11:20:00 · nada
+/// 함수: _fixtureNoise
+/// 목적: 기준 측정 기록에서 소음 열만 뽑는다. EVIMP1 포맷이라 머리말이
+///       두 줄이고 그 뒤로 X Y Z 소음 네 열이 공백으로 구분돼 있다.
+/// 반환: 소음 값 목록 (dBA)
+List<double> _fixtureNoise() {
+  return const LineSplitter()
+      .convert(File(_fixturePath).readAsStringSync())
+      .where((line) => line.trim().isNotEmpty)
+      .skip(2)
+      .map((line) => double.parse(line.trim().split(RegExp(r'\s+'))[3]))
+      .toList();
+}
+
 void main() {
   group('지금 낼 수 있는 값', () {
     test('최대 속도와 운행 거리가 나온다', () {
@@ -126,14 +149,11 @@ void main() {
 
   group('소음 통로가 뚫려 있는지', () {
     test('소음이 채워지면 이 계층을 고치지 않고 값이 나온다', () {
-      // 소음 수집을 다른 엔지니어가 붙였다고 가정하고, 그 결과물인
+      // 수집 계층이 격자에 실어 준 소음이 어셈블러를 거쳐 온 모양으로,
       // noiseSeries 와 noiseMax 를 채워 넣는다. 산출 계층을 건드리지
       // 않았는데도 평균과 최대가 나와야 통로가 실제로 열려 있는 것이다
       final metrics = ReportMetrics.from(
-        _result(
-          noiseSeries: const <double>[44.0, 46.0, 48.0],
-          noiseMax: 48.0,
-        ),
+        _result(noiseSeries: const <double>[44.0, 46.0, 48.0], noiseMax: 48.0),
       ); // 산출된 지표
 
       expect(metrics.noiseAvg.value, closeTo(46.0, 1e-9));
@@ -143,13 +163,10 @@ void main() {
     });
 
     test('최대는 시계열이 아니라 noiseMax 를 읽는다', () {
-      // 소음은 약 8Hz 라 격자 시계열이 표본 사이 봉우리를 잃는다. 센서가
-      // 본 최대가 시계열 최대보다 클 수 있고, 그때 정본은 noiseMax 다
+      // 최대의 정본은 noiseMax 다. 여기서 시계열로 다시 세면 0 인 표본을
+      // 빼는 규칙이 어셈블러와 갈라져 두 값이 어긋난다
       final metrics = ReportMetrics.from(
-        _result(
-          noiseSeries: const <double>[44.0, 46.0, 48.0],
-          noiseMax: 65.6,
-        ),
+        _result(noiseSeries: const <double>[44.0, 46.0, 48.0], noiseMax: 65.6),
       ); // 산출된 지표
 
       expect(metrics.noiseMax.value, closeTo(65.6, 1e-9));
@@ -168,7 +185,7 @@ void main() {
     });
 
     test('시작 직후 0 구간을 빼고 평균을 낸다', () {
-      // 실제 측정에서 앞 38개 표본이 0 으로 들어온다. 그대로 평균에
+      // 첫 창이 찰 때까지 수집 계층이 0 을 내보낸다. 그대로 평균에
       // 넣으면 값이 실제보다 낮게 끌려 내려간다
       final withZeros = <double>[
         ...List<double>.filled(38, 0.0),
@@ -194,12 +211,27 @@ void main() {
     });
 
     test('소음 최대가 기준을 넘으면 적색이다', () {
-      final metrics = ReportMetrics.from(
-        _result(noiseMax: 65.6),
-      ); // 산출된 지표
+      final metrics = ReportMetrics.from(_result(noiseMax: 65.6)); // 산출된 지표
 
       expect(metrics.noiseMax.verdict, ReportVerdict.red);
       expect(metrics.noiseMax.redDisplay, '50');
+    });
+  });
+
+  group('실측 소음 회귀', () {
+    test('평균과 최대가 원본 리포트에 인쇄된 값 그대로 찍힌다', () {
+      // 원본 TUNE 리포트 1쪽은 평균 45.8dBA · 최대 65.6dBA 로 적고 있다.
+      // 기준 측정 기록의 소음 열에서 그대로 나오는 값이라 표기 문자열까지
+      // 고정한다
+      final noise = _fixtureNoise(); // 기준 기록의 소음 열 (dBA)
+      final metrics = ReportMetrics.from(
+        _result(noiseSeries: noise, noiseMax: 65.6),
+      ); // 산출된 지표
+
+      expect(noise.length, 11388);
+      expect(metrics.noiseAvg.value!, closeTo(45.804380, 1e-6));
+      expect(metrics.noiseAvg.display, '45.8dBA');
+      expect(metrics.noiseMax.display, '65.6dBA');
     });
   });
 

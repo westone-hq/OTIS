@@ -48,23 +48,24 @@ class MeasurementAssembleResult {
 ///       최대 속도와 운행 거리를 거기서 뽑는다.
 ///
 ///       지금 비운 채로 넘기는 것
-///         - 소음 시계열 · 소음 최대: 소음 수집을 다른 담당자가 맡고
-///           있어 앱에 수집 경로가 없다. 받을 자리는 `assemble()` 의
-///           인자로 열어 두었다
 ///         - 진동 P2P(X/Y/Z): 진동 필터가 확정되지 않았다
 ///
 ///       소음 두 값의 계약
-///         소음 갱신율은 약 8Hz 로 진동 256Hz 보다 훨씬 느리다. 격자에
-///         맞춘 시계열은 표본과 표본 사이에서 올라갔다 내려온 봉우리를
-///         잃으므로, 센서가 실제로 본 최대는 `max(noiseSeries)` 보다 클
-///         수 있다. 그래서 두 값의 쓰임을 나눈다.
-///         - `noiseSeries` 는 격자에 정렬된 값이고 차트를 그리는 데 쓴다
-///         - `noiseMax` 가 소음 최대 지표의 정본이다. 수집 계층이 센서가
-///           본 최대를 실어 주면 그 값을 그대로 쓰고, 안 실어 주면
-///           여기서 시계열 최대로 채운다. 시계열 최대는 아쉬운 대로
-///           쓰는 값이지 같은 값이 아니다
+///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
+///         같은 주기로 갱신되므로 표본과 표본 사이에서 봉우리를 잃지
+///         않는다. 다만 수집 계층이 1초 창으로 고른 값을 내보내므로 그
+///         창보다 짧은 소리는 평탄해지는데, 이는 Slow 특성을 쓰기로 한
+///         결과이지 격자가 잃은 것이 아니다.
+///         - `noiseSeries` 는 격자에 정렬된 값 그대로이고 차트가 쓴다
+///         - `noiseMax` 는 그 시계열의 최대다
 ///         - 소음 평균은 모든 표본이 있어야 나오므로 시계열에서 낸다.
 ///           `ReportMetrics` 가 그 몫을 맡는다
+///
+///       소음 0 은 값이 아니라 미측정 표시다. 수집 계층은 마이크 권한이
+///       없거나 첫 창이 아직 차지 않았을 때 0 을 내보낸다. 실내 소음이
+///       0 dBA 로 잴 일은 없으므로 0 을 그대로 최대에 넣으면, 권한을
+///       거부한 측정이 "소음 정상"으로 찍힌다. 최대도 평균도 0 인 표본을
+///       빼고 센다.
 ///
 ///       비운 자리를 0 으로 채우지 않는다. `GridResampleResult` 가
 ///       격자에서 같은 이유로 값 채우기를 막아둔 것과 같은 규칙이다 —
@@ -92,19 +93,15 @@ class MeasurementAssembler {
   ///         표시를 false 로, 정속 구간 문구를 "미검출" 로 둔다. 모델
   ///         기본값도 같은 값이지만, 기본값이 나중에 바뀌어도 여기서
   ///         만드는 결과는 흔들리지 않게 그대로 적어 둔다
-  ///       - 소음은 받은 것만 옮긴다. `noiseMax` 를 받으면 그 값을 쓰고,
-  ///         안 받으면 `noiseSeries` 의 최대로 채운다. 시계열마저 비면
-  ///         null 로 둔다. 자세한 까닭은 클래스 주석의 소음 계약을 본다
+  ///       - 소음 시계열을 격자에서 그대로 옮기고, 0 이 아닌 표본의
+  ///         최대를 `noiseMax` 에 담는다. 쓸 표본이 하나도 없으면 null 로
+  ///         둔다. 자세한 까닭은 클래스 주석의 소음 계약을 본다
   /// 인자: grid — 격자 환산 결과
   ///       site — 홈 화면에서 입력받은 현장 정보
   ///       id — 이 측정의 식별자. 저장 파일명과 같은 시각 문자열을 쓴다
   ///       measuredAt — 측정 시각. `grid.t0Ns` 는 단조시계(기기가 켜진
   ///       뒤 흐른 시간만 세는 시계) 값이라 벽시계 시각으로 쓸 수 없어
   ///       따로 받는다
-  ///       noiseSeries — 격자에 맞춘 소음 시계열 (dBA). 수집 경로가
-  ///       생기기 전까지는 빈 목록이다
-  ///       noiseMax — 센서가 본 소음 최대 (dBA). 수집 계층이 알면 실어
-  ///       준다. 안 주면 `noiseSeries` 의 최대로 채운다
   /// 반환: 변환된 측정 결과, 또는 변환하지 못한 사유
   /// 식: sampleRate = 1,000,000,000 / gridIntervalNs
   static MeasurementAssembleResult assemble({
@@ -112,8 +109,6 @@ class MeasurementAssembler {
     required SiteInfo site,
     required String id,
     required DateTime measuredAt,
-    List<double> noiseSeries = const <double>[],
-    double? noiseMax,
   }) {
     if (grid.failureReason != null) {
       return MeasurementAssembleResult.failure(grid.failureReason!);
@@ -141,17 +136,20 @@ class MeasurementAssembler {
     final xSeries = <double>[]; // X축 진동 시계열 (mg)
     final ySeries = <double>[]; // Y축 진동 시계열 (mg)
     final zSeries = <double>[]; // Z축 진동 시계열 (mg)
+    final noiseSeries = <double>[]; // 소음 시계열 (dBA). 0 은 미측정
     for (final sample in grid.samples) {
       xSeries.add(sample.xMg);
       ySeries.add(sample.yMg);
       zSeries.add(sample.zMg);
+      noiseSeries.add(sample.noiseDba);
     }
 
-    final sampleRate =
-        1000000000 / grid.gridIntervalNs; // 실측 샘플레이트 (Hz)
+    final sampleRate = 1000000000 / grid.gridIntervalNs; // 실측 샘플레이트 (Hz)
     final model = site.model.trim(); // 기종. 비어 있으면 아래에서 null 로 둔다
-    final resolvedNoiseMax =
-        noiseMax ?? _maximumOrNull(noiseSeries); // 소음 최대 (dBA), 없으면 null
+    // → 로직 이동: _peakIgnoringZeros()
+    final resolvedNoiseMax = _peakIgnoringZeros(
+      noiseSeries,
+    ); // 소음 최대 (dBA). 쓸 표본이 없으면 null
     // → 로직 이동: _deriveKinematics()
     final motion = _deriveKinematics(zSeries, sampleRate); // 파생 물리량 묶음
 
@@ -186,17 +184,20 @@ class MeasurementAssembler {
   }
 
   /// 작성: 2026-09-15 21:38:58 · nada
-  /// 함수: _maximumOrNull
-  /// 목적: 표본 중 가장 큰 값을 찾는다. 소음 최대를 시계열에서 채울 때
-  ///       쓴다.
-  /// 인자: series — 살펴볼 표본 목록
-  /// 반환: 최댓값. 표본이 없으면 null — 잴 것이 없는데 0 을 돌려주면
-  ///       실제로 0 이 나온 측정과 구분할 수 없다
-  static double? _maximumOrNull(List<double> series) {
-    if (series.isEmpty) return null;
-    var peak = series.first; // 여기까지 본 것 중 가장 큰 값
+  /// 함수: _peakIgnoringZeros
+  /// 목적: 소음 표본 중 가장 큰 값을 찾되 0 인 표본은 빼고 센다. 0 은
+  ///       값이 아니라 미측정 표시라서다 — 클래스 주석의 소음 계약을
+  ///       본다. 평균 쪽에서 같은 규칙을 쓰는 곳은 `ReportMetrics` 의
+  ///       `_withoutWarmupZeros()` 다.
+  /// 인자: series — 살펴볼 소음 표본 목록 (dBA)
+  /// 반환: 0 이 아닌 표본 중 최댓값. 쓸 표본이 하나도 없으면 null — 잴
+  ///       것이 없는데 0 을 돌려주면 실제로 0 이 나온 측정과 구분할 수
+  ///       없고, 기준치와 견줘 "정상" 으로 찍힌다
+  static double? _peakIgnoringZeros(List<double> series) {
+    double? peak; // 여기까지 본 것 중 가장 큰 값. 아직 없으면 null
     for (final value in series) {
-      if (value > peak) peak = value;
+      if (value == 0) continue;
+      if (peak == null || value > peak) peak = value;
     }
     return peak;
   }

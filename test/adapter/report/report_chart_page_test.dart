@@ -42,10 +42,11 @@ List<double> _series(double amplitude, double cycles) {
 
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 함수: _result
-/// 목적: 차트 쪽을 그려 보려고 만드는 측정 결과. 소음만 비워 둔다 — 실제
-///       측정이 지금 그 상태다.
+/// 목적: 차트 쪽을 그려 보려고 만드는 측정 결과.
+/// 인자: noiseSeries — 소음 시계열 (dBA). 안 주면 빈 목록이며, 마이크
+///       권한이 없는 측정을 흉내 낸 것이다
 /// 반환: 차트 쪽 렌더링에 넣을 측정 결과
-MeasurementResult _result() {
+MeasurementResult _result({List<double> noiseSeries = const <double>[]}) {
   return MeasurementResult(
     id: '20260923-094000',
     jobNo: '2025F 1234R01',
@@ -60,7 +61,7 @@ MeasurementResult _result() {
     xSeries: _series(6.0, 120),
     ySeries: _series(9.0, 90),
     zSeries: _series(14.0, 150),
-    noiseSeries: const <double>[],
+    noiseSeries: noiseSeries,
     positionSeries: List<double>.generate(
       _sampleCount,
       (i) => 57.093948064 * i / _sampleCount,
@@ -160,6 +161,19 @@ void main() {
       final file = File(_outputPath); // 대조 스크립트가 읽을 파일
       await file.parent.create(recursive: true);
       await file.writeAsBytes(bytes);
+    });
+
+    test('소음이 들어오면 2쪽 넷째 차트에 파형이 얹힌다', () async {
+      // 소음이 붙기 전에는 축 틀만 그려진다. 값이 들어오면 그 자리에
+      // 꺾은선이 더해지므로 내용이 늘어난다
+      final quiet = await renderReportChartPages(result: _result()); // 소음 없음
+      final withNoise = await renderReportChartPages(
+        result: _result(
+          noiseSeries: _series(8.0, 60).map((v) => v + 50.0).toList(),
+        ),
+      ); // 42~58 dBA 사이를 오르내리는 소음
+
+      expect(withNoise.length, greaterThan(quiet.length));
     });
 
     test('소음 시계열이 비어도 2쪽은 그려진다', () async {

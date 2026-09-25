@@ -280,8 +280,7 @@ class ReportChartAxes {
   ///       시계열을 그리는지 정하는 곳을 한 군데로 둔다.
   /// 인자: spec — 꺼낼 축의 사양
   ///       result — 시계열을 가진 측정 결과
-  /// 반환: 그 축이 그릴 시계열. 아직 채워지지 않았으면 빈 목록 — 소음이
-  ///       지금 그렇다
+  /// 반환: 그 축이 그릴 시계열. 아직 채워지지 않았으면 빈 목록
   static List<double> seriesOf(ChartAxisSpec spec, MeasurementResult result) {
     switch (spec.key) {
       case 'x':
