@@ -24,6 +24,10 @@ import 'package:vibration_checker/model/measurement_result.dart';
 ///         - `report.pdf` — 만들어 둔 리포트. 없으면 그때 만든다
 ///         - `meta.txt` · `native_raw.txt` — 집계와 안드로이드 원본 사본
 ///
+///       어디에 무엇을 두는지는 이 클래스만 안다. 폴더는 `jobDirectory()`
+///       가, 파일 이름은 위 상수들이 정한다. 쓰는 쪽이 경로를 짜 맞추면
+///       배치가 바뀔 때 그쪽이 조용히 어긋난다.
+///
 ///       목록용 파일을 따로 두는 까닭
 ///         `result.json` 한 건이 시계열 때문에 1MB 를 넘는다. 목록 화면은
 ///         날짜와 판정만 있으면 되는데 그걸 보려고 전부 읽으면, 측정이
@@ -53,6 +57,36 @@ class MeasurementRepository {
   /// 목적: 만들어 둔 리포트 파일 이름.
   static const String reportFileName = 'report.pdf';
 
+  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 변수: rawFileName
+  /// 목적: 격자에 맞춘 측정값 파일 이름 (EVIMP1, X Y Z 소음 네 열).
+  static const String rawFileName = 'raw.txt';
+
+  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 변수: metaFileName
+  /// 목적: 격자 환산 집계 파일 이름. 사람이 읽어 보는 진단용이다.
+  static const String metaFileName = 'meta.txt';
+
+  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 변수: nativeRawFileName
+  /// 목적: 안드로이드가 따로 남긴 원본 기록을 이 폴더로 옮겨 온 사본의
+  ///       이름.
+  static const String nativeRawFileName = 'native_raw.txt';
+
+  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 변수: jobFileNames
+  /// 목적: 측정 폴더에 놓이는 파일 이름을 모두 모아 둔 것. 낱개 상수와
+  ///       같은 값이며, 폴더에 무엇이 들어가는지 한눈에 보거나 전부
+  ///       훑어야 할 때 쓴다.
+  static const List<String> jobFileNames = <String>[
+    resultFileName,
+    summaryFileName,
+    reportFileName,
+    rawFileName,
+    metaFileName,
+    nativeRawFileName,
+  ];
+
   /// 작성: 2026-09-26 09:30:00 · nada
   /// 변수: seriesKeys
   /// 목적: `summary.json` 에서 뺄 시계열 항목의 이름들. `toMap()` 이 쓰는
@@ -80,11 +114,19 @@ class MeasurementRepository {
   MeasurementRepository._();
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
+  /// 수정: 2026-09-27 09:30:00 · nada
   /// 함수: getBaseDirectory
   /// 목적: 측정 산출물을 저장할 기준 폴더를 확보한다. 기기의 외장
   ///       저장소가 있으면 그 안에, 없으면 앱 전용 문서 폴더 안에
   ///       `captures` 폴더를 두고, 없으면 만든다.
   /// 반환: 생성이 보장된 `captures` 폴더
+  /// 미구현: 안드로이드에서만 돈다. `getExternalStorageDirectory()` 가
+  ///       안드로이드가 아닌 곳에서는 null 을 돌려주지 않고
+  ///       `UnsupportedError` 를 던져서, 뒤의 앱 문서 폴더로 넘어가지
+  ///       못하고 이 함수 첫 줄에서 끊긴다. 저장 · 목록 · 리포트가 모두
+  ///       이 폴더를 거치므로 그 계층 전체가 함께 멈춘다. 요구사항서
+  ///       2쪽이 iOS 확장 가능성을 적어 두었으므로, 그때는 플랫폼을 보고
+  ///       외장 저장소를 건너뛰도록 고쳐야 한다
   Future<Directory> getBaseDirectory() async {
     final external = await getExternalStorageDirectory(); // 외장 저장소, 없으면 null
     final base =

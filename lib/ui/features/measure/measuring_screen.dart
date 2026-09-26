@@ -492,7 +492,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     try {
       // → 로직 이동: _resolveCaptureDirectory()
       final jobDir = await _resolveCaptureDirectory(stamp); // 이번 측정의 폴더
-      final metaPath = '${jobDir.path}/meta.txt'; // 집계 파일 경로
+      final metaPath =
+          '${jobDir.path}/${MeasurementRepository.metaFileName}'; // 집계 파일 경로
 
       try {
         // → 로직 이동: VibrationFileWriter.writeMeta()
@@ -509,7 +510,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         return;
       }
 
-      final valuePath = '${jobDir.path}/raw.txt'; // 측정값 파일 경로
+      final valuePath =
+          '${jobDir.path}/${MeasurementRepository.rawFileName}'; // 측정값 파일 경로
       // → 로직 이동: VibrationFileWriter.write()
       await VibrationFileWriter.write(valuePath, result);
 
@@ -540,7 +542,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       // 없으면(레코딩 실패 등) 그 사실만 집계 파일에 남겨둔다
       final rawPath =
           _sensorManager.lastRecordPath; // 안드로이드가 저장한 원본 경로, 없으면 null
-      final rawCopyPath = '${jobDir.path}/native_raw.txt'; // 원본 사본 경로
+      final rawCopyPath =
+          '${jobDir.path}/'
+          '${MeasurementRepository.nativeRawFileName}'; // 원본 사본 경로
       String? savedRawPath; // 복사해 저장한 원본 경로, 복사 못 했으면 null
       if (rawPath != null) {
         await File(rawPath).copy(rawCopyPath);
@@ -703,6 +707,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-09-27 11:30:00 · nada
   /// 함수: _confirmAndExit
   /// 목적: 기기 뒤로가기(제스처 · 버튼)를 눌렀을 때와 앱바의 뒤로가기
   ///       버튼을 눌렀을 때, 둘 다 이 함수가 실행된다.
@@ -710,12 +715,17 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///       띄우고, "중단하기"를 선택하면 타이머를 멈추고 센서 수집을
   ///       끄는 정리(`_cleanup()`)를 한 뒤 이 화면에서 나가 이전
   ///       화면으로 돌아간다.
+  ///       대화상자를 기다리는 사이에 화면이 사라질 수 있으므로, 기다린
+  ///       뒤에는 매번 이 화면이 아직 살아 있는지 보고 움직인다. 화면이
+  ///       가진 `mounted` 를 보는 이유는 `context.mounted` 가 화면이
+  ///       아니라 그 자리의 위젯만 살폈다고 보고 분석기가 경고하기
+  ///       때문이다 — 여기서는 화면 자체가 사라졌는지가 알고 싶은 것이다.
   Future<void> _confirmAndExit() async {
     final confirm = await _showExitDialog(); // 사용자 선택. true면 중단
-    if (confirm == true && context.mounted) {
+    if (confirm == true && mounted) {
       _isFinished = true;
       await _cleanup(); // → 로직 이동: _cleanup()
-      if (context.mounted) context.pop();
+      if (mounted) context.pop();
     }
   }
 

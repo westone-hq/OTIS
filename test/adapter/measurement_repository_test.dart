@@ -227,6 +227,49 @@ void main() {
     });
   });
 
+  group('MeasurementRepository 파일 배치', () {
+    test('폴더에 생긴 파일이 모두 저장소가 아는 이름이다', () async {
+      // 배치를 아는 곳이 저장소 하나여야 한다. 쓰는 쪽이 경로를 짜 맞추면
+      // 배치가 바뀔 때 그쪽이 조용히 어긋난다
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      await repo.ensureReportPdf('20260114-110359');
+
+      // 경로 구분자가 운영체제마다 달라 문자열을 자르지 않고, 경로를
+      // 주소 형태로 본 뒤 마지막 조각을 쓴다
+      final names = await dir
+          .list()
+          .map((e) => e.uri.pathSegments.last)
+          .toList(); // 폴더에 실제로 생긴 파일 이름
+
+      expect(names, isNotEmpty);
+      for (final name in names) {
+        expect(
+          MeasurementRepository.jobFileNames,
+          contains(name),
+          reason: '저장소가 모르는 이름이 생겼다: $name',
+        );
+      }
+    });
+
+    test('모아 둔 이름 목록이 낱개 상수와 어긋나지 않는다', () {
+      expect(MeasurementRepository.jobFileNames, <String>[
+        MeasurementRepository.resultFileName,
+        MeasurementRepository.summaryFileName,
+        MeasurementRepository.reportFileName,
+        MeasurementRepository.rawFileName,
+        MeasurementRepository.metaFileName,
+        MeasurementRepository.nativeRawFileName,
+      ]);
+      expect(
+        MeasurementRepository.jobFileNames.toSet().length,
+        MeasurementRepository.jobFileNames.length,
+        reason: '같은 이름을 두 번 담지 않는다',
+      );
+    });
+  });
+
   group('MeasurementRepository 삭제', () {
     test('폴더째 지운다', () async {
       final dir = await repo.save(

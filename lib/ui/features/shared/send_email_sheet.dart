@@ -100,8 +100,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 경로(attachmentPaths)에서는 쓰이지 않는다
   bool _sendPdf = true;
 
-  /// RAW 원본(raw.txt + 엑셀)을 보낼 항목에 포함할지 여부. 첨부 경로를
-  /// 직접 전달받는 경로에서는 쓰이지 않는다
+  /// 측정값 원본을 보낼 항목에 포함할지 여부. 첨부 경로를 직접 전달받는
+  /// 경로에서는 쓰이지 않는다. 엑셀은 아직 만들지 않으므로 이 항목을 켜도
+  /// 나가는 것은 측정값 파일 하나다
   bool _sendRaw = true;
 
   /// 지표 요약을 메일 본문에 넣을지 여부. 첨부 경로를 직접 전달받는
@@ -248,10 +249,16 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
   /// 함수: _buildJobEmail
-  /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다.
+  /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
+  ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
+  ///       빠진 채로 조용히 나가면 받는 쪽이 한참 뒤에야 안다. 메일 앱
+  ///       작성창에 본문이 그대로 뜨므로 보내는 사람도 누르기 전에 본다.
+  ///       파일이 어디에 어떤 이름으로 있는지는 저장소에 묻는다. 화면이
+  ///       경로를 짜 맞추면 저장 배치가 바뀔 때 여기가 조용히 어긋난다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
+    // → 로직 이동: MeasurementRepository.load()
     final result = await MeasurementRepository.instance.load(
       jobId,
     ); // 조회된 측정 결과, 없으면 null
@@ -259,30 +266,49 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       throw StateError('측정 결과를 찾을 수 없다: $jobId');
     }
 
-    final baseDir = await MeasurementRepository.instance
-        .getBaseDirectory(); // 산출물 저장 폴더
     final repo = MeasurementRepository.instance; // 저장소 인스턴스
+    // → 로직 이동: MeasurementRepository.jobDirectory()
+    final jobDir = await repo.jobDirectory(jobId); // 이 측정의 폴더
     final List<String> attachments = []; // 실제로 첨부할 파일 경로
     final List<String> attachmentDescriptions = []; // 본문에 나열할 첨부 설명 줄
+    final List<String> missing = []; // 보내기로 했는데 없는 자료
 
     if (_sendPdf) {
+      // → 로직 이동: MeasurementRepository.ensureReportPdf()
       final pdfFile = await repo.ensureReportPdf(
         jobId,
-      ); // 생성되거나 이미 있던 PDF, 실패 시 null
+      ); // 만들어졌거나 이미 있던 PDF. 저장된 측정이 없으면 null
       if (pdfFile != null && await pdfFile.exists()) {
         attachments.add(pdfFile.path);
-        attachmentDescriptions.add('- report.pdf: 앱 측정 결과(가공값)');
+        attachmentDescriptions.add(
+          '- ${MeasurementRepository.reportFileName}: 앱 측정 결과(가공값)',
+        );
+      } else {
+        missing.add(
+          '누락: ${MeasurementRepository.reportFileName} — 리포트를 만들지 '
+          '못했습니다',
+        );
       }
     }
     if (_sendRaw) {
-      final rawFile = File('${baseDir.path}/$jobId/raw.txt'); // 센서 원본 파일 경로
+      final rawFile = File(
+        '${jobDir.path}/${MeasurementRepository.rawFileName}',
+      ); // 격자에 맞춘 측정값 파일
       if (await rawFile.exists()) {
         attachments.add(rawFile.path);
-        attachmentDescriptions.add('- raw.txt: 센서 원본 샘플(256Hz)');
+        attachmentDescriptions.add(
+          '- ${MeasurementRepository.rawFileName}: 측정값 원본(256Hz)',
+        );
+      } else {
+        missing.add(
+          '누락: ${MeasurementRepository.rawFileName} — 측정값 원본 파일이 '
+          '없습니다',
+        );
       }
+      // → 로직 이동: MeasurementRepository.ensureRawExcelFiles()
       final excelFiles = await repo.ensureRawExcelFiles(
         jobId,
-      ); // 초별 분리 엑셀(256/128/64Hz), 생성되거나 이미 있던 파일 목록
+      ); // 엑셀 원본 파일 목록. 아직 만들지 않으므로 늘 비어 있다
       for (final excel in excelFiles) {
         if (await excel.exists()) {
           attachments.add(excel.path);
@@ -299,13 +325,19 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       'yyyy-MM-dd HH:mm',
     ).format(result.dateTime); // 메일 제목에 쓸 날짜 문구
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
-    final body =
-        _sendSummary // 메일 본문
-        ? ReportGenerator.generateSummaryText(result)
-        : 'OTIS 승강기 진동 측정 리포트입니다.\n'
-              '${attachmentDescriptions.join('\n')}\n'
-              '\n'
-              '※ 첨부 ${attachments.length}개';
+    final bodyLines = <String>[
+      if (_sendSummary)
+        // → 로직 이동: ReportGenerator.generateSummaryText()
+        ReportGenerator.generateSummaryText(result)
+      else ...[
+        'OTIS 승강기 진동 측정 리포트입니다.',
+        ...attachmentDescriptions,
+        '',
+        '※ 첨부 ${attachments.length}개',
+      ],
+      if (missing.isNotEmpty) ...['', ...missing],
+    ]; // 메일 본문 줄 목록
+    final body = bodyLines.join('\n'); // 메일 본문
 
     return Email(
       body: body,
@@ -470,7 +502,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       ),
                       const Divider(height: 1, color: AppColors.border),
                       _buildCheckboxItem(
-                        title: 'RAW 원본 (raw.txt + 엑셀 256/128/64)',
+                        // 엑셀은 아직 만들지 않는다. 라벨이 약속하면
+                        // 안 온 것을 받는 쪽이 누락으로 여긴다
+                        title: '측정값 원본 (raw.txt)',
                         value: _sendRaw,
                         onChanged: (val) =>
                             setState(() => _sendRaw = val ?? false),
