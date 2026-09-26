@@ -13,14 +13,12 @@ import kotlin.math.sqrt
 
 /**
  * 작성: 2026-09-15 13:20:00 · 박희정
- * 수정: 2026-09-23 · 박희정
+ * 수정: 2026-09-23 14:17:47 · 박희정
  * 클래스: NoiseCaptureHandler
  * 목적: 엘리베이터 본측정(EVIMP1) 때 마이크 소음(dBA)을 재서
  *       `latestDba`에 채운다. 샘플레이트 44100 Hz, Slow(1.0초)
  *       슬라이딩 창 RMS를 쓰고, 창은 격자 간격(~1/256초)마다 민다.
  *       권한이 없거나 초기화에 실패해도 앱을 죽이지 않고 0.0으로 대체한다.
- * 식:   dBFS = 20 × log10(rms)
- *       dBA  = dBFS + micDbfsToDbaOffset + calibrationOffsetDba  (0~130으로 자름)
  * 근거: 인용 — OI-4 임시 오프셋. 기본 micDbfsToDbaOffset=85.0.
  *       현장 비교 테스트에서 Slow(1.0초)가 Fast(0.125초)보다 안정적이라
  *       본측정 기본으로 채택.
@@ -55,12 +53,31 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-09-23 · 박희정
+     * 수정: 2026-09-27 09:30:00 · nada
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다.
      *       권한이 없거나 AudioRecord 초기화에 실패하면 예외 없이 0.0으로 둔다.
+     *
+     *       창이 가득 차기 전에는 값을 내지 않고 0.0을 내보낸다. 덜 찬 창의
+     *       RMS는 0에서 실제 크기로 천천히 올라오는 경사라서 값이 아니다.
+     *       이 저장소는 0 dBA를 이미 미측정 표시로 쓰므로, 새 규칙을 만드는
+     *       것이 아니라 재지 않은 값을 0으로 채우지 않는다는 기존 규칙을
+     *       지키는 것이다.
+     *       "준비됨"을 따로 실어 보내는 길을 안 고른 이유: 그 신호를 넣으면
+     *       NativeEvent·GridSample·MeasurementResult까지 줄줄이 자리를
+     *       만들어야 하는데, 받는 쪽은 결국 "값이 없다"로 똑같이 다룬다.
+     *       대가: 매 측정의 첫 1.0초가 통째로 미측정이 된다. 고치기 전에는
+     *       0이 0.168초뿐이었고 그 뒤 약 1.2초가 경사였다. 리포트는 0인
+     *       표본을 평균에서 빼므로, 평균이 경사에 끌려 내려가지 않는 대신
+     *       그만큼 표본이 줄어든다.
      * 인자: calibrationOffsetDba — 현장·기기별 추가 보정(dBA)
      *       micDbfsToDbaOffset — dBFS→dBA 기본 오프셋(기본 85.0)
+     * 식:   windowSamples = SAMPLE_RATE × WINDOW_SEC  (창에 담는 표본 수)
+     *       rms  = sqrt(창 안 표본 제곱의 합 / windowSamples)
+     *              창이 가득 찬 뒤에만 센다. 덜 찼으면 0.0을 내보낸다
+     *       dBFS = 20 × log10(rms)
+     *       dBA  = dBFS + micDbfsToDbaOffset + calibrationOffsetDba
+     *              (0~130으로 자름)
      */
     fun start(calibrationOffsetDba: Double, micDbfsToDbaOffset: Double = 85.0) {
         stop()
@@ -141,9 +158,14 @@ class NoiseCaptureHandler(private val context: Context) {
                         ringPos = (ringPos + 1) % windowSamples
                     }
 
-                    if (filled <= 0) continue
+                    if (filled < windowSamples) {
+                        // 덜 찬 창의 RMS는 값이 아니라 경사다. 미측정 표시인
+                        // 0.0을 내보내고 다음 홉을 기다린다
+                        latestDba = 0.0
+                        continue
+                    }
 
-                    val rms = sqrt(sumSquares / filled)
+                    val rms = sqrt(sumSquares / windowSamples)
                     val clampedRms = maxOf(rms, 1e-5)
                     val dbfs = 20.0 * log10(clampedRms)
                     val dba = (dbfs + micDbfsToDbaOffset + calibrationOffsetDba)
