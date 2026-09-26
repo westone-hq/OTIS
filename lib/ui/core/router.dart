@@ -8,7 +8,7 @@ import '../features/result/result_screen.dart';
 import '../features/settings/settings_screen.dart';
 
 /// 작성: 2026-08-17 11:50:18 · 박건준
-/// 수정: 2026-09-23 · 박희정
+/// 수정: 2026-09-23 14:17:47 · 박희정
 /// 변수: appRouter
 /// 목적: 화면 전환을 URL 경로 기반으로 정의하는 앱 라우터. 경로 하나가
 ///       화면 하나에 대응한다. 로그인 화면은 라우트(route, 경로 하나와

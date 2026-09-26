@@ -64,7 +64,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   ///       조회에 실패하면 빈 목록으로 두고 실패 상태를 표시한다.
   Future<void> _loadItems() async {
     try {
-      final list = await MeasurementRepository.instance.list();
+      // → 로직 이동: MeasurementRepository.list()
+      final list = await MeasurementRepository.instance.list(); // 저장된 목록
       if (mounted) {
         setState(() {
           _items = list;

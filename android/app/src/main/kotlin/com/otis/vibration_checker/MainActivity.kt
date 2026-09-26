@@ -15,7 +15,7 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * 작성: 2026-08-17 15:43:39 · 박건준
- * 수정: 2026-09-23 · 박희정
+ * 수정: 2026-09-23 14:17:47 · 박희정
  * 클래스: MainActivity
  * 목적: 안드로이드(네이티브, Flutter 쪽에서 부르는 안드로이드 코틀린
  *       코드) 진입점. Flutter와 채널로 연결된다.
@@ -74,7 +74,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-09-23 · 박희정
+     * 수정: 2026-09-23 14:17:47 · 박희정
      * 함수: configureFlutterEngine
      * 목적: Flutter 엔진이 뜰 때 소음·센서·소음테스트 핸들러를 만들고,
      *       MethodChannel·EventChannel을 등록해 Flutter와 안드로이드를
@@ -276,7 +276,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-09-23 · 박희정
+     * 수정: 2026-09-23 14:17:47 · 박희정
      * 함수: onDestroy
      * 목적: 액티비티가 완전히 종료될 때 센서·소음·소음테스트 핸들러를
      *       정리해, 자원을 계속 붙들고 있지 않게 한다.
