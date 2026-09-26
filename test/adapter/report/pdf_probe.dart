@@ -76,3 +76,31 @@ List<List<String>> verticalGridLines(String stream) {
 ///       0~1 로 나눈 세 값이라 원래 색 값과 생김새가 다르다.
 /// 근거: 측정 — 0xE0/255 = 0.87843, 0x30/255 = 0.18824
 const String markerColorOperand = '0.87843 0.18824 0.18824';
+
+/// 작성: 2026-09-27 09:30:00 · nada
+/// 함수: axisFrames
+/// 목적: 쪽 하나에서 축 틀 네모의 자리를 뽑는다. 렌더러가 실제로 찍은
+///       좌표라서, 계산으로 기대한 자리와 맞는지 대조하는 데 쓴다.
+///       같은 네모가 축 틀을 긋는 데 한 번, 파형을 자르는 데 한 번 나오므로
+///       같은 값은 한 번만 담는다. 쪽 전면을 덮는 네모는 서식 배경이라
+///       빼낸다.
+/// 인자: stream — 쪽 하나의 내용 스트림
+///       pageWidthPt — 쪽 가로 길이 (PDF 포인트). 배경을 가려내는 데 쓴다
+/// 반환: 축 틀마다 [왼쪽, 아래쪽, 가로, 세로] 네 값 (PDF 포인트). 그려진
+///       차례대로다
+List<List<double>> axisFrames(String stream, {required double pageWidthPt}) {
+  final rect = RegExp(r'([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re'); // 네모 하나
+  final out = <List<double>>[]; // 모아 갈 축 틀
+
+  for (final match in rect.allMatches(stream)) {
+    final box = <double>[
+      for (var i = 1; i <= 4; i++) double.parse(match.group(i)!),
+    ]; // 이 네모의 네 값
+    if (box[2] >= pageWidthPt) continue;
+    final seen = out.any(
+      (e) => e[0] == box[0] && e[1] == box[1] && e[2] == box[2],
+    ); // 이미 담은 네모인지
+    if (!seen) out.add(box);
+  }
+  return out;
+}

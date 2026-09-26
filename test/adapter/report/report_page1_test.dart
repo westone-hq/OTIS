@@ -6,9 +6,9 @@ import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-16 09:12:40 · nada
 /// 변수: _outputPath
-/// 목적: 만들어 낸 1쪽을 남겨 둘 자리. 참조 PDF 와 자리를 대조하는 파이썬
-///       스크립트가 이 파일을 읽는다. 시험이 끝나도 지우지 않는 이유는,
-///       어긋났을 때 눈으로 열어 볼 수 있어야 해서다.
+/// 목적: 만들어 낸 1쪽을 남겨 둘 자리. 표와 신호등이 서식 위에 제대로
+///       얹혔는지는 숫자로 재기 어려워 눈으로 열어 봐야 한다. 시험이
+///       끝나도 지우지 않는 이유가 그것이다.
 const _outputPath = 'build/report_page1_test.pdf';
 
 /// 작성: 2026-09-16 09:12:40 · nada
@@ -40,8 +40,8 @@ MeasurementResult _result() {
 
 /// 작성: 2026-09-16 09:12:40 · nada
 /// 함수: main
-/// 목적: 1쪽 렌더링을 시험한다. 자리가 참조 PDF 와 맞는지는 파이썬
-///       스크립트가 두 파일을 읽어 대조하므로, 여기서는 PDF 가 실제로
+/// 목적: 1쪽 렌더링을 시험한다. 자리가 맞는지는 `ReportLayout` 과 대조하는
+///       `report_layout_test.dart` 가 맡으므로, 여기서는 PDF 가 실제로
 ///       만들어지는지와 디버그 모드가 제품 흐름에 섞이지 않는지를 본다.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

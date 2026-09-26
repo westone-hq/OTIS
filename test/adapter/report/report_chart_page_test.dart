@@ -11,10 +11,18 @@ import 'pdf_probe.dart';
 
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 변수: _outputPath
-/// 목적: 만들어 낸 차트 두 쪽을 남겨 둘 자리. 축 틀 자리를 참조 PDF 와
-///       대조하는 파이썬 스크립트가 이 파일을 읽는다. 시험이 끝나도 지우지
-///       않는 이유는, 어긋났을 때 눈으로 열어 볼 수 있어야 해서다.
+/// 목적: 만들어 낸 차트 두 쪽을 남겨 둘 자리. 자리는 아래 시험이 값으로
+///       대조하므로, 이 파일은 눈금과 라벨이 겹치지 않는지처럼 숫자로 재기
+///       어려운 것을 눈으로 열어 볼 때 쓴다.
 const _outputPath = 'build/report_chart_page_test.pdf';
+
+/// 작성: 2026-09-27 09:30:00 · nada
+/// 변수: _framePrecision
+/// 목적: 축 틀 자리를 대조할 때 봐주는 오차 (PDF 포인트).
+/// 근거: 측정 — 렌더러와 기대값이 같은 계수로 같은 곱셈을 하므로 실제
+///       차이는 5e-6pt 안쪽이다. 여기에 두 자리 여유를 두었다. 옛 참조
+///       PDF 대조가 허용하던 0.1pt 보다 백 배 촘촘하다
+const _framePrecision = 0.001;
 
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 변수: _sampleRate
@@ -76,9 +84,20 @@ MeasurementResult _result({List<double> noiseSeries = const <double>[]}) {
 
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 함수: main
-/// 목적: 차트 쪽 렌더링을 시험한다. 축 틀 자리가 참조 PDF 와 맞는지는
-///       파이썬 스크립트가 두 파일을 읽어 대조하므로, 여기서는 쪽 구성이
-///       원본 차례와 같은지와 PDF 가 실제로 만들어지는지를 본다.
+/// 목적: 차트 쪽 렌더링을 시험한다. 쪽 구성이 원본 차례와 같은지, 만들어진
+///       PDF 의 축 틀이 서식 좌표에서 계산한 자리와 맞는지를 본다.
+///
+///       참조 PDF 와 대조하지 않는 까닭
+///         `docs/reference/sample_evimp.pdf` 는 축별 계수를 나누기 전 단일
+///         계수로 그려진 옛 산출물이라 아래쪽으로 갈수록 최대 0.1035pt 씩
+///         벌어진다. 새로 받을 수도 없다. 남는 잔차(가로 -0.0004 · 폭
+///         -0.0022 · 높이 +0.0100pt)도 렌더러가 아니라 그 PDF 를 만든
+///         파이썬 쪽 반올림에서 오는 것이라, 새 참조를 받아도 0 이 되지
+///         않는다. 참조가 알려 줄 수 있는 것은 이미 다 확인했다.
+///         지금은 `ReportLayout` 이 옮겨 둔 서식 좌표와 쪽 크기에서 곧바로
+///         계산해 0.001pt 로 대조한다. 참조보다 백 배 촘촘하고, 좌표가
+///         바뀌면 기대값도 따라 바뀐다. `sample_evimp.pdf` 는 눈으로 볼
+///         때만 쓰는 참고물로 남긴다.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -129,22 +148,50 @@ void main() {
   });
 
   group('ReportChartPageRenderer 축 틀 자리', () {
-    test('축 틀 네 자리가 서식 좌표를 그대로 옮긴 값이다', () {
-      // 참조 PDF 와 대조할 때 쓰는 기준값이다. 그리는 쪽이 자리를 스스로
-      // 계산하지 않고 `ReportLayout` 이 옮겨 둔 값만 쓴다는 것을 못 박는다
-      for (final slot in ReportChartPage.slots) {
-        final left = ReportLayout.xToPoints(slot.x); // 축 틀 왼쪽 끝
-        final bottom = ReportLayout.yToPoints(
-          slot.y + slot.height,
-        ); // 축 틀 아래쪽 끝
+    test('두 쪽 모두 축 틀이 계산한 자리에 그려진다', () async {
+      final bytes = await renderReportChartPages(result: _result()); // 만든 PDF
+      final pages = pdfChartStreams(bytes); // 차트가 그려진 쪽들
 
-        expect(left, closeTo(74.67336, 1e-4), reason: '왼쪽 끝은 네 자리가 같다');
-        expect(bottom, greaterThan(0));
+      expect(pages.length, ReportChartPageRenderer.pages.length);
+      for (var p = 0; p < pages.length; p++) {
+        final drawn = axisFrames(
+          pages[p],
+          pageWidthPt: ReportLayout.pageWidthPt,
+        ); // 실제로 찍힌 축 틀
         expect(
-          ReportLayout.xToPoints(slot.x + slot.width),
-          lessThan(ReportLayout.pageWidthPt),
-          reason: '축 틀이 쪽 오른쪽 밖으로 나가면 안 된다',
+          drawn.length,
+          ReportChartPage.slots.length,
+          reason: '${p + 2}쪽 축 틀 수',
         );
+
+        for (var i = 0; i < drawn.length; i++) {
+          final slot = ReportChartPage.slots[i]; // 서식이 정한 그 자리
+          final where = '${p + 2}쪽 ${i + 1}번째 자리'; // 어긋난 자리를 알릴 문구
+
+          expect(
+            drawn[i][0],
+            closeTo(ReportLayout.xToPoints(slot.x), _framePrecision),
+            reason: '$where 왼쪽 끝',
+          );
+          expect(
+            drawn[i][1],
+            closeTo(
+              ReportLayout.yToPoints(slot.y + slot.height),
+              _framePrecision,
+            ),
+            reason: '$where 아래쪽 끝',
+          );
+          expect(
+            drawn[i][2],
+            closeTo(ReportLayout.lengthToPoints(slot.width), _framePrecision),
+            reason: '$where 가로',
+          );
+          expect(
+            drawn[i][3],
+            closeTo(slot.height * ReportLayout.ptPerPxY, _framePrecision),
+            reason: '$where 세로',
+          );
+        }
       }
     });
   });
