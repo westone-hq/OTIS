@@ -75,24 +75,39 @@ abstract final class AppText {
   static const body = TextStyle(fontSize: 18, color: AppColors.text);
 
   /// 강조 본문 글자 스타일. 18sp, 굵게
-  static const bodyBold =
-      TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.text);
+  static const bodyBold = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    color: AppColors.text,
+  );
 
   /// 소제목 글자 스타일. 22sp, 굵게
-  static const subhead =
-      TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.text);
+  static const subhead = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    color: AppColors.text,
+  );
 
   /// 제목 글자 스타일. 28sp, 굵게, navy 색
-  static const title =
-      TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.navy);
+  static const title = TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w700,
+    color: AppColors.navy,
+  );
 
   /// 큰 숫자(경과 시간 등) 글자 스타일. 44sp, 굵게
-  static const bigNumber =
-      TextStyle(fontSize: 44, fontWeight: FontWeight.w700, color: AppColors.text);
+  static const bigNumber = TextStyle(
+    fontSize: 44,
+    fontWeight: FontWeight.w700,
+    color: AppColors.text,
+  );
 
   /// 버튼 글자 스타일. 20sp, 굵게, 흰색
-  static const button =
-      TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white);
+  static const button = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    color: Colors.white,
+  );
 }
 
 /// 작성: 2026-08-06 15:59:06 · 박건준

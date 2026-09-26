@@ -103,7 +103,8 @@ class NativeEvent {
   /// 반환: 파싱된 NativeEvent 객체. 데이터 타입이 안 맞거나 누락되면 null을 반환하여 잘못된 데이터가 섞이는 것을 막는다.
   /// 근거: 인용 — 네이티브 채널 데이터 통신 규약
   static NativeEvent? fromChannelMap(Map<dynamic, dynamic> map) {
-    final type = NativeEventType.values.asNameMap()[map['type']]; // 이름이 안 맞으면 null
+    final type = NativeEventType.values
+        .asNameMap()[map['type']]; // 이름이 안 맞으면 null
     final tsUs = map['tsUs']; // 타입 검사는 아래에서 한다
     final xMg = map['xMg']; // 타입 검사는 아래에서 한다
     final yMg = map['yMg']; // 타입 검사는 아래에서 한다

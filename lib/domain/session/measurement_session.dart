@@ -44,13 +44,13 @@ class SiteInfo {
   /// 목적: 현장 정보를 저장 가능한 Map 형태로 변환한다.
   /// 반환: 필드 이름을 키로 하는 Map
   Map<String, dynamic> toMap() => {
-        'jobNo': jobNo,
-        'siteName': siteName,
-        'bottomFloor': bottomFloor,
-        'topFloor': topFloor,
-        'direction': direction,
-        'model': model,
-      };
+    'jobNo': jobNo,
+    'siteName': siteName,
+    'bottomFloor': bottomFloor,
+    'topFloor': topFloor,
+    'direction': direction,
+    'model': model,
+  };
 
   /// 작성: 2026-07-05 08:42:31 · 박건준
   /// 함수: fromMap
@@ -58,13 +58,13 @@ class SiteInfo {
   /// 인자: map — 저장돼 있던 Map 데이터
   /// 반환: 복원된 SiteInfo 객체. 값이 없으면 기본값으로 채운다
   factory SiteInfo.fromMap(Map<String, dynamic> map) => SiteInfo(
-        jobNo: map['jobNo']?.toString() ?? '',
-        siteName: map['siteName']?.toString() ?? '',
-        bottomFloor: map['bottomFloor']?.toString() ?? '1',
-        topFloor: map['topFloor']?.toString() ?? '8',
-        direction: map['direction']?.toString() ?? '하부 → 상부',
-        model: map['model']?.toString() ?? 'Gen2',
-      );
+    jobNo: map['jobNo']?.toString() ?? '',
+    siteName: map['siteName']?.toString() ?? '',
+    bottomFloor: map['bottomFloor']?.toString() ?? '1',
+    topFloor: map['topFloor']?.toString() ?? '8',
+    direction: map['direction']?.toString() ?? '하부 → 상부',
+    model: map['model']?.toString() ?? 'Gen2',
+  );
 }
 
 /// 클래스: MeasurementSession

@@ -89,28 +89,16 @@ void main() {
 
   group('ReportThresholds.judgeHorizontal', () {
     test('두 축 다 기준 안이면 녹색이다', () {
-      expect(
-        ReportThresholds.judgeHorizontal(9.0, 9.0),
-        ReportVerdict.green,
-      );
+      expect(ReportThresholds.judgeHorizontal(9.0, 9.0), ReportVerdict.green);
     });
 
     test('한 축만 넘어도 적색이다', () {
-      expect(
-        ReportThresholds.judgeHorizontal(11.0, 9.0),
-        ReportVerdict.red,
-      );
-      expect(
-        ReportThresholds.judgeHorizontal(9.0, 11.0),
-        ReportVerdict.red,
-      );
+      expect(ReportThresholds.judgeHorizontal(11.0, 9.0), ReportVerdict.red);
+      expect(ReportThresholds.judgeHorizontal(9.0, 11.0), ReportVerdict.red);
     });
 
     test('넘은 축이 있으면 다른 축을 못 재도 적색이다', () {
-      expect(
-        ReportThresholds.judgeHorizontal(11.0, null),
-        ReportVerdict.red,
-      );
+      expect(ReportThresholds.judgeHorizontal(11.0, null), ReportVerdict.red);
     });
 
     test('못 잰 축이 있고 넘은 축이 없으면 미확정이다', () {
@@ -126,10 +114,7 @@ void main() {
     });
 
     test('경계값에서는 녹색이다', () {
-      expect(
-        ReportThresholds.judgeHorizontal(10.0, 10.0),
-        ReportVerdict.green,
-      );
+      expect(ReportThresholds.judgeHorizontal(10.0, 10.0), ReportVerdict.green);
     });
   });
 

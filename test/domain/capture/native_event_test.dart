@@ -8,7 +8,8 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 void main() {
   group('NativeEvent 왕복', () {
     test('기록 후 판독하면 모든 값이 보존된다', () {
-      const original = NativeEvent( // 기록 전 원본 이벤트
+      const original = NativeEvent(
+        // 기록 전 원본 이벤트
         type: NativeEventType.linear,
         tsUs: 123456789,
         xMg: -1.5,
@@ -16,7 +17,9 @@ void main() {
         zMg: 1001.75,
         dtUs: 3921,
       );
-      final restored = NativeEvent.fromRecordLine(original.toRecordLine()); // 왕복 후 복원된 이벤트
+      final restored = NativeEvent.fromRecordLine(
+        original.toRecordLine(),
+      ); // 왕복 후 복원된 이벤트
       expect(restored, isNotNull);
       expect(restored!.type, original.type);
       expect(restored.tsUs, original.tsUs);
@@ -27,7 +30,8 @@ void main() {
     });
 
     test('encode 후 decode 하면 개수와 순서가 보존된다', () {
-      const events = [ // 인코딩할 원본 이벤트 3개(종류가 각각 다름)
+      const events = [
+        // 인코딩할 원본 이벤트 3개(종류가 각각 다름)
         NativeEvent(
           type: NativeEventType.accel,
           tsUs: 100,
@@ -53,7 +57,10 @@ void main() {
           dtUs: 0,
         ),
       ];
-      final text = NativeEventRecord.encode(events, targetSampleRateHz: 256); // 인코딩된 텍스트
+      final text = NativeEventRecord.encode(
+        events,
+        targetSampleRateHz: 256,
+      ); // 인코딩된 텍스트
       final result = NativeEventRecord.decode(text); // 다시 디코딩한 결과
       expect(result.skippedLineCount, 0);
       expect(result.events.length, 3);

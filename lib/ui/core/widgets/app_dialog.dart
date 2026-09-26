@@ -64,7 +64,8 @@ class AppDialogButton extends StatelessWidget {
   ///       TextButton으로 그린다.
   @override
   Widget build(BuildContext context) {
-    final Color defaultColor = isDestructive // isDestructive·primary 조합별 기본 글자색
+    final Color defaultColor =
+        isDestructive // isDestructive·primary 조합별 기본 글자색
         ? (primary ? Colors.white : AppColors.red)
         : (primary ? Colors.white : AppColors.navy);
     final Color effectiveColor = textColor ?? defaultColor; // 실제로 쓸 글자색
@@ -73,7 +74,8 @@ class AppDialogButton extends StatelessWidget {
       color: effectiveColor,
     ); // 실제로 쓸 텍스트 스타일
 
-    final Widget textWidget = Text( // 라벨 텍스트 위젯
+    final Widget textWidget = Text(
+      // 라벨 텍스트 위젯
       label,
       style: !primary || isDestructive || textColor != null || textStyle != null
           ? effectiveStyle
@@ -82,9 +84,11 @@ class AppDialogButton extends StatelessWidget {
 
     Widget buttonWidget; // 최종적으로 반환할 버튼 위젯
     if (primary) {
-      final style = ElevatedButton.styleFrom( // primary 버튼 스타일
+      final style = ElevatedButton.styleFrom(
+        // primary 버튼 스타일
         backgroundColor: isDestructive ? AppColors.red : AppColors.blue,
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: AppDims.gap2),
+        padding:
+            padding ?? const EdgeInsets.symmetric(horizontal: AppDims.gap2),
       );
       if (icon != null) {
         buttonWidget = ElevatedButton.icon(
@@ -136,10 +140,7 @@ class AppDialogButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
-      child: SizedBox(
-        height: AppDims.touchMin,
-        child: buttonWidget,
-      ),
+      child: SizedBox(height: AppDims.touchMin, child: buttonWidget),
     );
   }
 }
