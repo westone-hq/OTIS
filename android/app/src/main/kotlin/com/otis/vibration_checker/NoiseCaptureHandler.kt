@@ -16,12 +16,12 @@ import kotlin.math.sqrt
  * 수정: 2026-09-23 14:17:47 · 박희정
  * 클래스: NoiseCaptureHandler
  * 목적: 엘리베이터 본측정(EVIMP1) 때 마이크 소음(dBA)을 재서
- *       `latestDba`에 채운다. 샘플레이트 44100 Hz, Slow(1.0초)
+ *       `latestDba`에 채운다. 샘플레이트 44100 Hz, Fast(0.125초)
  *       슬라이딩 창 RMS를 쓰고, 창은 격자 간격(~1/256초)마다 민다.
  *       권한이 없거나 초기화에 실패해도 앱을 죽이지 않고 0.0으로 대체한다.
  * 근거: 인용 — OTIS 동시측정 보정. 기본 micDbfsToDbaOffset=87.3
- *       (OI-4 임시 85.0 대비 +2.3). 현장 비교에서 Slow(1.0초)가
- *       Fast(0.125초)보다 안정적이라 본측정 기본으로 채택.
+ *       (OI-4 임시 85.0 대비 +2.3). OTIS처럼 빠르게 바뀌게 맞추려고
+ *       본측정 창을 Fast(0.125초)로 둔다. (이전 Slow 1.0초 대비)
  */
 class NoiseCaptureHandler(private val context: Context) {
     companion object {
@@ -32,8 +32,8 @@ class NoiseCaptureHandler(private val context: Context) {
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         /** 샘플 값을 16비트 정수로 받는다 */
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        /** Slow 계열 RMS 창 길이(초). ≈ IEC 61672 Slow */
-        private const val WINDOW_SEC = 1.0
+        /** Fast 계열 RMS 창 길이(초). ≈ IEC 61672 Fast */
+        private const val WINDOW_SEC = 0.125
         /** EVIMP1 행 주기(Hz). 창을 이 간격으로 밀어 행마다 값이 바뀌게 한다 */
         private const val HOP_HZ = 256
     }
@@ -66,7 +66,7 @@ class NoiseCaptureHandler(private val context: Context) {
      *       "준비됨"을 따로 실어 보내는 길을 안 고른 이유: 그 신호를 넣으면
      *       NativeEvent·GridSample·MeasurementResult까지 줄줄이 자리를
      *       만들어야 하는데, 받는 쪽은 결국 "값이 없다"로 똑같이 다룬다.
-     *       대가: 매 측정의 첫 1.0초가 통째로 미측정이 된다. 고치기 전에는
+     *       대가: 매 측정의 첫 0.125초가 통째로 미측정이 된다. 고치기 전에는
      *       0이 0.168초뿐이었고 그 뒤 약 1.2초가 경사였다. 리포트는 0인
      *       표본을 평균에서 빼므로, 평균이 경사에 끌려 내려가지 않는 대신
      *       그만큼 표본이 줄어든다.
@@ -100,7 +100,7 @@ class NoiseCaptureHandler(private val context: Context) {
             return
         }
 
-        // Slow 창 ≈ 44100 샘플. 홉 ≈ 172 샘플(1/256초) → 초당 ~256회 갱신
+        // Fast 창 ≈ 5512 샘플. 홉 ≈ 172 샘플(1/256초) → 초당 ~256회 갱신
         val windowSamples = (SAMPLE_RATE * WINDOW_SEC).toInt().coerceAtLeast(1)
         val hopSamples = (SAMPLE_RATE / HOP_HZ).coerceAtLeast(1)
         val bufferSize = maxOf(minBufSize, windowSamples * 2)
