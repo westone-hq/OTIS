@@ -12,6 +12,7 @@ import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/noise_offset.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import '../shared/send_email_sheet.dart';
@@ -215,10 +216,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         .checkSensorsAvailable(); // 센서 가용 여부
     if (available) {
       // → 로직 이동: SensorChannelManager.startCapture()
-      // micDbfsToDbaOffset 기본 85.0 — OI-4 임시 오프셋
+      // micDbfsToDbaOffset — OTIS 동시측정으로 맞춘 임시 오프셋(87.3)
       await _sensorManager.startCapture(
         calibrationOffsetDba: 0.0,
-        micDbfsToDbaOffset: 85.0,
+        micDbfsToDbaOffset: kDefaultMicDbfsToDbaOffset,
       );
       _sensorSub = _sensorManager.nativeEventStream.listen((event) {
         _receivedRealSample = true;

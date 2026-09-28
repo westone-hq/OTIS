@@ -19,9 +19,9 @@ import kotlin.math.sqrt
  *       `latestDba`에 채운다. 샘플레이트 44100 Hz, Slow(1.0초)
  *       슬라이딩 창 RMS를 쓰고, 창은 격자 간격(~1/256초)마다 민다.
  *       권한이 없거나 초기화에 실패해도 앱을 죽이지 않고 0.0으로 대체한다.
- * 근거: 인용 — OI-4 임시 오프셋. 기본 micDbfsToDbaOffset=85.0.
- *       현장 비교 테스트에서 Slow(1.0초)가 Fast(0.125초)보다 안정적이라
- *       본측정 기본으로 채택.
+ * 근거: 인용 — OTIS 동시측정 보정. 기본 micDbfsToDbaOffset=87.3
+ *       (OI-4 임시 85.0 대비 +2.3). 현장 비교에서 Slow(1.0초)가
+ *       Fast(0.125초)보다 안정적이라 본측정 기본으로 채택.
  */
 class NoiseCaptureHandler(private val context: Context) {
     companion object {
@@ -71,7 +71,7 @@ class NoiseCaptureHandler(private val context: Context) {
      *       표본을 평균에서 빼므로, 평균이 경사에 끌려 내려가지 않는 대신
      *       그만큼 표본이 줄어든다.
      * 인자: calibrationOffsetDba — 현장·기기별 추가 보정(dBA)
-     *       micDbfsToDbaOffset — dBFS→dBA 기본 오프셋(기본 85.0)
+     *       micDbfsToDbaOffset — dBFS→dBA 기본 오프셋(기본 87.3)
      * 식:   windowSamples = SAMPLE_RATE × WINDOW_SEC  (창에 담는 표본 수)
      *       rms  = sqrt(창 안 표본 제곱의 합 / windowSamples)
      *              창이 가득 찬 뒤에만 센다. 덜 찼으면 0.0을 내보낸다
@@ -79,7 +79,7 @@ class NoiseCaptureHandler(private val context: Context) {
      *       dBA  = dBFS + micDbfsToDbaOffset + calibrationOffsetDba
      *              (0~130으로 자름)
      */
-    fun start(calibrationOffsetDba: Double, micDbfsToDbaOffset: Double = 85.0) {
+    fun start(calibrationOffsetDba: Double, micDbfsToDbaOffset: Double = 87.3) {
         stop()
 
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)

@@ -156,10 +156,10 @@ class MainActivity : FlutterActivity() {
                      *       - 이미 권한이 있거나 Android 12 미만이면
                      *         곧바로 시작한다
                      * 인자: calibrationOffset — 현장·기기 보정(dBA), 기본 0.0
-                     *       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 85.0
+                     *       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 87.3
                      * 반환: result.success(null) 로 즉시 응답한다. 실제로
                      *       캡처가 시작됐는지는 기다리지 않는다
-                     * 근거: 인용 — OI-4 임시 오프셋(기본 85.0). 측정 —
+                     * 근거: 인용 — OTIS 동시측정 보정(기본 87.3). 측정 —
                      *       SENSOR_DELAY_FASTEST 로 요청해도 실제 수신
                      *       속도는 단말 하드웨어 주기라 200Hz 를 넘는다
                      */
@@ -167,7 +167,7 @@ class MainActivity : FlutterActivity() {
                         val calibrationOffset =
                             call.argument<Double>("calibrationOffset") ?: 0.0
                         val micDbfsToDbaOffset =
-                            call.argument<Double>("micDbfsToDbaOffset") ?: 85.0
+                            call.argument<Double>("micDbfsToDbaOffset") ?: 87.3
                         val begin = {
                             // → 로직 이동: NoiseCaptureHandler.start()
                             noiseCaptureHandler.start(

@@ -376,8 +376,11 @@ class GridResampler {
       );
     }
 
+    // Slow 창이 채워지기 전 앞부분 noiseDba=0 을, 첫 유효값으로 채운다
+    final filledSamples = _backfillLeadingNoiseDba(samples);
+
     return GridResampleResult(
-      samples: samples,
+      samples: filledSamples,
       t0Ns: t0Ns,
       gridIntervalNs: intervalNs,
       rawUsedCount: _raw.length,
@@ -392,6 +395,28 @@ class GridResampler {
       degenerateSpanCount:
           rawCursor.degenerateSpanCount + gravityCursor.degenerateSpanCount,
     );
+  }
+
+  /// 작성: 2026-09-28 · 박희정
+  /// 함수: _backfillLeadingNoiseDba
+  /// 목적: Slow(1초) 창이 채워지기 전 격자 앞부분의 noiseDba=0 을
+  ///       첫 유효 소음값으로 채운다. OTIS EVIMP1 처럼 초반 0 구간을 줄인다.
+  static List<GridSample> _backfillLeadingNoiseDba(List<GridSample> samples) {
+    final firstValid = samples.indexWhere((s) => s.noiseDba > 0.0);
+    if (firstValid <= 0) return samples;
+    final fill = samples[firstValid].noiseDba;
+    return [
+      for (var i = 0; i < samples.length; i++)
+        if (i < firstValid)
+          GridSample(
+            xMg: samples[i].xMg,
+            yMg: samples[i].yMg,
+            zMg: samples[i].zMg,
+            noiseDba: fill,
+          )
+        else
+          samples[i],
+    ];
   }
 }
 

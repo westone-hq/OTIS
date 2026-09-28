@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/noise_offset.dart';
 
 export 'package:vibration_checker/model/sensor_sample.dart';
 
@@ -151,12 +152,12 @@ class SensorChannelManager {
   ///       시작 전에 이전 측정 기록(폐기 개수 · 오류 문구 · 저장 경로)을
   ///       모두 초기화한다.
   /// 인자: calibrationOffsetDba — 현장·기기 보정(dBA), 기본 0.0
-  ///       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 85.0 (OI-4)
+  ///       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 87.3 (OTIS 보정)
   /// 반환: 없음. 요청이 실패하면 원인은 `debugPrint`로 남기고
   ///       `lastCaptureError`에 화면에 보여줄 문구를 채운다
   Future<void> startCapture({
     double calibrationOffsetDba = 0.0,
-    double micDbfsToDbaOffset = 85.0,
+    double micDbfsToDbaOffset = kDefaultMicDbfsToDbaOffset,
   }) async {
     droppedMapCount = 0;
     lastCaptureError = null;
