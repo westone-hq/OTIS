@@ -92,4 +92,8 @@ class MeasurementSession {
 
   /// 측정 시작 전 카운트다운 대기 시간 (초). 0이면 카운트다운 없이 곧바로 시작
   int delaySec = 0;
+
+  /// true면 측정 중 볼륨키 Up/Down을 측정 완료 입력으로 사용한다.
+  /// 일반 측정 시작에서는 false로 둬 기존 볼륨키 동작을 유지한다.
+  bool useVolumeKeyStop = false;
 }

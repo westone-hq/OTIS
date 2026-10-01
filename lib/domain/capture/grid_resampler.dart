@@ -376,7 +376,7 @@ class GridResampler {
       );
     }
 
-    // Fast 창이 채워지기 전 앞부분 noiseDba=0 을, 첫 유효값으로 채운다
+    // 소음 RMS 창이 채워지기 전 앞부분 noiseDba=0 을, 첫 유효값으로 채운다
     final filledSamples = _backfillLeadingNoiseDba(samples);
 
     return GridResampleResult(
@@ -399,7 +399,7 @@ class GridResampler {
 
   /// 작성: 2026-09-28 · 박희정
   /// 함수: _backfillLeadingNoiseDba
-  /// 목적: Fast(0.125초) 창이 채워지기 전 격자 앞부분의 noiseDba=0 을
+  /// 목적: 소음 RMS 창이 채워지기 전 격자 앞부분의 noiseDba=0 을
   ///       첫 유효 소음값으로 채운다. OTIS EVIMP1 처럼 초반 0 구간을 줄인다.
   static List<GridSample> _backfillLeadingNoiseDba(List<GridSample> samples) {
     final firstValid = samples.indexWhere((s) => s.noiseDba > 0.0);

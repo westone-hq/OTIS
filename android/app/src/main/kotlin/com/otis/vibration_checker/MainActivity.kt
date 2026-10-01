@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.view.KeyEvent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -61,6 +62,12 @@ class MainActivity : FlutterActivity() {
     /** 가속도 · 중력 센서 원본 캡처 담당. startCapture/stopCapture 요청을 이 핸들러에 그대로 위임한다 */
     private lateinit var sensorStreamHandler: SensorStreamHandler
 
+    /** 측정 중 볼륨키를 "측정 종료" 입력으로 쓸지 여부. 측정 화면에서만 true로 켠다 */
+    private var volumeKeyCaptureEnabled = false
+
+    /** Flutter 쪽으로 볼륨키 종료 요청을 보낼 통로 */
+    private var methodChannel: MethodChannel? = null
+
 
     /** 마이크 권한 요청 결과를 알려줄 콜백. 요청을 보낸 동안에만 값이 있고,
      *  onRequestPermissionsResult 에서 쓰고 나면 다시 null 로 비운다 */
@@ -92,9 +99,10 @@ class MainActivity : FlutterActivity() {
             .setStreamHandler(sensorStreamHandler)
 
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
+        methodChannel =
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
+        methodChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
                      * 수정: 2026-08-19 13:25:00 · 박희정
@@ -218,14 +226,46 @@ class MainActivity : FlutterActivity() {
                         result.success(recordPath)
                     }
                     /**
+                     * 함수: setVolumeKeyCaptureEnabled
+                     * 목적: 측정 중에만 볼륨키를 측정 종료 트리거로 바꾼다.
+                     *       false일 때는 시스템 볼륨키 동작에 손대지 않는다.
+                     */
+                    "setVolumeKeyCaptureEnabled" -> {
+                        volumeKeyCaptureEnabled =
+                            call.argument<Boolean>("enabled") ?: false
+                        result.success(null)
+                    }
+                    /**
                      * 함수: else
                      * 목적: 정의되지 않은 메서드 이름의 요청에 미구현으로 응답한다.
                      */
                     else -> {
                         result.notImplemented()
                     }
-                }
             }
+        }
+    }
+
+    /**
+     * 함수: dispatchKeyEvent
+     * 목적: 측정 중 볼륨 Up/Down을 시스템 볼륨 변경 대신 측정 종료
+     *       요청으로 소비한다. 카운트다운·종료 후에는 기존 볼륨키 동작을
+     *       그대로 둔다.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (volumeKeyCaptureEnabled &&
+            event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount == 0 &&
+            (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+                event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+        ) {
+            methodChannel?.invokeMethod(
+                "volumeKeyPressed",
+                mapOf("keyCode" to event.keyCode)
+            )
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     /**
@@ -283,6 +323,7 @@ class MainActivity : FlutterActivity() {
      */
     override fun onDestroy() {
         super.onDestroy()
+        volumeKeyCaptureEnabled = false
         if (::sensorStreamHandler.isInitialized) {
             sensorStreamHandler.stop()
         }

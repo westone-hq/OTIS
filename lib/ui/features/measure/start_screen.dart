@@ -334,12 +334,25 @@ class _StartScreenState extends State<StartScreen> {
                     ? () {
                         // → 로직 이동: MeasurementSession.instance.delaySec
                         MeasurementSession.instance.delaySec = _selectedSeconds;
+                        MeasurementSession.instance.useVolumeKeyStop = false;
                         context.push(
                           '/measuring',
                         ); // → 로직 이동: MeasuringScreen.build()
                       }
                     : null,
                 child: Text(_selectedSeconds == 0 ? '측정 시작' : '카운트다운 시작'),
+              ),
+              const SizedBox(height: AppDims.gap),
+              OutlinedButton.icon(
+                onPressed: canStart
+                    ? () {
+                        MeasurementSession.instance.delaySec = _selectedSeconds;
+                        MeasurementSession.instance.useVolumeKeyStop = true;
+                        context.push('/measuring');
+                      }
+                    : null,
+                icon: const Icon(Icons.volume_up_outlined),
+                label: const Text('볼륨키로 측정 시작'),
               ),
             ],
           ),

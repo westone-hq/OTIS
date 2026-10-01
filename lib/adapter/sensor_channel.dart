@@ -37,6 +37,25 @@ class SensorChannelManager {
     'com.otis.vibration_checker/sensors_stream',
   );
 
+  static final StreamController<void> _volumeKeyController =
+      StreamController<void>.broadcast();
+
+  static bool _methodCallHandlerInstalled = false;
+
+  SensorChannelManager() {
+    _installMethodCallHandler();
+  }
+
+  static void _installMethodCallHandler() {
+    if (_methodCallHandlerInstalled) return;
+    _methodCallHandlerInstalled = true;
+    _methodChannel.setMethodCallHandler((call) async {
+      if (call.method == 'volumeKeyPressed') {
+        _volumeKeyController.add(null);
+      }
+    });
+  }
+
   /// 작성: 2026-08-10 11:44:47 · 박건준
   /// 변수: _parsedStream
   /// 목적: `nativeEventStream`이 만든 스트림을 캐시해 둔다. 값을 요청할
@@ -55,6 +74,9 @@ class SensorChannelManager {
   /// 측정을 끝냈을 때 안드로이드가 저장해준 원본 텍스트 파일의 위치(경로).
   /// 아직 측정한 적 없거나 실패했으면 null
   String? lastRecordPath;
+
+  /// 측정 중 Android 볼륨키가 눌렸을 때 흘러오는 이벤트.
+  Stream<void> get volumeKeyPresses => _volumeKeyController.stream;
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
   /// 함수: nativeEventStream
@@ -191,5 +213,21 @@ class SensorChannelManager {
       lastRecordPath = null;
     }
     _parsedStream = null; // 다음 측정을 위해 이전 스트림 캐시를 비운다
+  }
+
+  /// 측정 중에만 볼륨키를 측정 종료 입력으로 가로채도록 Android에 알린다.
+  Future<void> setVolumeKeyCaptureEnabled(bool enabled) async {
+    try {
+      await _methodChannel.invokeMethod('setVolumeKeyCaptureEnabled', {
+        'enabled': enabled,
+      });
+    } catch (error, stack) {
+      developer.log(
+        'setVolumeKeyCaptureEnabled 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+    }
   }
 }

@@ -53,6 +53,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   late final SensorChannelManager _sensorManager =
       widget.sensorManager ?? SensorChannelManager();
 
+  /// 이 측정이 볼륨키 종료 전용 플로우로 시작됐는지 여부.
+  late final bool _useVolumeKeyStop =
+      MeasurementSession.instance.useVolumeKeyStop;
+
   /// 경과 시간(`_elapsedSeconds`)을 1초마다 하나씩 올리는 타이머.
   /// `_initCaptureAndTimers()`가 만들고, `_cleanup()`이 멈춘 뒤 비운다.
   /// 아직 시작 전이거나 이미 정리됐으면 null
@@ -70,6 +74,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   /// `_receivedRealSample`을 true로 바꾸고 `_resampler`에 쌓는다.
   /// `_cleanup()`이 끊는다. 구독 중이 아니면 null
   StreamSubscription<NativeEvent>? _sensorSub;
+
+  /// 볼륨키 종료 전용 플로우에서만 켜지는 볼륨키 이벤트 구독.
+  StreamSubscription<void>? _volumeKeySub;
 
   /// 측정이 시작된 뒤 지난 시간(초). `_timeTimer`가 1초마다 1씩
   /// 올리고, 화면에는 "분:초" 형태로 바꿔 보여준다
@@ -226,6 +233,14 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         // → 로직 이동: GridResampler.onEvent()
         _resampler.onEvent(event);
       });
+      if (_useVolumeKeyStop) {
+        await _sensorManager.setVolumeKeyCaptureEnabled(true);
+        _volumeKeySub = _sensorManager.volumeKeyPresses.listen((_) {
+          if (!_isCountingDown && !_isFinishing && !_isFinished) {
+            unawaited(_finishMeasurement());
+          }
+        });
+      }
     }
 
     // 이 3초 안에 사용자가 뒤로가기를 눌러 측정을 중단하면(확인 대화
@@ -270,6 +285,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     _timeTimer = null;
     _countdownTimer = null;
     _releaseTimeoutTimer = null;
+    final volumeKeySub = _volumeKeySub;
+    _volumeKeySub = null;
+    await _ignoreSlowCleanup(_sensorManager.setVolumeKeyCaptureEnabled(false));
+    if (volumeKeySub != null) {
+      await _ignoreSlowCleanup(volumeKeySub.cancel());
+    }
     final sensorSub = _sensorSub; // 끊기 전에 잠시 옮겨두는 구독, 없으면 null
     _sensorSub = null;
     // 순서 고정: stopCapture 가 네이티브 잔여 배치를 flush 하므로 먼저 부른다.
@@ -888,7 +909,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                       const SizedBox(width: AppDims.gap2),
                       Expanded(
                         child: Text(
-                          '테스트가 진행되는 동안 휴대폰을 들어 올리지 마세요',
+                          _useVolumeKeyStop
+                              ? '측정 중입니다.\n휴대폰을 움직이지 마세요.\n볼륨키를 누르면 측정이 종료됩니다.'
+                              : '테스트가 진행되는 동안 휴대폰을 들어 올리지 마세요',
                           style: AppText.bodyBold.copyWith(color: Colors.white),
                         ),
                       ),
