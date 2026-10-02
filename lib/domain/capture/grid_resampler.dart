@@ -368,8 +368,10 @@ class GridResampler {
       samples.add(
         GridSample(
           xMg: rawPoint.x - gravityPoint.x,
-          yMg: rawPoint.y - gravityPoint.y,
-          zMg: rawPoint.z - gravityPoint.z,
+          // 현재 측정 거치 방식(화면을 아래로, 상단은 문 기준 오른쪽)에서는
+          // OTIS 기준과 Y/Z 부호가 반대로 맞는다. X는 그대로 둔다.
+          yMg: -(rawPoint.y - gravityPoint.y),
+          zMg: -(rawPoint.z - gravityPoint.z),
           // 소음도 XYZ 와 같이 앞뒤 raw 실측값 사이를 선형 보간한다
           noiseDba: rawPoint.noiseDba,
         ),
