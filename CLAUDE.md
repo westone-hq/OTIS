@@ -15,7 +15,7 @@ flutter test                                      # 전부 통과 유지
 
 | 경로 | 역할 |
 |---|---|
-| `lib/model/` | 순수 자료형 (`MeasurementResult`, `SensorSample`) |
+| `lib/model/` | 순수 자료형 (`MeasurementResult`) |
 | `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`) |
 | `lib/domain/report/` | 리포트 좌표·임계값·지표 계산. 숫자는 여기에만 둔다 |
 | `lib/domain/session/` | 화면 사이에 넘기는 이번 측정 상태 (`MeasurementSession`) |
