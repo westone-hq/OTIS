@@ -154,6 +154,7 @@ void main() {
       ); // 저장 결과
 
       expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
+      expect(outcome.id, '20260114-110359');
       final names = outcome.savedPaths
           .map((p) => p.split('/').last)
           .toList(); // 저장한 파일 이름
@@ -181,7 +182,9 @@ void main() {
       ); // 저장 결과
 
       final meta = await File(
-        '${outcome.directoryPath}/${MeasurementRepository.metaFileName}',
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
       ).readAsString(); // 집계 파일 내용
       expect(meta, contains('rawRecordPath: null'));
     });

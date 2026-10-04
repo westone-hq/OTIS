@@ -13,73 +13,39 @@ import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-04 13:37:23 · nada
+/// 수정: 2026-10-04 18:15:24 · nada
 /// 함수: showSendEmailSheet
-/// 목적: 이메일 발송 화면을 앱 공통 모양의 바텀 시트(화면 아래에서 위로
-///       올라오는 패널)로 띄운다. 저장된 측정 결과를 보낼 때와, 측정을
-///       막 마친 파일을 그대로 보낼 때 둘 다 이 함수 하나로 연다.
+/// 목적: 저장된 측정 결과 하나를 보낼 이메일 발송 화면을 앱 공통 모양의
+///       바텀 시트(화면 아래에서 위로 올라오는 패널)로 띄운다. 결과 화면과
+///       저장 결과 목록이 함께 쓴다.
 /// 인자: context — 시트를 띄울 화면의 위치 정보
 ///       jobId — 첨부할 측정 결과의 식별자. 저장소에서 그 결과를 찾아
-///       첨부한다. attachmentPaths 대신 쓴다
-///       attachmentPaths — 이미 가진 파일을 저장소 조회 없이 그대로
-///       첨부하는 경로 목록. jobId 대신 쓴다
-///       subject — 메일 제목. attachmentPaths 경로에서만 쓰인다
-///       body — 메일 본문. attachmentPaths 경로에서만 쓰인다
-/// 반환: 시트가 닫힐 때 완료되는 비동기 작업. jobId 와 attachmentPaths 를
-///       둘 다 주거나 둘 다 빼면 `ArgumentError` 를 던진다
-Future<void> showSendEmailSheet(
-  BuildContext context, {
-  String? jobId,
-  List<String>? attachmentPaths,
-  String? subject,
-  String? body,
-}) {
-  if ((jobId != null) == (attachmentPaths != null)) {
-    throw ArgumentError('jobId 와 attachmentPaths 중 정확히 하나만 지정해야 한다');
-  }
+///       첨부한다
+/// 반환: 시트가 닫힐 때 완료되는 비동기 작업
+Future<void> showSendEmailSheet(BuildContext context, {required String jobId}) {
   return showAppSheet(
     context,
     // → 로직 이동: SendEmailSheet.initState()
-    builder: (ctx) => SendEmailSheet(
-      jobId: jobId,
-      attachmentPaths: attachmentPaths,
-      subject: subject,
-      body: body,
-    ),
+    builder: (ctx) => SendEmailSheet(jobId: jobId),
   );
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
+/// 수정: 2026-10-04 18:15:24 · nada
 /// 클래스: SendEmailSheet
 /// 목적: 이메일 발송 바텀 시트 위젯. 등록된 수신자를 보여주고, 보낼
 ///       항목을 선택받아 기기의 메일 앱을 띄운다. 어르신도 쓰기
-///       편하도록 시트 높이 70%, 체크박스 한 행 64dp, 체크박스
-///       확대(1.4배)를 적용했다.
+///       편하도록 체크박스 한 행 64dp, 체크박스 확대(1.4배)를 적용했다.
 class SendEmailSheet extends StatefulWidget {
-  /// 첨부할 측정 결과의 식별자. attachmentPaths 대신 쓴다
-  final String? jobId;
-
-  /// 그대로 첨부할 파일 경로 목록. jobId 대신 쓴다
-  final List<String>? attachmentPaths;
-
-  /// 메일 제목. attachmentPaths 경로에서만 쓰인다
-  final String? subject;
-
-  /// 메일 본문. attachmentPaths 경로에서만 쓰인다
-  final String? body;
+  /// 첨부할 측정 결과의 식별자
+  final String jobId;
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 수정: 2026-10-04 18:15:24 · nada
   /// 함수: SendEmailSheet
-  /// 목적: 시트가 보낼 자료를 받는다. `jobId` 와 `attachmentPaths` 중 하나만
-  ///       준다 — 둘 다 주거나 빼는 경우는 `showSendEmailSheet()` 가 막는다.
-  /// 인자: jobId, attachmentPaths, subject, body — 위 필드 설명을 따른다
-  const SendEmailSheet({
-    super.key,
-    this.jobId,
-    this.attachmentPaths,
-    this.subject,
-    this.body,
-  });
+  /// 목적: 시트가 보낼 측정 결과를 받는다.
+  /// 인자: jobId — 첨부할 측정 결과의 식별자
+  const SendEmailSheet({super.key, required this.jobId});
 
   @override
   State<SendEmailSheet> createState() => _SendEmailSheetState();
@@ -92,12 +58,10 @@ class SendEmailSheet extends StatefulWidget {
 ///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
 ///       발송을 실행한다. 보낸 주소는 기억해 다음에 미리 골라 둔다.
 class _SendEmailSheetState extends State<SendEmailSheet> {
-  /// PDF 리포트를 보낼 항목에 포함할지 여부. 첨부 경로를 직접 전달받는
-  /// 경로(attachmentPaths)에서는 쓰이지 않는다
+  /// PDF 리포트를 보낼 항목에 포함할지 여부
   bool _sendPdf = true;
 
-  /// 측정값 원본(`raw.txt`)을 보낼 항목에 포함할지 여부. 첨부 경로를
-  /// 직접 전달받는 경로에서는 쓰이지 않는다
+  /// 측정값 원본(`raw.txt`)을 보낼 항목에 포함할지 여부
   bool _sendRaw = true;
 
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
@@ -154,13 +118,12 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       _emails.where(_selected.contains).toList(growable: false);
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 18:15:24 · nada
   /// 함수: _send
   /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 하나도
   ///       등록되지 않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
   ///       있으면 보낼 메일의 제목·본문·수신자·첨부파일을 정하고
-  ///       (첨부 경로를 그대로 전달받은 경우 `_buildAttachmentEmail()`,
-  ///       측정 결과 ID로 조회하는 경우 `_buildJobEmail()`), 기기에
+  ///       (`_buildJobEmail()`), 기기에
   ///       이미 설치된 메일 앱(Gmail 등)의 작성 화면을 그 내용으로
   ///       미리 채워서 띄운다. 실제 발송 버튼은 사용자가 그 메일
   ///       앱에서 직접 눌러야 한다 — 이 함수가 메일을 대신 보내주는
@@ -188,11 +151,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     setState(() => _loading = true);
 
     try {
-      final email = widget.attachmentPaths != null
-          // → 로직 이동: _buildAttachmentEmail()
-          ? await _buildAttachmentEmail(widget.attachmentPaths!)
-          // → 로직 이동: _buildJobEmail()
-          : await _buildJobEmail(widget.jobId!);
+      // → 로직 이동: _buildJobEmail()
+      final email = await _buildJobEmail(widget.jobId); // 조립한 메일
 
       // → 로직 이동: FlutterEmailSender.send()
       await FlutterEmailSender.send(email);
@@ -204,9 +164,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       showSuccessSnackBar(context, '메일 작성창이 호출되었습니다 (첨부 구성 완료)');
     } catch (e) {
       if (!mounted) return;
-      final message = widget.jobId != null
-          ? '메일에 넣을 자료를 준비하지 못했습니다.\n$e'
-          : '메일 작성창 호출 실패: $e'; // 화면에 보여줄 실패 안내 문구
+      final message = '메일에 넣을 자료를 준비하지 못했습니다.\n$e'; // 화면에 보여줄 실패 안내 문구
       showErrorSnackBar(context, message);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -295,47 +253,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     );
   }
 
-  /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
-  /// 함수: _buildAttachmentEmail
-  /// 목적: 전달받은 첨부 경로로 메일의 제목·본문·수신자·첨부파일
-  ///       목록을 정한다. 저장소 조회나 측정 결과 객체 생성 과정을
-  ///       거치지 않는다 — 이미 첨부할 파일 경로를 갖고 있는
-  ///       상태이기 때문이다. 경로마다 파일이 실제로 있는지 확인해,
-  ///       있는 파일만 첨부 목록에 넣는다. 없는 파일은 첨부하지 않는
-  ///       대신, 메일 본문 맨 아래에 "누락: 파일명" 줄을 하나씩
-  ///       덧붙인다 — 받는 사람이 메일을 열었을 때 몇 개가 왜 안
-  ///       왔는지 바로 알 수 있게 하기 위해서다.
-  /// 인자: paths — 첨부할 파일의 절대 경로 목록
-  /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
-  Future<Email> _buildAttachmentEmail(List<String> paths) async {
-    final List<String> attachments = []; // 실제로 존재해 첨부할 경로
-    final List<String> missingNames = []; // 존재하지 않아 누락 처리할 파일명
-
-    for (final path in paths) {
-      if (await File(path).exists()) {
-        attachments.add(path);
-      } else {
-        missingNames.add(path.replaceAll('\\', '/').split('/').last);
-      }
-    }
-
-    final subject = widget.subject ?? 'OTIS 진동측정 파일 전송'; // 메일 제목
-    final bodyLines = <String>[
-      widget.body ?? 'OTIS 진동측정 계측 파일을 첨부합니다.',
-    ]; // 메일 본문 줄 목록
-    for (final name in missingNames) {
-      bodyLines.add('누락: $name');
-    }
-
-    return Email(
-      body: bodyLines.join('\n'),
-      subject: subject,
-      recipients: _recipients(), // → 로직 이동: _recipients()
-      attachmentPaths: attachments,
-    );
-  }
-
   /// 작성: 2026-10-04 13:37:23 · nada
   /// 함수: _buildCheckboxItem
   /// 목적: 보낼 항목 하나를 체크박스 + 이름 한 줄로 만든다. 줄 어디를
@@ -383,8 +300,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       1. 제목과 닫기 버튼
   ///       2. 받는 사람 — 등록된 이메일마다 체크 한 줄. 여러 개 고를 수
   ///          있다. "관리"를 누르면 설정 화면으로 간다
-  ///       3. 보낼 항목 체크 목록. 파일을 그대로 넘겨받은 경우에는 넘겨받은
-  ///          파일을 전부 보내므로 목록을 보여주지 않는다
+  ///       3. 보낼 항목 체크 목록 (PDF 리포트, 측정값 원본)
   ///       4. 고를 것이 빠졌을 때의 안내와 "보내기" 버튼
   ///       2 · 3 은 함께 스크롤되고 4 는 아래에 고정한다. 시트 아래쪽
   ///       시스템 영역은 `showAppSheet()` 가 비켜 준다.
@@ -392,9 +308,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
-    final isAttachmentMode = widget.attachmentPaths != null; // 파일을 그대로 넘겨받았는지
-    final noItem =
-        !isAttachmentMode && !_sendPdf && !_sendRaw; // 보낼 항목을 고르지 않았는지
+    final noItem = !_sendPdf && !_sendRaw; // 보낼 항목을 고르지 않았는지
     final noRecipient = _selected.isEmpty; // 받을 주소를 고르지 않았는지
     final warning = _emails.isEmpty
         ? null
@@ -470,24 +384,22 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       const Divider(height: 1, color: AppColors.border),
                     ],
 
-                    // 3. 보낼 항목 — 파일을 그대로 넘겨받았으면 전부 보낸다
-                    if (!isAttachmentMode) ...[
-                      const SizedBox(height: AppDims.gap3),
-                      Text('보낼 항목', style: AppText.bodyBold),
-                      _buildCheckboxItem(
-                        title: 'PDF 리포트',
-                        value: _sendPdf,
-                        onChanged: (val) =>
-                            setState(() => _sendPdf = val ?? false),
-                      ),
-                      const Divider(height: 1, color: AppColors.border),
-                      _buildCheckboxItem(
-                        title: '측정값 원본 (raw.txt)',
-                        value: _sendRaw,
-                        onChanged: (val) =>
-                            setState(() => _sendRaw = val ?? false),
-                      ),
-                    ],
+                    // 3. 보낼 항목
+                    const SizedBox(height: AppDims.gap3),
+                    Text('보낼 항목', style: AppText.bodyBold),
+                    _buildCheckboxItem(
+                      title: 'PDF 리포트',
+                      value: _sendPdf,
+                      onChanged: (val) =>
+                          setState(() => _sendPdf = val ?? false),
+                    ),
+                    const Divider(height: 1, color: AppColors.border),
+                    _buildCheckboxItem(
+                      title: '측정값 원본 (raw.txt)',
+                      value: _sendRaw,
+                      onChanged: (val) =>
+                          setState(() => _sendRaw = val ?? false),
+                    ),
                   ],
                 ),
               ),

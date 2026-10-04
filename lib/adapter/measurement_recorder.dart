@@ -28,19 +28,17 @@ enum RecordFailure {
 
 /// 작성: 2026-10-04 13:29:41 · nada
 /// 클래스: RecordOutcome
-/// 목적: `MeasurementRecorder.record()` 의 결과. 성공이면 저장 위치와
-///       파일 목록을, 실패면 사유를 담는다. 성공과 실패를 같은 형태로
+/// 목적: `MeasurementRecorder.record()` 의 결과. 성공이면 측정 ID 와
+///       저장한 파일 목록을, 실패면 사유를 담는다. 성공과 실패를 같은 형태로
 ///       돌려줘 화면이 예외를 잡지 않고 갈래만 나누게 한다.
 class RecordOutcome {
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: RecordOutcome.success
   /// 목적: 저장에 성공한 결과를 만든다.
-  /// 인자: grid — 격자 환산 결과. 완료 요약에 집계 수치를 보여줄 때 쓴다
-  ///       directoryPath — 이번 측정 폴더 경로
+  /// 인자: id — 저장한 측정 ID. 결과 화면이 이 ID 로 측정 결과를 읽는다
   ///       savedPaths — 저장한 파일 경로. 메일 첨부 순서 그대로다
   const RecordOutcome.success({
-    required GridResampleResult this.grid,
-    required String this.directoryPath,
+    required String this.id,
     required this.savedPaths,
   }) : failure = null,
        detail = null;
@@ -51,8 +49,7 @@ class RecordOutcome {
   /// 인자: failure — 실패 종류
   ///       detail — 화면에 덧붙일 원인 문구. 없으면 null
   const RecordOutcome.failure(RecordFailure this.failure, [this.detail])
-    : grid = null,
-      directoryPath = null,
+    : id = null,
       savedPaths = const <String>[];
 
   /// 실패 종류. 성공이면 null
@@ -62,11 +59,8 @@ class RecordOutcome {
   /// 원인이 없으면 null
   final String? detail;
 
-  /// 격자 환산 결과. 실패면 null
-  final GridResampleResult? grid;
-
-  /// 이번 측정 폴더 경로. 실패면 null
-  final String? directoryPath;
+  /// 저장한 측정 ID (`yyyyMMdd-HHmmss`). 실패면 null
+  final String? id;
 
   /// 저장한 파일 경로 목록. 리포트를 맨 앞에 둬 메일 첨부 목록에서 먼저
   /// 보이게 한다. 리포트 · 안드로이드 원본 사본은 못 만들었으면 빠진다.
@@ -197,8 +191,7 @@ class MeasurementRecorder {
       }
 
       return RecordOutcome.success(
-        grid: grid,
-        directoryPath: jobDir.path,
+        id: id,
         savedPaths: <String>[?reportPath, valuePath, metaPath, ?rawCopyPath],
       );
     } catch (e, st) {

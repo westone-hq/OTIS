@@ -21,7 +21,7 @@ Future<void> _openSheet(WidgetTester tester, {double bottomInset = 0}) async {
         builder: (context) => Scaffold(
           body: TextButton(
             onPressed: () =>
-                showSendEmailSheet(context, attachmentPaths: <String>['x']),
+                showSendEmailSheet(context, jobId: '20260114-110359'),
             child: const Text('열기'),
           ),
         ),

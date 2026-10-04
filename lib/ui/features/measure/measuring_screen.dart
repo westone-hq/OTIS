@@ -12,8 +12,6 @@ import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_notice.dart';
-import '../../core/widgets/app_snack_bar.dart';
-import '../shared/send_email_sheet.dart';
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
 /// 수정: 2026-10-04 13:33:18 · nada
@@ -140,12 +138,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 16:54:15 · nada
+  /// 수정: 2026-10-04 18:15:24 · nada
   /// 함수: _initCaptureAndTimers
   /// 목적: 카운트다운이 끝난 뒤(또는 대기 시간이 없으면 곧바로) 경과
-  ///       시간 타이머를 켜고 센서 수집을 시작한다. 마이크 권한이
-  ///       거절됐으면 소음 없이 진동만 잰다는 안내를 띄운다. 볼륨키는
-  ///       카운트다운 · 마무리 중에는 무시한다.
+  ///       시간 타이머를 켜고 센서 수집을 시작한다. 볼륨키는 카운트다운 ·
+  ///       마무리 중에는 무시한다.
   Future<void> _initCaptureAndTimers() async {
     _timeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
@@ -154,25 +151,14 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     });
 
     // → 로직 이동: CaptureSession.start()
-    final audioGranted = await _capture.start(
+    await _capture.start(
       onVolumeKey: () {
         if (!_isCountingDown && !_isFinishing && !_isFinished) {
           unawaited(_finishMeasurement()); // → 로직 이동: _finishMeasurement()
         }
       },
       onNoResponse: _onNoResponse, // → 로직 이동: _onNoResponse()
-    ); // 마이크 권한을 받았는지
-    if (!audioGranted && mounted) {
-      showErrorSnackBar(
-        context,
-        '소음 제외 측정: 마이크 권한이 거절되어 진동만 측정합니다. '
-        '(결과 파일 소음 열은 0.0)\n'
-        '권한 설정 창이 다시 안 뜨면 휴대폰 설정 > 앱 > OTIS 진동 측정 > '
-        '권한에서 마이크를 허용해 주세요.',
-        // 문구가 길어 읽을 시간을 기본보다 더 준다
-        duration: const Duration(seconds: 5),
-      );
-    }
+    );
   }
 
   /// 작성: 2026-10-04 13:33:18 · nada
@@ -308,7 +294,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:33:18 · nada
+  /// 수정: 2026-10-04 18:15:24 · nada
   /// 함수: _finishMeasurement
   /// 목적: "테스트 완료" 버튼이나 볼륨키로 측정을 마무리한다. 순서대로
   ///       진행한다.
@@ -317,8 +303,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///       2. 마무리 중 상태로 표시하고 `_cleanup()`으로 타이머와 센서
   ///          수집을 멈춘다
   ///       3. `MeasurementRecorder.record()` 로 저장한다
-  ///       4. 실패면 사유를 담은 실패 안내를, 성공이면 완료 요약
-  ///          대화상자를 띄운다
+  ///       4. 실패면 사유를 담은 실패 안내를 띄우고, 성공이면 이 화면을
+  ///          결과 화면으로 바꾼다. 결과 화면에서 뒤로 가면 시작 화면이다
   Future<void> _finishMeasurement() async {
     if (_isFinishing || _isFinished) return; // 이미 진행 중이면 중복 실행 방지
 
@@ -343,85 +329,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       await _showMeasureFailDialog(_failureMessage(outcome));
       return;
     }
-    // → 로직 이동: _showCaptureSummaryDialog()
-    await _showCaptureSummaryDialog(outcome);
-  }
-
-  /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:33:18 · nada
-  /// 함수: _showCaptureSummaryDialog
-  /// 목적: 측정이 끝난 뒤 저장 위치 · 파일 목록과 환산 집계 수치를
-  ///       보여주는 대화상자를 띄운다.
-  ///       - "메일로 보내기"를 누르면 저장된 파일을 첨부해 메일 작성
-  ///         화면을 띄운 뒤 `/start`로 돌아간다
-  ///       - "닫기"를 누르면 곧바로 `/start`로 돌아간다
-  /// 인자: outcome — 성공한 저장 결과
-  Future<void> _showCaptureSummaryDialog(RecordOutcome outcome) async {
     if (!mounted) return;
-    final grid = outcome.grid!; // 성공한 결과라 항상 있는 격자 환산 결과
-    final savedFiles = outcome.savedPaths; // 메일 첨부용 전체 경로
-    final fileNames = savedFiles
-        .map((p) => p.split('/').last)
-        .toList(); // 화면 표시용 파일명만
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('측정 완료'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('저장 위치'),
-              Text(outcome.directoryPath!, style: AppText.caption),
-              const SizedBox(height: AppDims.gap),
-              const Text('저장된 파일'),
-              for (final name in fileNames) Text('- $name'),
-              const SizedBox(height: AppDims.gap),
-              Text('행 수: ${grid.rowCount}'),
-              Text('측정시간(초): ${grid.durationSec.toStringAsFixed(1)}'),
-              Text('raw 사용 수: ${grid.rawUsedCount}'),
-              Text('gravity 사용 수: ${grid.gravityUsedCount}'),
-              Text(
-                '폐기(0값, 시각역행): '
-                '${grid.droppedZeroCount}, ${grid.droppedBackwardCount}',
-              ),
-              Text(
-                '잘린 행(시작, 끝): '
-                '${grid.headTrimmedRows}, ${grid.tailTrimmedRows}',
-              ),
-              Text(
-                '최대 간격(raw, gravity): '
-                '${grid.rawMaxSpanNs ~/ 1000}us, '
-                '${grid.gravityMaxSpanNs ~/ 1000}us',
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          AppDialogButton(
-            label: '메일로 보내기',
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              // → 로직 이동: showSendEmailSheet()
-              await showSendEmailSheet(context, attachmentPaths: savedFiles);
-              // → 로직 이동: StartScreen.build()
-              if (mounted) context.go('/start');
-            },
-            primary: false,
-          ),
-          AppDialogButton(
-            label: '닫기',
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              // → 로직 이동: StartScreen.build()
-              if (mounted) context.go('/start');
-            },
-          ),
-        ],
-      ),
-    );
+    // → 로직 이동: ResultScreen.build()
+    context.pushReplacement('/result/${outcome.id}');
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준

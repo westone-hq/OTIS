@@ -100,28 +100,25 @@ class CaptureSession {
 
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: start
-  /// 목적: 수집을 시작한다. 순서대로 진행한다.
+  /// 목적: 수집을 시작한다. 순서대로 진행한다. 마이크 권한은 여기서
+  ///       요청하지 않는다 — 측정 중에 권한 창이 뜨면 뒤집어 놓은 휴대폰에서
+  ///       누를 수 없으므로 시작 화면이 미리 받는다(`ensureMicPermission()`).
+  ///       권한이 없으면 소음 수집 쪽이 0 으로 대신한다.
   ///       1. 화면 꺼짐 방지를 켠다. 한도 안에 응답이 없어도 넘어간다
-  ///       2. 마이크 권한을 요청한다. 거절돼도 진동은 잰다
-  ///       3. 센서가 있으면 수집을 시작하고 이벤트를 `resampler` 에
+  ///       2. 센서가 있으면 수집을 시작하고 이벤트를 `resampler` 에
   ///          쌓는다. 측정은 볼륨키로 끝내므로 볼륨키도 가로챈다
-  ///       4. 센서 유무와 상관없이 무응답 감시를 건다. 센서가 없으면
+  ///       3. 센서 유무와 상관없이 무응답 감시를 건다. 센서가 없으면
   ///          값이 오지 않으므로 감시가 그 경우도 잡는다
   /// 인자: onVolumeKey — 볼륨키가 눌릴 때마다 부를 함수
   ///       onNoResponse — `noResponseTimeout` 안에 값이 하나도 안 오면
   ///       한 번 부를 함수
-  /// 반환: 마이크 권한을 받았으면 true. false 면 소음 열이 비어 저장된다
-  Future<bool> start({
+  Future<void> start({
     required void Function() onVolumeKey,
     required void Function() onNoResponse,
   }) async {
     try {
       await WakelockPlus.enable().timeout(_wakelockOnLimit);
     } catch (_) {}
-
-    // → 로직 이동: SensorChannelManager.requestAudioPermission()
-    final audioGranted = await _sensorManager
-        .requestAudioPermission(); // 마이크 권한을 받았는지
 
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
     final available = await _sensorManager.checkSensorsAvailable(); // 센서 유무
@@ -145,7 +142,6 @@ class CaptureSession {
     _noResponseTimer = Timer(noResponseTimeout, () {
       if (!_receivedSample) onNoResponse();
     });
-    return audioGranted;
   }
 
   /// 작성: 2026-10-04 13:29:41 · nada

@@ -9,6 +9,7 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_notice.dart';
+import 'mic_permission.dart';
 import 'placement_sheet.dart';
 
 /// 작성: 2026-08-17 13:31:30 · 박건준
@@ -118,9 +119,16 @@ class _StartScreenState extends State<StartScreen> {
 
   /// 작성: 2026-10-04 13:37:23 · nada
   /// 함수: _startMeasuring
-  /// 목적: 고른 대기 시간을 `MeasurementSession` 에 싣고 측정 화면으로
-  ///       넘어간다. 측정은 모두 볼륨키로 끝낸다.
-  void _startMeasuring() {
+  /// 목적: 마이크 권한을 먼저 받고, 고른 대기 시간을 `MeasurementSession`
+  ///       에 실어 측정 화면으로 넘어간다. 측정은 모두 볼륨키로 끝낸다.
+  ///       권한을 거절하고 진동만 재기도 마다하면 이 화면에 머문다.
+  Future<void> _startMeasuring() async {
+    // → 로직 이동: ensureMicPermission()
+    final proceed = await ensureMicPermission(
+      context,
+      _sensorManager,
+    ); // 측정 화면으로 넘어가도 되는지
+    if (!proceed || !mounted) return;
     // → 로직 이동: MeasurementSession.instance.delaySec
     MeasurementSession.instance.delaySec = _selectedSeconds;
     context.push('/measuring'); // → 로직 이동: MeasuringScreen.build()
