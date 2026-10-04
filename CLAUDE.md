@@ -29,6 +29,22 @@ flutter test                                      # 전부 통과 유지
 | `docs/reference/sample_evimp.pdf` | 원본 TUNE 리포트. 코드 주석의 `근거:` 가 가리킨다 |
 | `docs/noise_otis_offset_notes.md` | 소음 dBA 오프셋 · OTIS 차이 · 남은 과제 |
 
+## 화면 흐름
+
+```
+홈(현장 정보, 입력 즉시 저장) ─▶ 시작(대기 시간 · 거치 안내)
+  ─[마이크 권한 확인]─▶ 측정(카운트다운 → 수집, 볼륨키로 종료)
+  ─▶ 결과(/result/:id: 지표 · 결과 비교 · 메일 · 테스트 재실행)
+홈 ─▶ 저장 결과 목록(history) ─▶ 결과
+홈 ─▶ 설정(수신 이메일 목록 · 앱 버전)
+```
+
+- 측정 화면은 끝나면 결과 화면으로 바뀐다(`pushReplacement`). 실패 · 중단이면
+  측정을 시작한 화면으로 돌아간다(`pop`).
+- 마이크 권한은 측정 화면에 들어가기 전에 `ensureMicPermission()` 이 받는다.
+  측정 중에는 휴대폰이 뒤집혀 있어 권한 창을 누를 수 없다.
+- 바텀 시트는 `showAppSheet()` 로만 띄운다. 아래쪽 시스템 막대를 비켜 준다.
+
 ## 관통 원칙
 
 1. **재지 않은 값을 0 이나 빈 문자열로 채우지 않는다.** 미측정은 `null`.
@@ -57,7 +73,7 @@ flutter test                                      # 전부 통과 유지
 - 측정 · 저장 · 리포트 로직을 화면 파일에 새로 넣지 않는다. 화면은
   `CaptureSession` · `MeasurementRecorder` · `SiteInfo.validate()` 의 결과를
   받아 문구와 화면 이동만 고른다.
-- 저장 결과 화면(`history_screen.dart`)은 새로 만들 예정이라 토큰 · 공용
+- 저장 결과 목록 화면(`history_screen.dart`)은 새로 만들 예정이라 토큰 · 공용
   위젯 정리에서 빠져 있다.
 
 ## 작업 방식
@@ -81,7 +97,7 @@ flutter test                                      # 전부 통과 유지
 - `docs/reference/sample_evimp.pdf` 는 축별 계수 분리 이전의 단일 계수로
   만들어졌다. 차이는 최대 0.14pt. 좌표가 아니라 참조 PDF 를 다시 만들어야 한다.
 - 요구사항서(`Vibration_Checking_App_Development_20260630.pdf`)가 저장소에 없다.
-- 결과 화면(`/result/:id`) · 서버 연동은 미구현이다. 로그인은 두지 않는다
-  (수신 이메일은 기기에 목록으로 둔다).
+- 서버 연동은 미구현이다. 로그인은 두지 않는다(수신 이메일은 기기에 목록으로
+  둔다).
 - 소음 RMS 창(`WINDOW_SEC`) · 갱신 주기(`HOP_HZ`)는 OTIS 와 맞춰 보는
   실험값이다 (`NoiseCaptureHandler.kt`).

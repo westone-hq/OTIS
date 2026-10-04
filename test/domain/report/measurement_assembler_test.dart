@@ -107,6 +107,7 @@ List<GridSample> _trapezoid() {
 
   const mgPerMetersPerSecondSquared = 1 / 9.80665e-3; // m/s² → mg 환산 계수
   final rows = <GridSample>[]; // 만들어 쌓을 격자 행
+  // 같은 가속도(m/s²)로 count 행을 rows 끝에 붙이는 지역 함수
   void push(double accelMps2, int count) {
     final zMg = accelMps2 * mgPerMetersPerSecondSquared; // 수직 진동값 (mg)
     for (var i = 0; i < count; i++) {
