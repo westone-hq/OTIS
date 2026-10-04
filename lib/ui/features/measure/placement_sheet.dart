@@ -10,7 +10,7 @@ import '../../core/widgets/app_notice.dart';
 ///       토큰(theme.dart)에 두지 않고 여기에 모은다.
 abstract final class _DiagramSize {
   /// 그림 전체 높이
-  static const height = 200.0;
+  static const height = 220.0;
 
   /// 출입구 라벨과 그림 위쪽 끝 사이 간격
   static const doorTop = 12.0;
@@ -27,21 +27,31 @@ abstract final class _DiagramSize {
   /// 휴대폰 그림을 출입구 라벨 아래로 내리는 거리
   static const phoneTop = 24.0;
 
-  /// 휴대폰 그림 폭
-  static const phoneW = 72.0;
+  /// 가로로 눕힌 휴대폰 그림의 긴 변
+  static const phoneLong = 128.0;
 
-  /// 휴대폰 그림 높이
-  static const phoneH = 110.0;
+  /// 가로로 눕힌 휴대폰 그림의 짧은 변
+  static const phoneShort = 64.0;
 
   /// 휴대폰 그림 테두리 두께
   static const phoneBorder = 3.0;
+
+  /// 뒷면 카메라 모듈 한 변
+  static const cameraSize = 26.0;
+
+  /// 카메라 모듈을 휴대폰 모서리에서 들여 넣는 거리
+  static const cameraInset = 6.0;
+
+  /// 카메라 렌즈 지름
+  static const lensSize = 8.0;
 }
 
 /// 작성: 2026-08-17 18:55:14 · 박건준
-/// 수정: 2026-10-04 13:37:23 · nada
+/// 수정: 2026-10-04 16:54:15 · nada
 /// 클래스: PlacementSheet
-/// 목적: 휴대폰을 엘리베이터 카 바닥 중앙에 Y축 방향으로 맞춰 놓으라고
-///       안내하는 바텀 시트.
+/// 목적: 휴대폰을 엘리베이터 카 바닥 중앙에 뒤집어서, 휴대폰 위쪽이
+///       출입구 기준 오른쪽을 보게 놓으라고 안내하는 바텀 시트. 화면이
+///       바닥을 보므로 측정은 볼륨키로 끝낸다.
 ///       - 어르신도 쓰기 쉽도록 도식은 크게, 단계 번호는 40dp 원형
 ///         뱃지로, 확인 버튼은 64dp로 키운다
 class PlacementSheet extends StatelessWidget {
@@ -86,7 +96,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:54:15 · nada
   /// 함수: build
   /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다.
   ///       - 상단 헤더 — 제목과 닫기 버튼
@@ -146,10 +156,10 @@ class PlacementSheet extends StatelessWidget {
                     const SizedBox(height: AppDims.gap3),
 
                     // 4단계 안내
-                    _buildStepItem(1, '카운트다운이 끝나기 전에 휴대폰을 바닥에 놓으세요'),
-                    _buildStepItem(2, '휴대폰을 Y축 방향으로 맞추세요'),
-                    _buildStepItem(3, '테스트가 시작되면 엘리베이터를 움직이세요'),
-                    _buildStepItem(4, '완전히 멈추면 \'테스트 완료\'를 누르세요'),
+                    _buildStepItem(1, '카운트다운이 끝나기 전에 휴대폰을 카 바닥 중앙에 놓으세요'),
+                    _buildStepItem(2, '휴대폰을 뒤집어 그림과 같은 방향으로 놓으세요'),
+                    _buildStepItem(3, '측정이 시작되면 엘리베이터를 움직이세요'),
+                    _buildStepItem(4, '엘리베이터가 완전히 멈추면 볼륨키를 눌러 측정을 끝내세요'),
                     const SizedBox(height: AppDims.gap),
 
                     // 주의 배너: 색 + 아이콘 + 텍스트 3중 표시
@@ -178,12 +188,16 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:54:15 · nada
   /// 함수: _buildDiagram
   /// 목적: 엘리베이터 카 안에서 휴대폰을 어느 위치에 어느 방향으로
-  ///       놓을지 보여주는 도식을 만든다. 출입구 라벨, 카 바닥 테두리,
-  ///       중앙의 휴대폰 · Y축 화살표로 구성한다.
+  ///       놓을지 보여주는 도식을 만든다. 위쪽에 출입구, 가운데에 뒤집어
+  ///       가로로 눕힌 휴대폰(뒷면과 카메라가 보인다)을 두고, 휴대폰
+  ///       위쪽이 오른쪽을 향한다는 화살표와 설명을 붙인다.
   /// 반환: 거치 방향 안내 도식 위젯
+  /// 근거: 인용 — 격자 환산의 부호 기준이 이 거치 방식(화면을 아래로,
+  ///       위쪽은 출입구 기준 오른쪽)을 전제로 한다
+  ///       (`GridResampler.resample()`)
   Widget _buildDiagram() {
     return Container(
       height: _DiagramSize.height,
@@ -233,42 +247,93 @@ class PlacementSheet extends StatelessWidget {
             ),
           ),
 
-          // 중앙 스마트폰 및 Y축 화살표 도식
+          // 뒤집어 눕힌 휴대폰과 설명
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: _DiagramSize.phoneTop),
-              Container(
-                width: _DiagramSize.phoneW,
-                height: _DiagramSize.phoneH,
-                decoration: BoxDecoration(
-                  color: AppColors.bg,
-                  borderRadius: BorderRadius.circular(AppDims.radius),
-                  border: Border.all(
-                    color: AppColors.blue,
-                    width: _DiagramSize.phoneBorder,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.arrow_upward,
-                      color: AppColors.blue,
-                      size: AppDims.iconL,
-                    ),
-                    const SizedBox(height: AppDims.gapHalf),
-                    Text(
-                      'Y축',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.blue,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+              _buildPhoneBack(), // → 로직 이동: _buildPhoneBack()
+              const SizedBox(height: AppDims.gap),
+              Text(
+                '뒤집어서, 휴대폰 위쪽이 오른쪽',
+                style: AppText.caption.copyWith(
+                  color: AppColors.navy,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 작성: 2026-10-04 16:54:15 · nada
+  /// 함수: _buildPhoneBack
+  /// 목적: 위에서 내려다본, 뒤집어 놓은 휴대폰을 그린다. 뒷면이 보이므로
+  ///       남색으로 칠하고, 휴대폰 위쪽 끝(오른쪽)에 카메라 모듈을 둔다.
+  ///       가운데의 "위쪽 →" 이 휴대폰 위쪽이 가리킬 방향이다.
+  /// 반환: 휴대폰 뒷면 그림 위젯
+  Widget _buildPhoneBack() {
+    return Container(
+      width: _DiagramSize.phoneLong,
+      height: _DiagramSize.phoneShort,
+      decoration: BoxDecoration(
+        color: AppColors.navy,
+        borderRadius: BorderRadius.circular(AppDims.radius),
+        border: Border.all(
+          color: AppColors.blue,
+          width: _DiagramSize.phoneBorder,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // 뒷면 카메라 모듈 — 휴대폰 위쪽 끝에 붙어 있다
+          Positioned(
+            top: _DiagramSize.cameraInset,
+            right: _DiagramSize.cameraInset,
+            child: Container(
+              width: _DiagramSize.cameraSize,
+              height: _DiagramSize.cameraSize,
+              decoration: BoxDecoration(
+                color: AppColors.onDarkSub,
+                borderRadius: BorderRadius.circular(AppDims.gap),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (var lens = 0; lens < 2; lens++)
+                    Container(
+                      width: _DiagramSize.lensSize,
+                      height: _DiagramSize.lensSize,
+                      decoration: const BoxDecoration(
+                        color: AppColors.navy,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          // 휴대폰 위쪽이 가리킬 방향
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '위쪽',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.onDark,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward,
+                  color: AppColors.onDark,
+                  size: AppDims.iconM,
+                ),
+              ],
+            ),
           ),
         ],
       ),

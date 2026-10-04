@@ -42,7 +42,7 @@ class MeasuringScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
-/// 수정: 2026-10-04 13:33:18 · nada
+/// 수정: 2026-10-04 16:54:15 · nada
 /// 클래스: _MeasuringScreenState
 /// 목적: 라이브 측정 화면의 상태를 관리한다. 경과 시간 · 카운트다운
 ///       타이머와, 앱이 백그라운드로 전환됐을 때의 중단 처리를 맡는다.
@@ -52,11 +52,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   late final CaptureSession _capture = CaptureSession(
     sensorManager: widget.sensorManager,
   );
-
-  /// 이 측정이 볼륨키로 끝내는 흐름으로 시작됐는지. 시작 화면이
-  /// `MeasurementSession` 에 실어 둔 값을 화면이 열릴 때 한 번 읽는다
-  late final bool _useVolumeKeyStop =
-      MeasurementSession.instance.useVolumeKeyStop;
 
   /// 경과 시간(`_elapsedSeconds`)을 1초마다 하나씩 올리는 타이머.
   /// `_initCaptureAndTimers()`가 만들고, `_cleanup()`이 멈춘 뒤 비운다.
@@ -145,7 +140,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:54:15 · nada
   /// 함수: _initCaptureAndTimers
   /// 목적: 카운트다운이 끝난 뒤(또는 대기 시간이 없으면 곧바로) 경과
   ///       시간 타이머를 켜고 센서 수집을 시작한다. 마이크 권한이
@@ -160,7 +155,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
 
     // → 로직 이동: CaptureSession.start()
     final audioGranted = await _capture.start(
-      useVolumeKeyStop: _useVolumeKeyStop,
       onVolumeKey: () {
         if (!_isCountingDown && !_isFinishing && !_isFinished) {
           unawaited(_finishMeasurement()); // → 로직 이동: _finishMeasurement()
@@ -463,7 +457,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:54:15 · nada
   /// 함수: build
   /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자 카운트다운
   ///       화면을, 아니면 경과 시간과 "테스트 완료" 버튼이 있는 실제
@@ -605,9 +599,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                 ),
                 child: AppNotice(
                   icon: Icons.front_hand_outlined,
-                  message: _useVolumeKeyStop
-                      ? '측정 중입니다.\n휴대폰을 움직이지 마세요.\n볼륨키를 누르면 측정이 종료됩니다.'
-                      : '테스트가 진행되는 동안 휴대폰을 들어 올리지 마세요',
+                  message: '측정 중입니다.\n휴대폰을 움직이지 마세요.\n볼륨키를 누르면 측정이 종료됩니다.',
                   tone: NoticeTone.alert,
                 ),
               ),

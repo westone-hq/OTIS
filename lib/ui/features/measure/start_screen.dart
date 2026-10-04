@@ -118,14 +118,11 @@ class _StartScreenState extends State<StartScreen> {
 
   /// 작성: 2026-10-04 13:37:23 · nada
   /// 함수: _startMeasuring
-  /// 목적: 고른 대기 시간과 종료 방식을 `MeasurementSession` 에 싣고 측정
-  ///       화면으로 넘어간다. 두 시작 버튼이 종료 방식만 달리해 부른다.
-  /// 인자: useVolumeKeyStop — 볼륨키로 측정을 끝내는 흐름인지
-  void _startMeasuring({required bool useVolumeKeyStop}) {
+  /// 목적: 고른 대기 시간을 `MeasurementSession` 에 싣고 측정 화면으로
+  ///       넘어간다. 측정은 모두 볼륨키로 끝낸다.
+  void _startMeasuring() {
     // → 로직 이동: MeasurementSession.instance.delaySec
     MeasurementSession.instance.delaySec = _selectedSeconds;
-    // → 로직 이동: MeasurementSession.instance.useVolumeKeyStop
-    MeasurementSession.instance.useVolumeKeyStop = useVolumeKeyStop;
     context.push('/measuring'); // → 로직 이동: MeasuringScreen.build()
   }
 
@@ -189,14 +186,14 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:54:15 · nada
   /// 함수: build
   /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
   ///       - `appBar` — 제목만 있는 간단한 상단 바
   ///       - `body` — 스크롤 가능한 안내 영역. 거치 안내 카드 → 대기
   ///         시간 선택 카드 4개 → 선택한 시간 요약 문구 순으로 보여준다
   ///       - `bottomNavigationBar` — 센서를 못 쓰면 오류 안내를 보여주고,
-  ///         그 아래 측정(또는 카운트다운) 시작 버튼 두 개를 둔다
+  ///         그 아래 "볼륨키로 측정 시작" 버튼 하나를 둔다
   /// 인자: context — 이 화면이 어디에 놓이는지 알려주는 값
   /// 반환: 측정 준비 화면 전체를 담는 위젯
   @override
@@ -295,19 +292,9 @@ class _StartScreenState extends State<StartScreen> {
               ),
               const SizedBox(height: AppDims.gap2),
             ],
-            ElevatedButton(
-              onPressed: canStart
-                  // → 로직 이동: _startMeasuring()
-                  ? () => _startMeasuring(useVolumeKeyStop: false)
-                  : null,
-              child: Text(_selectedSeconds == 0 ? '측정 시작' : '카운트다운 시작'),
-            ),
-            const SizedBox(height: AppDims.gap),
-            OutlinedButton.icon(
-              onPressed: canStart
-                  // → 로직 이동: _startMeasuring()
-                  ? () => _startMeasuring(useVolumeKeyStop: true)
-                  : null,
+            ElevatedButton.icon(
+              // → 로직 이동: _startMeasuring()
+              onPressed: canStart ? _startMeasuring : null,
               icon: const Icon(Icons.volume_up_outlined),
               label: const Text('볼륨키로 측정 시작'),
             ),

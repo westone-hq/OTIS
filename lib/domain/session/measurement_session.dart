@@ -23,14 +23,12 @@ enum SiteFieldError {
 ///       싣고, 저장할 때 `MeasurementAssembler` 가 측정 결과로 옮긴다.
 class SiteInfo {
   /// 작성: 2026-10-04 13:31:53 · nada
-  /// 수정: 2026-10-04 16:44:32 · nada
   /// 변수: directionUp
   /// 목적: 운전 방향 선택지 — 상승. 기본값이다.
   ///       측정 결과에 이 문구 그대로 저장되고 리포트에 찍힌다.
   static const String directionUp = '상승';
 
   /// 작성: 2026-10-04 13:31:53 · nada
-  /// 수정: 2026-10-04 16:44:32 · nada
   /// 변수: directionDown
   /// 목적: 운전 방향 선택지 — 하강.
   static const String directionDown = '하강';
@@ -161,7 +159,7 @@ class SiteInfo {
 }
 
 /// 작성: 2026-07-04 15:04:38 · 박건준
-/// 수정: 2026-10-04 13:31:53 · nada
+/// 수정: 2026-10-04 16:54:15 · nada
 /// 클래스: MeasurementSession
 /// 목적: 화면 사이에 넘기는 이번 측정의 상태 보관소. 홈 화면 → 시작
 ///       화면 → 측정 화면이 차례로 채우고 읽는다. 앱 전체에 하나만 둔다.
@@ -182,8 +180,4 @@ class MeasurementSession {
 
   /// 측정 시작 전 카운트다운 대기 시간 (초). 0이면 카운트다운 없이 곧바로 시작
   int delaySec = 0;
-
-  /// true 면 측정 중 볼륨키(올림 · 내림)를 측정 완료 입력으로 쓴다.
-  /// 일반 측정 시작에서는 false 로 둬 볼륨키 본래 동작을 그대로 둔다
-  bool useVolumeKeyStop = false;
 }
