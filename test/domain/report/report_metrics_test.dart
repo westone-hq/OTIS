@@ -286,6 +286,17 @@ void main() {
       expect(metrics.vertMax.display, '11.0mg');
     });
 
+    test('평균 행은 원시 A95 를 싣고 수평은 큰 쪽과 두 축을 적는다', () {
+      final metrics = ReportMetrics.from(
+        _result().copyWith(xA95: 10.4, yA95: 12.4, zA95: 4.9),
+      ); // 산출된 지표
+
+      expect(metrics.vertAvg.value, closeTo(4.9, 1e-9));
+      expect(metrics.horizAvg.value, closeTo(12.4, 1e-9));
+      expect(metrics.horizAvg.detail, 'X 10.4 / Y 12.4');
+      expect(metrics.vertAvg.redLimit, isNull, reason: '평균 행에는 기준이 없다');
+    });
+
     test('수평 행은 큰 쪽을 싣고 두 축을 함께 적는다', () {
       final metrics = ReportMetrics.from(
         _result(xPtp: 8.2, yPtp: 12.9),

@@ -96,11 +96,10 @@ class ReportMetric {
 ///         - 최대 속도 · 운행 거리
 ///         - 소음 평균 · 최대
 ///         - 수직 · 수평 진동 최대: 필터 없는 원시 P2P
-///           (`MeasurementAssembler` 참고)
+///         - 수직 · 수평 진동 평균: 필터 없는 원시 A95
+///           (둘 다 `MeasurementAssembler` 참고)
 ///
-///       지금 비는 것
-///         - 수직 · 수평 진동 평균(A95): P2P 값들의 95백분위라 반주기 단위
-///           P2P 산정이 있어야 낼 수 있다. 필터 없이 가기로 해 비워 둔다
+///       값이 비는 것은 그 값을 계산하지 않은 예전 측정뿐이다
 ///
 ///       임시값을 만들어 채우지 않는다. 재지 못한 자리는 표에 `—` 로
 ///       나오고 신호등은 회색이 된다.
@@ -207,6 +206,10 @@ class ReportMetrics {
       'X ${ReportThresholds.xPtpRedMg}, Y ${ReportThresholds.yPtpRedMg}',
     );
     final horizontal = _larger(result.xPtp, result.yPtp); // 수평 중 큰 값 (mg)
+    final horizontalA95 = _larger(
+      result.xA95,
+      result.yA95,
+    ); // 수평 A95 중 큰 값 (mg)
 
     return ReportMetrics(
       noiseAvg: ReportMetric(
@@ -227,10 +230,10 @@ class ReportMetrics {
       ),
       vertAvg: ReportMetric(
         key: 'vert_avg',
-        value: null,
+        value: result.zA95,
         unit: 'mg',
         suffix: 'A95',
-        verdict: ReportThresholds.judge(null, null),
+        verdict: ReportThresholds.judge(result.zA95, null),
       ),
       vertMax: ReportMetric(
         key: 'vert_max',
@@ -244,10 +247,11 @@ class ReportMetrics {
       ),
       horizAvg: ReportMetric(
         key: 'horiz_avg',
-        value: null,
+        value: horizontalA95,
         unit: 'mg',
         suffix: 'A95',
-        verdict: ReportThresholds.judge(null, null),
+        detail: _horizontalDetail(result.xA95, result.yA95),
+        verdict: ReportThresholds.judge(horizontalA95, null),
       ),
       horizMax: ReportMetric(
         key: 'horiz_max',

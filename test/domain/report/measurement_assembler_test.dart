@@ -148,7 +148,8 @@ const _threeRows = <GridSample>[
 /// 목적: 캡처 결과를 측정 결과 모델로 바꾸는 변환을 시험한다.
 ///       - 진동 시계열과 샘플레이트가 제대로 옮겨지는지
 ///       - 아직 재지 않은 소음이 0 이 아니라 비어 있는 채로 남는지
-///       - 진동 P2P 가 필터 없이 원시 최대 − 최소로 나오는지
+///       - 진동 P2P 가 필터 없이 원시 최대 − 최소로, A95 가 반주기 P2P
+///         95백분위로 나오는지
 ///       - 기종이 버려지지 않고 실리는지, 비었으면 null 인지
 ///       - 환산 실패와 행 부족을 삼키지 않고 그대로 올리는지
 ///       - 실측 기준 데이터에서 파생 물리량이 프로토타입과 같은 값을
@@ -203,6 +204,27 @@ void main() {
 
       expect(model.noiseSeries, everyElement(0.0), reason: '격자에 소음이 없다');
       expect(model.noiseMax, isNull, reason: '0 뿐이면 잰 것이 없다');
+    });
+
+    test('진동 A95 는 반주기 P2P 의 95백분위다', () {
+      // X: 반주기 크기 1 · 2 · 3 · 1 → P2P 3 · 5 · 4 → 정렬 3 4 5, 순위
+      // ceil(0.95 × 3) = 3 → 5. 정확히 0 인 표본은 반주기를 끊지 않는다
+      final model = MeasurementAssembler.assemble(
+        grid: _grid(const [
+          GridSample(xMg: 1.0, yMg: 0.0, zMg: 0.0),
+          GridSample(xMg: -2.0, yMg: 0.0, zMg: 0.0),
+          GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
+          GridSample(xMg: -1.0, yMg: 0.0, zMg: 0.0),
+          GridSample(xMg: 3.0, yMg: 0.0, zMg: 0.0),
+          GridSample(xMg: -1.0, yMg: 0.0, zMg: 0.0),
+        ]),
+        site: _site,
+        id: 'id',
+        measuredAt: measuredAt,
+      ).result!; // 변환된 측정 결과
+
+      expect(model.xA95, 5.0);
+      expect(model.yA95, isNull, reason: '0 뿐이면 반주기가 없다');
     });
 
     test('진동 P2P 는 필터 없이 축마다 최대 − 최소다', () {
@@ -495,6 +517,21 @@ void main() {
         expect(model.xPtp!, closeTo(20.232, 1e-9));
         expect(model.yPtp!, closeTo(48.331, 1e-9));
         expect(model.zPtp!, closeTo(126.586, 1e-9));
+      });
+
+      test('레퍼런스폰 원시 데이터의 진동 A95 를 필터 없이 낸다', () {
+        // 기준값은 같은 정의(반주기 P2P 95백분위, 최근접 순위)를 파이썬으로
+        // 파일 X Y Z 열에 그대로 돌려 얻었다
+        final model = MeasurementAssembler.assemble(
+          grid: _grid(_fixtureRows()),
+          site: _site,
+          id: 'id',
+          measuredAt: measuredAt,
+        ).result!; // 변환된 측정 결과
+
+        expect(model.xA95!, closeTo(10.397, 1e-9));
+        expect(model.yA95!, closeTo(12.362, 1e-9));
+        expect(model.zA95!, closeTo(4.948, 1e-9));
       });
 
       test('실측 소음이 원본 리포트에 인쇄된 값과 같다', () {

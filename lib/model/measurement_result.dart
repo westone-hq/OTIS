@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-04 16:44:32 · nada
+/// 수정: 2026-10-04 18:36:31 · nada
 /// 클래스: MeasurementResult
 /// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
 ///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
@@ -47,6 +47,17 @@ class MeasurementResult {
   /// 가감속이 그대로 섞여 있다
   final double? zPtp;
 
+  /// X축 진동 A95 (mg). 반주기 P2P 값들의 95백분위로, 필터 없이 원시
+  /// 시계열 전체에서 낸다. null 이면 계산하지 않은 예전 측정이거나 반주기가
+  /// 두 개도 안 되는 측정이다
+  final double? xA95;
+
+  /// Y축 진동 A95 (mg). 정의와 null 의 뜻은 `xA95` 와 같다
+  final double? yA95;
+
+  /// Z축 진동 A95 (mg). 정의와 null 의 뜻은 `xA95` 와 같다
+  final double? zA95;
+
   /// 소음 최대값 (dBA). null 이면 잴 수 있는 표본이 없었다 — 마이크
   /// 권한이 없거나 소음이 0 으로만 들어온 측정이다
   final double? noiseMax;
@@ -86,7 +97,7 @@ class MeasurementResult {
   final double sampleRate;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 18:36:31 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -100,6 +111,8 @@ class MeasurementResult {
   ///       dateTime — 측정 일시
   ///       xPtp, yPtp, zPtp — 축별 원시 진동 P2P (mg). 계산하지 않은
   ///       예전 측정이면 null
+  ///       xA95, yA95, zA95 — 축별 원시 진동 A95 (mg). 계산하지 않았으면
+  ///       null
   ///       noiseMax — 소음 최대 (dBA). 잴 수 있는 표본이 없으면 null
   ///       distance — 운행거리 (m). 방향 무관 누적 이동량
   ///       maxSpeed — 최대속도 (m/s)
@@ -119,6 +132,9 @@ class MeasurementResult {
     this.xPtp,
     this.yPtp,
     this.zPtp,
+    this.xA95,
+    this.yA95,
+    this.zA95,
     this.noiseMax,
     this.distance,
     this.maxSpeed,
@@ -134,7 +150,7 @@ class MeasurementResult {
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 18:36:31 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -154,6 +170,9 @@ class MeasurementResult {
     double? xPtp,
     double? yPtp,
     double? zPtp,
+    double? xA95,
+    double? yA95,
+    double? zA95,
     double? noiseMax,
     double? distance,
     double? maxSpeed,
@@ -180,6 +199,9 @@ class MeasurementResult {
       xPtp: xPtp ?? this.xPtp,
       yPtp: yPtp ?? this.yPtp,
       zPtp: zPtp ?? this.zPtp,
+      xA95: xA95 ?? this.xA95,
+      yA95: yA95 ?? this.yA95,
+      zA95: zA95 ?? this.zA95,
       noiseMax: noiseMax ?? this.noiseMax,
       distance: distance ?? this.distance,
       maxSpeed: maxSpeed ?? this.maxSpeed,
@@ -196,7 +218,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 18:36:31 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -216,6 +238,9 @@ class MeasurementResult {
       'xPtp': xPtp,
       'yPtp': yPtp,
       'zPtp': zPtp,
+      'xA95': xA95,
+      'yA95': yA95,
+      'zA95': zA95,
       'noiseMax': noiseMax,
       'distance': distance,
       'maxSpeed': maxSpeed,
@@ -232,7 +257,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 18:36:31 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -263,6 +288,9 @@ class MeasurementResult {
       xPtp: (map['xPtp'] as num?)?.toDouble(),
       yPtp: (map['yPtp'] as num?)?.toDouble(),
       zPtp: (map['zPtp'] as num?)?.toDouble(),
+      xA95: (map['xA95'] as num?)?.toDouble(),
+      yA95: (map['yA95'] as num?)?.toDouble(),
+      zA95: (map['zA95'] as num?)?.toDouble(),
       noiseMax: (map['noiseMax'] as num?)?.toDouble(),
       distance: (map['distance'] as num?)?.toDouble(),
       maxSpeed: (map['maxSpeed'] as num?)?.toDouble(),

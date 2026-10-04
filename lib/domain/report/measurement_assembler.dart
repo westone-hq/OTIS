@@ -47,10 +47,11 @@ class MeasurementAssembleResult {
 ///       수직 진동에서 가속도 · 속도 · 누적 이동량 · 저크를 만들고,
 ///       최대 속도와 운행 거리를 거기서 뽑는다.
 ///
-///       진동 P2P(X/Y/Z)는 필터 없이 원시 시계열 전체의 최대 − 최소로
-///       낸다. 레퍼런스폰 · 개발폰 · EVA 를 같은 원시 기준으로 견주기
-///       위해서다. Z 에는 엘리베이터 가감속이 그대로 섞여 있어 리포트의
-///       적색 기준과 견주면 늘 넘는다
+///       진동 P2P(X/Y/Z)는 필터 없이 원시 시계열 전체의 최대 − 최소로,
+///       진동 A95 는 같은 원시 시계열의 반주기 P2P 95백분위로 낸다.
+///       레퍼런스폰 · 개발폰 · EVA 를 같은 원시 기준으로 견주기 위해서다.
+///       Z 에는 엘리베이터 가감속이 그대로 섞여 있어 리포트의 적색 기준과
+///       견주면 늘 넘는다
 ///
 ///       소음 두 값의 계약
 ///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
@@ -175,6 +176,10 @@ class MeasurementAssembler {
         xPtp: _rawPeakToPeak(xSeries),
         yPtp: _rawPeakToPeak(ySeries),
         zPtp: _rawPeakToPeak(zSeries),
+        // → 로직 이동: _rawA95()
+        xA95: _rawA95(xSeries),
+        yA95: _rawA95(ySeries),
+        zA95: _rawA95(zSeries),
         maxSpeed: motion.maxSpeed,
         distance: motion.distance,
         sampleRate: sampleRate,
@@ -202,6 +207,47 @@ class MeasurementAssembler {
       if (value > high) high = value;
     }
     return high - low;
+  }
+
+  /// 작성: 2026-10-04 18:36:31 · nada
+  /// 함수: _rawA95
+  /// 목적: 진동 시계열 한 축의 A95 를 필터 없이 낸다. 신호가 0 을 지날
+  ///       때마다 반주기로 끊고, 반주기마다 가장 큰 크기(봉우리 또는 골)를
+  ///       잡는다. 이웃한 두 반주기의 크기를 더한 것이 반주기 P2P 이고,
+  ///       그 값들의 95백분위가 A95 다. 정확히 0 인 표본은 어느 쪽 부호도
+  ///       아니라 반주기를 끊지 않는다.
+  /// 인자: series — 한 축의 진동 시계열 (mg)
+  /// 반환: A95 (mg). 반주기가 두 개보다 적어 P2P 를 하나도 못 만들면 null
+  /// 식: P2P_i = |봉우리_i| + |봉우리_i+1|
+  ///     A95 = 오름차순 정렬한 P2P 의 ceil(0.95 × n) 번째 값
+  /// 근거: 인용 — ISO 18738 의 P2P(0 을 한 번 지나는 사이 부호가 반대인 두
+  ///       봉우리 크기의 합)와 A95(그 값들의 95%가 이하가 되는 값) 정의.
+  ///       표준은 주파수 가중을 거친 신호와 출발 · 정지 0.5m 를 뺀 구간을
+  ///       쓰지만, 필터 없이 가기로 해 원시 신호 전체로 낸다 (2026-10-04
+  ///       결정). 백분위 산정법(최근접 순위)은 표준에서 확인하지 못했다
+  /// 미확인: 표준이 쓰는 백분위 보간 방식
+  static double? _rawA95(List<double> series) {
+    final peaks = <double>[]; // 반주기마다의 가장 큰 크기 (mg)
+    var current = 0.0; // 지금 반주기에서 본 가장 큰 크기 (mg)
+    var sign = 0; // 지금 반주기의 부호. 아직 0 아닌 값을 못 봤으면 0
+    for (final value in series) {
+      final s = value > 0 ? 1 : (value < 0 ? -1 : 0); // 이 표본의 부호
+      if (s == 0) continue;
+      if (sign != 0 && s != sign) {
+        peaks.add(current);
+        current = 0.0;
+      }
+      sign = s;
+      if (value.abs() > current) current = value.abs();
+    }
+    if (sign != 0) peaks.add(current);
+    if (peaks.length < 2) return null;
+
+    final p2p = <double>[
+      for (var i = 0; i + 1 < peaks.length; i++) peaks[i] + peaks[i + 1],
+    ]..sort(); // 반주기 P2P, 작은 것부터
+    final rank = (0.95 * p2p.length).ceil(); // 95백분위의 순위 (1부터)
+    return p2p[rank - 1];
   }
 
   /// 작성: 2026-09-15 21:38:58 · nada
