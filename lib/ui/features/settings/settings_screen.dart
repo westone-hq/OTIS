@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 
 import '../../core/theme.dart';
@@ -35,16 +36,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// 이메일 입력창 아래에 보여줄 오류 문구. 오류가 없으면 null
   String? _error;
 
+  /// 화면에 보여줄 앱 버전 문구. `_loadVersion()`이 채운다. 읽기 전이면
+  /// null
+  String? _version;
+
   /// 작성: 2026-08-19 10:57:06 · 박건준
+  /// 수정: 2026-10-04 13:28:35 · nada
   /// 함수: initState
   /// 목적: 이 화면이 나타날 때 한 번, 입력 컨트롤러를 만들고 저장된
-  ///       이메일을 불러와 입력창에 채운다.
+  ///       이메일과 앱 버전을 불러와 화면에 채운다.
   @override
   void initState() {
     super.initState();
     _emailCtl = TextEditingController();
     // → 로직 이동: _loadEmail()
     _loadEmail();
+    _loadVersion(); // → 로직 이동: _loadVersion()
+  }
+
+  /// 작성: 2026-10-04 13:28:35 · nada
+  /// 함수: _loadVersion
+  /// 목적: 설치된 앱의 버전을 읽어 화면에 채운다. 버전은 `pubspec.yaml`
+  ///       의 `version:` 한 곳에서만 정하고, 빌드할 때 앱에 새겨진 값을
+  ///       그대로 읽는다. 읽지 못하면 "확인 불가"를 보여준다.
+  /// 근거: 표준 — `version: 1.0.0+1` 의 `+` 앞이 `PackageInfo.version`,
+  ///       뒤가 `PackageInfo.buildNumber` 다 (Flutter 빌드 규칙)
+  Future<void> _loadVersion() async {
+    String version; // 화면에 보여줄 버전 문구
+    try {
+      final info = await PackageInfo.fromPlatform(); // 설치된 앱 정보
+      version = '${info.version} (${info.buildNumber})';
+    } catch (_) {
+      version = '확인 불가';
+    }
+    if (!mounted) return;
+    setState(() => _version = version);
   }
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
@@ -183,7 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: AppDims.gap3),
 
               // 2. 앱 버전
-              _buildListTile(title: '앱 버전', trailingText: '1.0.0'),
+              _buildListTile(title: '앱 버전', trailingText: _version ?? ''),
             ],
           ),
         ),
