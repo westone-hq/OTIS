@@ -96,9 +96,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 경로(attachmentPaths)에서는 쓰이지 않는다
   bool _sendPdf = true;
 
-  /// 측정값 원본을 보낼 항목에 포함할지 여부. 첨부 경로를 직접 전달받는
-  /// 경로에서는 쓰이지 않는다. 엑셀은 아직 만들지 않으므로 이 항목을 켜도
-  /// 나가는 것은 측정값 파일 하나다
+  /// 측정값 원본(`raw.txt`)을 보낼 항목에 포함할지 여부. 첨부 경로를
+  /// 직접 전달받는 경로에서는 쓰이지 않는다
   bool _sendRaw = true;
 
   /// 지표 요약을 메일 본문에 넣을지 여부. 첨부 경로를 직접 전달받는
@@ -210,6 +209,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 수정: 2026-10-04 14:30:00 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -266,20 +266,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
           '누락: ${MeasurementRepository.rawFileName} — 측정값 원본 파일이 '
           '없습니다',
         );
-      }
-      // → 로직 이동: MeasurementRepository.ensureRawExcelFiles()
-      final excelFiles = await repo.ensureRawExcelFiles(
-        jobId,
-      ); // 엑셀 원본 파일 목록. 아직 만들지 않으므로 늘 비어 있다
-      for (final excel in excelFiles) {
-        if (await excel.exists()) {
-          attachments.add(excel.path);
-          final name = excel.path
-              .replaceAll('\\', '/')
-              .split('/')
-              .last; // 경로에서 파일명만
-          attachmentDescriptions.add('- $name');
-        }
       }
     }
 
@@ -482,8 +468,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       ),
                       const Divider(height: 1, color: AppColors.border),
                       _buildCheckboxItem(
-                        // 엑셀은 아직 만들지 않는다. 라벨이 약속하면
-                        // 안 온 것을 받는 쪽이 누락으로 여긴다
                         title: '측정값 원본 (raw.txt)',
                         value: _sendRaw,
                         onChanged: (val) =>

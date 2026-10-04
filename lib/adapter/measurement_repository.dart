@@ -324,21 +324,4 @@ class MeasurementRepository {
     // → 로직 이동: writeTuneReport()
     return writeTuneReport(result: result, path: file.path);
   }
-
-  /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-26 09:30:00 · nada
-  /// 함수: ensureRawExcelFiles
-  /// 목적: 측정 결과에 딸린 엑셀 데이터 원본 파일을 가져온다.
-  /// 인자: id — 측정 결과 식별자
-  /// 반환: 엑셀 파일 목록. 지금은 항상 빈 목록
-  /// 미구현: 엑셀을 쓰는 코드가 없다. 예외를 던지지 않고 빈 목록을
-  ///       돌려주므로, 메일 시트(`send_email_sheet.dart`)의
-  ///       `_buildJobEmail()` 은 첨부를 하나도 더하지 않고 그대로
-  ///       넘어간다 — 메일은 정상으로 발송된다.
-  ///       요구사항서 4-① 의 raw data 파일은 같은 폴더의 `raw.txt` 가
-  ///       맡는다. 엑셀로도 내보내려면 표 작성 패키지를 새로 들여야 해서
-  ///       이번 범위 밖으로 두었다.
-  Future<List<File>> ensureRawExcelFiles(String id) async {
-    return const <File>[];
-  }
 }

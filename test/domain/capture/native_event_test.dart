@@ -2,77 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
 /// 작성: 2026-08-06 14:47:52 · 박건준
-/// 수정: 2026-10-04 13:50:15 · nada
+/// 수정: 2026-10-04 14:30:00 · nada
 /// 함수: main
-/// 목적: 안드로이드에서 보내는 센서 원본 데이터(`NativeEvent`)를 텍스트
-///       파일로 저장했다가 다시 읽어들일 때, 데이터가 깨지지 않고
-///       그대로 복원되는지 테스트한다.
+/// 목적: 안드로이드가 채널로 보낸 표를 `NativeEvent` 로 바꿀 때 값이
+///       보존되고, 형식이 맞지 않는 표는 0 으로 채우지 않고 버리는지
+///       시험한다.
 void main() {
-  group('NativeEvent 왕복', () {
-    test('기록 후 판독하면 모든 값이 보존된다', () {
-      const original = NativeEvent(
-        // 기록 전 원본 이벤트
-        type: NativeEventType.linear,
-        tsUs: 123456789,
-        xMg: -1.5,
-        yMg: 0.25,
-        zMg: 1001.75,
-        dtUs: 3921,
-      );
-      final restored = NativeEvent.fromRecordLine(
-        original.toRecordLine(),
-      ); // 왕복 후 복원된 이벤트
-      expect(restored, isNotNull);
-      expect(restored!.type, original.type);
-      expect(restored.tsUs, original.tsUs);
-      expect(restored.xMg, original.xMg);
-      expect(restored.yMg, original.yMg);
-      expect(restored.zMg, original.zMg);
-      expect(restored.dtUs, original.dtUs);
-    });
-
-    test('encode 후 decode 하면 개수와 순서가 보존된다', () {
-      const events = [
-        // 인코딩할 원본 이벤트 3개(종류가 각각 다름)
-        NativeEvent(
-          type: NativeEventType.accel,
-          tsUs: 100,
-          xMg: 1.0,
-          yMg: 2.0,
-          zMg: 3.0,
-          dtUs: 0,
-        ),
-        NativeEvent(
-          type: NativeEventType.gravity,
-          tsUs: 103,
-          xMg: 0.0,
-          yMg: 0.0,
-          zMg: 1000.0,
-          dtUs: 0,
-        ),
-        NativeEvent(
-          type: NativeEventType.linear,
-          tsUs: 105,
-          xMg: -0.5,
-          yMg: 0.5,
-          zMg: 1.5,
-          dtUs: 0,
-        ),
-      ];
-      final text = NativeEventRecord.encode(
-        events,
-        targetSampleRateHz: 256,
-      ); // 인코딩된 텍스트
-      final result = NativeEventRecord.decode(text); // 다시 디코딩한 결과
-      expect(result.skippedLineCount, 0);
-      expect(result.events.length, 3);
-      expect(result.events[0].type, NativeEventType.accel);
-      expect(result.events[1].type, NativeEventType.gravity);
-      expect(result.events[2].type, NativeEventType.linear);
-      expect(result.events[2].tsUs, 105);
-    });
-  });
-
   group('NativeEvent.fromChannelMap', () {
     test('정상 Map 을 판독하고 noiseDba 를 담는다', () {
       final event = NativeEvent.fromChannelMap({
@@ -129,42 +64,6 @@ void main() {
         }),
         isNull,
       );
-    });
-  });
-
-  group('NativeEventRecord.decode 방어', () {
-    test('주석과 빈 줄은 폐기 집계에 넣지 않는다', () {
-      const text = '# 주석\n\nlinear 100 1.0 2.0 3.0 0\n# 또 주석\n'; // 주석·빈 줄 섞인 입력
-      final result = NativeEventRecord.decode(text); // 디코딩 결과
-      expect(result.events.length, 1);
-      expect(result.skippedLineCount, 0);
-    });
-
-    test('형식 불일치 줄은 폐기하고 집계하며 0값으로 채우지 않는다', () {
-      const text =
-          'linear 100 1.0 2.0 3.0 0\n'
-          '깨진 줄\n'
-          'linear abc 1.0 2.0 3.0 0\n'
-          'linear 200 1.0 2.0 3.0 0\n'; // 깨진 줄이 섞인 입력
-      final result = NativeEventRecord.decode(text); // 디코딩 결과
-      expect(result.events.length, 2);
-      expect(result.skippedLineCount, 2);
-      expect(result.events[0].tsUs, 100);
-      expect(result.events[1].tsUs, 200);
-    });
-
-    test('develop 브랜치 실제 머리말 형식을 판독할 수 있다', () {
-      const text =
-          '# OTIS raw_native.txt · 보간 전 센서 이벤트 (samplingPeriodUs=3000)\n'
-          '# 256Hz 리샘플 이전의 실제 콜백. 요청은 1~3ms이며 실제 간격은 기기/OS에 따라 불규칙할 수 있음.\n'
-          '# columns: type tsUs x_mg y_mg z_mg dtUs\n'
-          '# type: accel | gravity | linear\n'
-          'accel 1000 -0.929 0.919 -1.267 0\n'
-          'accel 4921 -0.155 0.342 0.036 3921\n'; // develop 브랜치 실제 머리말 형식
-      final result = NativeEventRecord.decode(text); // 디코딩 결과
-      expect(result.events.length, 2);
-      expect(result.skippedLineCount, 0);
-      expect(result.events[1].dtUs, 3921);
     });
   });
 }

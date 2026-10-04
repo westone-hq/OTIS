@@ -324,12 +324,4 @@ void main() {
       expect(await got!.readAsString(), '이미 만들어 둔 리포트');
     });
   });
-
-  group('MeasurementRepository 엑셀', () {
-    test('아직 만들지 않으므로 빈 목록이다', () async {
-      // 예외를 던지면 메일 발송이 통째로 막힌다. 빈 목록이라야 첨부만
-      // 빠지고 메일은 나간다
-      expect(await repo.ensureRawExcelFiles('20260114-110359'), isEmpty);
-    });
-  });
 }
