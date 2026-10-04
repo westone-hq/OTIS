@@ -423,7 +423,7 @@ class ReportPage1 {
     color: ReportColors.text,
   );
 
-  /// 주소. 앱에 값이 없어 비워 둔다
+  /// 주소. 홈 화면에서 받은 현장 주소
   static const LayoutField address = LayoutField(
     key: 'address',
     x: 1062,

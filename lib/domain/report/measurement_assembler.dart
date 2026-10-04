@@ -156,6 +156,7 @@ class MeasurementAssembler {
         id: id,
         jobNo: site.jobNo,
         siteName: site.siteName,
+        address: site.address.trim(),
         bottomFloor: bottomFloor,
         topFloor: topFloor,
         direction: site.direction,

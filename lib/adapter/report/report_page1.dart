@@ -276,7 +276,7 @@ class ReportPage1Renderer {
   ///       고정값으로 채우거나 비운다.
   ///       - 제번 → 측정 ID, 현장명 → 건물명, 최하층·최상층 → 층 정보
   ///       - 제품 · 품질성능기준 · 측정 종류는 고정 문구
-  ///       - 하중과 주소는 앱이 입력받지 않아 비운다
+  ///       - 주소는 홈 화면에서 받은 값. 하중은 앱이 입력받지 않아 비운다
   ///       - 엔지니어명은 비운다. 앱에 사용자 계정이 없어 채울 값이 없다
   /// 인자: result — 값을 가져올 측정 결과
   /// 반환: 서식 칸 이름을 열쇠로 하는 문구 표
@@ -297,7 +297,7 @@ class ReportPage1Renderer {
       'direction': result.direction,
       'floors': '시작층 : ${result.bottomFloor}, 도착층 : ${result.topFloor}',
       'building_name': result.siteName,
-      'address': '',
+      'address': result.address,
     };
   }
 

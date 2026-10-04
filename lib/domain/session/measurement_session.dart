@@ -23,32 +23,44 @@ enum SiteFieldError {
 ///       싣고, 저장할 때 `MeasurementAssembler` 가 측정 결과로 옮긴다.
 class SiteInfo {
   /// 작성: 2026-10-04 13:31:53 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 변수: directionUp
-  /// 목적: 운전 방향 선택지 — 아래층에서 위층으로. 기본값이다.
+  /// 목적: 운전 방향 선택지 — 상승. 기본값이다.
   ///       측정 결과에 이 문구 그대로 저장되고 리포트에 찍힌다.
-  static const String directionUp = '하부 → 상부';
+  static const String directionUp = '상승';
 
   /// 작성: 2026-10-04 13:31:53 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 변수: directionDown
-  /// 목적: 운전 방향 선택지 — 위층에서 아래층으로.
-  static const String directionDown = '상부 → 하부';
+  /// 목적: 운전 방향 선택지 — 하강.
+  static const String directionDown = '하강';
 
-  /// 작성: 2026-10-04 13:31:53 · nada
-  /// 변수: modelGen2
-  /// 목적: 기종 선택지 — Gen2. 기본값이다.
-  ///       측정 결과에 이 문구 그대로 저장되고 리포트에 찍힌다.
-  static const String modelGen2 = 'Gen2';
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 변수: modelOptions
+  /// 목적: 기종 드롭다운에 보여줄 선택지와 그 차례. 측정 결과에 이 문구
+  ///       그대로 저장되고 리포트에 찍힌다.
+  /// 근거: 인용 — 2026-10-04 사용자 지정 목록
+  static const List<String> modelOptions = <String>[
+    '줄-로우프, 2:1',
+    '줄-로우프, 1:1',
+    'Gen2',
+    '유압',
+    '기타',
+  ];
 
-  /// 작성: 2026-10-04 13:31:53 · nada
-  /// 변수: modelOther
-  /// 목적: 기종 선택지 — Gen2 가 아닌 나머지 전부.
-  static const String modelOther = '기타';
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 변수: defaultModel
+  /// 목적: 처음 입력할 때 미리 골라 둘 기종.
+  static const String defaultModel = 'Gen2';
 
   /// 제번
   final String jobNo;
 
   /// 현장명
   final String siteName;
+
+  /// 현장 주소. 입력하지 않았으면 빈 문자열
+  final String address;
 
   /// 최하층. 숫자 문자열 (예: "1", "-1")
   final String bottomFloor;
@@ -59,14 +71,16 @@ class SiteInfo {
   /// 운전 방향. `directionUp` 또는 `directionDown`
   final String direction;
 
-  /// 엘리베이터 기종. `modelGen2` 또는 `modelOther`
+  /// 엘리베이터 기종. `modelOptions` 가운데 하나
   final String model;
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: SiteInfo
   /// 목적: 입력받은 현장 정보 값을 그대로 담는 생성자.
   /// 인자: jobNo — 제번
   ///       siteName — 현장명
+  ///       address — 현장 주소. 안 주면 빈 문자열
   ///       bottomFloor — 최하층
   ///       topFloor — 최상층
   ///       direction — 방향
@@ -74,11 +88,48 @@ class SiteInfo {
   const SiteInfo({
     required this.jobNo,
     required this.siteName,
+    this.address = '',
     required this.bottomFloor,
     required this.topFloor,
     required this.direction,
     required this.model,
   });
+
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 함수: SiteInfo.fromMap
+  /// 목적: 기기에 저장해 둔 표에서 현장 정보를 되살린다. 홈 화면이 지난번
+  ///       입력을 다시 채울 때 쓴다. 빠진 항목은 빈 값으로, 선택지에 없는
+  ///       운전 방향 · 기종은 기본값으로 둔다 — 예전 선택지(예: "하부 →
+  ///       상부")가 남아 있으면 화면이 그릴 항목을 찾지 못한다.
+  /// 인자: map — `toMap()` 이 만든 표
+  /// 반환: 되살린 현장 정보
+  factory SiteInfo.fromMap(Map<String, String?> map) {
+    final direction = map['direction']; // 저장된 운전 방향, 없으면 null
+    final model = map['model']; // 저장된 기종, 없으면 null
+    return SiteInfo(
+      jobNo: map['jobNo'] ?? '',
+      siteName: map['siteName'] ?? '',
+      address: map['address'] ?? '',
+      bottomFloor: map['bottomFloor'] ?? '',
+      topFloor: map['topFloor'] ?? '',
+      direction: direction == directionDown ? directionDown : directionUp,
+      model: modelOptions.contains(model) ? model! : defaultModel,
+    );
+  }
+
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 함수: toMap
+  /// 목적: 기기에 저장할 표로 바꾼다. `SiteInfo.fromMap` 이 되읽는다.
+  /// 반환: 항목 이름을 열쇠로 하는 표
+  Map<String, String> toMap() => <String, String>{
+    'jobNo': jobNo,
+    'siteName': siteName,
+    'address': address,
+    'bottomFloor': bottomFloor,
+    'topFloor': topFloor,
+    'direction': direction,
+    'model': model,
+  };
 
   /// 작성: 2026-10-04 13:31:53 · nada
   /// 함수: validate

@@ -45,7 +45,7 @@ const _site = SiteInfo(
   bottomFloor: '1',
   topFloor: '8',
   direction: SiteInfo.directionUp,
-  model: SiteInfo.modelGen2,
+  model: SiteInfo.defaultModel,
 );
 
 /// 작성: 2026-10-04 13:36:00 · nada
@@ -119,7 +119,7 @@ void main() {
         bottomFloor: '8',
         topFloor: '1',
         direction: SiteInfo.directionUp,
-        model: SiteInfo.modelGen2,
+        model: SiteInfo.defaultModel,
       ); // 최하층과 최상층을 거꾸로 넣은 현장 정보
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(),

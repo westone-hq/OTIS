@@ -25,9 +25,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
+/// 수정: 2026-10-04 16:44:32 · nada
 /// 클래스: _HomeScreenState
-/// 목적: 홈 화면의 입력 상태를 관리한다.
-///       - 입력 컨트롤러 4개(제번·현장명·최하층·최상층)와 포커스 노드로
+/// 목적: 홈 화면의 입력 상태를 관리한다. 입력이 바뀔 때마다 기기에 저장해,
+///       다음 측정이나 다음 앱 실행 때 마지막 입력이 그대로 남게 한다.
+///       - 입력 컨트롤러 5개(제번·현장명·주소·최하층·최상층)와 포커스 노드로
 ///         텍스트 필드 값과 포커스 이동을 관리한다
 ///       - `_direction`(운전 방향)·`_model`(기종)은 선택형 값이라 별도
 ///         컨트롤러 없이 상태 필드로만 둔다
@@ -40,6 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 현장명 입력 필드의 텍스트 컨트롤러
   final _siteNameCtl = TextEditingController();
 
+  /// 주소 입력 필드의 텍스트 컨트롤러
+  final _addressCtl = TextEditingController();
+
   /// 최하층 입력 필드의 텍스트 컨트롤러
   final _bottomFloorCtl = TextEditingController();
 
@@ -51,6 +56,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// 현장명 입력 필드의 포커스 노드
   final _siteNameFocus = FocusNode();
+
+  /// 주소 입력 필드의 포커스 노드
+  final _addressFocus = FocusNode();
 
   /// 최하층 입력 필드의 포커스 노드
   final _bottomFloorFocus = FocusNode();
@@ -70,8 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 운전 방향. `SiteInfo.directionUp` 또는 `SiteInfo.directionDown`
   String _direction = SiteInfo.directionUp;
 
-  /// 기종. `SiteInfo.modelGen2` 또는 `SiteInfo.modelOther`
-  String _model = SiteInfo.modelGen2;
+  /// 기종. `SiteInfo.modelOptions` 가운데 하나
+  String _model = SiteInfo.defaultModel;
 
   /// 제번 입력 오류 문구. null이면 오류 없음
   String? _jobNoError;
@@ -95,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-04 14:35:59 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _loadSavedInputs
   /// 목적: `PrefsStore`(기기에 값을 저장·불러오는 저장소 클래스)에 저장된
   ///       마지막 현장 정보를 불러와 입력 필드를 채운다.
@@ -103,57 +111,76 @@ class _HomeScreenState extends State<HomeScreen> {
   ///         (`!mounted`) 그대로 끝낸다. 이미 사라진 위젯에 `setState`
   ///         (상태가 바뀌었으니 화면을 다시 그리라고 Flutter에 알리는
   ///         함수)를 하면 오류가 난다
-  ///       - 각 값은 저장된 적이 있을 때(null이 아닐 때)만 반영한다.
-  ///         저장된 적 없는 값은 기존 기본값을 그대로 둔다
-  ///       - 운전 방향 · 기종은 지금 선택지에 있는 값일 때만 반영한다.
-  ///         선택지에 없는 값을 넣으면 기종 드롭다운이 그릴 항목을 찾지
-  ///         못해 오류가 난다
+  ///       - 저장된 적이 없으면 기본값을 그대로 둔다
+  ///       - 선택지에 없는 운전 방향 · 기종은 `SiteInfo.fromMap` 이
+  ///         기본값으로 바꿔 준다
   Future<void> _loadSavedInputs() async {
     final saved = await PrefsStore.instance.loadLastSite(); // 마지막 저장분
-    if (!mounted) return;
-    final jobNo = saved['jobNo']; // 저장된 제번, 없으면 null
-    final siteName = saved['siteName']; // 저장된 현장명, 없으면 null
-    final bottomFloorStr = saved['bottomFloor']; // 저장된 최하층, 없으면 null
-    final topFloorStr = saved['topFloor']; // 저장된 최상층, 없으면 null
-    final direction = saved['direction']; // 저장된 운전 방향, 없으면 null
-    final model = saved['model']; // 저장된 기종, 없으면 null
+    if (!mounted || saved.isEmpty) return;
+    final site = SiteInfo.fromMap(saved); // → 로직 이동: SiteInfo.fromMap()
 
     setState(() {
-      if (jobNo != null) _jobNoCtl.text = jobNo;
-      if (siteName != null) _siteNameCtl.text = siteName;
-      if (bottomFloorStr != null) _bottomFloorCtl.text = bottomFloorStr;
-      if (topFloorStr != null) _topFloorCtl.text = topFloorStr;
-      if (direction == SiteInfo.directionUp ||
-          direction == SiteInfo.directionDown) {
-        _direction = direction!;
-      }
-      if (model == SiteInfo.modelGen2 || model == SiteInfo.modelOther) {
-        _model = model!;
-      }
+      _jobNoCtl.text = site.jobNo;
+      _siteNameCtl.text = site.siteName;
+      _addressCtl.text = site.address;
+      _bottomFloorCtl.text = site.bottomFloor;
+      _topFloorCtl.text = site.topFloor;
+      _direction = site.direction;
+      _model = site.model;
     });
   }
 
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 함수: _currentSite
+  /// 목적: 지금 입력창 · 선택지에 있는 값을 앞뒤 공백을 지워 현장 정보로
+  ///       묶는다.
+  /// 반환: 지금 입력된 현장 정보. 검사는 하지 않는다
+  SiteInfo _currentSite() {
+    return SiteInfo(
+      jobNo: _jobNoCtl.text.trim(),
+      siteName: _siteNameCtl.text.trim(),
+      address: _addressCtl.text.trim(),
+      bottomFloor: _bottomFloorCtl.text.trim(),
+      topFloor: _topFloorCtl.text.trim(),
+      direction: _direction,
+      model: _model,
+    );
+  }
+
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 함수: _saveDraft
+  /// 목적: 지금 입력을 마지막 현장 정보로 저장한다. 입력이 바뀔 때마다
+  ///       부른다 — 측정을 시작하지 않고 앱을 닫아도 다음에 그대로
+  ///       남게 하려는 것이다. 검사를 통과하지 않은 값도 저장한다.
+  void _saveDraft() {
+    // → 로직 이동: PrefsStore.saveLastSite()
+    PrefsStore.instance.saveLastSite(_currentSite().toMap());
+  }
+
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: dispose
   /// 목적: `dispose`(이 화면이 완전히 사라질 때 Flutter가 마지막으로
   ///       한 번 불러주는 생명주기 메서드. `initState`의 반대 시점)다.
-  ///       입력 컨트롤러 4개와 포커스 노드 4개를 정리해, 메모리에 계속
+  ///       입력 컨트롤러 5개와 포커스 노드 5개를 정리해, 메모리에 계속
   ///       남아있지 않게 한다.
   @override
   void dispose() {
     _jobNoCtl.dispose();
     _siteNameCtl.dispose();
+    _addressCtl.dispose();
     _bottomFloorCtl.dispose();
     _topFloorCtl.dispose();
     _jobNoFocus.dispose();
     _siteNameFocus.dispose();
+    _addressFocus.dispose();
     _bottomFloorFocus.dispose();
     _topFloorFocus.dispose();
     super.dispose();
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-04 13:35:26 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _startMeasure
   /// 목적: 입력값을 검증하고, 통과하면 측정을 시작한다.
   ///       - 포커스를 해제하고 입력값을 다듬어 `SiteInfo`(제번 · 현장명 ·
@@ -170,24 +197,16 @@ class _HomeScreenState extends State<HomeScreen> {
     // 1) 포커스 해제 및 입력값 다듬기
     FocusScope.of(context).unfocus();
 
-    final siteInfo = SiteInfo(
-      // 앞뒤 공백을 지운 입력값을 묶은 현장 정보
-      jobNo: _jobNoCtl.text.trim(),
-      siteName: _siteNameCtl.text.trim(),
-      bottomFloor: _bottomFloorCtl.text.trim(),
-      topFloor: _topFloorCtl.text.trim(),
-      direction: _direction,
-      model: _model,
-    );
+    final siteInfo = _currentSite(); // → 로직 이동: _currentSite()
 
     // 2) 검증
     // → 로직 이동: SiteInfo.validate()
     final errors = siteInfo.validate(); // 걸린 항목, 없으면 빈 목록
     final jobNoError = errors.contains(SiteFieldError.jobNoMissing)
-        ? '제번을 입력하세요 (예: 2024F 1447R01)'
+        ? '제번을 입력하세요'
         : null; // 제번 오류 문구, 없으면 null
     final siteNameError = errors.contains(SiteFieldError.siteNameMissing)
-        ? '현장명을 입력하세요 (예: 럭키종합건설/송정동근생)'
+        ? '현장명을 입력하세요'
         : null; // 현장명 오류 문구, 없으면 null
     // → 로직 이동: _floorErrorMessage()
     final floorError = _floorErrorMessage(errors); // 층수 오류 문구, 없으면 null
@@ -231,14 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
     MeasurementSession.instance.currentSite = siteInfo;
 
     // → 로직 이동: PrefsStore.saveLastSite()
-    PrefsStore.instance.saveLastSite({
-      'jobNo': siteInfo.jobNo,
-      'siteName': siteInfo.siteName,
-      'bottomFloor': siteInfo.bottomFloor,
-      'topFloor': siteInfo.topFloor,
-      'direction': siteInfo.direction,
-      'model': siteInfo.model,
-    });
+    PrefsStore.instance.saveLastSite(siteInfo.toMap());
 
     context.push('/start'); // → 로직 이동: StartScreen.initState()
   }
@@ -322,6 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _buildJobNoField
   /// 목적: 제번 입력 필드를 만든다. 값을 고치면 오류 표시를 지운다.
   /// 반환: 제번 입력 영역 위젯
@@ -341,12 +354,12 @@ class _HomeScreenState extends State<HomeScreen> {
               style: AppText.body,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                hintText: '예: 2024F 1447R01',
                 enabledBorder: _jobNoError != null ? _errorBorder() : null,
                 focusedBorder: _jobNoError != null ? _errorBorder() : null,
               ),
               onSubmitted: (_) => _siteNameFocus.requestFocus(),
               onChanged: (_) {
+                _saveDraft(); // → 로직 이동: _saveDraft()
                 if (_jobNoError != null) {
                   setState(() => _jobNoError = null);
                 }
@@ -360,6 +373,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _buildSiteNameField
   /// 목적: 현장명 입력 필드를 만든다. 값을 고치면 오류 표시를 지운다.
   /// 반환: 현장명 입력 영역 위젯
@@ -379,12 +393,12 @@ class _HomeScreenState extends State<HomeScreen> {
               style: AppText.body,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                hintText: '예: 럭키종합건설/송정동근생',
                 enabledBorder: _siteNameError != null ? _errorBorder() : null,
                 focusedBorder: _siteNameError != null ? _errorBorder() : null,
               ),
-              onSubmitted: (_) => _bottomFloorFocus.requestFocus(),
+              onSubmitted: (_) => _addressFocus.requestFocus(),
               onChanged: (_) {
+                _saveDraft(); // → 로직 이동: _saveDraft()
                 if (_siteNameError != null) {
                   setState(() => _siteNameError = null);
                 }
@@ -397,7 +411,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 함수: _buildAddressField
+  /// 목적: 현장 주소 입력 필드를 만든다. 주소는 리포트 머리말의 주소 칸에
+  ///       찍히고, 비워 둬도 측정은 시작할 수 있다.
+  /// 반환: 주소 입력 영역 위젯
+  Widget _buildAddressField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('주소', style: AppText.bodyBold),
+        const SizedBox(height: AppDims.gap),
+        SizedBox(
+          height: AppDims.fieldH,
+          child: TextField(
+            controller: _addressCtl,
+            focusNode: _addressFocus,
+            style: AppText.body,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(hintText: '시 · 도 주소'),
+            onSubmitted: (_) => _bottomFloorFocus.requestFocus(),
+            onChanged: (_) => _saveDraft(), // → 로직 이동: _saveDraft()
+          ),
+        ),
+      ],
+    );
+  }
+
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _buildFloorFields
   /// 목적: 최하층 · 최상층 입력 필드 2개를 나란히 만든다. 숫자만 입력받고,
   ///       값을 고치면 오류 표시를 지운다.
@@ -437,6 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     onSubmitted: (_) => _topFloorFocus.requestFocus(),
                     onChanged: (_) {
+                      _saveDraft(); // → 로직 이동: _saveDraft()
                       if (_floorError != null) {
                         setState(() => _floorError = null);
                       }
@@ -470,6 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     onSubmitted: (_) => _startMeasure(),
                     onChanged: (_) {
+                      _saveDraft(); // → 로직 이동: _saveDraft()
                       if (_floorError != null) {
                         setState(() => _floorError = null);
                       }
@@ -486,9 +530,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _buildDirectionSelector
-  /// 목적: 운전 방향(하부 → 상부 / 상부 → 하부)을 고르는 버튼 2개를 만든다.
+  /// 목적: 운전 방향(상승 / 하강)을 고르는 버튼 2개를 만든다.
   /// 반환: 운전 방향 선택 위젯
   Widget _buildDirectionSelector() {
     return Column(
@@ -518,6 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
           selected: {_direction},
           onSelectionChanged: (val) {
             setState(() => _direction = val.first);
+            _saveDraft(); // → 로직 이동: _saveDraft()
           },
           style: SegmentedButton.styleFrom(
             backgroundColor: AppColors.surface,
@@ -536,9 +581,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _buildModelSelector
-  /// 목적: 기종(Gen2 / 기타)을 고르는 드롭다운을 만든다.
+  /// 목적: 기종을 고르는 드롭다운을 만든다. 선택지는
+  ///       `SiteInfo.modelOptions` 차례 그대로다.
   /// 반환: 기종 선택 위젯
   Widget _buildModelSelector() {
     return Column(
@@ -548,18 +594,14 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: AppDims.gap),
         DropdownButtonFormField<String>(
           initialValue: _model,
-          items: const [
-            DropdownMenuItem(
-              value: SiteInfo.modelGen2,
-              child: Text(SiteInfo.modelGen2),
-            ),
-            DropdownMenuItem(
-              value: SiteInfo.modelOther,
-              child: Text(SiteInfo.modelOther),
-            ),
+          items: [
+            for (final option in SiteInfo.modelOptions)
+              DropdownMenuItem(value: option, child: Text(option)),
           ],
           onChanged: (val) {
-            if (val != null) setState(() => _model = val);
+            if (val == null) return;
+            setState(() => _model = val);
+            _saveDraft(); // → 로직 이동: _saveDraft()
           },
           style: AppText.body,
           icon: const Icon(
@@ -575,12 +617,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: build
   /// 목적: 홈 화면(현장 정보 입력) 레이아웃을 구성한다.
   ///       - `appBar` — 화면 제목과, 설정·저장 결과 화면으로 이동하는
   ///         버튼 2개
-  ///       - `body` — 스크롤 가능한 입력 폼. 제번 → 현장명 → 최하층·최상층
+  ///       - `body` — 스크롤 가능한 입력 폼. 제번 → 현장명 → 주소 → 최하층·최상층
   ///         → 운전 방향 → 기종 순으로 입력받는다. `_startMeasure`가 찾아낸
   ///         오류는 각 필드 아래 빨간 오류 박스로 표시한다
   ///       - `bottomNavigationBar` — 입력을 마치고 `_startMeasure`를 호출해
@@ -621,6 +663,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildJobNoField(),
           const SizedBox(height: AppDims.gap3),
           _buildSiteNameField(),
+          const SizedBox(height: AppDims.gap3),
+          _buildAddressField(),
           const SizedBox(height: AppDims.gap3),
           _buildFloorFields(),
           const SizedBox(height: AppDims.gap3),
