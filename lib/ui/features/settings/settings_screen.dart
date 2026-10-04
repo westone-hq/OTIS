@@ -3,6 +3,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 
 import '../../core/theme.dart';
+import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_layout.dart';
+import '../../core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
 /// 수정: 2026-10-04 13:26:44 · nada
@@ -96,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
-  /// 수정: 2026-10-04 13:26:44 · nada
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _save
   /// 목적: "저장" 버튼을 눌렀을 때 실행된다. 입력한 이메일이
   ///       `name@example.com`처럼 "@" 앞뒤에 글자가 있고 "@" 뒤에
@@ -118,21 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _error = null);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: AppColors.green),
-            SizedBox(width: AppDims.gap),
-            Expanded(
-              child: Text('저장되었습니다', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.navy,
-      ),
-    );
+    showSuccessSnackBar(context, '저장되었습니다');
   }
 
   /// 작성: 2026-10-04 13:26:44 · nada
@@ -142,17 +131,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ///       trailingText — 오른쪽에 놓을 값
   /// 반환: 정보 행 위젯
   Widget _buildListTile({required String title, required String trailingText}) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 64),
-      alignment: Alignment.center,
+    return AppCard(
+      minHeight: AppDims.rowMinH,
       padding: const EdgeInsets.symmetric(
         horizontal: AppDims.gap2,
         vertical: AppDims.gap,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppDims.radius),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -168,51 +151,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 13:26:44 · nada
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: build
   /// 목적: 설정 화면을 그린다. 이메일 등록과 앱 버전을 세로로 배치한다.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppDims.screenPad),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. 결과 수신 이메일 설정 섹션
-              Text('결과 수신 이메일', style: AppText.bodyBold),
-              const SizedBox(height: AppDims.gap),
-              TextField(
-                controller: _emailCtl,
-                keyboardType: TextInputType.emailAddress,
-                style: AppText.body,
-                decoration: InputDecoration(
-                  hintText: '예: name@otis.com',
-                  errorText: _error,
-                  prefixIcon: Icon(
-                    _error != null ? Icons.error_outline : Icons.email_outlined,
-                    color: _error != null ? AppColors.red : AppColors.textSub,
-                  ),
-                ),
+      body: AppScrollBody(
+        children: [
+          // 1. 결과 수신 이메일 설정 섹션
+          Text('결과 수신 이메일', style: AppText.bodyBold),
+          const SizedBox(height: AppDims.gap),
+          TextField(
+            controller: _emailCtl,
+            keyboardType: TextInputType.emailAddress,
+            style: AppText.body,
+            decoration: InputDecoration(
+              hintText: '예: name@otis.com',
+              errorText: _error,
+              prefixIcon: Icon(
+                _error != null ? Icons.error_outline : Icons.email_outlined,
+                color: _error != null ? AppColors.red : AppColors.textSub,
               ),
-              const SizedBox(height: AppDims.gap),
-              // 입력한 이메일을 형식 검사 후 저장
-              SizedBox(
-                height: AppDims.buttonH,
-                child: ElevatedButton(
-                  onPressed: _save,
-                  child: const Text('저장'),
-                ),
-              ),
-              const SizedBox(height: AppDims.gap3),
-
-              // 2. 앱 버전
-              _buildListTile(title: '앱 버전', trailingText: _version ?? ''),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: AppDims.gap),
+          // 입력한 이메일을 형식 검사 후 저장
+          ElevatedButton(
+            onPressed: _save, // → 로직 이동: _save()
+            child: const Text('저장'),
+          ),
+          const SizedBox(height: AppDims.gap3),
+
+          // 2. 앱 버전
+          _buildListTile(title: '앱 버전', trailingText: _version ?? ''),
+        ],
       ),
     );
   }

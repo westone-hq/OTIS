@@ -10,6 +10,9 @@ import 'package:vibration_checker/domain/session/measurement_session.dart';
 
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_layout.dart';
+import '../../core/widgets/app_notice.dart';
+import '../../core/widgets/app_snack_bar.dart';
 import '../shared/send_email_sheet.dart';
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
@@ -138,7 +141,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:33:18 · nada
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _initCaptureAndTimers
   /// 목적: 카운트다운이 끝난 뒤(또는 대기 시간이 없으면 곧바로) 경과
   ///       시간 타이머를 켜고 센서 수집을 시작한다. 마이크 권한이
@@ -162,18 +165,14 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       onNoResponse: _onNoResponse, // → 로직 이동: _onNoResponse()
     ); // 마이크 권한을 받았는지
     if (!audioGranted && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '소음 제외 측정: 마이크 권한이 거절되어 진동만 측정합니다. '
-            '(결과 파일 소음 열은 0.0)\n'
-            '권한 설정 창이 다시 안 뜨면 휴대폰 설정 > 앱 > OTIS 진동 측정 > '
-            '권한에서 마이크를 허용해 주세요.',
-            style: AppText.body.copyWith(color: Colors.white),
-          ),
-          backgroundColor: AppColors.red,
-          duration: const Duration(seconds: 5),
-        ),
+      showErrorSnackBar(
+        context,
+        '소음 제외 측정: 마이크 권한이 거절되어 진동만 측정합니다. '
+        '(결과 파일 소음 열은 0.0)\n'
+        '권한 설정 창이 다시 안 뜨면 휴대폰 설정 > 앱 > OTIS 진동 측정 > '
+        '권한에서 마이크를 허용해 주세요.',
+        // 문구가 길어 읽을 시간을 기본보다 더 준다
+        duration: const Duration(seconds: 5),
       );
     }
   }
@@ -252,6 +251,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _showAbortedDialog
   /// 목적: 측정 중 전화가 오는 등 앱이 화면 밖으로 밀려나면 측정이
   ///       중단된다. 앱으로 다시 돌아왔을 때, 이 대화상자로 측정이
@@ -261,29 +261,20 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///       않는다.
   Future<void> _showAbortedDialog() async {
     if (!mounted) return;
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('측정이 중단되었습니다'),
-        content: const Text(
-          '측정 중 앱이 백그라운드로 전환되어(전화 수신 등) 측정을 중단했습니다. 처음부터 다시 측정해 주세요.',
-        ),
-        actions: [
-          AppDialogButton(
-            label: '확인',
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              // → 로직 이동: StartScreen.build()
-              if (mounted) context.go('/start');
-            },
-          ),
-        ],
-      ),
+    // → 로직 이동: showAppConfirmDialog()
+    await showAppConfirmDialog(
+      context,
+      title: '측정이 중단되었습니다',
+      message:
+          '측정 중 앱이 백그라운드로 전환되어(전화 수신 등) 측정을 중단했습니다. '
+          '처음부터 다시 측정해 주세요.',
+      confirmLabel: '확인',
     );
+    if (mounted) context.go('/start'); // → 로직 이동: StartScreen.build()
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _showMeasureFailDialog
   /// 목적: 측정 실패를 알리는 대화상자를 띄운다. "확인"을 누르면
   ///       `/start` 화면으로 돌아간다. 화면이 이미 사라졌으면
@@ -291,24 +282,14 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   /// 인자: message — 실패 사유를 보여줄 문구
   Future<void> _showMeasureFailDialog(String message) async {
     if (!mounted) return;
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('측정 실패'),
-        content: Text(message),
-        actions: [
-          AppDialogButton(
-            label: '확인',
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              // → 로직 이동: StartScreen.build()
-              if (mounted) context.go('/start');
-            },
-          ),
-        ],
-      ),
+    // → 로직 이동: showAppConfirmDialog()
+    await showAppConfirmDialog(
+      context,
+      title: '측정 실패',
+      message: message,
+      confirmLabel: '확인',
     );
+    if (mounted) context.go('/start'); // → 로직 이동: StartScreen.build()
   }
 
   /// 작성: 2026-10-04 13:33:18 · nada
@@ -446,43 +427,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 함수: _showExitDialog
-  /// 목적: "측정을 중단할까요?" 확인 대화상자를 띄운다. 저장 없이
-  ///       중단된다는 것을 함께 알린다.
-  /// 반환: 사용자 선택. "중단하기"면 true, "계속 측정"이면 false,
-  ///       대화상자 밖을 눌러 닫으면 null
-  Future<bool?> _showExitDialog() {
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('측정 중단', style: AppText.subhead),
-        content: Text(
-          '측정을 중단할까요?\n진행 중인 측정 데이터는 저장되지 않습니다.',
-          style: AppText.body,
-        ),
-        actions: [
-          AppDialogButton(
-            label: '계속 측정',
-            onPressed: () => Navigator.of(ctx).pop(false),
-            primary: false,
-          ),
-          AppDialogButton(
-            label: '중단하기',
-            onPressed: () => Navigator.of(ctx).pop(true),
-            isDestructive: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-09-27 11:30:00 · nada
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _confirmAndExit
   /// 목적: 기기 뒤로가기(제스처 · 버튼)를 눌렀을 때와 앱바의 뒤로가기
   ///       버튼을 눌렀을 때, 둘 다 이 함수가 실행된다.
-  ///       "측정을 중단할까요?" 확인 대화상자(`_showExitDialog`)를
-  ///       띄우고, "중단하기"를 선택하면 타이머를 멈추고 센서 수집을
+  ///       저장 없이 중단된다는 것을 알리는 확인 대화상자를 띄우고,
+  ///       "중단하기"를 선택하면 타이머를 멈추고 센서 수집을
   ///       끄는 정리(`_cleanup()`)를 한 뒤 이 화면에서 나가 이전
   ///       화면으로 돌아간다.
   ///       대화상자를 기다리는 사이에 화면이 사라질 수 있으므로, 기다린
@@ -491,8 +441,17 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///       아니라 그 자리의 위젯만 살폈다고 보고 분석기가 경고하기
   ///       때문이다 — 여기서는 화면 자체가 사라졌는지가 알고 싶은 것이다.
   Future<void> _confirmAndExit() async {
-    final confirm = await _showExitDialog(); // 사용자 선택. true면 중단
-    if (confirm == true && mounted) {
+    // → 로직 이동: showAppConfirmDialog()
+    final confirm = await showAppConfirmDialog(
+      context,
+      title: '측정 중단',
+      message: '측정을 중단할까요?\n진행 중인 측정 데이터는 저장되지 않습니다.',
+      confirmLabel: '중단하기',
+      cancelLabel: '계속 측정',
+      isDestructive: true,
+      barrierDismissible: true,
+    ); // 사용자 선택. true 면 중단
+    if (confirm && mounted) {
       _isFinished = true;
       await _cleanup(); // → 로직 이동: _cleanup()
       if (mounted) context.pop();
@@ -500,6 +459,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: build
   /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자 카운트다운
   ///       화면을, 아니면 경과 시간과 "테스트 완료" 버튼이 있는 실제
@@ -514,24 +474,21 @@ class _MeasuringScreenState extends State<MeasuringScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  '$_countdownSec',
-                  style: AppText.bigNumber.copyWith(
-                    color: AppColors.blue,
-                    fontSize: 120,
-                  ),
-                ),
+                Text('$_countdownSec', style: AppText.countdown),
                 const SizedBox(height: AppDims.gap3),
                 Text(
                   '잠시 후 측정이 시작됩니다...',
-                  style: AppText.subhead.copyWith(color: Colors.white),
+                  style: AppText.subhead.copyWith(color: AppColors.onDark),
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: AppDims.gap6),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.surface,
                     foregroundColor: AppColors.text,
-                    minimumSize: const Size(200, 64),
+                    minimumSize: const Size(
+                      AppDims.wideButtonW,
+                      AppDims.buttonH,
+                    ),
                   ),
                   onPressed: () {
                     _countdownTimer?.cancel();
@@ -574,7 +531,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
         backgroundColor: AppColors.navy,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onDark,
           elevation: 0,
           leading: Semantics(
             button: true,
@@ -585,8 +542,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
               child: IconButton(
                 icon: const Icon(
                   Icons.arrow_back,
-                  size: 28,
-                  color: Colors.white,
+                  size: AppDims.iconM,
+                  color: AppColors.onDark,
                 ),
                 onPressed: _confirmAndExit, // → 로직 이동: _confirmAndExit()
               ),
@@ -594,7 +551,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           ),
           title: Text(
             '테스트 진행 중...',
-            style: AppText.subhead.copyWith(color: Colors.white),
+            style: AppText.subhead.copyWith(color: AppColors.onDark),
           ),
         ),
         body: SafeArea(
@@ -612,23 +569,23 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                         Text(
                           '측정 중',
                           style: AppText.bodyBold.copyWith(
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: AppColors.onDarkSub,
                           ),
                         ),
-                        const SizedBox(height: 40),
+                        const SizedBox(height: AppDims.gap5),
 
                         // 걸린 시간 섹션
                         Text(
                           '걸린 시간',
                           style: AppText.bodyBold.copyWith(
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: AppColors.onDarkSub,
                           ),
                         ),
                         const SizedBox(height: AppDims.gap),
                         Text(
                           timeFormatted,
                           style: AppText.bigNumber.copyWith(
-                            color: Colors.white,
+                            color: AppColors.onDark,
                           ),
                         ),
                       ],
@@ -642,44 +599,23 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDims.screenPad,
                 ),
-                child: Container(
-                  padding: const EdgeInsets.all(AppDims.gap2),
-                  decoration: BoxDecoration(
-                    color: AppColors.red,
-                    borderRadius: BorderRadius.circular(AppDims.radius),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.front_hand_outlined,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(width: AppDims.gap2),
-                      Expanded(
-                        child: Text(
-                          _useVolumeKeyStop
-                              ? '측정 중입니다.\n휴대폰을 움직이지 마세요.\n볼륨키를 누르면 측정이 종료됩니다.'
-                              : '테스트가 진행되는 동안 휴대폰을 들어 올리지 마세요',
-                          style: AppText.bodyBold.copyWith(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: AppNotice(
+                  icon: Icons.front_hand_outlined,
+                  message: _useVolumeKeyStop
+                      ? '측정 중입니다.\n휴대폰을 움직이지 마세요.\n볼륨키를 누르면 측정이 종료됩니다.'
+                      : '테스트가 진행되는 동안 휴대폰을 들어 올리지 마세요',
+                  tone: NoticeTone.alert,
                 ),
               ),
               const SizedBox(height: AppDims.gap2),
             ],
           ),
         ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(AppDims.screenPad),
-            child: ElevatedButton(
-              // → 로직 이동: _finishMeasurement()
-              onPressed: _isFinishing ? null : _finishMeasurement,
-              child: Text(_isFinishing ? '종료 중...' : '테스트 완료'),
-            ),
+        bottomNavigationBar: AppBottomBar(
+          child: ElevatedButton(
+            // → 로직 이동: _finishMeasurement()
+            onPressed: _isFinishing ? null : _finishMeasurement,
+            child: Text(_isFinishing ? '종료 중...' : '테스트 완료'),
           ),
         ),
       ),

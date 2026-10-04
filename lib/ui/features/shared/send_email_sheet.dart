@@ -9,29 +9,26 @@ import 'package:vibration_checker/adapter/report_generator.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 
 import '../../core/theme.dart';
+import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_layout.dart';
+import '../../core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
+/// 수정: 2026-10-04 13:37:23 · nada
 /// 함수: showSendEmailSheet
-/// 목적: 이메일 발송 화면을 `showModalBottomSheet`(화면 아래에서 위로
-///       올라오는 바텀 시트를 띄우는 Flutter 함수)로 띄운다. 측정
-///       결과 화면과 첨부파일 전달 화면 둘 다 이 함수 하나로 발송
-///       시트를 연다. 각 인자의 역할은 다음과 같다.
-///       - `context` — 어느 화면 위에 띄울지 알려주는 위치 정보
-///       - `isScrollControlled` — true로 주면 시트가 내용 길이에 맞춰
-///         화면 위쪽 끝까지 늘어날 수 있다
-///       - `backgroundColor` — 시트 바탕색
-///       - `shape` — 시트의 위쪽 두 모서리만 둥글게 깎는 테두리 모양
-///       - `builder` — 시트 안에 실제로 그릴 위젯을 돌려주는 함수.
-///         여기서는 `SendEmailSheet`를 그대로 띄운다
-/// 인자: context — 시트를 띄울 화면의 BuildContext
+/// 목적: 이메일 발송 화면을 앱 공통 모양의 바텀 시트(화면 아래에서 위로
+///       올라오는 패널)로 띄운다. 저장된 측정 결과를 보낼 때와, 측정을
+///       막 마친 파일을 그대로 보낼 때 둘 다 이 함수 하나로 연다.
+/// 인자: context — 시트를 띄울 화면의 위치 정보
 ///       jobId — 첨부할 측정 결과의 식별자. 저장소에서 그 결과를 찾아
 ///       첨부한다. attachmentPaths 대신 쓴다
 ///       attachmentPaths — 이미 가진 파일을 저장소 조회 없이 그대로
 ///       첨부하는 경로 목록. jobId 대신 쓴다
 ///       subject — 메일 제목. attachmentPaths 경로에서만 쓰인다
 ///       body — 메일 본문. attachmentPaths 경로에서만 쓰인다
-/// 반환: 시트가 닫힐 때 완료되는 Future
+/// 반환: 시트가 닫힐 때 완료되는 비동기 작업. jobId 와 attachmentPaths 를
+///       둘 다 주거나 둘 다 빼면 `ArgumentError` 를 던진다
 Future<void> showSendEmailSheet(
   BuildContext context, {
   String? jobId,
@@ -42,13 +39,8 @@ Future<void> showSendEmailSheet(
   if ((jobId != null) == (attachmentPaths != null)) {
     throw ArgumentError('jobId 와 attachmentPaths 중 정확히 하나만 지정해야 한다');
   }
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppDims.radius)),
-    ),
+  return showAppSheet(
+    context,
     // → 로직 이동: SendEmailSheet.initState()
     builder: (ctx) => SendEmailSheet(
       jobId: jobId,
@@ -155,6 +147,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _send
   /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 등록되지
   ///       않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
@@ -167,32 +160,21 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       것은 아니다.
   Future<void> _send() async {
     if (!_isEmailSet) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('이메일 등록 안내', style: AppText.subhead),
-          content: Text(
-            '수신할 이메일 주소가 설정되지 않았습니다.\n설정 화면에서 먼저 이메일을 등록해 주세요.',
-            style: AppText.body,
-          ),
-          actions: [
-            AppDialogButton(
-              label: '취소',
-              onPressed: () => Navigator.of(ctx).pop(),
-              primary: false,
-            ),
-            AppDialogButton(
-              label: '설정으로 이동',
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                Navigator.of(context).pop();
-                // → 로직 이동: SettingsScreen
-                context.push('/settings');
-              },
-            ),
-          ],
-        ),
-      );
+      // → 로직 이동: showAppConfirmDialog()
+      final goToSettings = await showAppConfirmDialog(
+        context,
+        title: '이메일 등록 안내',
+        message:
+            '수신할 이메일 주소가 설정되지 않았습니다.\n'
+            '설정 화면에서 먼저 이메일을 등록해 주세요.',
+        confirmLabel: '설정으로 이동',
+        cancelLabel: '취소',
+        barrierDismissible: true,
+      ); // 설정으로 가기를 골랐는지
+      if (goToSettings && mounted) {
+        Navigator.of(context).pop();
+        context.push('/settings'); // → 로직 이동: SettingsScreen.build()
+      }
       return;
     }
 
@@ -205,38 +187,18 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
           // → 로직 이동: _buildJobEmail()
           : await _buildJobEmail(widget.jobId!);
 
-      // → 로직 이동: 기기 메일 앱(외부)
+      // → 로직 이동: FlutterEmailSender.send()
       await FlutterEmailSender.send(email);
 
       if (!mounted) return;
       Navigator.of(context).pop();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_outline, color: AppColors.green),
-              const SizedBox(width: AppDims.gap),
-              const Expanded(
-                child: Text(
-                  '메일 작성창이 호출되었습니다 (첨부 구성 완료)',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.navy,
-        ),
-      );
+      showSuccessSnackBar(context, '메일 작성창이 호출되었습니다 (첨부 구성 완료)');
     } catch (e) {
       if (!mounted) return;
       final message = widget.jobId != null
           ? '메일에 넣을 자료를 준비하지 못했습니다.\n$e'
           : '메일 작성창 호출 실패: $e'; // 화면에 보여줄 실패 안내 문구
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppColors.red),
-      );
+      showErrorSnackBar(context, message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -382,22 +344,32 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     );
   }
 
+  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 함수: _buildCheckboxItem
+  /// 목적: 보낼 항목 하나를 체크박스 + 이름 한 줄로 만든다. 줄 어디를
+  ///       눌러도 체크가 바뀌고, 체크박스는 어르신이 누르기 쉽게 키운다.
+  /// 인자: title — 항목 이름
+  ///       value — 지금 체크됐는지
+  ///       onChanged — 체크를 바꿀 때 부를 함수. 바뀐 값을 받는다
+  /// 반환: 체크 항목 한 줄 위젯
   Widget _buildCheckboxItem({
     required String title,
     required bool value,
     required ValueChanged<bool?> onChanged,
   }) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 64),
+      constraints: const BoxConstraints(minHeight: AppDims.rowMinH),
       alignment: Alignment.center,
       child: InkWell(
+        // 줄 전체를 누를 자리로 만든다
         onTap: () => onChanged(!value),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppDims.gap),
           child: Row(
             children: [
               Transform.scale(
-                scale: 1.4,
+                // 체크박스만 키운다
+                scale: AppDims.checkboxScale,
                 child: Checkbox(
                   value: value,
                   onChanged: onChanged,
@@ -413,12 +385,26 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     );
   }
 
+  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 함수: build
+  /// 목적: 이메일 발송 시트를 그린다. 위에서부터 순서대로 놓는다.
+  ///       1. 제목과 닫기 버튼
+  ///       2. 받는 사람 카드. "변경"을 누르면 설정 화면으로 간다
+  ///       3. 보낼 항목 체크 목록. 파일을 그대로 넘겨받은 경우에는 넘겨받은
+  ///          파일을 전부 보내므로 목록을 보여주지 않는다
+  ///       4. 아무 항목도 고르지 않았을 때의 안내와 "보내기" 버튼
+  /// 인자: context — 이 시트가 화면 어디에 놓이는지 알려주는 값
+  /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
-    final bool isAttachmentMode = widget.attachmentPaths != null;
-    final bool noneSelected =
-        !isAttachmentMode && !_sendPdf && !_sendRaw && !_sendSummary;
-    final double sheetHeight = MediaQuery.of(context).size.height * 0.7;
+    final isAttachmentMode = widget.attachmentPaths != null; // 파일을 그대로 넘겨받았는지
+    final noneSelected =
+        !isAttachmentMode &&
+        !_sendPdf &&
+        !_sendRaw &&
+        !_sendSummary; // 보낼 항목을 하나도 고르지 않았는지
+    final sheetHeight =
+        MediaQuery.of(context).size.height * AppDims.sheetHeightFactor; // 시트 높이
 
     return SizedBox(
       height: sheetHeight,
@@ -442,13 +428,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
             const SizedBox(height: AppDims.gap),
 
             // 2. 수신자 카드
-            Container(
-              padding: const EdgeInsets.all(AppDims.gap2),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppDims.radius),
-                border: Border.all(color: AppColors.border),
-              ),
+            AppCard(
               child: Row(
                 children: [
                   Expanded(
@@ -461,7 +441,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                             color: AppColors.textSub,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppDims.gapHalf),
                         Text(_recipientEmail, style: AppText.bodyBold),
                       ],
                     ),
@@ -471,7 +451,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                     label: '변경',
                     onPressed: () {
                       Navigator.of(context).pop();
-                      // → 로직 이동: SettingsScreen
+                      // → 로직 이동: SettingsScreen.build()
                       context.push('/settings');
                     },
                     primary: false,
@@ -525,10 +505,10 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                 children: [
                   const Icon(
                     Icons.error_outline,
-                    size: 18,
+                    size: AppDims.iconXs,
                     color: AppColors.red,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppDims.gapHalf),
                   Text(
                     '보낼 항목을 선택하세요',
                     style: AppText.caption.copyWith(
@@ -546,11 +526,11 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                 onPressed: (noneSelected || _loading) ? null : _send,
                 child: _loading
                     ? const SizedBox(
-                        width: 24,
-                        height: 24,
+                        width: AppDims.iconS,
+                        height: AppDims.iconS,
                         child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5,
+                          color: AppColors.onDark,
+                          strokeWidth: AppDims.spinnerStroke,
                         ),
                       )
                     : const Text('보내기'),

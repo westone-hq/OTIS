@@ -59,6 +59,7 @@ class AppDialogButton extends StatelessWidget {
   });
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: build
   /// 목적: primary·isDestructive·icon 여부에 따라 ElevatedButton 또는
   ///       TextButton으로 그린다.
@@ -66,8 +67,8 @@ class AppDialogButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color defaultColor =
         isDestructive // isDestructive·primary 조합별 기본 글자색
-        ? (primary ? Colors.white : AppColors.red)
-        : (primary ? Colors.white : AppColors.navy);
+        ? (primary ? AppColors.onDark : AppColors.red)
+        : (primary ? AppColors.onDark : AppColors.navy);
     final Color effectiveColor = textColor ?? defaultColor; // 실제로 쓸 글자색
 
     final TextStyle effectiveStyle = (textStyle ?? AppText.bodyBold).copyWith(
@@ -96,7 +97,7 @@ class AppDialogButton extends StatelessWidget {
           style: style,
           icon: Icon(
             icon,
-            size: iconSize ?? 22,
+            size: iconSize ?? AppDims.iconS,
             color: iconColor ?? effectiveColor,
           ),
           label: textWidget,
@@ -123,7 +124,7 @@ class AppDialogButton extends StatelessWidget {
           style: style,
           icon: Icon(
             icon,
-            size: iconSize ?? 24,
+            size: iconSize ?? AppDims.iconS,
             color: iconColor ?? effectiveColor,
           ),
           label: textWidget,
@@ -146,6 +147,7 @@ class AppDialogButton extends StatelessWidget {
 }
 
 /// 작성: 2026-08-06 15:59:06 · 박건준
+/// 수정: 2026-10-04 13:37:23 · nada
 /// 클래스: AppDialogIconButton
 /// 목적: 어르신 UX(최소 터치 타깃 56dp x 56dp)를 준수하는 아이콘 전용
 ///       버튼이다.
@@ -153,7 +155,7 @@ class AppDialogIconButton extends StatelessWidget {
   /// 아이콘 종류
   final IconData icon;
 
-  /// Semantics 라벨 및 툴팁 문자열
+  /// 화면 낭독기에 읽어 줄 이름이자, 길게 누르면 뜨는 설명 문구
   final String label;
 
   /// 눌렀을 때 실행할 동작
@@ -162,25 +164,22 @@ class AppDialogIconButton extends StatelessWidget {
   /// 아이콘 색상
   final Color? color;
 
-  /// 아이콘 크기 (기본값 28)
+  /// 아이콘 크기 (기본값 `AppDims.iconM`)
   final double size;
 
-  /// 따로 지정하는 툴팁 (지정하지 않으면 label 사용)
-  final String? tooltip;
-
   /// 작성: 2026-08-06 15:59:06 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: AppDialogIconButton
   /// 목적: 아이콘 버튼에 필요한 값을 받아 위젯을 만든다. 각 인자의
   ///       의미는 위 필드 설명을 따른다.
-  /// 인자: icon, label, onPressed, color, size, tooltip
+  /// 인자: icon, label, onPressed, color, size
   const AppDialogIconButton({
     super.key,
     required this.icon,
     required this.label,
     required this.onPressed,
     this.color,
-    this.size = 28,
-    this.tooltip,
+    this.size = AppDims.iconM,
   });
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
@@ -196,7 +195,7 @@ class AppDialogIconButton extends StatelessWidget {
         height: AppDims.touchMin,
         child: IconButton(
           icon: Icon(icon, size: size, color: color),
-          tooltip: tooltip ?? label,
+          tooltip: label,
           onPressed: onPressed,
         ),
       ),
@@ -205,56 +204,49 @@ class AppDialogIconButton extends StatelessWidget {
 }
 
 /// 작성: 2026-08-06 15:59:06 · 박건준
+/// 수정: 2026-10-04 13:37:23 · nada
 /// 함수: showAppConfirmDialog
-/// 목적: 반복되는 barrierDismissible: false + AlertDialog 골격을 간편하게
-///       띄우는 확인 다이얼로그 함수이다.
-/// 인자: context — 다이얼로그를 띄울 화면의 BuildContext
-///       title — 다이얼로그 제목 위젯
-///       content — 다이얼로그 본문 위젯
+/// 목적: 제목 · 문구 · 버튼 한두 개로 된 대화상자를 띄우고 사용자의
+///       선택을 돌려준다. 측정 중단 확인, 측정 실패 · 중단 안내, 이메일
+///       등록 안내가 같은 모양을 쓴다. 버튼을 누른 뒤 할 일(화면 이동
+///       등)은 돌려받은 값을 보고 부르는 쪽이 한다.
+/// 인자: context — 대화상자를 띄울 화면의 위치 정보
+///       title — 제목
+///       message — 본문 문구. 줄바꿈 문자로 여러 줄을 쓸 수 있다
 ///       confirmLabel — 확인 버튼 라벨
-///       cancelLabel — 취소 버튼 라벨. null이면 취소 버튼을 만들지 않는다
-///       onConfirm — 확인을 눌렀을 때 추가로 실행할 동작
-///       onCancel — 취소를 눌렀을 때 추가로 실행할 동작
-///       isDestructive — 확인 버튼을 위험 행동 색으로 표시할지 여부
-///       barrierDismissible — 바깥을 눌러 닫을 수 있는지 여부, 기본 false
-/// 반환: 사용자가 확인을 누르면 true, 취소나 바깥을 눌러 닫으면 false/null
-Future<T?> showAppConfirmDialog<T>({
-  required BuildContext context,
-  required Widget title,
-  required Widget content,
+///       cancelLabel — 취소 버튼 라벨. null 이면 확인 버튼 하나만 둔다
+///       isDestructive — 확인 버튼을 위험 행동 색(빨강)으로 칠할지
+///       barrierDismissible — 바깥을 눌러 닫을 수 있는지. 기본 false
+/// 반환: 확인을 누르면 true. 취소를 누르거나 바깥을 눌러 닫으면 false
+Future<bool> showAppConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
   required String confirmLabel,
   String? cancelLabel,
-  VoidCallback? onConfirm,
-  VoidCallback? onCancel,
   bool isDestructive = false,
   bool barrierDismissible = false,
-}) {
-  return showDialog<T>(
+}) async {
+  final confirmed = await showDialog<bool>(
     context: context,
     barrierDismissible: barrierDismissible,
     builder: (ctx) => AlertDialog(
-      title: title,
-      content: content,
+      title: Text(title, style: AppText.subhead),
+      content: Text(message, style: AppText.body),
       actions: [
         if (cancelLabel != null)
           AppDialogButton(
             label: cancelLabel,
-            onPressed: () {
-              Navigator.of(ctx).pop(false as T?);
-              onCancel?.call();
-            },
+            onPressed: () => Navigator.of(ctx).pop(false),
             primary: false,
           ),
         AppDialogButton(
           label: confirmLabel,
-          onPressed: () {
-            Navigator.of(ctx).pop(true as T?);
-            onConfirm?.call();
-          },
-          primary: true,
+          onPressed: () => Navigator.of(ctx).pop(true),
           isDestructive: isDestructive,
         ),
       ],
     ),
-  );
+  ); // 누른 버튼. 바깥을 눌러 닫았으면 null
+  return confirmed ?? false;
 }

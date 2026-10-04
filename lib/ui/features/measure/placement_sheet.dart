@@ -1,8 +1,44 @@
 import 'package:flutter/material.dart';
+
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_notice.dart';
+
+/// 작성: 2026-10-04 13:37:23 · nada
+/// 클래스: _DiagramSize
+/// 목적: 거치 안내 그림의 치수 (dp). 이 그림에만 쓰는 값이라 앱 공통
+///       토큰(theme.dart)에 두지 않고 여기에 모은다.
+abstract final class _DiagramSize {
+  /// 그림 전체 높이
+  static const height = 200.0;
+
+  /// 출입구 라벨과 그림 위쪽 끝 사이 간격
+  static const doorTop = 12.0;
+
+  /// 출입구 라벨 안쪽 좌우 여백
+  static const doorPadH = 24.0;
+
+  /// 출입구 라벨 안쪽 위아래 여백
+  static const doorPadV = 6.0;
+
+  /// 카 바닥 윤곽선을 그림 테두리에서 들여 넣는 거리
+  static const floorInset = 24.0;
+
+  /// 휴대폰 그림을 출입구 라벨 아래로 내리는 거리
+  static const phoneTop = 24.0;
+
+  /// 휴대폰 그림 폭
+  static const phoneW = 72.0;
+
+  /// 휴대폰 그림 높이
+  static const phoneH = 110.0;
+
+  /// 휴대폰 그림 테두리 두께
+  static const phoneBorder = 3.0;
+}
 
 /// 작성: 2026-08-17 18:55:14 · 박건준
+/// 수정: 2026-10-04 13:37:23 · nada
 /// 클래스: PlacementSheet
 /// 목적: 휴대폰을 엘리베이터 카 바닥 중앙에 Y축 방향으로 맞춰 놓으라고
 ///       안내하는 바텀 시트.
@@ -12,6 +48,7 @@ class PlacementSheet extends StatelessWidget {
   const PlacementSheet({super.key});
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _buildStepItem
   /// 목적: 안내 단계 하나를 번호 뱃지 + 문구 형태로 만든다.
   /// 인자: stepNumber — 단계 번호 (원형 뱃지에 표시)
@@ -24,8 +61,8 @@ class PlacementSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: AppDims.badgeSize,
+            height: AppDims.badgeSize,
             decoration: const BoxDecoration(
               color: AppColors.navy,
               shape: BoxShape.circle,
@@ -33,13 +70,13 @@ class PlacementSheet extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               '$stepNumber',
-              style: AppText.button.copyWith(fontSize: 18),
+              style: AppText.bodyBold.copyWith(color: AppColors.onDark),
             ),
           ),
           const SizedBox(width: AppDims.gap2),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: AppDims.gap),
               child: Text(text, style: AppText.body),
             ),
           ),
@@ -49,6 +86,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: build
   /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다.
   ///       - 상단 헤더 — 제목과 닫기 버튼
@@ -65,7 +103,7 @@ class PlacementSheet extends StatelessWidget {
     ).size.height; // 시트 높이를 비율로 잡을 화면 전체 높이
     return SizedBox(
       // 시트 전체 높이를 화면의 75%로 고정
-      height: screenHeight * 0.75,
+      height: screenHeight * AppDims.sheetHeightFactor,
       child: SafeArea(
         // 노치 등 시스템 UI를 피해서 배치
         child: Column(
@@ -114,32 +152,11 @@ class PlacementSheet extends StatelessWidget {
                     _buildStepItem(4, '완전히 멈추면 \'테스트 완료\'를 누르세요'),
                     const SizedBox(height: AppDims.gap),
 
-                    Container(
-                      // 경고 배너: 색 + 아이콘 + 텍스트 3중 표시
-                      padding: const EdgeInsets.all(AppDims.gap2),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(AppDims.radius),
-                        border: Border.all(color: AppColors.gold, width: 1.5),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.volume_off_outlined,
-                            color: AppColors.gold,
-                            size: 28,
-                          ),
-                          const SizedBox(width: AppDims.gap2),
-                          Expanded(
-                            child: Text(
-                              '측정 중에는 조용히 해주세요',
-                              style: AppText.bodyBold.copyWith(
-                                color: AppColors.text,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    // 주의 배너: 색 + 아이콘 + 텍스트 3중 표시
+                    const AppNotice(
+                      icon: Icons.volume_off_outlined,
+                      message: '측정 중에는 조용히 해주세요',
+                      tone: NoticeTone.caution,
                     ),
                   ],
                 ),
@@ -161,6 +178,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _buildDiagram
   /// 목적: 엘리베이터 카 안에서 휴대폰을 어느 위치에 어느 방향으로
   ///       놓을지 보여주는 도식을 만든다. 출입구 라벨, 카 바닥 테두리,
@@ -168,20 +186,23 @@ class PlacementSheet extends StatelessWidget {
   /// 반환: 거치 방향 안내 도식 위젯
   Widget _buildDiagram() {
     return Container(
-      height: 200,
+      height: _DiagramSize.height,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDims.radius),
-        border: Border.all(color: AppColors.border, width: 1.5),
+        border: Border.all(color: AppColors.border, width: AppDims.borderW),
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
           // 상단 출입구 라벨 박스
           Positioned(
-            top: 12,
+            top: _DiagramSize.doorTop,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _DiagramSize.doorPadH,
+                vertical: _DiagramSize.doorPadV,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.navy,
                 borderRadius: BorderRadius.circular(AppDims.radius),
@@ -189,7 +210,7 @@ class PlacementSheet extends StatelessWidget {
               child: Text(
                 '출입구',
                 style: AppText.caption.copyWith(
-                  color: Colors.white,
+                  color: AppColors.onDark,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -198,15 +219,15 @@ class PlacementSheet extends StatelessWidget {
 
           // 카 내부 바닥(도식 배경 라인)
           Positioned.fill(
-            left: 24,
-            top: 24,
-            right: 24,
-            bottom: 24,
+            left: _DiagramSize.floorInset,
+            top: _DiagramSize.floorInset,
+            right: _DiagramSize.floorInset,
+            bottom: _DiagramSize.floorInset,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: AppColors.navy.withValues(alpha: 0.2),
-                  width: 2,
+                  color: AppColors.navyFaint,
+                  width: AppDims.borderWThick,
                 ),
               ),
             ),
@@ -216,14 +237,17 @@ class PlacementSheet extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: _DiagramSize.phoneTop),
               Container(
-                width: 72,
-                height: 110,
+                width: _DiagramSize.phoneW,
+                height: _DiagramSize.phoneH,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.blue, width: 3),
+                  color: AppColors.bg,
+                  borderRadius: BorderRadius.circular(AppDims.radius),
+                  border: Border.all(
+                    color: AppColors.blue,
+                    width: _DiagramSize.phoneBorder,
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -231,9 +255,9 @@ class PlacementSheet extends StatelessWidget {
                     const Icon(
                       Icons.arrow_upward,
                       color: AppColors.blue,
-                      size: 36,
+                      size: AppDims.iconL,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppDims.gapHalf),
                     Text(
                       'Y축',
                       style: AppText.caption.copyWith(

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_layout.dart';
+import '../../core/widgets/app_notice.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 
@@ -252,47 +254,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _errorBorder
   /// 목적: 입력 필드에 오류가 있을 때 보여줄 빨간 테두리를 만든다.
   /// 반환: 빨간 테두리 스타일
   OutlineInputBorder _errorBorder() {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppDims.radius),
-      borderSide: const BorderSide(color: AppColors.red, width: 2),
+      borderSide: const BorderSide(
+        color: AppColors.red,
+        width: AppDims.borderWThick,
+      ),
     );
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _buildErrorBox
   /// 목적: 오류 문구를 아이콘 · 빨간 박스와 함께 보여주는 위젯을 만든다.
   /// 인자: message — 화면에 보여줄 오류 문구
   /// 반환: 오류 안내용 위젯
   Widget _buildErrorBox(String message) {
-    return Container(
-      margin: const EdgeInsets.only(top: AppDims.gap2),
-      padding: const EdgeInsets.all(AppDims.gap2),
-      decoration: BoxDecoration(
-        color: AppColors.red.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppDims.radius),
-        border: Border.all(color: AppColors.red),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.error_outline, color: AppColors.red, size: 28),
-          const SizedBox(width: AppDims.gap2),
-          Expanded(
-            child: Text(
-              message,
-              style: AppText.body.copyWith(color: AppColors.red),
-            ),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(top: AppDims.gap2),
+      child: AppNotice(
+        icon: Icons.error_outline,
+        message: message,
+        tone: NoticeTone.danger,
       ),
     );
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _buildActionBtn
   /// 목적: 앱바 오른쪽에 쓰는 아이콘 + 문구 버튼을 만든다.
   /// 인자: onPressed — 버튼을 눌렀을 때 실행할 동작
@@ -309,7 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onPressed: onPressed,
       primary: false,
       icon: icon,
-      iconSize: 24,
+      iconSize: AppDims.iconS,
       textStyle: AppText.caption.copyWith(
         color: AppColors.navy,
         fontWeight: FontWeight.w700,
@@ -483,6 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _buildDirectionSelector
   /// 목적: 운전 방향(하부 → 상부 / 상부 → 하부)을 고르는 버튼 2개를 만든다.
   /// 반환: 운전 방향 선택 위젯
@@ -497,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ButtonSegment<String>(
               value: SiteInfo.directionUp,
               label: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: AppDims.gap2),
                 child: Text(SiteInfo.directionUp),
               ),
               icon: Icon(Icons.arrow_upward),
@@ -505,7 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ButtonSegment<String>(
               value: SiteInfo.directionDown,
               label: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: AppDims.gap2),
                 child: Text(SiteInfo.directionDown),
               ),
               icon: Icon(Icons.arrow_downward),
@@ -518,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: SegmentedButton.styleFrom(
             backgroundColor: AppColors.surface,
             selectedBackgroundColor: AppColors.blue,
-            selectedForegroundColor: Colors.white,
+            selectedForegroundColor: AppColors.onDark,
             foregroundColor: AppColors.navy,
             textStyle: AppText.bodyBold,
             minimumSize: const Size(0, AppDims.touchMin),
@@ -532,6 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: _buildModelSelector
   /// 목적: 기종(Gen2 / 기타)을 고르는 드롭다운을 만든다.
   /// 반환: 기종 선택 위젯
@@ -559,29 +555,18 @@ class _HomeScreenState extends State<HomeScreen> {
           style: AppText.body,
           icon: const Icon(
             Icons.keyboard_arrow_down,
-            size: 28,
+            size: AppDims.iconM,
             color: AppColors.navy,
           ),
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppDims.gap2,
-              vertical: 20,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDims.radius),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDims.radius),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-          ),
+          // 여백 · 테두리는 앱 테마의 입력창 설정을 그대로 따른다
+          decoration: const InputDecoration(),
         ),
       ],
     );
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 13:37:23 · nada
   /// 함수: build
   /// 목적: 홈 화면(현장 정보 입력) 레이아웃을 구성한다.
   ///       - `appBar` — 화면 제목과, 설정·저장 결과 화면으로 이동하는
@@ -617,45 +602,29 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: AppDims.gap),
         ],
       ),
-      body: SafeArea(
-        // 시스템 UI(노치 등)를 피해서 배치
-        child: SingleChildScrollView(
-          // 입력 폼 전체를 세로로 스크롤
-          padding: const EdgeInsets.all(AppDims.screenPad),
-          child: ConstrainedBox(
-            // 넓은 화면에서 폭이 과하게 늘어나지 않게 제한
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: Column(
-              // 입력 필드들을 순서대로 세로로 배치
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: AppDims.gap),
-                Text('현장 정보', style: AppText.subhead),
-                const SizedBox(height: AppDims.gap3),
+      // 입력 필드들을 순서대로 세로로 배치
+      body: AppScrollBody(
+        children: [
+          const SizedBox(height: AppDims.gap),
+          Text('현장 정보', style: AppText.subhead),
+          const SizedBox(height: AppDims.gap3),
 
-                _buildJobNoField(),
-                const SizedBox(height: AppDims.gap3),
-                _buildSiteNameField(),
-                const SizedBox(height: AppDims.gap3),
-                _buildFloorFields(),
-                const SizedBox(height: AppDims.gap3),
-                _buildDirectionSelector(),
-                const SizedBox(height: AppDims.gap3),
-                _buildModelSelector(),
-                const SizedBox(height: 48),
-              ],
-            ),
-          ),
-        ),
+          _buildJobNoField(),
+          const SizedBox(height: AppDims.gap3),
+          _buildSiteNameField(),
+          const SizedBox(height: AppDims.gap3),
+          _buildFloorFields(),
+          const SizedBox(height: AppDims.gap3),
+          _buildDirectionSelector(),
+          const SizedBox(height: AppDims.gap3),
+          _buildModelSelector(),
+          const SizedBox(height: AppDims.gap6),
+        ],
       ),
-      bottomNavigationBar: SafeArea(
-        // 하단 고정 영역, 시스템 UI를 피해서 배치
-        child: Padding(
-          padding: const EdgeInsets.all(AppDims.screenPad),
-          child: ElevatedButton(
-            onPressed: _startMeasure, // → 로직 이동: _startMeasure()
-            child: const Text('측정 시작'),
-          ),
+      bottomNavigationBar: AppBottomBar(
+        child: ElevatedButton(
+          onPressed: _startMeasure, // → 로직 이동: _startMeasure()
+          child: const Text('측정 시작'),
         ),
       ),
     );
