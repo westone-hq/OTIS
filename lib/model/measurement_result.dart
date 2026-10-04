@@ -33,14 +33,15 @@ class MeasurementResult {
   /// 측정 일시
   final DateTime dateTime;
 
-  /// X축 진동 P2P (mg). null 이면 아직 계산하지 않았다 — 진동 필터가
-  /// 확정되지 않아 값을 채우지 않는다
+  /// X축 진동 P2P (mg). 필터 없이 원시 시계열 전체의 최대 − 최소다.
+  /// null 이면 계산하지 않은 예전 측정이다
   final double? xPtp;
 
-  /// Y축 진동 P2P (mg). null 이면 아직 계산하지 않았다 — `xPtp` 와 같은 이유
+  /// Y축 진동 P2P (mg). 정의와 null 의 뜻은 `xPtp` 와 같다
   final double? yPtp;
 
-  /// Z축 진동 P2P (mg). null 이면 아직 계산하지 않았다 — `xPtp` 와 같은 이유
+  /// Z축 진동 P2P (mg). 정의와 null 의 뜻은 `xPtp` 와 같다. 엘리베이터
+  /// 가감속이 그대로 섞여 있다
   final double? zPtp;
 
   /// 소음 최대값 (dBA). null 이면 잴 수 있는 표본이 없었다 — 마이크
@@ -93,8 +94,8 @@ class MeasurementResult {
   ///       direction — 방향
   ///       model — 엘리베이터 기종. 입력되지 않았으면 null
   ///       dateTime — 측정 일시
-  ///       xPtp, yPtp, zPtp — 축별 진동 P2P (mg). 필터 미확정이라
-  ///       지금은 null
+  ///       xPtp, yPtp, zPtp — 축별 원시 진동 P2P (mg). 계산하지 않은
+  ///       예전 측정이면 null
   ///       noiseMax — 소음 최대 (dBA). 잴 수 있는 표본이 없으면 null
   ///       distance — 운행거리 (m). 방향 무관 누적 이동량
   ///       maxSpeed — 최대속도 (m/s)

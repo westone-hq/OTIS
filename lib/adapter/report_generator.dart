@@ -34,15 +34,19 @@ class ReportGenerator {
   };
 
   /// 작성: 2026-09-26 09:30:00 · nada
-  /// 변수: pendingFilterRows
-  /// 목적: 진동 필터가 확정되지 않아 아직 값을 못 내는 행들.
-  /// 근거: 미정 — 진동 필터 파라미터가 정해지면 이 네 행에 값이 들어오고
-  ///       이 목록은 비워야 한다. `MeasurementResult` 의 P2P 네 값이 지금
-  ///       null 인 것과 같은 이유다
-  static const List<String> pendingFilterRows = <String>[
-    'vert_avg',
+  /// 변수: pendingA95Rows
+  /// 목적: 아직 값을 내지 않는 진동 평균(A95) 행들.
+  /// 근거: 미정 — A95 는 반주기 단위 P2P 값들의 95백분위라 그 산정이
+  ///       있어야 낸다. 진동은 필터 없이 원시 값만 내기로 해(2026-10-04)
+  ///       비워 둔다
+  static const List<String> pendingA95Rows = <String>['vert_avg', 'horiz_avg'];
+
+  /// 작성: 2026-10-04 16:03:06 · nada
+  /// 변수: rawVibrationRows
+  /// 목적: 필터 없는 원시 P2P 를 싣는 진동 최대 행들. 값이 있으면 기준과
+  ///       바로 견줄 수 없다는 안내를 붙인다.
+  static const List<String> rawVibrationRows = <String>[
     'vert_max',
-    'horiz_avg',
     'horiz_max',
   ];
 
@@ -126,15 +130,16 @@ class ReportGenerator {
   /// 인자: key — 지표 행 이름
   /// 반환: 값 자리에 적을 문구
   static String _missingReason(String key) {
-    if (pendingFilterRows.contains(key)) return '—(필터 확정 대기)';
+    if (pendingA95Rows.contains(key)) return '—(A95 미산정)';
     if (noiseRows.contains(key)) return '—(소음 미측정)';
     return '—(측정값 없음)';
   }
 
   /// 작성: 2026-09-26 09:30:00 · nada
   /// 함수: _notes
-  /// 목적: 본문 끝에 붙일 안내 줄을 만든다. 값이 빠진 행이 있을 때만
-  ///       그 까닭을 한 번씩 적는다 — 여덟 줄마다 되풀이하면 읽기 어렵다.
+  /// 목적: 본문 끝에 붙일 안내 줄을 만든다. 값이 빠진 행이 있으면 그
+  ///       까닭을, 진동 최대에 원시 값이 실렸으면 그 사실을 한 번씩 적는다
+  ///       — 여덟 줄마다 되풀이하면 읽기 어렵다.
   /// 인자: metrics — 산출된 지표 여덟 개
   /// 반환: 안내 줄 목록. 빠진 행이 없으면 빈 목록
   static List<String> _notes(ReportMetrics metrics) {
@@ -144,9 +149,16 @@ class ReportGenerator {
         .toSet(); // 값이 빠진 행 이름들
     final notes = <String>[]; // 쌓아 갈 안내 줄
 
-    if (missing.any(pendingFilterRows.contains)) {
+    if (rawVibrationRows.any((key) => !missing.contains(key))) {
       notes.add(
-        '※ 진동 네 항목은 진동 필터가 확정되지 않아 아직 값을 내지 않습니다. '
+        '※ 진동 최대는 필터를 거치지 않은 원시 P2P(전체 구간 최대 − 최소)'
+        '입니다. 수직에는 운행 가감속이 섞여 있어 기준과 바로 견줄 수 '
+        '없습니다.',
+      );
+    }
+    if (missing.any(pendingA95Rows.contains)) {
+      notes.add(
+        '※ 진동 평균(A95) 두 항목은 아직 산정하지 않아 비워 둡니다. '
         '값을 지어내지 않으려고 비워 둔 것입니다.',
       );
     }

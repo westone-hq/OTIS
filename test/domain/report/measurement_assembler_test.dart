@@ -143,14 +143,13 @@ const _threeRows = <GridSample>[
 ];
 
 /// 작성: 2026-09-15 13:08:37 · nada
-/// 수정: 2026-09-15 19:14:22 · nada
+/// 수정: 2026-10-04 16:03:06 · nada
 /// 함수: main
 /// 목적: 캡처 결과를 측정 결과 모델로 바꾸는 변환을 시험한다.
 ///       - 진동 시계열과 샘플레이트가 제대로 옮겨지는지
-///       - 아직 재지 않은 소음과 진동 P2P 가 0 이 아니라 비어 있는
-///         채로 남는지
+///       - 아직 재지 않은 소음이 0 이 아니라 비어 있는 채로 남는지
+///       - 진동 P2P 가 필터 없이 원시 최대 − 최소로 나오는지
 ///       - 기종이 버려지지 않고 실리는지, 비었으면 null 인지
-///       - 하지 않은 구간 검출이 성공으로 남지 않는지
 ///       - 환산 실패와 행 부족을 삼키지 않고 그대로 올리는지
 ///       - 실측 기준 데이터에서 파생 물리량이 프로토타입과 같은 값을
 ///         내는지
@@ -194,7 +193,7 @@ void main() {
       expect(result.result!.sampleRate, closeTo(256.0, 1e-9));
     });
 
-    test('소음과 진동 P2P 는 0 이 아니라 비어 있다', () {
+    test('소음은 0 이 아니라 비어 있다', () {
       final model = MeasurementAssembler.assemble(
         grid: _grid(_threeRows),
         site: _site,
@@ -204,9 +203,23 @@ void main() {
 
       expect(model.noiseSeries, everyElement(0.0), reason: '격자에 소음이 없다');
       expect(model.noiseMax, isNull, reason: '0 뿐이면 잰 것이 없다');
-      expect(model.xPtp, isNull);
-      expect(model.yPtp, isNull);
-      expect(model.zPtp, isNull);
+    });
+
+    test('진동 P2P 는 필터 없이 축마다 최대 − 최소다', () {
+      final model = MeasurementAssembler.assemble(
+        grid: _grid(const [
+          GridSample(xMg: -1.0, yMg: 4.0, zMg: 0.5),
+          GridSample(xMg: 3.0, yMg: -2.0, zMg: 0.5),
+          GridSample(xMg: 0.0, yMg: 1.0, zMg: 0.5),
+        ]),
+        site: _site,
+        id: 'id',
+        measuredAt: measuredAt,
+      ).result!; // 변환된 측정 결과
+
+      expect(model.xPtp, 4.0);
+      expect(model.yPtp, 6.0);
+      expect(model.zPtp, 0.0, reason: '흔들림이 없으면 0 이 실제로 잰 값이다');
     });
 
     test('소음 말고 시계열 일곱 개가 채워진다', () {
@@ -233,7 +246,7 @@ void main() {
       expect(model.distance, isNotNull);
     });
 
-    test('재지 않은 지표의 판정은 정상이 아니라 null 이다', () {
+    test('재지 않은 소음의 판정은 정상이 아니라 null 이다', () {
       final model = MeasurementAssembler.assemble(
         grid: _grid(_threeRows),
         site: _site,
@@ -241,9 +254,6 @@ void main() {
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.xExceeded, isNull);
-      expect(model.yExceeded, isNull);
-      expect(model.zExceeded, isNull);
       expect(model.noiseExceeded, isNull);
     });
 
@@ -470,6 +480,21 @@ void main() {
         expect(model.distance!, closeTo(57.093948064, 1e-6));
         expect(model.speedSeries.first, closeTo(0.0, 1e-9));
         expect(model.speedSeries.last, closeTo(0.0, 1e-9));
+      });
+
+      test('레퍼런스폰 원시 데이터의 진동 P2P 를 필터 없이 낸다', () {
+        // 기준값은 파일의 X Y Z 열에서 바로 구한 최대 − 최소다. 기기끼리
+        // 원시 값을 견줄 때 이 값이 출발점이다
+        final model = MeasurementAssembler.assemble(
+          grid: _grid(_fixtureRows()),
+          site: _site,
+          id: 'id',
+          measuredAt: measuredAt,
+        ).result!; // 변환된 측정 결과
+
+        expect(model.xPtp!, closeTo(20.232, 1e-9));
+        expect(model.yPtp!, closeTo(48.331, 1e-9));
+        expect(model.zPtp!, closeTo(126.586, 1e-9));
       });
 
       test('실측 소음이 원본 리포트에 인쇄된 값과 같다', () {

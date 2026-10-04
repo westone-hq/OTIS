@@ -41,14 +41,16 @@ class MeasurementAssembleResult {
 /// 작성: 2026-09-15 13:08:37 · nada
 /// 클래스: MeasurementAssembler
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과와 현장
-///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 값을 새로
-///       계산하지 않고 옮기기만 한다.
+///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 시계열은 그대로
+///       옮기고, 아래 지표만 새로 계산한다.
 ///
 ///       수직 진동에서 가속도 · 속도 · 누적 이동량 · 저크를 만들고,
 ///       최대 속도와 운행 거리를 거기서 뽑는다.
 ///
-///       지금 비운 채로 넘기는 것
-///         - 진동 P2P(X/Y/Z): 진동 필터가 확정되지 않았다
+///       진동 P2P(X/Y/Z)는 필터 없이 원시 시계열 전체의 최대 − 최소로
+///       낸다. 레퍼런스폰 · 개발폰 · EVA 를 같은 원시 기준으로 견주기
+///       위해서다. Z 에는 엘리베이터 가감속이 그대로 섞여 있어 리포트의
+///       적색 기준과 견주면 늘 넘는다
 ///
 ///       소음 두 값의 계약
 ///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
@@ -168,11 +170,37 @@ class MeasurementAssembler {
         speedSeries: motion.speed,
         accelSeries: motion.accel,
         jerkSeries: motion.jerk,
+        // → 로직 이동: _rawPeakToPeak()
+        xPtp: _rawPeakToPeak(xSeries),
+        yPtp: _rawPeakToPeak(ySeries),
+        zPtp: _rawPeakToPeak(zSeries),
         maxSpeed: motion.maxSpeed,
         distance: motion.distance,
         sampleRate: sampleRate,
       ),
     );
+  }
+
+  /// 작성: 2026-10-04 16:03:06 · nada
+  /// 함수: _rawPeakToPeak
+  /// 목적: 진동 시계열 한 축의 P2P 를 필터 없이 낸다. 기기끼리 원시 값을
+  ///       견주는 용도다.
+  /// 인자: series — 한 축의 진동 시계열 (mg)
+  /// 반환: 최댓값 − 최솟값 (mg). 표본이 없으면 null
+  /// 식: P2P = max(series) − min(series)
+  /// 근거: 미정 — EVA 가 따르는 ISO 18738 은 주파수 가중을 거친 신호에서
+  ///       0 을 지나는 사이 이웃 봉우리 · 골을 더해 세고, 출발 · 정지 0.5m
+  ///       구간을 뺀다. 그 가중의 세부 값이 확인되지 않아 이번에는 필터 없이
+  ///       전체 구간으로 낸다 (2026-10-04 결정)
+  static double? _rawPeakToPeak(List<double> series) {
+    if (series.isEmpty) return null;
+    var low = series.first; // 여기까지 본 최솟값 (mg)
+    var high = series.first; // 여기까지 본 최댓값 (mg)
+    for (final value in series) {
+      if (value < low) low = value;
+      if (value > high) high = value;
+    }
+    return high - low;
   }
 
   /// 작성: 2026-09-15 21:38:58 · nada

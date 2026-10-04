@@ -5,7 +5,8 @@ import 'package:vibration_checker/model/measurement_result.dart';
 /// 작성: 2026-09-26 09:30:00 · nada
 /// 함수: _result
 /// 목적: 메일 요약을 만들어 보려고 꾸미는 측정 결과. 진동 P2P 는 비워 둔다
-///       — 진동 필터가 확정되기 전의 실제 측정이 그 상태다.
+///       — 원시 P2P 를 내기 전(2026-10-04 이전)에 저장된 측정이 그
+///       상태다.
 /// 인자: noiseMax — 소음 최대 (dBA). 안 주면 null
 ///       noiseSeries — 소음 시계열 (dBA). 안 주면 빈 목록
 ///       model — 엘리베이터 기종. 안 주면 null
@@ -95,15 +96,15 @@ void main() {
       // `—` 만 적으면 못 잰 것인지 기준이 없는 것인지 읽는 사람이 모른다
       final text = ReportGenerator.generateSummaryText(_result()); // 만든 요약
 
-      expect(text, contains('- 수직진동, 평균: —(필터 확정 대기)'));
-      expect(text, contains('- 수평진동, 최대: —(필터 확정 대기)'));
+      expect(text, contains('- 수직진동, 평균: —(A95 미산정)'));
+      expect(text, contains('- 수평진동, 최대: —(측정값 없음)'));
       expect(text, contains('- 소음, 평균: —(소음 미측정)'));
     });
 
     test('빠진 값이 있으면 끝에 까닭을 한 번씩만 덧붙인다', () {
       final text = ReportGenerator.generateSummaryText(_result()); // 만든 요약
 
-      expect('※ 진동 네 항목'.allMatches(text).length, 1);
+      expect('※ 진동 평균(A95)'.allMatches(text).length, 1);
       expect('※ 소음은 측정된 값이'.allMatches(text).length, 1);
     });
 
@@ -113,7 +114,22 @@ void main() {
       ); // 만든 요약
 
       expect(text, isNot(contains('※ 소음은 측정된 값이')));
-      expect(text, contains('※ 진동 네 항목'), reason: '진동은 여전히 빠져 있다');
+      expect(text, contains('※ 진동 평균(A95)'), reason: 'A95 는 여전히 빠져 있다');
+    });
+
+    test('진동 최대가 있으면 원시 값이라는 안내를 붙인다', () {
+      final text = ReportGenerator.generateSummaryText(
+        _result().copyWith(xPtp: 20.2, yPtp: 48.3, zPtp: 126.6),
+      ); // 만든 요약
+
+      expect(text, contains('- 수직진동, 최대: 127mg'));
+      expect('※ 진동 최대는 필터를 거치지 않은'.allMatches(text).length, 1);
+    });
+
+    test('진동 최대가 없으면 원시 값 안내도 없다', () {
+      final text = ReportGenerator.generateSummaryText(_result()); // 만든 요약
+
+      expect(text, isNot(contains('※ 진동 최대는')));
     });
   });
 }
