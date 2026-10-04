@@ -5,7 +5,6 @@ import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
-import 'package:vibration_checker/adapter/auth_repository.dart';
 import 'package:vibration_checker/adapter/report_generator.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 
@@ -133,24 +132,20 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 수정: 2026-10-04 13:26:44 · nada
   /// 함수: _loadRecipient
-  /// 목적: 지금 로그인된 사용자 앞으로 저장된 수신 이메일을 불러와
-  ///       화면에 표시할 상태를 채운다. 로그인 정보가 없거나, 이메일을
-  ///       등록한 적이 없거나, 등록값이 빈 문자열이면 안내 문구를
-  ///       그대로 두고 `_isEmailSet`을 false로 남긴다 — `_send()`가
-  ///       이 값을 보고 발송 전 등록 안내를 띄운다.
+  /// 목적: 저장된 수신 이메일을 불러와 화면에 표시할 상태를 채운다.
+  ///       이메일을 등록한 적이 없거나 등록값이 빈 문자열이면 안내
+  ///       문구를 그대로 두고 `_isEmailSet`을 false로 남긴다 —
+  ///       `_send()`가 이 값을 보고 발송 전 등록 안내를 띄운다.
   Future<void> _loadRecipient() async {
-    // → 로직 이동: AuthRepository.currentUserId
-    final id = AuthRepository.instance.currentUserId; // 로그인 사용자 식별자
     String email = '설정에서 이메일을 등록하세요'; // 화면에 채울 수신 이메일
     bool isSet = false; // 실제로 등록된 이메일을 찾았는지 여부
-    if (id != null) {
-      // → 로직 이동: PrefsStore.loadEmail()
-      final saved = await PrefsStore.instance.loadEmail(id); // 저장된 수신 주소
-      if (saved != null && saved.trim().isNotEmpty) {
-        email = saved;
-        isSet = true;
-      }
+    // → 로직 이동: PrefsStore.loadEmail()
+    final saved = await PrefsStore.instance.loadEmail(); // 저장된 수신 주소
+    if (saved != null && saved.trim().isNotEmpty) {
+      email = saved;
+      isSet = true;
     }
     if (!mounted) return;
     setState(() {

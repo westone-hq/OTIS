@@ -322,7 +322,7 @@ class ReportPage1 {
     color: ReportColors.navy,
   );
 
-  /// 엔지니어명. 지금은 비워 둔다 — 로그인 아이디를 끌어오지 않는다
+  /// 엔지니어명. 지금은 비워 둔다 — 앱에 사용자 계정이 없다
   static const LayoutField engineerName = LayoutField(
     key: 'engineer_name',
     x: 1023,

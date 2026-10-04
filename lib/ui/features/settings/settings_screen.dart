@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
-import 'package:vibration_checker/adapter/auth_repository.dart';
 
 import '../../core/theme.dart';
-import '../../core/widgets/app_dialog.dart';
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
+/// 수정: 2026-10-04 13:26:44 · nada
 /// 클래스: SettingsScreen
-/// 목적: 설정 화면. 사용자 프로필 정보, 결과 수신 이메일 등록, 앱
-///       버전 확인, 로그아웃을 한 화면에서 처리한다. 어르신도 쓰기
-///       편하도록 버튼 높이를 64dp 이상으로 두고, 오류는 테두리 색
-///       · 아이콘 · 문구 3중으로 겹쳐 보여준다.
+/// 목적: 설정 화면. 결과 수신 이메일 등록과 앱 버전 확인을 한 화면에서
+///       처리한다. 어르신도 쓰기 편하도록 버튼 높이를 64dp 이상으로
+///       두고, 오류는 테두리 색 · 아이콘 · 문구 3중으로 겹쳐 보여준다.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -20,9 +17,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
+/// 수정: 2026-10-04 13:26:44 · nada
 /// 클래스: _SettingsScreenState
-/// 목적: 설정 화면의 상태를 관리한다. 로그인된 사용자 아이디를 기준으로
-///       이메일 등록값을 불러오고 저장하며, 로그아웃 처리를 한다.
+/// 목적: 설정 화면의 상태를 관리한다. 이메일 등록값을 불러오고 저장한다.
 class _SettingsScreenState extends State<SettingsScreen> {
   /// `TextEditingController`(입력창에 지금 적힌 글자를 코드에서 읽고
   /// 쓸 수 있게 연결해 주는 객체). 이메일 입력창에 연결해 두면,
@@ -51,16 +48,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
+  /// 수정: 2026-10-04 13:26:44 · nada
   /// 함수: _loadEmail
-  /// 목적: 지금 로그인된 사용자 앞으로 저장된 이메일이 있으면 불러와
-  ///       입력창에 채운다. 로그인 정보가 없거나 저장된 적이 없으면
-  ///       입력창을 빈 채로 둔다.
+  /// 목적: 저장된 이메일이 있으면 불러와 입력창에 채운다. 저장된 적이
+  ///       없으면 입력창을 빈 채로 둔다.
   Future<void> _loadEmail() async {
-    // → 로직 이동: AuthRepository.currentUserId
-    final id = AuthRepository.instance.currentUserId; // 로그인 사용자 식별자
-    if (id == null) return;
     // → 로직 이동: PrefsStore.loadEmail()
-    final savedEmail = await PrefsStore.instance.loadEmail(id); // 저장된 이메일
+    final savedEmail = await PrefsStore.instance.loadEmail(); // 저장된 이메일
     if (savedEmail != null && mounted) {
       _emailCtl.text = savedEmail;
     }
@@ -76,13 +70,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
+  /// 수정: 2026-10-04 13:26:44 · nada
   /// 함수: _save
   /// 목적: "저장" 버튼을 눌렀을 때 실행된다. 입력한 이메일이
   ///       `name@example.com`처럼 "@" 앞뒤에 글자가 있고 "@" 뒤에
   ///       마침표가 하나 더 있는 형식인지 검사하고, 아니면 입력창
-  ///       아래에 오류 문구를 띄우고 멈춘다. 형식이 맞으면 로그인된
-  ///       사용자 아이디에 연결해 저장하고, 저장 완료를 알리는
-  ///       안내를 띄운다.
+  ///       아래에 오류 문구를 띄우고 멈춘다. 형식이 맞으면 저장하고,
+  ///       저장 완료를 알리는 안내를 띄운다.
   Future<void> _save() async {
     FocusScope.of(context).unfocus(); // 키보드를 내린다
     final email = _emailCtl.text.trim(); // 입력창에 적힌 이메일(양끝 공백 제거)
@@ -92,12 +86,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    // → 로직 이동: AuthRepository.currentUserId
-    final id = AuthRepository.instance.currentUserId; // 로그인 사용자 식별자
-    if (id != null) {
-      // → 로직 이동: PrefsStore.saveEmail()
-      await PrefsStore.instance.saveEmail(id, email);
-    }
+    // → 로직 이동: PrefsStore.saveEmail()
+    await PrefsStore.instance.saveEmail(email);
 
     setState(() => _error = null);
 
@@ -119,90 +109,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 함수: _confirmLogout
-  /// 목적: 로그아웃 확인 대화상자를 띄우고, "로그아웃"을 선택하면
-  ///       로그아웃 처리 후 로그인 화면으로 이동한다.
-  /// 미구현: `/login` 경로가 router.dart 에 등록돼 있지 않아, 로그아웃
-  ///       후 `context.go('/login')`을 불러도 실제로는 아무 화면도
-  ///       뜨지 않는다.
-  Future<void> _confirmLogout() async {
-    final confirm = await showDialog<bool>(
-      // 사용자 선택. "로그아웃"이면 true
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('로그아웃', style: AppText.subhead),
-        content: Text('정말 로그아웃 하시겠습니까?', style: AppText.body),
-        actions: [
-          AppDialogButton(
-            label: '취소',
-            onPressed: () => Navigator.of(ctx).pop(false),
-            primary: false,
-          ),
-          AppDialogButton(
-            label: '로그아웃',
-            onPressed: () => Navigator.of(ctx).pop(true),
-            isDestructive: true,
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      await AuthRepository.instance.logout();
-      if (!mounted) return;
-      context.go('/login');
-    }
-  }
-
-  /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 함수: _buildProfileCard
-  /// 목적: 로그인된 사용자 아이디를 보여주는 프로필 카드 위젯을 만든다.
-  /// 반환: 프로필 카드 위젯
-  Widget _buildProfileCard() {
-    final userId =
-        AuthRepository.instance.currentUserId ?? '미로그인'; // 로그인 사용자 아이디
-    return Container(
-      padding: const EdgeInsets.all(AppDims.gap2),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDims.radius),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.blue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person_outline,
-              size: 40,
-              color: AppColors.blue,
-            ),
-          ),
-          const SizedBox(width: AppDims.gap2),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(userId, style: AppText.bodyBold),
-                const SizedBox(height: 4),
-                Text(
-                  'Otis 직원',
-                  style: AppText.caption.copyWith(color: AppColors.textSub),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  /// 작성: 2026-10-04 13:26:44 · nada
+  /// 함수: _buildListTile
+  /// 목적: 제목과 오른쪽 값 한 쌍을 보여주는 정보 행을 만든다.
+  /// 인자: title — 왼쪽에 놓을 항목 이름
+  ///       trailingText — 오른쪽에 놓을 값
+  /// 반환: 정보 행 위젯
   Widget _buildListTile({required String title, required String trailingText}) {
     return Container(
       constraints: const BoxConstraints(minHeight: 64),
@@ -230,9 +142,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 수정: 2026-10-04 13:26:44 · nada
   /// 함수: build
-  /// 목적: 설정 화면을 그린다. 프로필 카드, 이메일 등록, 앱 버전,
-  ///       로그아웃 버튼을 세로로 배치한다.
+  /// 목적: 설정 화면을 그린다. 이메일 등록과 앱 버전을 세로로 배치한다.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -243,11 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. 프로필 카드
-              _buildProfileCard(),
-              const SizedBox(height: AppDims.gap3),
-
-              // 2. 결과 수신 이메일 설정 섹션
+              // 1. 결과 수신 이메일 설정 섹션
               Text('결과 수신 이메일', style: AppText.bodyBold),
               const SizedBox(height: AppDims.gap),
               TextField(
@@ -274,28 +182,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: AppDims.gap3),
 
-              // 3. 앱 버전
+              // 2. 앱 버전
               _buildListTile(title: '앱 버전', trailingText: '1.0.0'),
-              const SizedBox(height: 48),
-
-              // 4. 맨 아래 로그아웃 버튼
-              SizedBox(
-                height: AppDims.buttonH,
-                child: OutlinedButton(
-                  onPressed: _confirmLogout,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.red, width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppDims.radius),
-                    ),
-                  ),
-                  child: Text(
-                    '로그아웃',
-                    style: AppText.bodyBold.copyWith(color: AppColors.red),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppDims.gap2),
             ],
           ),
         ),

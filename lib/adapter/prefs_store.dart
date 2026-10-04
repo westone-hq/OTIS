@@ -23,28 +23,31 @@ class PrefsStore {
   PrefsStore._();
 
   /// 작성: 2026-08-19 10:35:27 · 박건준
-  /// 변수: _emailKeyPrefix
-  /// 목적: 메일 주소 저장 키의 접두사. 다른 항목과 충돌하지 않게 분리한다.
-  static const String _emailKeyPrefix = 'email:';
+  /// 수정: 2026-10-04 13:26:44 · nada
+  /// 변수: _emailKey
+  /// 목적: 메일 수신 주소의 저장 키.
+  /// 근거: 미정 — 앱에 사용자 계정이 없어 기기 하나에 주소 하나만 둔다.
+  ///       계정 체계가 정해지면 사용자별 키로 나눈다
+  static const String _emailKey = 'email';
 
   /// 작성: 2026-08-19 10:35:27 · 박건준
+  /// 수정: 2026-10-04 13:26:44 · nada
   /// 함수: loadEmail
-  /// 목적: 사용자별로 저장된 메일 수신 주소를 읽어온다.
-  /// 인자: id — 사용자 식별자. 사용자별로 키를 분리해 섞이지 않게 한다
+  /// 목적: 저장된 메일 수신 주소를 읽어온다.
   /// 반환: 저장된 주소. 저장된 적이 없으면 null
-  Future<String?> loadEmail(String id) async {
+  Future<String?> loadEmail() async {
     final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
-    return prefs.getString('$_emailKeyPrefix$id');
+    return prefs.getString(_emailKey);
   }
 
   /// 작성: 2026-08-19 10:35:27 · 박건준
+  /// 수정: 2026-10-04 13:26:44 · nada
   /// 함수: saveEmail
-  /// 목적: 사용자별 메일 수신 주소를 저장한다.
-  /// 인자: id — 사용자 식별자
-  ///       email — 저장할 주소. 형식 검증은 호출부(설정 화면)에서 한다
-  Future<void> saveEmail(String id, String email) async {
+  /// 목적: 메일 수신 주소를 저장한다.
+  /// 인자: email — 저장할 주소. 형식 검증은 호출부(설정 화면)에서 한다
+  Future<void> saveEmail(String email) async {
     final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
-    await prefs.setString('$_emailKeyPrefix$id', email);
+    await prefs.setString(_emailKey, email);
   }
 
   /// 작성: 2026-08-19 10:35:27 · 박건준
