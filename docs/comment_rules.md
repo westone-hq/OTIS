@@ -13,8 +13,8 @@
 
 - Dart 파일 머리에 `///` 금지 — 바로 아래 첫 선언의 문서 주석으로 붙어버린다.
 - 다만 `import` 가 하나도 없어 **첫 선언이 1행부터 시작하는 파일**은, 1행의 `///`
-  가 곧 그 선언의 문서 주석이므로 위반이 아니다 (`auth_repository.dart`,
-  `capture_config.dart`, `native_event.dart`, `sensor_sample.dart`).
+  가 곧 그 선언의 문서 주석이므로 위반이 아니다 (`capture_config.dart`,
+  `native_event.dart`, `noise_offset.dart`, `measurement_session.dart`).
 - 라이선스 · 자동생성 표시처럼 도구가 요구하는 줄만 예외로 남긴다.
 
 ---
@@ -314,7 +314,7 @@ Future<String> save(MeasurementResult result) => throw UnimplementedError();
 
 - **무엇이 없는지 + 대신 무슨 일이 일어나는지** 둘 다 적는다. "아직 구현 안 됨" 한 줄로 끝내지 않는다.
 - "대신 무슨 일이" 는 **부르는 쪽까지 따라가서** 적는다. 어느 파일 어느 함수가 그 예외를 잡아 화면에 무엇을 띄우는지까지 쓴다.
-- 클래스 · 인터페이스 안의 여러 멤버가 미구현이면, **클래스 주석에도 `미구현:` 을 두고 어디까지 되고 어디부터 안 되는지 요약한다** (`measurement_repository.dart`, `prefs_store.dart`).
+- 클래스 · 인터페이스 안의 여러 멤버가 미구현이면, **클래스 주석에도 `미구현:` 을 두고 어디까지 되고 어디부터 안 되는지 요약한다**. 아래는 형식 예시다 (2026-10-04 기준 코드에 해당하는 클래스는 없다).
 
 ```dart
 /// 미구현: `loadEmail()`과 `saveEmail()`만 실제로 저장·조회한다.
