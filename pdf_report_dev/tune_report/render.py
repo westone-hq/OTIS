@@ -27,8 +27,9 @@ from .metrics import ReportMetrics
 # reportlab 은 CFF(포스트스크립트 아웃라인) OTF/TTC 를 임베드하지 못한다.
 # 시스템 Noto Sans CJK 는 CFF 라 쓸 수 없어 TrueType 한글 폰트를 동봉한다.
 # 앱(Dart)으로 이식할 때는 프로젝트에서 쓰는 폰트로 교체할 것.
-FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "assets", "fonts")
+ASSET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "..", "assets")
+FONT_DIR = os.path.join(ASSET_DIR, "fonts")
 KR_REG_TTF = os.path.join(FONT_DIR, "NanumGothic-Regular.ttf")
 KR_BOLD_TTF = os.path.join(FONT_DIR, "NanumGothic-Bold.ttf")
 
@@ -54,7 +55,6 @@ class ReportRenderer:
     def __init__(self, layout_path: str, debug: bool = False):
         with open(layout_path, encoding="utf-8") as fh:
             self.L = json.load(fh)
-        self.root = os.path.dirname(os.path.abspath(layout_path))
         self.debug = debug
         self.W = self.L["page"]["width_pt"]
         self.H = self.L["page"]["height_pt"]
@@ -118,8 +118,10 @@ class ReportRenderer:
         c.drawString(x + 5, y + 1.5, label)
         c.restoreState()
 
-    def _background(self, c, rel_path):
-        img = ImageReader(os.path.join(self.root, rel_path))
+    def _background(self, c, file_name):
+        # 좌표 정본(docs/report_layout.json)은 배경을 파일 이름으로만 둔다.
+        # 놓이는 디렉터리는 구현마다 달라 프로토타입은 assets/ 에서 찾는다
+        img = ImageReader(os.path.join(ASSET_DIR, file_name))
         c.drawImage(img, 0, 0, width=self.W, height=self.H,
                     preserveAspectRatio=False, mask=None)
 

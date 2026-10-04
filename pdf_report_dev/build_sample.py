@@ -103,7 +103,8 @@ def main():
     rm = metrics.compute(sig)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    r = render.ReportRenderer(os.path.join(HERE, "report_layout.json"), debug=args.debug)
+    r = render.ReportRenderer(
+        os.path.join(HERE, "..", "docs", "report_layout.json"), debug=args.debug)
     out = r.build(args.out, SAMPLE_META, rm, signals=sig)
 
     print(f"입력   : {src}")

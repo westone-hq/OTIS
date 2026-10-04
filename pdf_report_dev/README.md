@@ -22,7 +22,7 @@ python build_sample.py --source evimp --out out/debug.pdf --debug
 ## 구조
 
 ```
-layout.json          좌표표. 이 파일 하나가 이 프로젝트의 산출물이다.
+../docs/report_layout.json  좌표표 정본. 앱 테스트와 이 프로토타입이 같은 파일을 읽는다.
 tune_report/
   metrics.py         측정 데이터 -> 지표 + 판정. 렌더링을 전혀 모른다.
   charts.py          matplotlib 차트를 A4 투명 PDF로. 축 범위 상수 포함.
