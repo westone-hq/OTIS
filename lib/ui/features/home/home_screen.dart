@@ -95,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 14:35:59 · nada
   /// 함수: _loadSavedInputs
   /// 목적: `PrefsStore`(기기에 값을 저장·불러오는 저장소 클래스)에 저장된
   ///       마지막 현장 정보를 불러와 입력 필드를 채운다.
@@ -104,6 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
   ///         함수)를 하면 오류가 난다
   ///       - 각 값은 저장된 적이 있을 때(null이 아닐 때)만 반영한다.
   ///         저장된 적 없는 값은 기존 기본값을 그대로 둔다
+  ///       - 운전 방향 · 기종은 지금 선택지에 있는 값일 때만 반영한다.
+  ///         선택지에 없는 값을 넣으면 기종 드롭다운이 그릴 항목을 찾지
+  ///         못해 오류가 난다
   Future<void> _loadSavedInputs() async {
     final saved = await PrefsStore.instance.loadLastSite(); // 마지막 저장분
     if (!mounted) return;
@@ -119,8 +123,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (siteName != null) _siteNameCtl.text = siteName;
       if (bottomFloorStr != null) _bottomFloorCtl.text = bottomFloorStr;
       if (topFloorStr != null) _topFloorCtl.text = topFloorStr;
-      if (direction != null) _direction = direction;
-      if (model != null) _model = model;
+      if (direction == SiteInfo.directionUp ||
+          direction == SiteInfo.directionDown) {
+        _direction = direction!;
+      }
+      if (model == SiteInfo.modelGen2 || model == SiteInfo.modelOther) {
+        _model = model!;
+      }
     });
   }
 
