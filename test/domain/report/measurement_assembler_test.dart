@@ -180,7 +180,7 @@ void main() {
       expect(model.bottomFloor, 1);
       expect(model.topFloor, 8);
       expect(model.dateTime, measuredAt);
-      expect(model.totalVibrationSampleCount, 3);
+      expect(model.zSeries, hasLength(3));
     });
 
     test('샘플레이트를 격자 간격에서 구한다', () {
@@ -274,19 +274,6 @@ void main() {
       ).result!; // 변환된 측정 결과
 
       expect(model.model, isNull);
-    });
-
-    test('검출하지 않은 구간을 성공으로 남기지 않는다', () {
-      final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
-        site: _site,
-        id: 'id',
-        measuredAt: measuredAt,
-      ).result!; // 변환된 측정 결과
-
-      expect(model.usedDetectedRideSegment, isFalse);
-      expect(model.usedDetectedConstantSpeed, isFalse);
-      expect(model.constantSpeedRange, '미검출');
     });
 
     test('환산 실패는 삼키지 않고 사유를 그대로 올린다', () {

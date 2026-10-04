@@ -89,10 +89,6 @@ class MeasurementAssembler {
   ///       - `site.model`(기종)도 함께 옮긴다. 비어 있으면 null 로 둔다.
   ///         이걸 실어 두면 리포트가 측정 결과 하나만 받으면 되고
   ///         현장 정보를 따로 들고 다니지 않아도 된다
-  ///       - 주행 구간 · 정속 구간 검출은 하지 않았으므로 검출 성공
-  ///         표시를 false 로, 정속 구간 문구를 "미검출" 로 둔다. 모델
-  ///         기본값도 같은 값이지만, 기본값이 나중에 바뀌어도 여기서
-  ///         만드는 결과는 흔들리지 않게 그대로 적어 둔다
   ///       - 소음 시계열을 격자에서 그대로 옮기고, 0 이 아닌 표본의
   ///         최대를 `noiseMax` 에 담는다. 쓸 표본이 하나도 없으면 null 로
   ///         둔다. 자세한 까닭은 클래스 주석의 소음 계약을 본다
@@ -175,10 +171,6 @@ class MeasurementAssembler {
         maxSpeed: motion.maxSpeed,
         distance: motion.distance,
         sampleRate: sampleRate,
-        totalVibrationSampleCount: grid.rowCount,
-        usedDetectedRideSegment: false,
-        usedDetectedConstantSpeed: false,
-        constantSpeedRange: '미검출',
       ),
     );
   }
