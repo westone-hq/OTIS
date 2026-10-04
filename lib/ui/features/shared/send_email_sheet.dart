@@ -5,11 +5,9 @@ import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
-import 'package:vibration_checker/adapter/report_generator.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 
 import '../../core/theme.dart';
-import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_snack_bar.dart';
@@ -88,9 +86,11 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
+/// 수정: 2026-10-04 16:44:32 · nada
 /// 클래스: _SendEmailSheetState
-/// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신자를
-///       확인하고, 보낼 항목을 선택받아 발송을 실행한다.
+/// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신 이메일
+///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
+///       발송을 실행한다. 보낸 주소는 기억해 다음에 미리 골라 둔다.
 class _SendEmailSheetState extends State<SendEmailSheet> {
   /// PDF 리포트를 보낼 항목에 포함할지 여부. 첨부 경로를 직접 전달받는
   /// 경로(attachmentPaths)에서는 쓰이지 않는다
@@ -100,70 +100,73 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 직접 전달받는 경로에서는 쓰이지 않는다
   bool _sendRaw = true;
 
-  /// 지표 요약을 메일 본문에 넣을지 여부. 첨부 경로를 직접 전달받는
-  /// 경로에서는 쓰이지 않는다
-  bool _sendSummary = false;
-
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
   /// 버튼을 비활성화해 중복 실행을 막는다
   bool _loading = false;
 
-  /// 화면에 보여줄 수신 이메일 주소. `_loadRecipient()`가 채운다.
-  /// 등록된 적이 없으면 안내 문구가 그대로 남는다
-  String _recipientEmail = '설정에서 이메일을 등록하세요';
+  /// 설정에 등록된 수신 이메일 전부. `_loadRecipients()` 가 채운다.
+  /// 비어 있으면 아직 등록하지 않은 것이다
+  List<String> _emails = <String>[];
 
-  /// 수신 이메일이 실제로 등록되어 있는지 여부. `_loadRecipient()`가
-  /// 채우고, `_send()`가 이 값을 보고 등록 안내를 띄울지 정한다
-  bool _isEmailSet = false;
+  /// 받을 주소로 고른 이메일. `_loadRecipients()` 가 지난번 보낸 주소로
+  /// 미리 채우고, 체크를 바꿀 때마다 고친다
+  final Set<String> _selected = <String>{};
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: initState
-  /// 목적: 이 시트가 화면에 나타날 때 한 번, 저장된 수신자 이메일을
-  ///       불러와 화면에 표시한다.
+  /// 목적: 이 시트가 화면에 나타날 때 한 번, 저장된 수신 이메일과 지난번
+  ///       보낸 주소를 불러와 화면에 표시한다.
   @override
   void initState() {
     super.initState();
-    // → 로직 이동: _loadRecipient()
-    _loadRecipient();
+    _loadRecipients(); // → 로직 이동: _loadRecipients()
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 13:26:44 · nada
-  /// 함수: _loadRecipient
-  /// 목적: 저장된 수신 이메일을 불러와 화면에 표시할 상태를 채운다.
-  ///       이메일을 등록한 적이 없거나 등록값이 빈 문자열이면 안내
-  ///       문구를 그대로 두고 `_isEmailSet`을 false로 남긴다 —
-  ///       `_send()`가 이 값을 보고 발송 전 등록 안내를 띄운다.
-  Future<void> _loadRecipient() async {
-    String email = '설정에서 이메일을 등록하세요'; // 화면에 채울 수신 이메일
-    bool isSet = false; // 실제로 등록된 이메일을 찾았는지 여부
-    // → 로직 이동: PrefsStore.loadEmail()
-    final saved = await PrefsStore.instance.loadEmail(); // 저장된 수신 주소
-    if (saved != null && saved.trim().isNotEmpty) {
-      email = saved;
-      isSet = true;
-    }
+  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 함수: _loadRecipients
+  /// 목적: 등록된 수신 이메일 목록을 불러오고, 지난번 메일을 보낸 주소
+  ///       가운데 아직 목록에 남아 있는 것을 미리 고른다. 보낸 적이 없고
+  ///       등록된 주소가 하나뿐이면 그 하나를 고른다.
+  Future<void> _loadRecipients() async {
+    final store = PrefsStore.instance; // 기기 저장소
+    // → 로직 이동: PrefsStore.loadEmails()
+    final emails = await store.loadEmails(); // 등록된 수신 이메일
+    // → 로직 이동: PrefsStore.loadLastRecipients()
+    final last = await store.loadLastRecipients(); // 지난번 보낸 주소
     if (!mounted) return;
     setState(() {
-      _recipientEmail = email;
-      _isEmailSet = isSet;
+      _emails = emails;
+      _selected
+        ..clear()
+        ..addAll(last.where(emails.contains));
+      if (_selected.isEmpty && emails.length == 1) _selected.add(emails.first);
     });
   }
 
+  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 함수: _recipients
+  /// 목적: 고른 주소를 설정에 등록된 차례대로 늘어놓는다. 메일 앱에 넘기는
+  ///       수신자 목록이다.
+  /// 반환: 받을 주소 목록
+  List<String> _recipients() =>
+      _emails.where(_selected.contains).toList(growable: false);
+
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _send
-  /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 등록되지
-  ///       않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
+  /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 하나도
+  ///       등록되지 않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
   ///       있으면 보낼 메일의 제목·본문·수신자·첨부파일을 정하고
   ///       (첨부 경로를 그대로 전달받은 경우 `_buildAttachmentEmail()`,
   ///       측정 결과 ID로 조회하는 경우 `_buildJobEmail()`), 기기에
   ///       이미 설치된 메일 앱(Gmail 등)의 작성 화면을 그 내용으로
   ///       미리 채워서 띄운다. 실제 발송 버튼은 사용자가 그 메일
   ///       앱에서 직접 눌러야 한다 — 이 함수가 메일을 대신 보내주는
-  ///       것은 아니다.
+  ///       것은 아니다. 메일 앱 작성창을 띄웠으면 고른 주소를 기억한다.
   Future<void> _send() async {
-    if (!_isEmailSet) {
+    if (_emails.isEmpty) {
       // → 로직 이동: showAppConfirmDialog()
       final goToSettings = await showAppConfirmDialog(
         context,
@@ -193,6 +196,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
       // → 로직 이동: FlutterEmailSender.send()
       await FlutterEmailSender.send(email);
+      // → 로직 이동: PrefsStore.saveLastRecipients()
+      await PrefsStore.instance.saveLastRecipients(email.recipients);
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -209,7 +214,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 14:30:00 · nada
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -274,15 +279,10 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     ).format(result.dateTime); // 메일 제목에 쓸 날짜 문구
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
     final bodyLines = <String>[
-      if (_sendSummary)
-        // → 로직 이동: ReportGenerator.generateSummaryText()
-        ReportGenerator.generateSummaryText(result)
-      else ...[
-        'OTIS 승강기 진동 측정 리포트입니다.',
-        ...attachmentDescriptions,
-        '',
-        '※ 첨부 ${attachments.length}개',
-      ],
+      'OTIS 승강기 진동 측정 리포트입니다.',
+      ...attachmentDescriptions,
+      '',
+      '※ 첨부 ${attachments.length}개',
       if (missing.isNotEmpty) ...['', ...missing],
     ]; // 메일 본문 줄 목록
     final body = bodyLines.join('\n'); // 메일 본문
@@ -290,12 +290,13 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     return Email(
       body: body,
       subject: subject,
-      recipients: [_recipientEmail],
+      recipients: _recipients(), // → 로직 이동: _recipients()
       attachmentPaths: attachments,
     );
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _buildAttachmentEmail
   /// 목적: 전달받은 첨부 경로로 메일의 제목·본문·수신자·첨부파일
   ///       목록을 정한다. 저장소 조회나 측정 결과 객체 생성 과정을
@@ -330,7 +331,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     return Email(
       body: bodyLines.join('\n'),
       subject: subject,
-      recipients: [_recipientEmail],
+      recipients: _recipients(), // → 로직 이동: _recipients()
       attachmentPaths: attachments,
     );
   }
@@ -380,20 +381,28 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 함수: build
   /// 목적: 이메일 발송 시트를 그린다. 위에서부터 순서대로 놓는다.
   ///       1. 제목과 닫기 버튼
-  ///       2. 받는 사람 카드. "변경"을 누르면 설정 화면으로 간다
+  ///       2. 받는 사람 — 등록된 이메일마다 체크 한 줄. 여러 개 고를 수
+  ///          있다. "관리"를 누르면 설정 화면으로 간다
   ///       3. 보낼 항목 체크 목록. 파일을 그대로 넘겨받은 경우에는 넘겨받은
   ///          파일을 전부 보내므로 목록을 보여주지 않는다
-  ///       4. 아무 항목도 고르지 않았을 때의 안내와 "보내기" 버튼
+  ///       4. 고를 것이 빠졌을 때의 안내와 "보내기" 버튼
+  ///       2 · 3 은 함께 스크롤되고 4 는 아래에 고정한다. 시트 아래쪽
+  ///       시스템 영역은 `showAppSheet()` 가 비켜 준다.
   /// 인자: context — 이 시트가 화면 어디에 놓이는지 알려주는 값
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
     final isAttachmentMode = widget.attachmentPaths != null; // 파일을 그대로 넘겨받았는지
-    final noneSelected =
-        !isAttachmentMode &&
-        !_sendPdf &&
-        !_sendRaw &&
-        !_sendSummary; // 보낼 항목을 하나도 고르지 않았는지
+    final noItem =
+        !isAttachmentMode && !_sendPdf && !_sendRaw; // 보낼 항목을 고르지 않았는지
+    final noRecipient = _selected.isEmpty; // 받을 주소를 고르지 않았는지
+    final warning = _emails.isEmpty
+        ? null
+        : noRecipient
+        ? '받을 이메일을 선택하세요'
+        : noItem
+        ? '보낼 항목을 선택하세요'
+        : null; // 보내기 버튼 위 안내 문구, 없으면 null
     final sheetHeight =
         MediaQuery.of(context).size.height * AppDims.sheetHeightFactor; // 시트 높이
 
@@ -418,48 +427,53 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
             ),
             const SizedBox(height: AppDims.gap),
 
-            // 2. 수신자 카드
-            AppCard(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              // 받는 사람 · 보낼 항목을 함께 스크롤
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 2. 받는 사람
+                    Row(
                       children: [
-                        Text(
-                          '받는 사람',
-                          style: AppText.caption.copyWith(
-                            color: AppColors.textSub,
-                          ),
+                        Expanded(child: Text('받는 사람', style: AppText.bodyBold)),
+                        // 수신 이메일을 등록 · 삭제하러 설정 화면으로 이동
+                        AppDialogButton(
+                          label: '관리',
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            // → 로직 이동: SettingsScreen.build()
+                            context.push('/settings');
+                          },
+                          primary: false,
+                          textColor: AppColors.blue,
                         ),
-                        const SizedBox(height: AppDims.gapHalf),
-                        Text(_recipientEmail, style: AppText.bodyBold),
                       ],
                     ),
-                  ),
-                  // 수신 이메일을 등록·변경하러 설정 화면으로 이동
-                  AppDialogButton(
-                    label: '변경',
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      // → 로직 이동: SettingsScreen.build()
-                      context.push('/settings');
-                    },
-                    primary: false,
-                    textColor: AppColors.blue,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppDims.gap2),
+                    if (_emails.isEmpty)
+                      Text(
+                        '등록된 이메일이 없습니다. 설정에서 먼저 등록해 주세요.',
+                        style: AppText.caption,
+                      ),
+                    for (final email in _emails) ...[
+                      _buildCheckboxItem(
+                        title: email,
+                        value: _selected.contains(email),
+                        onChanged: (val) => setState(() {
+                          if (val ?? false) {
+                            _selected.add(email);
+                          } else {
+                            _selected.remove(email);
+                          }
+                        }),
+                      ),
+                      const Divider(height: 1, color: AppColors.border),
+                    ],
 
-            // 3. 발송 항목 CheckboxListTile 3개 — attachmentPaths 경로에서는
-            //    전달받은 파일을 전부 보내므로 선택 UI를 표시하지 않는다.
-            if (!isAttachmentMode)
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
+                    // 3. 보낼 항목 — 파일을 그대로 넘겨받았으면 전부 보낸다
+                    if (!isAttachmentMode) ...[
+                      const SizedBox(height: AppDims.gap3),
+                      Text('보낼 항목', style: AppText.bodyBold),
                       _buildCheckboxItem(
                         title: 'PDF 리포트',
                         value: _sendPdf,
@@ -473,22 +487,15 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                         onChanged: (val) =>
                             setState(() => _sendRaw = val ?? false),
                       ),
-                      const Divider(height: 1, color: AppColors.border),
-                      _buildCheckboxItem(
-                        title: '지표 요약(메일 본문)',
-                        value: _sendSummary,
-                        onChanged: (val) =>
-                            setState(() => _sendSummary = val ?? false),
-                      ),
                     ],
-                  ),
+                  ],
                 ),
-              )
-            else
-              const Expanded(child: SizedBox.shrink()),
+              ),
+            ),
+            const SizedBox(height: AppDims.gap),
 
             // 4. 하단 안내 및 보내기 버튼
-            if (noneSelected) ...[
+            if (warning != null) ...[
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -499,7 +506,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                   ),
                   const SizedBox(width: AppDims.gapHalf),
                   Text(
-                    '보낼 항목을 선택하세요',
+                    warning,
                     style: AppText.caption.copyWith(
                       color: AppColors.red,
                       fontWeight: FontWeight.w700,
@@ -509,23 +516,23 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
               ),
               const SizedBox(height: AppDims.gap),
             ],
-            SizedBox(
-              height: AppDims.buttonH,
-              child: ElevatedButton(
-                onPressed: (noneSelected || _loading) ? null : _send,
-                child: _loading
-                    ? const SizedBox(
-                        width: AppDims.iconS,
-                        height: AppDims.iconS,
-                        child: CircularProgressIndicator(
-                          color: AppColors.onDark,
-                          strokeWidth: AppDims.spinnerStroke,
-                        ),
-                      )
-                    : const Text('보내기'),
-              ),
+            ElevatedButton(
+              // 등록된 주소가 없으면 눌렀을 때 등록 안내를 띄운다
+              onPressed:
+                  (_emails.isNotEmpty && (noRecipient || noItem)) || _loading
+                  ? null
+                  : _send, // → 로직 이동: _send()
+              child: _loading
+                  ? const SizedBox(
+                      width: AppDims.iconS,
+                      height: AppDims.iconS,
+                      child: CircularProgressIndicator(
+                        color: AppColors.onDark,
+                        strokeWidth: AppDims.spinnerStroke,
+                      ),
+                    )
+                  : const Text('보내기'),
             ),
-            const SizedBox(height: AppDims.gap),
           ],
         ),
       ),

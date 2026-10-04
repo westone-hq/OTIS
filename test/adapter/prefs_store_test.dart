@@ -4,19 +4,37 @@ import 'package:vibration_checker/adapter/prefs_store.dart';
 
 /// 작성: 2026-10-04 14:30:00 · nada
 /// 함수: main
-/// 목적: 기기 저장소에 둔 수신 이메일과 마지막 현장 정보가 저장한 그대로
+/// 목적: 기기 저장소에 둔 수신 이메일 · 수신자 · 마지막 현장 정보가 저장한 그대로
 ///       돌아오는지, 깨진 값은 빈 값으로 받는지 시험한다.
 void main() {
   final store = PrefsStore.instance; // 시험할 저장소
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('수신 이메일을 저장한 그대로 읽는다', () async {
-    expect(await store.loadEmail(), isNull);
+  test('수신 이메일 목록을 저장한 그대로 읽는다', () async {
+    expect(await store.loadEmails(), isEmpty);
 
-    await store.saveEmail('name@otis.com');
+    await store.saveEmails(<String>['a@otis.com', 'b@otis.com']);
 
-    expect(await store.loadEmail(), 'name@otis.com');
+    expect(await store.loadEmails(), <String>['a@otis.com', 'b@otis.com']);
+  });
+
+  test('예전 한 칸 주소는 목록 하나로 읽고, 저장하면 지운다', () async {
+    SharedPreferences.setMockInitialValues({'email': 'old@otis.com'});
+
+    expect(await store.loadEmails(), <String>['old@otis.com']);
+
+    await store.saveEmails(<String>['new@otis.com']);
+    final prefs = await SharedPreferences.getInstance(); // 기기 저장소
+    expect(prefs.getString('email'), isNull);
+  });
+
+  test('지난번 수신자를 저장한 그대로 읽는다', () async {
+    expect(await store.loadLastRecipients(), isEmpty);
+
+    await store.saveLastRecipients(<String>['b@otis.com']);
+
+    expect(await store.loadLastRecipients(), <String>['b@otis.com']);
   });
 
   test('마지막 현장 정보를 저장한 그대로 읽는다', () async {
