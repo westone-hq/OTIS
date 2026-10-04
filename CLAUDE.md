@@ -82,6 +82,6 @@ flutter test                                      # 전부 통과 유지
   만들어졌다. 차이는 최대 0.14pt. 좌표가 아니라 참조 PDF 를 다시 만들어야 한다.
 - 요구사항서(`Vibration_Checking_App_Development_20260630.pdf`)가 저장소에 없다.
 - 결과 화면(`/result/:id`) · 서버 연동은 미구현이다. 로그인은 두지 않는다
-  (수신 이메일은 기기당 하나).
+  (수신 이메일은 기기에 목록으로 둔다).
 - 소음 RMS 창(`WINDOW_SEC`) · 갱신 주기(`HOP_HZ`)는 OTIS 와 맞춰 보는
   실험값이다 (`NoiseCaptureHandler.kt`).

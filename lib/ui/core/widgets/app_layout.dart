@@ -80,6 +80,9 @@ class AppBottomBar extends StatelessWidget {
 ///       올라오는 패널)를 띄운다. 위쪽 두 모서리만 둥글게 깎고, 시트가
 ///       내용 길이에 맞춰 화면 위쪽까지 늘어날 수 있게 한다. 기본값대로
 ///       두면 시트가 화면 절반 높이로 묶여 안내가 잘린다.
+///       시트는 화면 맨 아래까지 붙어 올라오므로, 내용을 아래쪽 시스템
+///       영역(홈 · 뒤로 키가 있는 막대) 위로 올려 둔다 — 그러지 않으면
+///       시트 맨 아래 버튼이 그 막대에 가려 누를 수 없다.
 /// 인자: context — 시트를 띄울 화면의 위치 정보
 ///       builder — 시트 안에 그릴 위젯을 돌려주는 함수
 /// 반환: 시트가 닫힐 때 끝나는 비동기 작업
@@ -94,6 +97,9 @@ Future<void> showAppSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppDims.radius)),
     ),
-    builder: builder,
+    useSafeArea: true,
+    // 아래쪽 시스템 영역만 비킨다. 위쪽은 `useSafeArea` 가 맡는다
+    builder: (sheetContext) =>
+        SafeArea(top: false, child: builder(sheetContext)),
   );
 }
