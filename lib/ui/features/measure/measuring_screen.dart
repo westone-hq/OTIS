@@ -235,12 +235,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 18:26:41 · nada
   /// 함수: _showAbortedDialog
   /// 목적: 측정 중 전화가 오는 등 앱이 화면 밖으로 밀려나면 측정이
   ///       중단된다. 앱으로 다시 돌아왔을 때, 이 대화상자로 측정이
   ///       중단됐었다는 사실을 알려준다(`didChangeAppLifecycleState`
-  ///       에서 부름). "확인"을 누르면 `/start` 화면으로 돌아간다.
+  ///       에서 부름). "확인"을 누르면 이 화면을 닫고 측정을 시작한
+  ///       화면(시작 화면 또는 결과 화면을 열었던 곳)으로 돌아간다.
   ///       화면이 이미 사라졌으면(`mounted`가 false) 아무것도 하지
   ///       않는다.
   Future<void> _showAbortedDialog() async {
@@ -254,15 +255,16 @@ class _MeasuringScreenState extends State<MeasuringScreen>
           '처음부터 다시 측정해 주세요.',
       confirmLabel: '확인',
     );
-    if (mounted) context.go('/start'); // → 로직 이동: StartScreen.build()
+    if (mounted) context.pop(); // 측정을 시작한 화면으로 돌아간다
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 18:26:41 · nada
   /// 함수: _showMeasureFailDialog
-  /// 목적: 측정 실패를 알리는 대화상자를 띄운다. "확인"을 누르면
-  ///       `/start` 화면으로 돌아간다. 화면이 이미 사라졌으면
-  ///       (`mounted`가 false) 아무것도 하지 않는다.
+  /// 목적: 측정 실패를 알리는 대화상자를 띄운다. "확인"을 누르면 이
+  ///       화면을 닫고 측정을 시작한 화면으로 돌아간다. 화면 기록을 통째로
+  ///       바꾸지 않아야 그곳에서 뒤로 가기로 홈까지 돌아갈 수 있다. 화면이
+  ///       이미 사라졌으면(`mounted`가 false) 아무것도 하지 않는다.
   /// 인자: message — 실패 사유를 보여줄 문구
   Future<void> _showMeasureFailDialog(String message) async {
     if (!mounted) return;
@@ -273,7 +275,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       message: message,
       confirmLabel: '확인',
     );
-    if (mounted) context.go('/start'); // → 로직 이동: StartScreen.build()
+    if (mounted) context.pop(); // 측정을 시작한 화면으로 돌아간다
   }
 
   /// 작성: 2026-10-04 13:33:18 · nada
@@ -304,7 +306,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///          수집을 멈춘다
   ///       3. `MeasurementRecorder.record()` 로 저장한다
   ///       4. 실패면 사유를 담은 실패 안내를 띄우고, 성공이면 이 화면을
-  ///          결과 화면으로 바꾼다. 결과 화면에서 뒤로 가면 시작 화면이다
+  ///          결과 화면으로 바꾼다. 결과 화면에서 뒤로 가면 측정을 시작한
+  ///          화면(시작 화면 또는 저장 결과 목록)이다
   Future<void> _finishMeasurement() async {
     if (_isFinishing || _isFinished) return; // 이미 진행 중이면 중복 실행 방지
 
