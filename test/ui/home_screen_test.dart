@@ -7,7 +7,6 @@ import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
 
 /// 작성: 2026-10-04 14:35:59 · nada
-/// 수정: 2026-10-04 16:44:32 · nada
 /// 함수: main
 /// 목적: 홈 화면이 지난번 현장 정보로 입력창 · 선택지를 미리 채우는지,
 ///       선택지에 없는 저장값은 버리는지, 입력하는 즉시 저장하는지

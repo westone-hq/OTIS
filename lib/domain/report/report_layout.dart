@@ -65,7 +65,6 @@ class ReportLayout {
   static const String datetimePattern = 'dd/MM/yyyy hh:mm:ss a';
 
   /// 작성: 2026-09-15 20:13:49 · nada
-  /// 수정: 2026-10-04 13:44:32 · nada
   /// 변수: ptPerPxX
   /// 목적: 서식 이미지 픽셀 하나가 PDF 포인트로 가로 몇인지. json 에는
   ///       소수로 끊은 사본이 적혀 있고, 여기서는 페이지 크기에서 직접
@@ -80,7 +79,6 @@ class ReportLayout {
   static const double ptPerPxX = pageWidthPt / pageWidthPx;
 
   /// 작성: 2026-09-15 20:13:49 · nada
-  /// 수정: 2026-10-04 13:44:32 · nada
   /// 변수: ptPerPxY
   /// 목적: 서식 이미지 픽셀 하나가 PDF 포인트로 세로 몇인지.
   /// 식: ky = pageHeightPt / pageHeightPx
