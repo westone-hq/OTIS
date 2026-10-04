@@ -65,11 +65,11 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 최하층 · 최상층 입력 영역으로 스크롤 이동시킬 때 쓰는 위치 키
   final _floorKey = GlobalKey();
 
-  /// 운전 방향. '하부 → 상부' 또는 '상부 → 하부' 중 하나
-  String _direction = '하부 → 상부';
+  /// 운전 방향. `SiteInfo.directionUp` 또는 `SiteInfo.directionDown`
+  String _direction = SiteInfo.directionUp;
 
-  /// 기종. 'Gen2' 또는 '기타' 중 하나
-  String _model = 'Gen2';
+  /// 기종. `SiteInfo.modelGen2` 또는 `SiteInfo.modelOther`
+  String _model = SiteInfo.modelGen2;
 
   /// 제번 입력 오류 문구. null이면 오류 없음
   String? _jobNoError;
@@ -142,51 +142,44 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-04 13:35:26 · nada
   /// 함수: _startMeasure
   /// 목적: 입력값을 검증하고, 통과하면 측정을 시작한다.
-  ///       - 포커스를 해제하고 제번 · 현장명 · 최하층 · 최상층 값을 다듬는다
-  ///       - 필수값 누락, 층수가 숫자가 아님, 최상층이 최하층보다 작거나
-  ///         같음을 검사한다
+  ///       - 포커스를 해제하고 입력값을 다듬어 `SiteInfo`(제번 · 현장명 ·
+  ///         층수 등 현장 정보를 한데 묶는 자료형)로 묶는다
+  ///       - 검사는 `SiteInfo.validate()` 가 한다. 저장할 때도 같은
+  ///         검사를 거치므로 기준이 한 곳에 있다
   ///       - 오류가 있으면 오류 문구를 표시하고, 첫 오류 필드로 포커스를
   ///         옮기며 그 위치까지 화면을 스크롤한 뒤 여기서 멈춘다
-  ///       - 오류가 없으면 입력값을 `SiteInfo`(제번 · 현장명 · 층수 등
-  ///         현장 정보를 한데 묶는 자료형)로 묶어 `MeasurementSession`
-  ///         (이번 측정 정보를 여러 화면이 공유해 쓰도록 앱 전체에 하나만
-  ///         두는 객체)에 저장하고, 다음에 자동으로 채워 넣을 수 있도록
+  ///       - 오류가 없으면 현장 정보를 `MeasurementSession`(이번 측정
+  ///         정보를 여러 화면이 공유해 쓰도록 앱 전체에 하나만 두는
+  ///         객체)에 싣고, 다음에 자동으로 채워 넣을 수 있도록
   ///         `PrefsStore`에도 저장한 뒤 `/start`로 넘어간다
   void _startMeasure() {
     // 1) 포커스 해제 및 입력값 다듬기
     FocusScope.of(context).unfocus();
 
-    final jobNo = _jobNoCtl.text.trim(); // 앞뒤 공백을 지운 제번
-    final siteName = _siteNameCtl.text.trim(); // 앞뒤 공백을 지운 현장명
-    final bottomFloorStr = _bottomFloorCtl.text.trim(); // 최하층 원문
-    final topFloorStr = _topFloorCtl.text.trim(); // 최상층 원문
+    final siteInfo = SiteInfo(
+      // 앞뒤 공백을 지운 입력값을 묶은 현장 정보
+      jobNo: _jobNoCtl.text.trim(),
+      siteName: _siteNameCtl.text.trim(),
+      bottomFloor: _bottomFloorCtl.text.trim(),
+      topFloor: _topFloorCtl.text.trim(),
+      direction: _direction,
+      model: _model,
+    );
 
     // 2) 검증
-    String? jobNoError; // 제번 오류 문구, 없으면 null
-    String? siteNameError; // 현장명 오류 문구, 없으면 null
-    String? floorError; // 층수 오류 문구, 없으면 null
-
-    if (jobNo.isEmpty) {
-      jobNoError = '제번을 입력하세요 (예: 2024F 1447R01)';
-    }
-
-    if (siteName.isEmpty) {
-      siteNameError = '현장명을 입력하세요 (예: 럭키종합건설/송정동근생)';
-    }
-
-    if (bottomFloorStr.isEmpty || topFloorStr.isEmpty) {
-      floorError = '최하층과 최상층을 모두 입력하세요';
-    } else {
-      final bottomFloor = int.tryParse(bottomFloorStr); // 최하층 숫자, 변환 실패 시 null
-      final topFloor = int.tryParse(topFloorStr); // 최상층 숫자, 변환 실패 시 null
-      if (bottomFloor == null || topFloor == null) {
-        floorError = '층수는 숫자로 입력하세요';
-      } else if (bottomFloor >= topFloor) {
-        floorError = '최상층이 최하층보다 커야 합니다';
-      }
-    }
+    // → 로직 이동: SiteInfo.validate()
+    final errors = siteInfo.validate(); // 걸린 항목, 없으면 빈 목록
+    final jobNoError = errors.contains(SiteFieldError.jobNoMissing)
+        ? '제번을 입력하세요 (예: 2024F 1447R01)'
+        : null; // 제번 오류 문구, 없으면 null
+    final siteNameError = errors.contains(SiteFieldError.siteNameMissing)
+        ? '현장명을 입력하세요 (예: 럭키종합건설/송정동근생)'
+        : null; // 현장명 오류 문구, 없으면 null
+    // → 로직 이동: _floorErrorMessage()
+    final floorError = _floorErrorMessage(errors); // 층수 오류 문구, 없으면 null
 
     setState(() {
       _jobNoError = jobNoError;
@@ -205,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _siteNameFocus.requestFocus();
       } else if (floorError != null) {
         targetKey = _floorKey;
-        if (bottomFloorStr.isEmpty) {
+        if (siteInfo.bottomFloor.isEmpty) {
           _bottomFloorFocus.requestFocus();
         } else {
           _topFloorFocus.requestFocus();
@@ -223,28 +216,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // 4) 오류 없음 — 세션에 반영하고 다음 자동 입력을 위해 저장
-    final siteInfo = SiteInfo(
-      // 검증을 마친 입력값을 묶은 현장 정보
-      jobNo: jobNo,
-      siteName: siteName,
-      bottomFloor: bottomFloorStr,
-      topFloor: topFloorStr,
-      direction: _direction,
-      model: _model,
-    );
     // → 로직 이동: MeasurementSession.instance.currentSite
     MeasurementSession.instance.currentSite = siteInfo;
 
+    // → 로직 이동: PrefsStore.saveLastSite()
     PrefsStore.instance.saveLastSite({
-      'jobNo': jobNo,
-      'siteName': siteName,
-      'bottomFloor': bottomFloorStr,
-      'topFloor': topFloorStr,
-      'direction': _direction,
-      'model': _model,
+      'jobNo': siteInfo.jobNo,
+      'siteName': siteInfo.siteName,
+      'bottomFloor': siteInfo.bottomFloor,
+      'topFloor': siteInfo.topFloor,
+      'direction': siteInfo.direction,
+      'model': siteInfo.model,
     });
 
     context.push('/start'); // → 로직 이동: StartScreen.initState()
+  }
+
+  /// 작성: 2026-10-04 13:35:26 · nada
+  /// 함수: _floorErrorMessage
+  /// 목적: 층수 검사에 걸린 항목을 안내 문구로 바꾼다. 층수 오류는 한 번에
+  ///       하나만 나온다.
+  /// 인자: errors — `SiteInfo.validate()` 가 돌려준 목록
+  /// 반환: 층수 오류 문구. 층수에 문제가 없으면 null
+  String? _floorErrorMessage(List<SiteFieldError> errors) {
+    if (errors.contains(SiteFieldError.floorMissing)) {
+      return '최하층과 최상층을 모두 입력하세요';
+    }
+    if (errors.contains(SiteFieldError.floorNotNumber)) {
+      return '층수는 숫자로 입력하세요';
+    }
+    if (errors.contains(SiteFieldError.floorNotAscending)) {
+      return '최상층이 최하층보다 커야 합니다';
+    }
+    return null;
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
@@ -491,18 +495,18 @@ class _HomeScreenState extends State<HomeScreen> {
         SegmentedButton<String>(
           segments: const [
             ButtonSegment<String>(
-              value: '하부 → 상부',
+              value: SiteInfo.directionUp,
               label: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('하부 → 상부'),
+                child: Text(SiteInfo.directionUp),
               ),
               icon: Icon(Icons.arrow_upward),
             ),
             ButtonSegment<String>(
-              value: '상부 → 하부',
+              value: SiteInfo.directionDown,
               label: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('상부 → 하부'),
+                child: Text(SiteInfo.directionDown),
               ),
               icon: Icon(Icons.arrow_downward),
             ),
@@ -540,8 +544,14 @@ class _HomeScreenState extends State<HomeScreen> {
         DropdownButtonFormField<String>(
           initialValue: _model,
           items: const [
-            DropdownMenuItem(value: 'Gen2', child: Text('Gen2')),
-            DropdownMenuItem(value: '기타', child: Text('기타')),
+            DropdownMenuItem(
+              value: SiteInfo.modelGen2,
+              child: Text(SiteInfo.modelGen2),
+            ),
+            DropdownMenuItem(
+              value: SiteInfo.modelOther,
+              child: Text(SiteInfo.modelOther),
+            ),
           ],
           onChanged: (val) {
             if (val != null) setState(() => _model = val);
