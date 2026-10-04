@@ -1,15 +1,12 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 작성: 2026-08-19 10:35:27 · 박건준
+/// 수정: 2026-10-04 14:30:00 · nada
 /// 클래스: PrefsStore
-/// 목적: 앱 설정(이메일 주소, 마지막 현장 정보 등)을 기기에 저장하고
+/// 목적: 앱 설정(수신 이메일 주소, 마지막 현장 정보)을 기기에 저장하고
 ///       불러오는 역할을 한다.
-/// 미구현: `loadEmail()`과 `saveEmail()`만 실제로 저장·조회한다.
-///       나머지(최근 현장 정보를 다루는 `loadLastSite()`,
-///       `saveLastSite()`)는 예외를 던지지 않고 null 또는 빈 값을
-///       그대로 돌려준다 — 저장한 것처럼 보이지만 실제로는 저장되지
-///       않는다. 호출하는 곳에서 실패 여부를 알 수 없으므로, 구현
-///       전까지 그 값을 신뢰하면 안 된다.
 class PrefsStore {
   /// 작성: 2026-07-05 08:15:28 · 박건준
   /// 변수: instance
@@ -50,22 +47,43 @@ class PrefsStore {
     await prefs.setString(_emailKey, email);
   }
 
-  /// 작성: 2026-08-19 10:35:27 · 박건준
-  /// 함수: loadLastSite
-  /// 목적: 이전에 측정했던 현장 이름, 엘리베이터 층수 등의 정보를 불러와서 다음 측정 시 입력창을 자동으로 채워준다.
-  /// 반환: 필드 이름을 키로 하는 저장값 Map. 현재는 항상 빈 Map
-  /// 미구현: 저장 계층이 없어 예외 없이 항상 빈 Map을 돌려준다. 홈
-  ///       화면(home_screen.dart)의 `_loadSavedInputs()`가 이 값을
-  ///       불러 각 입력창에 채우는데, 늘 비어 있어 저장된 적이
-  ///       없는 것처럼 항상 기본값 상태로 남는다.
-  Future<Map<String, String?>> loadLastSite() async => {};
+  /// 작성: 2026-10-04 14:30:00 · nada
+  /// 변수: _lastSiteKey
+  /// 목적: 마지막 현장 정보의 저장 키. 값은 항목 표를 JSON 문자열로 바꿔
+  ///       한 칸에 둔다.
+  static const String _lastSiteKey = 'lastSite';
 
   /// 작성: 2026-08-19 10:35:27 · 박건준
+  /// 수정: 2026-10-04 14:30:00 · nada
+  /// 함수: loadLastSite
+  /// 목적: 지난번 측정의 현장 정보를 불러온다. 홈 화면이 입력창을 미리
+  ///       채우는 데 쓴다. 저장된 값이 깨져 있으면 저장된 적이 없는 것과
+  ///       똑같이 빈 표를 돌려준다 — 미리 채우기는 편의 기능이라, 못
+  ///       채워도 사용자가 다시 입력하면 된다.
+  /// 반환: 항목 이름을 열쇠로 하는 저장값 표. 저장된 적이 없으면 빈 표
+  Future<Map<String, String?>> loadLastSite() async {
+    final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
+    final raw = prefs.getString(_lastSiteKey); // 저장된 JSON, 없으면 null
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw); // 되읽은 값. 표가 아니면 깨진 것
+      if (decoded is! Map) return {};
+      return decoded.map(
+        (key, value) => MapEntry(key.toString(), value?.toString()),
+      );
+    } on FormatException {
+      return {};
+    }
+  }
+
+  /// 작성: 2026-08-19 10:35:27 · 박건준
+  /// 수정: 2026-10-04 14:30:00 · nada
   /// 함수: saveLastSite
-  /// 목적: 방금 측정한 현장 정보를 다음 측정 때 재사용할 수 있도록 저장한다.
-  /// 인자: siteMap — 저장할 현장 정보 Map
-  /// 미구현: 저장 계층이 없어 본문이 비어 있다. 홈 화면이 측정 시작
-  ///       시 이 함수를 불러 저장한 것처럼 동작하지만 실제로는 아무
-  ///       것도 기록되지 않는다.
-  Future<void> saveLastSite(Map<String, String?> siteMap) async {}
+  /// 목적: 방금 측정을 시작한 현장 정보를 다음 측정 때 다시 채울 수 있도록
+  ///       저장한다. 이전 값은 덮어쓴다.
+  /// 인자: siteMap — 항목 이름을 열쇠로 하는 현장 정보 표
+  Future<void> saveLastSite(Map<String, String?> siteMap) async {
+    final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
+    await prefs.setString(_lastSiteKey, jsonEncode(siteMap));
+  }
 }
