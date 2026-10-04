@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
+/// 작성: 2026-08-06 14:47:52 · 박건준
+/// 수정: 2026-10-04 13:50:15 · nada
 /// 함수: main
-/// 목적: 안드로이드에서 쏴주는 센서 원본 데이터(NativeEvent)를 텍스트
+/// 목적: 안드로이드에서 보내는 센서 원본 데이터(`NativeEvent`)를 텍스트
 ///       파일로 저장했다가 다시 읽어들일 때, 데이터가 깨지지 않고
 ///       그대로 복원되는지 테스트한다.
 void main() {

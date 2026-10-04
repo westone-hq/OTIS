@@ -31,6 +31,10 @@ class MeasuringScreen extends StatefulWidget {
   /// 담당하는 클래스)를 새로 만들어 쓴다
   final SensorChannelManager? sensorManager;
 
+  /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 함수: MeasuringScreen
+  /// 목적: 측정 화면을 만든다.
+  /// 인자: sensorManager — 바꿔 끼울 센서 통로. 보통은 넘기지 않는다
   const MeasuringScreen({super.key, this.sensorManager});
 
   @override

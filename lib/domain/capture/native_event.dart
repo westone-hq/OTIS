@@ -1,10 +1,17 @@
+/// 작성: 2026-08-06 14:47:52 · 박건준
+/// 수정: 2026-10-04 13:44:32 · nada
 /// 클래스: NativeEventType
-/// 목적: 스마트폰 하드웨어 센서에서 직접 올라오는 원시(Raw) 데이터의 3가지 종류를 정의한다.
-///       - accel: 중력이 포함된 가속도계 원본 데이터
-///       - gravity: 스마트폰이 추정한 중력 방향 데이터
-///       - linear: OS가 자체적으로 중력을 제거한 선형 가속도 (당사에서는 부정확하여 미사용)
+/// 목적: 안드로이드 센서가 올려 보내는 가공 전 값의 종류.
+///       - `accel` — 중력이 섞인 가속도 원본
+///       - `gravity` — 기기가 추정한 중력 방향
+///       - `linear` — 안드로이드가 중력을 빼서 내 준 가속도. 쓰지 않는다
+///         (`GridResampler.onEvent()` 가 받는 즉시 버린다)
+/// 근거: 미확인 — `linear` 를 쓰지 않는 이유를 "부정확해서"라고 적어
+///       두었으나, 잰 기록이 코드 · 문서에 없다
 enum NativeEventType { accel, gravity, linear }
 
+/// 작성: 2026-08-06 14:47:52 · 박건준
+/// 수정: 2026-10-04 13:44:32 · nada
 /// 클래스: NativeEvent
 /// 목적: 안드로이드 센서 콜백(callback, 값이 준비되면 시스템이 대신
 ///       불러주는 함수)에서 도착한 가공되지 않은 1건의 센서 이벤트를
@@ -33,9 +40,9 @@ class NativeEvent {
   /// 이벤트 종류
   final NativeEventType type;
 
-  /// 변수: tsUs
-  /// 목적: 센서가 데이터를 측정한 시점의 타임스탬프 (단위: 마이크로초)
-  /// 근거: 표준 — 안드로이드 SensorEvent.timestamp API 계약상 단조증가(Monotonically increasing) 시간
+  /// 센서가 값을 잰 시각 (마이크로초). 안드로이드 `SensorEvent.timestamp`
+  /// 를 옮긴 값이라 기기를 켠 뒤부터 줄지 않고 늘기만 하는 시계 기준이다.
+  /// 벽시계 시각과는 다르다
   final int tsUs;
 
   /// X축 가속도 (mg)
@@ -47,20 +54,23 @@ class NativeEvent {
   /// Z축 가속도 (mg)
   final double zMg;
 
-  /// 변수: dtUs
-  /// 목적: 바로 이전 데이터와 현재 데이터 사이의 시간 간격 (단위: 마이크로초)
-  ///       안드로이드(Native) 단에서 넘겨준 값을 그대로 들고 와서 지연/유실 검증에 쓴다.
+  /// 같은 종류 바로 앞 값과의 시간 간격 (마이크로초). 안드로이드가 계산해
+  /// 넘긴 값을 그대로 담아, 수신이 늦거나 빠진 구간을 찾는 데 쓴다.
+  /// 첫 값이면 0
   final int dtUs;
 
-  /// 변수: noiseDba
-  /// 목적: 이 센서 이벤트와 함께 실려 온 최신 소음 크기(dBA).
-  ///       네이티브가 키를 안 보냈거나 권한이 없으면 null/0 취급한다.
+  /// 이 이벤트와 함께 실려 온 가장 최근 소음 크기 (dBA). 안드로이드가 값을
+  /// 보내지 않았으면 null, 마이크 권한이 없거나 소음 창이 아직 덜 찼으면 0
   final double? noiseDba;
 
+  /// 작성: 2026-08-06 14:47:52 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: fromRecordLine
-  /// 목적: 텍스트 파일에 기록된 데이터 한 줄을 다시 NativeEvent 객체로 복원(역직렬화)한다.
-  /// 인자: line — 파싱할 문자열 한 줄 (type, tsUs, xMg, yMg, zMg, dtUs 값이 공백으로 구분됨)
-  /// 반환: 파싱된 NativeEvent 객체. 형식이 하나라도 어긋나면 null을 반환하여 잘못된 데이터가 섞이는 것을 막는다.
+  /// 목적: 기록 파일의 한 줄을 이벤트로 되살린다. `toRecordLine()` 의
+  ///       반대다.
+  /// 인자: line — 공백으로 나뉜 여섯 칸(종류 시각 x y z 간격) 한 줄
+  /// 반환: 되살린 이벤트. 칸 수나 값 형식이 하나라도 어긋나면 null —
+  ///       잘못된 줄이 이벤트로 섞이지 않게 한다
   static NativeEvent? fromRecordLine(String line) {
     final parts = line.trim().split(RegExp(r'\s+')); // 공백으로 나눈 필드 조각들
     if (parts.length != 6) return null;
@@ -88,9 +98,11 @@ class NativeEvent {
     );
   }
 
+  /// 작성: 2026-08-06 14:47:52 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: toRecordLine
-  /// 목적: NativeEvent 객체를 텍스트 파일에 기록하기 좋게 공백으로 구분된 한 줄의 문자열로 변환(직렬화)한다.
-  /// 반환: "종류 tsUs xMg yMg zMg dtUs" 형태의 공백 구분 한 줄 문자열
+  /// 목적: 이벤트 하나를 기록 파일의 한 줄로 바꾼다. 소음은 싣지 않는다.
+  /// 반환: "종류 tsUs xMg yMg zMg dtUs" 를 공백으로 이은 한 줄
   String toRecordLine() {
     return '${type.name} $tsUs $xMg $yMg $zMg $dtUs';
   }
@@ -98,10 +110,14 @@ class NativeEvent {
   /// 작성: 2026-08-06 14:47:52 · 박건준
   /// 수정: 2026-09-15 13:30:00 · 박희정
   /// 함수: fromChannelMap
-  /// 목적: 안드로이드 네이티브(EventChannel)에서 쏘아준 딕셔너리(Map) 형태의 데이터를 NativeEvent 객체로 조립한다.
-  /// 인자: map — 안드로이드에서 전달받은 Map 데이터
-  /// 반환: 파싱된 NativeEvent 객체. 데이터 타입이 안 맞거나 누락되면 null을 반환하여 잘못된 데이터가 섞이는 것을 막는다.
-  /// 근거: 인용 — 네이티브 채널 데이터 통신 규약
+  /// 목적: 안드로이드가 `EventChannel`(네이티브가 데이터를 계속 흘려
+  ///       보내는 통로)로 보낸 표 하나를 이벤트로 바꾼다.
+  /// 인자: map — 안드로이드가 보낸 표. 열쇠는 type · tsUs · xMg · yMg ·
+  ///       zMg · dtUs · noiseDba(없어도 됨)
+  /// 반환: 바꾼 이벤트. 열쇠가 빠졌거나 값의 형이 맞지 않으면 null —
+  ///       잘못된 값이 이벤트로 섞이지 않게 한다
+  /// 근거: 인용 — 열쇠 이름과 형은 `SensorStreamHandler.kt` 가 보내는
+  ///       표와 맞춘 것이다
   static NativeEvent? fromChannelMap(Map<dynamic, dynamic> map) {
     final type = NativeEventType.values
         .asNameMap()[map['type']]; // 이름이 안 맞으면 null
@@ -132,20 +148,27 @@ class NativeEvent {
   }
 }
 
+/// 작성: 2026-08-06 14:47:52 · 박건준
+/// 수정: 2026-10-04 13:44:32 · nada
 /// 클래스: NativeEventRecord
-/// 목적: 스마트폰에서 수집한 순수 원본 센서 이벤트를 `.txt` 파일로 저장하고,
-///       나중에 다시 이 파일을 읽어서 앱 화면에 띄우거나 테스트할 수 있게 도와준다.
+/// 목적: 가공 전 센서 이벤트 목록과 기록 텍스트(`raw_native.txt` 형식)
+///       사이를 오간다. 지금은 시험(native_event_test.dart)만 부른다 —
+///       앱은 안드로이드가 직접 쓴 기록 파일을 복사만 하고 읽지 않는다.
 class NativeEventRecord {
+  /// 작성: 2026-08-06 14:47:52 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: encode
-  /// 목적: 여러 개의 NativeEvent 객체들이 들어있는 리스트를 통째로 텍스트 파일 형태의 긴 문자열로 변환한다.
-  /// 인자: events — 저장할 센서 이벤트 리스트
-  ///       targetSampleRateHz — 측정 시 설정했던 목표 주파수(Hz) (파일 머리말 기록용)
-  /// 반환: 머리말(주석)과 센서 기록들이 줄바꿈(\n)으로 이어진 최종 텍스트 문자열
+  /// 목적: 이벤트 목록을 머리말 몇 줄과 이벤트 한 줄씩으로 된 기록
+  ///       텍스트로 만든다.
+  /// 인자: events — 기록할 이벤트 목록
+  ///       targetSampleRateHz — 측정 때 요청한 목표 주기 (Hz). 머리말에
+  ///       적는다
+  /// 반환: `#` 로 시작하는 머리말 뒤에 이벤트가 한 줄씩 이어진 텍스트
   static String encode(
     List<NativeEvent> events, {
     required int targetSampleRateHz,
   }) {
-    final buffer = StringBuffer();
+    final buffer = StringBuffer(); // 기록 텍스트를 쌓을 자리
     buffer.writeln('# OTIS raw_native.txt · 보간 전 센서 이벤트');
     buffer.writeln('# columns: type tsUs x_mg y_mg z_mg dtUs');
     buffer.writeln('# type: accel | gravity');
@@ -156,10 +179,14 @@ class NativeEventRecord {
     return buffer.toString();
   }
 
+  /// 작성: 2026-08-06 14:47:52 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: decode
-  /// 목적: 통짜 텍스트 파일 문자열을 줄 단위로 쪼개어 읽으면서 다시 NativeEvent 리스트로 복원한다.
-  /// 인자: text — 텍스트 파일 전체 문자열 (주석 `#`은 무시)
-  /// 반환: 복원된 이벤트 리스트(events)와 파싱에 실패하여 버려진 줄 수(skippedLineCount)를 담은 레코드
+  /// 목적: 기록 텍스트를 줄 단위로 읽어 이벤트 목록으로 되살린다. 빈 줄과
+  ///       `#` 로 시작하는 머리말 줄은 건너뛴다.
+  /// 인자: text — 기록 텍스트 전체
+  /// 반환: 되살린 이벤트 목록(`events`)과, 형식이 맞지 않아 버린 줄
+  ///       수(`skippedLineCount`)
   static ({List<NativeEvent> events, int skippedLineCount}) decode(
     String text,
   ) {

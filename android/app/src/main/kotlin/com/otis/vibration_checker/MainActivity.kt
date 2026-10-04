@@ -27,39 +27,48 @@ import io.flutter.plugin.common.MethodChannel
  */
 class MainActivity : FlutterActivity() {
     /**
+     * 작성: 2026-07-04 12:00:10 · 박건준
+     * 수정: 2026-10-04 13:50:15 · nada
      * 클래스: Companion
      * 목적: Flutter와 연결할 채널 이름, 권한 요청 코드 등 MainActivity
      *       전역에서 쓰는 상수를 모아둔다.
      */
     companion object {
         /**
-         * Flutter 쪽 lib/adapter/sensor_channel.dart 의 _methodChannel 과
-         * 문자열이 반드시 같아야 한다. 컴파일러가 대신 검사해주는 연결이
-         * 아니라서, 둘 중 하나만 바뀌면 컴파일은 되지만 요청이 반대편에
-         * 닿지 않고 조용히 실패한다
+         * 작성: 2026-07-04 12:00:10 · 박건준
+         * 수정: 2026-10-04 13:50:15 · nada
+         * 변수: METHOD_CHANNEL
+         * 목적: 요청 하나 · 응답 하나를 주고받는 통로 이름. Flutter 쪽
+         *       `sensor_channel.dart` 의 `_methodChannel` 과 문자열이 반드시
+         *       같아야 한다. 컴파일러가 대신 검사해주는 연결이 아니라서, 둘
+         *       중 하나만 바뀌면 컴파일은 되지만 요청이 반대편에 닿지 않고
+         *       조용히 실패한다.
          */
         private const val METHOD_CHANNEL =
             "com.otis.vibration_checker/sensors_method"
 
         /**
-         * 위와 같은 이유로 sensor_channel.dart 의 _eventChannel 과 문자열이
-         * 반드시 같아야 한다
+         * 작성: 2026-07-04 12:00:10 · 박건준
+         * 수정: 2026-10-04 13:50:15 · nada
+         * 변수: STREAM_CHANNEL
+         * 목적: 센서 값을 계속 흘려보내는 통로 이름. `METHOD_CHANNEL` 과
+         *       같은 이유로 `sensor_channel.dart` 의 `_eventChannel` 과
+         *       문자열이 반드시 같아야 한다.
          */
         private const val STREAM_CHANNEL =
             "com.otis.vibration_checker/sensors_stream"
 
-
-        /** onRequestPermissionsResult 에서 마이크 권한 응답과 고속 샘플링
-         *  권한 응답을 구분하기 위한 임의의 요청 코드 */
+        /** 마이크 권한 요청 코드. 응답을 고속 샘플링 권한과 구분하는 임의 값 */
         private const val REQ_AUDIO_PERMISSION = 1001
+
+        /** 고속 샘플링 권한 요청 코드. 응답을 마이크 권한과 구분하는 임의 값 */
         private const val REQ_HIGH_RATE_PERMISSION = 1002
     }
 
     /** 소음(마이크) 원본 캡처 담당. startCapture/stopCapture·onDestroy에서 시작·정지한다 */
     private lateinit var noiseCaptureHandler: NoiseCaptureHandler
 
-
-    /** 가속도 · 중력 센서 원본 캡처 담당. startCapture/stopCapture 요청을 이 핸들러에 그대로 위임한다 */
+    /** 가속도 · 중력 센서 원본 캡처 담당. 시작 · 종료 요청을 그대로 넘긴다 */
     private lateinit var sensorStreamHandler: SensorStreamHandler
 
     /** 측정 중 볼륨키를 "측정 종료" 입력으로 쓸지 여부. 측정 화면에서만 true로 켠다 */
@@ -67,7 +76,6 @@ class MainActivity : FlutterActivity() {
 
     /** Flutter 쪽으로 볼륨키 종료 요청을 보낼 통로 */
     private var methodChannel: MethodChannel? = null
-
 
     /** 마이크 권한 요청 결과를 알려줄 콜백. 요청을 보낸 동안에만 값이 있고,
      *  onRequestPermissionsResult 에서 쓰고 나면 다시 null 로 비운다 */
@@ -114,11 +122,11 @@ class MainActivity : FlutterActivity() {
                      *       중력 센서가 둘 다 있으면 true
                      */
                     "checkAvailable" -> {
-                        val sensorManager =
+                        val sensorManager = // 센서 목록 조회 서비스. 못 가져오면 null
                             getSystemService(Context.SENSOR_SERVICE) as SensorManager?
-                        val accel =
+                        val accel = // 가속도 센서, 없으면 null
                             sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                        val gravity =
+                        val gravity = // 중력 센서, 없으면 null
                             sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
                         result.success(accel != null && gravity != null)
                     }
@@ -153,7 +161,7 @@ class MainActivity : FlutterActivity() {
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-09-15 13:30:00 · 박희정
+                     * 수정: 2026-10-04 13:50:15 · nada
                      * 함수: startCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "startCapture" 요청에 응답한다. 소음(마이크)과
@@ -164,19 +172,20 @@ class MainActivity : FlutterActivity() {
                      *       - 이미 권한이 있거나 Android 12 미만이면
                      *         곧바로 시작한다
                      * 인자: calibrationOffset — 현장·기기 보정(dBA), 기본 0.0
-                     *       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 87.3
+                     *       micDbfsToDbaOffset — dBFS→dBA 오프셋. 넘어오지
+                     *       않으면 `NoiseCaptureHandler` 의 기본값
                      * 반환: result.success(null) 로 즉시 응답한다. 실제로
                      *       캡처가 시작됐는지는 기다리지 않는다
-                     * 근거: 인용 — OTIS 동시측정 보정(기본 87.3). 측정 —
-                     *       SENSOR_DELAY_FASTEST 로 요청해도 실제 수신
+                     * 근거: 측정 — SENSOR_DELAY_FASTEST 로 요청해도 실제 수신
                      *       속도는 단말 하드웨어 주기라 200Hz 를 넘는다
                      */
                     "startCapture" -> {
-                        val calibrationOffset =
+                        val calibrationOffset = // 현장 · 기기 보정(dBA)
                             call.argument<Double>("calibrationOffset") ?: 0.0
-                        val micDbfsToDbaOffset =
-                            call.argument<Double>("micDbfsToDbaOffset") ?: 87.3
-                        val begin = {
+                        val micDbfsToDbaOffset = // dBFS→dBA 기본 오프셋
+                            call.argument<Double>("micDbfsToDbaOffset")
+                                ?: NoiseCaptureHandler.DEFAULT_MIC_DBFS_TO_DBA_OFFSET
+                        val begin = { // 소음 · 센서 수집을 함께 켜는 동작
                             // → 로직 이동: NoiseCaptureHandler.start()
                             noiseCaptureHandler.start(
                                 calibrationOffset,
@@ -186,9 +195,9 @@ class MainActivity : FlutterActivity() {
                             sensorStreamHandler.start()
                         }
 
-                        val needsHighRate =
+                        val needsHighRate = // 고속 샘플링 권한이 필요한 버전인지
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                        val permName =
+                        val permName = // 고속 샘플링 권한 이름
                             "android.permission.HIGH_SAMPLING_RATE_SENSORS"
                         if (needsHighRate &&
                             ContextCompat.checkSelfPermission(
@@ -220,15 +229,19 @@ class MainActivity : FlutterActivity() {
                      */
                     "stopCapture" -> {
                         // → 로직 이동: SensorStreamHandler.stop()
-                        val recordPath = sensorStreamHandler.stop()
+                        val recordPath = // 저장한 원본 기록 경로, 못 했으면 null
+                            sensorStreamHandler.stop()
                         // → 로직 이동: NoiseCaptureHandler.stop()
                         noiseCaptureHandler.stop()
                         result.success(recordPath)
                     }
                     /**
+                     * 작성: 2026-10-01 13:04:31 · 박희정
+                     * 수정: 2026-10-04 13:50:15 · nada
                      * 함수: setVolumeKeyCaptureEnabled
-                     * 목적: 측정 중에만 볼륨키를 측정 종료 트리거로 바꾼다.
-                     *       false일 때는 시스템 볼륨키 동작에 손대지 않는다.
+                     * 목적: 측정 중에만 볼륨키를 측정 종료 입력으로 바꾼다.
+                     *       false 일 때는 시스템 볼륨키 동작에 손대지 않는다.
+                     *       실제 가로채기는 `dispatchKeyEvent()` 가 한다.
                      */
                     "setVolumeKeyCaptureEnabled" -> {
                         volumeKeyCaptureEnabled =
@@ -236,8 +249,10 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     /**
+                     * 작성: 2026-07-04 12:00:10 · 박건준
                      * 함수: else
-                     * 목적: 정의되지 않은 메서드 이름의 요청에 미구현으로 응답한다.
+                     * 목적: 정의되지 않은 메서드 이름의 요청에 미구현으로
+                     *       응답한다.
                      */
                     else -> {
                         result.notImplemented()
@@ -247,10 +262,15 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
+     * 작성: 2026-10-01 13:04:31 · 박희정
+     * 수정: 2026-10-04 13:50:15 · nada
      * 함수: dispatchKeyEvent
-     * 목적: 측정 중 볼륨 Up/Down을 시스템 볼륨 변경 대신 측정 종료
-     *       요청으로 소비한다. 카운트다운·종료 후에는 기존 볼륨키 동작을
-     *       그대로 둔다.
+     * 목적: 측정 중 볼륨 올림 · 내림 키를 소리 크기 변경 대신 측정 종료
+     *       요청으로 쓰고, 다른 곳으로 넘기지 않는다. 가로채기가 꺼져
+     *       있으면(측정 전 · 후) 본래 동작을 그대로 둔다. 길게 눌러 반복해
+     *       들어오는 키는 한 번만 센다.
+     * 인자: event — 눌린 키 정보
+     * 반환: 가로챘으면 true, 아니면 상위 클래스의 처리 결과
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (volumeKeyCaptureEnabled &&
@@ -259,6 +279,7 @@ class MainActivity : FlutterActivity() {
             (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
                 event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
         ) {
+            // → 로직 이동: SensorChannelManager._installMethodCallHandler()
             methodChannel?.invokeMethod(
                 "volumeKeyPressed",
                 mapOf("keyCode" to event.keyCode)
@@ -292,14 +313,14 @@ class MainActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_AUDIO_PERMISSION) {
-            val granted =
+            val granted = // 마이크 권한을 허용했는지
                 grantResults.isNotEmpty() &&
                     grantResults[0] == PackageManager.PERMISSION_GRANTED
             permissionCallback?.success(granted)
             permissionCallback = null
         }
         if (requestCode == REQ_HIGH_RATE_PERMISSION) {
-            val granted =
+            val granted = // 고속 샘플링 권한을 허용했는지
                 grantResults.isNotEmpty() &&
                     grantResults[0] == PackageManager.PERMISSION_GRANTED
             if (!granted) {

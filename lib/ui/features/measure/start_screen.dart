@@ -24,6 +24,10 @@ class StartScreen extends StatefulWidget {
   /// 담당하는 관리자 클래스)를 새로 만들어 쓴다
   final SensorChannelManager? sensorManager;
 
+  /// 작성: 2026-08-17 13:31:30 · 박건준
+  /// 함수: StartScreen
+  /// 목적: 측정 시작 화면을 만든다.
+  /// 인자: sensorManager — 바꿔 끼울 센서 통로. 보통은 넘기지 않는다
   const StartScreen({super.key, this.sensorManager});
 
   @override

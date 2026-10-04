@@ -20,7 +20,8 @@ import 'package:vibration_checker/model/measurement_result.dart';
 ///         - `result.json` — 측정 결과 전부. 시계열 여덟 개가 들어 있어
 ///           크다. `load()` 만 읽는다
 ///         - `summary.json` — 시계열을 뺀 나머지. 목록 화면이 읽는다
-///         - `raw.txt` — 격자에 맞춘 측정값 (EVIMP1, X Y Z 소음)
+///         - `raw.txt` — 격자에 맞춘 측정값. EVIMP1(회사 EVA 진동측정
+///           장비가 쓰는 데이터 형식)로 X Y Z 소음 네 열
 ///         - `report.pdf` — 만들어 둔 리포트. 없으면 그때 만든다
 ///         - `meta.txt` · `native_raw.txt` — 집계와 안드로이드 원본 사본
 ///

@@ -1,10 +1,13 @@
 import 'dart:convert';
 
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
-import 'package:vibration_checker/model/sensor_sample.dart';
 
+/// 작성: 2026-07-03 15:21:58 · 박건준
+/// 수정: 2026-10-04 13:44:32 · nada
 /// 클래스: MeasurementResult
-/// 목적: 진동 분석 엔진이 계산을 마친 최종 측정 결과 데이터를 담는다.
+/// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
+///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
+///       `MeasurementRepository` 가 JSON 파일로 저장 · 복원한다.
 class MeasurementResult {
   /// 결과 식별자
   final String id;
@@ -134,10 +137,6 @@ class MeasurementResult {
   /// 전체 대비 정속 구간 비율 (0~1)
   final double constantSpeedRatio;
 
-  /// 원본 센서 데이터 보관 (EVIMP1, 회사 EVA 진동측정 장비가 쓰는
-  /// 표준 데이터 포맷 저장용). 없으면 null
-  final List<SensorSample>? rawSamples;
-
   /// 움직임 미감지 경고 여부
   final bool lowMotionWarning;
 
@@ -145,7 +144,7 @@ class MeasurementResult {
   final Map<String, double> debugMetrics;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-09-15 14:32:07 · nada
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자. 확장 필드는 기본값을 갖는다.
   /// 인자: id — 결과 식별자
@@ -178,7 +177,6 @@ class MeasurementResult {
   ///       constantSpeedSampleCount — 정속 구간 샘플 수, 기본 0
   ///       totalVibrationSampleCount — 진동 분석 전체 샘플 수, 기본 0
   ///       constantSpeedRatio — 전체 대비 정속 구간 비율, 기본 0.0
-  ///       rawSamples — 원본 데이터 보관, 없으면 null
   ///       lowMotionWarning — 움직임 미감지 경고 여부, 기본 false
   ///       debugMetrics — 실측 진단용 임시 지표, 기본 빈 Map
   const MeasurementResult({
@@ -223,11 +221,18 @@ class MeasurementResult {
     this.constantSpeedSampleCount = 0,
     this.totalVibrationSampleCount = 0,
     this.constantSpeedRatio = 0.0,
-    this.rawSamples,
     this.lowMotionWarning = false,
     this.debugMetrics = const {},
   });
 
+  /// 작성: 2026-07-04 15:04:38 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 함수: copyWith
+  /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
+  ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
+  ///       넘기면 "바꾸지 않음"으로 읽힌다.
+  /// 인자: 생성자 `MeasurementResult` 와 같다. 모두 생략할 수 있다
+  /// 반환: 새 측정 결과
   MeasurementResult copyWith({
     String? id,
     String? jobNo,
@@ -270,7 +275,6 @@ class MeasurementResult {
     int? constantSpeedSampleCount,
     int? totalVibrationSampleCount,
     double? constantSpeedRatio,
-    List<SensorSample>? rawSamples,
     bool? lowMotionWarning,
     Map<String, double>? debugMetrics,
   }) {
@@ -323,12 +327,18 @@ class MeasurementResult {
       totalVibrationSampleCount:
           totalVibrationSampleCount ?? this.totalVibrationSampleCount,
       constantSpeedRatio: constantSpeedRatio ?? this.constantSpeedRatio,
-      rawSamples: rawSamples ?? this.rawSamples,
       lowMotionWarning: lowMotionWarning ?? this.lowMotionWarning,
       debugMetrics: debugMetrics ?? this.debugMetrics,
     );
   }
 
+  /// 작성: 2026-08-06 15:59:06 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 함수: toMap
+  /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
+  ///       문자열로, 재지 않은 값은 null 그대로 둔다.
+  ///       `MeasurementResult.fromMap` 이 이 표를 되읽는다.
+  /// 반환: 필드 이름을 열쇠로 하는 표
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -377,6 +387,7 @@ class MeasurementResult {
     };
   }
 
+  /// 작성: 2026-07-04 15:52:54 · 박건준
   /// 수정: 2026-09-15 13:22:45 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다.
@@ -461,6 +472,7 @@ class MeasurementResult {
   factory MeasurementResult.fromJson(String source) =>
       MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 수정: 2026-09-15 20:13:49 · nada
   /// 함수: xExceeded
   /// 목적: X축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
@@ -477,6 +489,7 @@ class MeasurementResult {
   bool? get xExceeded =>
       ReportThresholds.exceeds(xPtp, ReportThresholds.xPtpRedMg);
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 수정: 2026-09-15 20:13:49 · nada
   /// 함수: yExceeded
   /// 목적: Y축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
@@ -493,6 +506,7 @@ class MeasurementResult {
   bool? get yExceeded =>
       ReportThresholds.exceeds(yPtp, ReportThresholds.yPtpRedMg);
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 수정: 2026-09-15 20:13:49 · nada
   /// 함수: zExceeded
   /// 목적: Z축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
@@ -509,6 +523,7 @@ class MeasurementResult {
   bool? get zExceeded =>
       ReportThresholds.exceeds(zPtp, ReportThresholds.zPtpRedMg);
 
+  /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 수정: 2026-09-15 20:13:49 · nada
   /// 함수: noiseExceeded
   /// 목적: 최대 소음이 위험 기준치를 넘었는지 확인한다. 기준 숫자는

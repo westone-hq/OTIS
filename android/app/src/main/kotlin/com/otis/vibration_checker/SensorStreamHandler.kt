@@ -61,14 +61,23 @@ import java.io.FileWriter
  */
 class SensorStreamHandler(
     private val context: Context, // 센서 서비스에 접근할 때 쓰는 안드로이드 컨텍스트
-    private val noiseCaptureHandler: NoiseCaptureHandler, // 소음값을 함께 실어 보내기 위해 참조
+    // 소음값을 센서 이벤트에 함께 실어 보내기 위해 참조
+    private val noiseCaptureHandler: NoiseCaptureHandler,
 ) : EventChannel.StreamHandler, SensorEventListener {
 
+    /**
+     * 작성: 2026-07-04 12:00:10 · 박건준
+     * 수정: 2026-10-04 13:50:15 · nada
+     * 클래스: Companion
+     * 목적: 단위 환산 계수, 전송 묶음 크기, Flutter 로 보낼 종류 이름을
+     *       모아 둔다.
+     */
     companion object {
         /** 로그 태그 (Log.e/Log.i 호출 시 출처를 이 이름으로 남긴다) */
         private const val TAG = "SensorStreamHandler"
 
         /**
+         * 작성: 2026-07-04 12:00:10 · 박건준
          * 변수: MPS2_TO_MG
          * 목적: m/s² → mg 환산 계수
          * 근거: 표준 — 표준 중력 9.80665, 1000 / 9.80665
@@ -76,6 +85,7 @@ class SensorStreamHandler(
         private const val MPS2_TO_MG = 101.97162129779283
 
         /**
+         * 작성: 2026-07-04 12:00:10 · 박건준
          * 변수: BATCH_SIZE
          * 목적: 채널 전송 배치 크기
          * 근거: 미확인 — 채널 오버헤드(한 번 보낼 때마다 추가로 드는
@@ -151,7 +161,8 @@ class SensorStreamHandler(
         // → 로직 이동: openRecordFile()
         openRecordFile()
 
-        val thread = HandlerThread("otis-sensor").also { it.start() } // 센서 콜백 전용 스레드
+        val thread = // 센서 콜백 전용 스레드
+            HandlerThread("otis-sensor").also { it.start() }
         val handler = Handler(thread.looper) // 그 스레드에 일을 넣는 핸들러
         sensorThread = thread
         sensorHandler = handler
@@ -191,7 +202,7 @@ class SensorStreamHandler(
 
         // 채널로 아직 못 보낸 배치 잔여분이 있으면 마저 내보낸다.
         // 내보내지 않으면 이번 측정의 마지막 값 몇 개가 유실된다
-        var remainder: List<Map<String, Any>>? = null
+        var remainder: List<Map<String, Any>>? = null // 마저 보낼 묶음, 없으면 null
         synchronized(batchBuffer) {
             if (batchBuffer.isNotEmpty()) {
                 remainder = ArrayList(batchBuffer)
@@ -267,8 +278,10 @@ class SensorStreamHandler(
         }
 
         val tsNs = event.timestamp // 이번 값의 시각(나노초)
-        val prevNs = if (type == TYPE_ACCEL) lastAccelTsNs else lastGravityTsNs // 같은 종류의 직전 값 시각
-        val dtUs = if (prevNs > 0L && tsNs > prevNs) (tsNs - prevNs) / 1000L else 0L // 직전 값과의 간격(us). 첫 값이면 0
+        val prevNs = // 같은 종류의 직전 값 시각(나노초)
+            if (type == TYPE_ACCEL) lastAccelTsNs else lastGravityTsNs
+        val dtUs = // 직전 값과의 간격(마이크로초). 첫 값이면 0
+            if (prevNs > 0L && tsNs > prevNs) (tsNs - prevNs) / 1000L else 0L
         if (type == TYPE_ACCEL) lastAccelTsNs = tsNs else lastGravityTsNs = tsNs
 
         val xMg = event.values[0] * MPS2_TO_MG // X축 값(mg)
@@ -337,8 +350,10 @@ class SensorStreamHandler(
         // → 로직 이동: closeRecordFile()
         closeRecordFile()
         try {
-            val dir = context.getExternalFilesDir(null) ?: context.filesDir // 외장 없으면 앱 전용 내부 저장소
-            val file = File(dir, "raw_native_${System.currentTimeMillis()}.txt") // 새로 만들 기록 파일
+            val dir = // 기록 폴더. 외장이 없으면 앱 전용 내부 저장소
+                context.getExternalFilesDir(null) ?: context.filesDir
+            val file = // 새로 만들 기록 파일
+                File(dir, "raw_native_${System.currentTimeMillis()}.txt")
             val writer = BufferedWriter(FileWriter(file)) // 이 파일에 쓸 기록기
             writer.write("# OTIS raw_native.txt · 보간 전 센서 이벤트\n")
             writer.write("# columns: type tsUs x_mg y_mg z_mg dtUs\n")

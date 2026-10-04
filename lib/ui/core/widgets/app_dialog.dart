@@ -117,7 +117,7 @@ class AppDialogButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppDims.radius),
               ),
             )
-          : null;
+          : null; // 여백을 따로 받았을 때만 덮어쓸 모양
       if (icon != null) {
         buttonWidget = TextButton.icon(
           onPressed: onPressed,

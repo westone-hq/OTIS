@@ -65,25 +65,27 @@ class ReportLayout {
   static const String datetimePattern = 'dd/MM/yyyy hh:mm:ss a';
 
   /// 작성: 2026-09-15 20:13:49 · nada
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 변수: ptPerPxX
-  /// 목적: 서식 이미지 픽셀 하나가 PDF 포인트로 가로 몇인지.
+  /// 목적: 서식 이미지 픽셀 하나가 PDF 포인트로 가로 몇인지. json 에는
+  ///       소수로 끊은 사본이 적혀 있고, 여기서는 페이지 크기에서 직접
+  ///       나눈다. 그래야 서식 오른쪽 끝이 A4 폭에 정확히 떨어진다.
+  /// 식: kx = pageWidthPt / pageWidthPx
   /// 근거: 인용 — `docs/report_layout.json` 의 `page.pt_per_px_x`. 가로와
   ///       세로 계수가 다른 이유는 서식 이미지 비율(1.414007)이 A4
   ///       비율(1.414285)과 미세하게 달라서다. 배경을 A4 전면에 늘려
   ///       깔기 때문에 좌표도 같은 배율로 늘어나야 배경 위 자리와
   ///       맞는다. 하나의 계수로 두 축을 다 쓰면 페이지 아래쪽에서
   ///       0.16pt 어긋난다
-  /// 식: kx = pageWidthPt / pageWidthPx
-  ///     json 에는 소수로 끊은 사본이 적혀 있고, 여기서는 페이지 크기에서
-  ///     직접 나눈다. 그래야 서식 오른쪽 끝이 A4 폭에 정확히 떨어진다
   static const double ptPerPxX = pageWidthPt / pageWidthPx;
 
   /// 작성: 2026-09-15 20:13:49 · nada
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 변수: ptPerPxY
   /// 목적: 서식 이미지 픽셀 하나가 PDF 포인트로 세로 몇인지.
+  /// 식: ky = pageHeightPt / pageHeightPx
   /// 근거: 인용 — `docs/report_layout.json` 의 `page.pt_per_px_y`.
   ///       `ptPerPxX` 와 다른 이유는 같은 설명을 본다
-  /// 식: ky = pageHeightPt / pageHeightPx
   static const double ptPerPxY = pageHeightPt / pageHeightPx;
 
   /// 작성: 2026-09-15 19:43:50 · nada

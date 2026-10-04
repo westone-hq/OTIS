@@ -122,7 +122,8 @@ class CaptureSession {
     } catch (_) {}
 
     // → 로직 이동: SensorChannelManager.requestAudioPermission()
-    final audioGranted = await _sensorManager.requestAudioPermission();
+    final audioGranted = await _sensorManager
+        .requestAudioPermission(); // 마이크 권한을 받았는지
 
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
     final available = await _sensorManager.checkSensorsAvailable(); // 센서 유무

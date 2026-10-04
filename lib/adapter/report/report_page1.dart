@@ -441,7 +441,10 @@ class ReportPage1Renderer {
       ..drawString(textWriter.regular, 3.6, label, x + 5, y + 1.5);
   }
 
-  /// 디버그 표식에 쓰는 자홍색. 서식에 없는 색이라 눈에 바로 띈다
+  /// 작성: 2026-09-22 20:18:06 · nada
+  /// 변수: _debugColor
+  /// 목적: 자리 확인용 표식(`debug: true` 일 때만 그린다)에 쓰는 자홍색.
+  ///       서식에 없는 색이라 눈에 바로 띈다.
   static final PdfColor _debugColor = PdfColor.fromInt(0xFFFF00AA);
 }
 

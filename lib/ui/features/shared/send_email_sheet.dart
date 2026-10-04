@@ -70,6 +70,11 @@ class SendEmailSheet extends StatefulWidget {
   /// 메일 본문. attachmentPaths 경로에서만 쓰인다
   final String? body;
 
+  /// 작성: 2026-08-19 10:33:43 · 박건준
+  /// 함수: SendEmailSheet
+  /// 목적: 시트가 보낼 자료를 받는다. `jobId` 와 `attachmentPaths` 중 하나만
+  ///       준다 — 둘 다 주거나 빼는 경우는 `showSendEmailSheet()` 가 막는다.
+  /// 인자: jobId, attachmentPaths, subject, body — 위 필드 설명을 따른다
   const SendEmailSheet({
     super.key,
     this.jobId,

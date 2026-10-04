@@ -7,8 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
 
-export 'package:vibration_checker/model/sensor_sample.dart';
-
 /// 작성: 2026-08-17 15:35:02 · 박건준
 /// 클래스: SensorChannelManager
 /// 목적: Flutter(UI)와 안드로이드(하드웨어) 사이에서 센서 데이터를
@@ -20,32 +18,62 @@ export 'package:vibration_checker/model/sensor_sample.dart';
 ///         가속도 · 중력 센서 원본 데이터를 배치(batch, 여러 개를
 ///         묶은 덩어리)로 받는다
 class SensorChannelManager {
-  /// Flutter ↔ 안드로이드가 요청 하나 · 응답 하나를 주고받는 통로.
-  /// 양쪽은 이 문자열 하나만으로 서로를 찾는다 — Dart 코드와 코틀린 코드
-  /// 사이에는 컴파일러가 대신 검사해주는 연결이 없어서, 한쪽 문자열만
-  /// 바뀌면 컴파일은 그대로 되지만 실행할 때 요청이 반대편에 닿지 않고
-  /// 조용히 실패한다(예외 없이 응답만 안 옴). 이름을 바꿀 일이 생기면
-  /// `MainActivity.kt`에 등록된 문자열도 반드시 같이 바꿔야 한다
+  /// 작성: 2026-07-10 11:01:05 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 변수: _methodChannel
+  /// 목적: Flutter ↔ 안드로이드가 요청 하나 · 응답 하나를 주고받는 통로.
+  ///       양쪽은 이 문자열 하나만으로 서로를 찾는다 — Dart 코드와 코틀린
+  ///       코드 사이에는 컴파일러가 대신 검사해주는 연결이 없어서, 한쪽
+  ///       문자열만 바뀌면 컴파일은 그대로 되지만 실행할 때 요청이 반대편에
+  ///       닿지 않고 조용히 실패한다(예외 없이 응답만 안 옴). 이름을 바꿀
+  ///       일이 생기면 `MainActivity.kt`에 등록된 문자열도 반드시 같이
+  ///       바꿔야 한다.
   static const MethodChannel _methodChannel = MethodChannel(
     'com.otis.vibration_checker/sensors_method',
   );
 
-  /// 안드로이드 → Flutter로 센서 원본 데이터가 계속 흘러오는 통로.
-  /// 문자열 하나로 식별되고, 양쪽을 같이 바꿔야 하는 이유는
-  /// `_methodChannel`과 같다
+  /// 작성: 2026-07-10 11:01:05 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 변수: _eventChannel
+  /// 목적: 안드로이드 → Flutter로 센서 원본 데이터가 계속 흘러오는 통로.
+  ///       문자열 하나로 식별되고, 양쪽을 같이 바꿔야 하는 이유는
+  ///       `_methodChannel`과 같다.
   static const EventChannel _eventChannel = EventChannel(
     'com.otis.vibration_checker/sensors_stream',
   );
 
+  /// 작성: 2026-10-01 13:04:31 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 변수: _volumeKeyController
+  /// 목적: 안드로이드가 알려 온 볼륨키 눌림을 `volumeKeyPresses` 로
+  ///       내보내는 통로. 여러 곳이 동시에 들을 수 있게 하고, 관리자를
+  ///       여러 개 만들어도 안드로이드 쪽 알림은 하나이므로 클래스에 하나만
+  ///       둔다.
   static final StreamController<void> _volumeKeyController =
       StreamController<void>.broadcast();
 
+  /// 작성: 2026-10-01 13:04:31 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 변수: _methodCallHandlerInstalled
+  /// 목적: 안드로이드 → Flutter 요청 받는 함수를 이미 걸었는지. 통로 하나에
+  ///       받는 함수는 하나만 걸리므로 두 번 걸지 않게 막는다.
   static bool _methodCallHandlerInstalled = false;
 
+  /// 작성: 2026-10-01 13:04:31 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 함수: SensorChannelManager
+  /// 목적: 관리자를 만들 때 안드로이드가 보내는 요청(볼륨키 눌림)을 받을
+  ///       준비를 한다.
   SensorChannelManager() {
-    _installMethodCallHandler();
+    _installMethodCallHandler(); // → 로직 이동: _installMethodCallHandler()
   }
 
+  /// 작성: 2026-10-01 13:04:31 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 함수: _installMethodCallHandler
+  /// 목적: 안드로이드가 `_methodChannel` 로 보내는 요청을 받는 함수를 한
+  ///       번만 건다. 지금 받는 요청은 볼륨키 눌림(`volumeKeyPressed`)
+  ///       하나이고, 받으면 `_volumeKeyController` 로 흘려보낸다.
   static void _installMethodCallHandler() {
     if (_methodCallHandlerInstalled) return;
     _methodCallHandlerInstalled = true;
@@ -56,12 +84,10 @@ class SensorChannelManager {
     });
   }
 
-  /// 작성: 2026-08-10 11:44:47 · 박건준
-  /// 변수: _parsedStream
-  /// 목적: `nativeEventStream`이 만든 스트림을 캐시해 둔다. 값을 요청할
-  ///       때마다 새로 만들지 않고 이미 있으면 그대로 재사용한다.
-  ///       측정이 끝나면(`stopCapture()`) 비워서 다음 측정 때 새로
-  ///       만들게 한다. 아직 만든 적 없거나 비워졌으면 null
+  /// `nativeEventStream`이 만든 스트림을 담아 둔다. 값을 요청할 때마다
+  /// 새로 만들지 않고 이미 있으면 그대로 다시 쓴다. 측정이 끝나면
+  /// (`stopCapture()`) 비워서 다음 측정 때 새로 만들게 한다. 아직 만든 적
+  /// 없거나 비워졌으면 null
   Stream<NativeEvent>? _parsedStream;
 
   /// 안드로이드가 보낸 데이터 중 형태가 깨졌거나 이상해서 버린 개수
@@ -75,7 +101,12 @@ class SensorChannelManager {
   /// 아직 측정한 적 없거나 실패했으면 null
   String? lastRecordPath;
 
-  /// 측정 중 Android 볼륨키가 눌렸을 때 흘러오는 이벤트.
+  /// 작성: 2026-10-01 13:04:31 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 함수: volumeKeyPresses
+  /// 목적: 측정 중 볼륨키가 눌릴 때마다 값 없이 한 번씩 알린다. 안드로이드가
+  ///       볼륨키를 가로채는 동안(`setVolumeKeyCaptureEnabled(true)`)에만
+  ///       흘러온다.
   Stream<void> get volumeKeyPresses => _volumeKeyController.stream;
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
@@ -88,6 +119,7 @@ class SensorChannelManager {
   /// 반환: `NativeEvent`(센서 원본 이벤트 하나를 담는 자료형) 스트림.
   ///       형태가 깨진 데이터는 걸러내고 `droppedMapCount`만 늘린다
   Stream<NativeEvent> get nativeEventStream {
+    // → 로직 이동: SensorStreamHandler.onListen()
     _parsedStream ??= _eventChannel
         .receiveBroadcastStream()
         .expand<NativeEvent>((batch) {
@@ -153,7 +185,7 @@ class SensorChannelManager {
       // → 로직 이동: MainActivity.requestAudioPermission
       final bool? granted = await _methodChannel.invokeMethod<bool>(
         'requestAudioPermission',
-      );
+      ); // 허용 여부. 응답이 비었으면 null
       return granted ?? false;
     } catch (error, stack) {
       developer.log(
@@ -168,13 +200,14 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-09-15 13:30:00 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: startCapture
   /// 목적: 안드로이드에게 센서·소음 데이터를 쏴 달라고 명령을 내린다.
   ///       시작 전에 이전 측정 기록(폐기 개수 · 오류 문구 · 저장 경로)을
   ///       모두 초기화한다.
   /// 인자: calibrationOffsetDba — 현장·기기 보정(dBA), 기본 0.0
-  ///       micDbfsToDbaOffset — dBFS→dBA 오프셋, 기본 87.3 (OTIS 보정)
+  ///       micDbfsToDbaOffset — dBFS→dBA 오프셋. 기본은
+  ///       `kDefaultMicDbfsToDbaOffset`
   /// 반환: 없음. 요청이 실패하면 원인은 `debugPrint`로 남기고
   ///       `lastCaptureError`에 화면에 보여줄 문구를 채운다
   Future<void> startCapture({
@@ -185,6 +218,7 @@ class SensorChannelManager {
     lastCaptureError = null;
     lastRecordPath = null;
     try {
+      // → 로직 이동: MainActivity.startCapture
       await _methodChannel.invokeMethod('startCapture', {
         'calibrationOffset': calibrationOffsetDba,
         'micDbfsToDbaOffset': micDbfsToDbaOffset,
@@ -215,9 +249,18 @@ class SensorChannelManager {
     _parsedStream = null; // 다음 측정을 위해 이전 스트림 캐시를 비운다
   }
 
-  /// 측정 중에만 볼륨키를 측정 종료 입력으로 가로채도록 Android에 알린다.
+  /// 작성: 2026-10-01 13:04:31 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 함수: setVolumeKeyCaptureEnabled
+  /// 목적: 볼륨키를 측정 종료 입력으로 가로챌지 안드로이드에 알린다. 측정
+  ///       중에만 켜 두고, 끝나면 꺼서 볼륨키 본래 동작(소리 크기 조절)을
+  ///       돌려준다.
+  /// 인자: enabled — true 면 가로채기 시작, false 면 그만
+  /// 반환: 없음. 요청이 실패하면 원인을 기록만 하고 오류를 올리지 않는다 —
+  ///       볼륨키를 못 가로채도 화면의 완료 버튼으로 끝낼 수 있다
   Future<void> setVolumeKeyCaptureEnabled(bool enabled) async {
     try {
+      // → 로직 이동: MainActivity.setVolumeKeyCaptureEnabled
       await _methodChannel.invokeMethod('setVolumeKeyCaptureEnabled', {
         'enabled': enabled,
       });

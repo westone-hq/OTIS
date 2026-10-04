@@ -278,21 +278,26 @@ class GridResampler {
   }
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: resample
   /// 목적: 센서에서 들어오는 raw(가속도 원본) · gravity(중력 성분) 값은
   ///       일정한 시간 간격으로 오지 않는다. 이 함수는 그 값들을 갖고,
   ///       정해진 시간 간격마다(예: 1초에 256번) 값이 하나씩 있는 표를
   ///       만든다. 시간 간격이 정확히 일정해야 출력 파일에 시각을
   ///       따로 적지 않고도 행 번호만으로 각 행의 시각을 알 수 있기
-  ///       때문이다. raw와 gravity는 측정 화면이 센서로부터 데이터를
-  ///       받을 때마다 `onEvent()`를 불러 이미 쌓아 둔 값이다. 표의
-  ///       각 행 값은 그 시각의 raw 값에서 gravity 값을 뺀
-  ///       것(motion, 중력을 뺀 순수 진동)이다. 결과 하나를 만들고
+  ///       때문이다. raw와 gravity는 `CaptureSession`(capture_session.dart)
+  ///       이 센서 값을 받을 때마다 `onEvent()`를 불러 이미 쌓아 둔
+  ///       값이다. 표의 각 행 값은 그 시각의 raw 값에서 gravity 값을 뺀
+  ///       것(motion, 중력을 뺀 순수 진동)이다. 지금 거치 방식(화면을
+  ///       아래로, 위쪽 끝은 문 기준 오른쪽)에서는 Y · Z 부호가 OTIS 장비
+  ///       기준과 반대로 나와 두 축은 부호를 뒤집는다. 결과 하나를 만들고
   ///       나면 다시 부르지 않는다. 누적된 `_raw`, `_gravity`를 쓴다.
   /// 반환: 표 행 목록과 집계값을 담은 결과. 표를 만들 수 없는 조건을
   ///       만나면 표 없이 사유만 담긴 실패 결과를 대신 반환한다
   /// 식: t(n) = t0Ns + n x gridIntervalNs
-  ///     motion(n) = raw_행(n) - gravity_행(n)
+  ///     motion_x(n) = raw_x(n) - gravity_x(n)
+  ///     motion_y(n) = -(raw_y(n) - gravity_y(n))
+  ///     motion_z(n) = -(raw_z(n) - gravity_z(n))
   GridResampleResult resample() {
     final intervalNs = config.idealIntervalNs; // 표 한 행 사이의 시간 간격(나노초)
 
@@ -378,8 +383,10 @@ class GridResampler {
       );
     }
 
-    // 소음 RMS 창이 채워지기 전 앞부분 noiseDba=0 을, 첫 유효값으로 채운다
-    final filledSamples = _backfillLeadingNoiseDba(samples);
+    // → 로직 이동: _backfillLeadingNoiseDba()
+    final filledSamples = _backfillLeadingNoiseDba(
+      samples,
+    ); // 앞부분 소음 0 을 첫 유효값으로 채운 격자
 
     return GridResampleResult(
       samples: filledSamples,
@@ -399,14 +406,26 @@ class GridResampler {
     );
   }
 
-  /// 작성: 2026-09-28 · 박희정
+  /// 작성: 2026-09-28 15:00:36 · 박희정
+  /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: _backfillLeadingNoiseDba
-  /// 목적: 소음 RMS 창이 채워지기 전 격자 앞부분의 noiseDba=0 을
-  ///       첫 유효 소음값으로 채운다. OTIS EVIMP1 처럼 초반 0 구간을 줄인다.
+  /// 목적: 격자 앞부분에서 소음이 0 인 행을 첫 유효 소음값으로 채운다.
+  ///       안드로이드는 소음 RMS(제곱 평균의 제곱근, 소리 크기를 구하는
+  ///       계산) 창이 다 차기 전에는 값 대신 0 을 보낸다. 그대로 두면 기록
+  ///       파일 앞부분에 소음만 0 이 길게 찍혀, 처음부터 값이 있는 OTIS
+  ///       장비 기록과 나란히 볼 때 어긋난다. 그 구간을 다시 잰 것이 아니라
+  ///       첫 값을 앞으로 당겨 채운 것이다.
+  /// 인자: samples — 다 만든 격자 행 목록
+  /// 반환: 앞부분 0 을 채운 새 목록. 유효 소음값이 없거나 첫 행부터 값이
+  ///       있으면 받은 목록 그대로
+  /// 근거: 인용 — `docs/noise_otis_offset_notes.md` 의 "초반 noise 0
+  ///       채우기" 절
   static List<GridSample> _backfillLeadingNoiseDba(List<GridSample> samples) {
-    final firstValid = samples.indexWhere((s) => s.noiseDba > 0.0);
+    final firstValid = samples.indexWhere(
+      (s) => s.noiseDba > 0.0,
+    ); // 처음으로 소음이 0 보다 큰 행 번호, 없으면 -1
     if (firstValid <= 0) return samples;
-    final fill = samples[firstValid].noiseDba;
+    final fill = samples[firstValid].noiseDba; // 앞으로 당겨 채울 값 (dBA)
     return [
       for (var i = 0; i < samples.length; i++)
         if (i < firstValid)
@@ -473,8 +492,8 @@ class _ChannelCursor {
     final beforeNs = before.tsUs * 1000; // before의 시각(나노초)
     final afterNs = after.tsUs * 1000; // after의 시각(나노초)
     final spanNs = afterNs - beforeNs; // 두 실측값 사이 시간 간격
-    final beforeNoise = before.noiseDba ?? 0.0;
-    final afterNoise = after.noiseDba ?? beforeNoise;
+    final beforeNoise = before.noiseDba ?? 0.0; // 앞 실측의 소음, 없으면 0
+    final afterNoise = after.noiseDba ?? beforeNoise; // 뒤 실측의 소음, 없으면 앞 값을 쓴다
 
     if (spanNs > maxSpanNs) maxSpanNs = spanNs;
 
