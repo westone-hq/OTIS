@@ -42,6 +42,15 @@ class SensorChannelManager {
     'com.otis.vibration_checker/sensors_stream',
   );
 
+  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 변수: _stopReplyLimit
+  /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 넘기면 원본 기록 경로를
+  ///       받지 못해 측정 폴더에 원본 사본(`native_raw.txt`)이 빠진다.
+  /// 근거: 인용 — 안드로이드 `SensorStreamHandler.stop()` 이 센서 스레드를
+  ///       최대 500ms, `NoiseCaptureHandler.stop()` 이 마이크 스레드를 최대
+  ///       300ms 기다린다. 둘의 합보다 넉넉히 잡았다
+  static const Duration _stopReplyLimit = Duration(milliseconds: 1500);
+
   /// 작성: 2026-10-01 13:04:31 · 박희정
   /// 수정: 2026-10-04 13:44:32 · nada
   /// 변수: _volumeKeyController
@@ -230,10 +239,11 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
+  /// 수정: 2026-10-05 10:00:11 · nada
   /// 함수: stopCapture
   /// 목적: 안드로이드에게 그만 보내고 지금까지 모은 걸 파일로 저장해
-  ///       경로를 알려달라고 명령을 내린다. 0.5초 안에 응답이 없거나
-  ///       실패하면 포기하고 넘어간다.
+  ///       경로를 알려달라고 명령을 내린다. `_stopReplyLimit` 안에 응답이
+  ///       없거나 실패하면 포기하고 넘어간다.
   /// 반환: 없음. 성공하면 `lastRecordPath`에 저장 경로를, 실패하거나
   ///       시간 초과되면 null을 담는다
   Future<void> stopCapture() async {
@@ -241,7 +251,7 @@ class SensorChannelManager {
       // → 로직 이동: MainActivity.stopCapture
       final String? path = await _methodChannel
           .invokeMethod<String>('stopCapture')
-          .timeout(const Duration(milliseconds: 500)); // 응답 대기 한도
+          .timeout(_stopReplyLimit); // 응답 대기 한도
       lastRecordPath = path;
     } catch (_) {
       lastRecordPath = null;

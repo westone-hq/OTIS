@@ -50,6 +50,17 @@ class CaptureSession {
   /// 근거: 미확인 — 500ms 를 고른 근거가 코드 · 문서에 없다
   static const Duration _slowStepLimit = Duration(milliseconds: 500);
 
+  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 변수: _stopCaptureLimit
+  /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 정지는 안드로이드가 원본
+  ///       기록 파일을 닫고 경로를 돌려주는 단계라 다른 정리보다 길게
+  ///       기다린다. 이 한도가 `SensorChannelManager.stopCapture()` 자신의
+  ///       한도보다 짧으면 경로를 받기 전에 끊겨 원본 사본이 빠진다.
+  /// 근거: 인용 — 안드로이드 `SensorStreamHandler.stop()` 이 센서 스레드를
+  ///       최대 500ms, `NoiseCaptureHandler.stop()` 이 마이크 스레드를 최대
+  ///       300ms 기다린다. `SensorChannelManager` 의 응답 한도보다 길게 둔다
+  static const Duration _stopCaptureLimit = Duration(seconds: 2);
+
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 변수: _wakelockOnLimit
   /// 목적: 화면 꺼짐 방지를 켤 때 기다리는 한도. 넘기면 켜졌는지와
@@ -86,6 +97,22 @@ class CaptureSession {
   /// 센서 이벤트를 한 번이라도 받았는지. 무응답 감시가 이 값을 본다
   bool _receivedSample = false;
 
+  /// `stop()` 이 불렸는지. 한 번 true 가 되면 되돌리지 않는다. `start()` 가
+  /// 기다리는 사이에 정지가 끼었는지 이 값으로 알아챈다
+  bool _stopped = false;
+
+  /// 안드로이드에 수집 시작을 요청했는지. `_teardown()` 이 정지 요청을
+  /// 보낼지 정한다 — 켜지 않은 수집을 멈추라고 보내지 않고, 두 번 보내지도
+  /// 않는다
+  bool _captureStarted = false;
+
+  /// 안드로이드에 볼륨키 가로채기를 켜 달라고 했는지. `_teardown()` 이 끄는
+  /// 요청을 보낼지 정한다
+  bool _volumeKeyEnabled = false;
+
+  /// 화면 꺼짐 방지를 켰는지. `_teardown()` 이 끌지 정한다
+  bool _wakelockEnabled = false;
+
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: lastCaptureError
   /// 목적: 수집 시작 요청이 실패했을 때 화면에 보여줄 원인 문구. 실패가
@@ -109,6 +136,9 @@ class CaptureSession {
   ///          쌓는다. 측정은 볼륨키로 끝내므로 볼륨키도 가로챈다
   ///       3. 센서 유무와 상관없이 무응답 감시를 건다. 센서가 없으면
   ///          값이 오지 않으므로 감시가 그 경우도 잡는다
+  ///       기다리는 단계마다 그 사이에 `stop()` 이 끼었는지 본다. 끼었으면
+  ///       그때까지 켠 것을 `_teardown()` 으로 되돌리고 멈춘다 — 그대로
+  ///       이어 가면 정지 뒤에 수집과 볼륨키 가로채기가 켜진 채 남는다.
   /// 인자: onVolumeKey — 볼륨키가 눌릴 때마다 부를 함수
   ///       onNoResponse — `noResponseTimeout` 안에 값이 하나도 안 오면
   ///       한 번 부를 함수
@@ -116,24 +146,32 @@ class CaptureSession {
     required void Function() onVolumeKey,
     required void Function() onNoResponse,
   }) async {
+    if (_stopped) return;
+    _wakelockEnabled = true;
     try {
       await WakelockPlus.enable().timeout(_wakelockOnLimit);
     } catch (_) {}
+    if (_stopped) return _teardown(); // → 로직 이동: _teardown()
 
     // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
     final available = await _sensorManager.checkSensorsAvailable(); // 센서 유무
+    if (_stopped) return _teardown(); // → 로직 이동: _teardown()
     if (available) {
+      _captureStarted = true;
       // → 로직 이동: SensorChannelManager.startCapture()
       await _sensorManager.startCapture(
         calibrationOffsetDba: 0.0,
         micDbfsToDbaOffset: kDefaultMicDbfsToDbaOffset,
       );
+      if (_stopped) return _teardown(); // → 로직 이동: _teardown()
       _sensorSub = _sensorManager.nativeEventStream.listen((event) {
         _receivedSample = true;
         resampler.onEvent(event); // → 로직 이동: GridResampler.onEvent()
       });
+      _volumeKeyEnabled = true;
       // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
       await _sensorManager.setVolumeKeyCaptureEnabled(true);
+      if (_stopped) return _teardown(); // → 로직 이동: _teardown()
       _volumeKeySub = _sensorManager.volumeKeyPresses.listen(
         (_) => onVolumeKey(),
       );
@@ -146,9 +184,19 @@ class CaptureSession {
 
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: stop
-  /// 목적: `start()` 가 건 것을 거꾸로 푼다. 측정을 끝낼 때, 중단할 때,
-  ///       화면이 사라질 때 모두 부르므로 두 번 불러도 안전해야 한다 —
-  ///       그래서 각 구독을 끊기 전에 먼저 필드를 비운다.
+  /// 목적: 수집을 멈춘다. 측정을 끝낼 때, 중단할 때, 화면이 사라질 때 모두
+  ///       부르므로 두 번 불러도 안전하다. 먼저 정지 표시를 세워, 아직
+  ///       진행 중인 `start()` 가 더 켜지 않고 스스로 되돌리게 한다.
+  Future<void> stop() async {
+    _stopped = true;
+    await _teardown(); // → 로직 이동: _teardown()
+  }
+
+  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 함수: _teardown
+  /// 목적: `start()` 가 지금까지 켠 것만 거꾸로 푼다. 켜지 않은 것은 건드리지
+  ///       않고, 각 표시와 필드를 먼저 비워 두 번 불려도 같은 요청을 두 번
+  ///       보내지 않는다.
   ///       - 수집 정지 요청을 구독 끊기보다 먼저 보낸다. 정지 요청이
   ///         안드로이드에 남은 묶음을 내보내게 하는데, 구독을 먼저 끊으면
   ///         안드로이드가 보낼 통로를 닫아 남은 묶음이 버려진다
@@ -156,37 +204,46 @@ class CaptureSession {
   ///         기다린 뒤 구독을 끊는다
   ///       - 안드로이드 응답이 늦거나 실패해도 한도가 지나면 다음 단계로
   ///         간다
-  Future<void> stop() async {
+  Future<void> _teardown() async {
     _noResponseTimer?.cancel();
     _noResponseTimer = null;
 
     final volumeKeySub = _volumeKeySub; // 끊기 전에 옮겨 두는 구독, 없으면 null
     _volumeKeySub = null;
-    // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
-    await _limit(_sensorManager.setVolumeKeyCaptureEnabled(false));
+    if (_volumeKeyEnabled) {
+      _volumeKeyEnabled = false;
+      // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
+      await _limit(_sensorManager.setVolumeKeyCaptureEnabled(false));
+    }
     if (volumeKeySub != null) await _limit(volumeKeySub.cancel());
 
     final sensorSub = _sensorSub; // 끊기 전에 옮겨 두는 구독, 없으면 null
     _sensorSub = null;
-    // → 로직 이동: SensorChannelManager.stopCapture()
-    await _limit(_sensorManager.stopCapture());
-    await Future<void>.delayed(_flushWait);
+    if (_captureStarted) {
+      _captureStarted = false;
+      // → 로직 이동: SensorChannelManager.stopCapture()
+      await _limit(_sensorManager.stopCapture(), _stopCaptureLimit);
+      await Future<void>.delayed(_flushWait);
+    }
     if (sensorSub != null) await _limit(sensorSub.cancel());
 
-    try {
-      await WakelockPlus.disable().timeout(_wakelockOffLimit);
-    } catch (_) {}
+    if (_wakelockEnabled) {
+      _wakelockEnabled = false;
+      try {
+        await WakelockPlus.disable().timeout(_wakelockOffLimit);
+      } catch (_) {}
+    }
   }
 
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: _limit
-  /// 목적: 정리 단계 하나를 `_slowStepLimit` 까지만 기다린다. 늦거나
-  ///       실패해도 오류를 올리지 않는다 — 정리가 막혀 화면을 못 나가는
-  ///       것이 더 나쁘다.
+  /// 목적: 정리 단계 하나를 한도까지만 기다린다. 늦거나 실패해도 오류를
+  ///       올리지 않는다 — 정리가 막혀 화면을 못 나가는 것이 더 나쁘다.
   /// 인자: step — 기다릴 정리 단계 (정지 요청, 구독 끊기 등)
-  Future<void> _limit(Future<void> step) async {
+  ///       limit — 기다릴 한도. 안 주면 `_slowStepLimit`
+  Future<void> _limit(Future<void> step, [Duration? limit]) async {
     try {
-      await step.timeout(_slowStepLimit);
+      await step.timeout(limit ?? _slowStepLimit);
     } catch (_) {}
   }
 }
