@@ -116,6 +116,7 @@ class VibrationFileWriter {
   }
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
+  /// 수정: 2026-10-05 10:00:11 · nada
   /// 함수: encodeMeta
   /// 목적: 환산 과정에서 폐기되거나 특이하게 처리된 표본 수를 모아
   ///       사람이 읽을 수 있는 집계 문자열로 만든다. 값 파일(`encode()`
@@ -164,9 +165,12 @@ class VibrationFileWriter {
     line('degenerateSpanCount: ${result.degenerateSpanCount}');
     line('headTrimmedRows: ${result.headTrimmedRows}');
     line('tailTrimmedRows: ${result.tailTrimmedRows}');
+    line('edgeTrimmedRows: ${result.edgeTrimmedRows}');
     line('');
     line('# headTrimmedRows / tailTrimmedRows 는 두 센서의 수신 구간이');
     line('# 어긋난 만큼 격자를 만들지 않은 행 수다. 직전 값 복사는 하지 않는다.');
+    line('# edgeTrimmedRows 는 시작 · 종료 입력 충격을 빼려고 앞뒤에서 버린');
+    line('# 행 수의 합이다. native_raw.txt 는 자르지 않는다.');
     return buffer.toString();
   }
 

@@ -1,18 +1,22 @@
 /// 작성: 2026-08-19 08:04:05 · 박건준
+/// 수정: 2026-10-05 10:00:11 · nada
 /// 클래스: CaptureConfig
 /// 목적: 스마트폰 센서 데이터 수집에 쓰는 속도(Hz)와 불량 판정 기준(us)을 이 파일에서만 정의한다.
 ///       다른 파일에 같은 수치를 하드코딩하지 않는다.
 class CaptureConfig {
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-10-05 10:00:11 · nada
   /// 함수: CaptureConfig
   /// 목적: 수집 설정 객체를 생성한다. 값을 지정하지 않으면 기본값이 적용된다.
   /// 인자: targetSampleRateHz — 격자 환산의 목표 수집 속도 (Hz), 기본 256
   ///       normalIntervalMinUs — 정상 수신 간격의 하한 (마이크로초)
   ///       normalIntervalMaxUs — 정상 수신 간격의 상한 (마이크로초)
+  ///       edgeTrimMs — 격자를 만들 때 앞뒤에서 각각 버리는 길이 (밀리초)
   const CaptureConfig({
     this.targetSampleRateHz = defaultTargetSampleRateHz,
     this.normalIntervalMinUs = defaultNormalIntervalMinUs,
     this.normalIntervalMaxUs = defaultNormalIntervalMaxUs,
+    this.edgeTrimMs = defaultEdgeTrimMs,
   });
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
@@ -48,6 +52,23 @@ class CaptureConfig {
   ///       현재 앱 동작에는 영향이 없다. 이 판정은 명령줄 도구의 출력에만 쓰인다.
   final int normalIntervalMaxUs;
 
+  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 변수: edgeTrimMs
+  /// 목적: 두 센서가 함께 값을 낸 구간의 앞과 뒤에서 각각 이만큼을 버리고
+  ///       격자를 만든다 (밀리초). 측정을 시작 · 종료하려고 화면 버튼이나
+  ///       볼륨키를 누르는 충격이 진동 지표에 들어가지 않게 하려는 것이다.
+  ///       안드로이드 원본 기록(`native_raw.txt`)은 자르지 않는다.
+  /// 근거: 미정 — 2026-10-05 사용자 결정. 2026-10-04 코드 점검 보고서가
+  ///       시험 자료 끝 0.25초에서 종료 입력 충격을 짚었고, 그보다 넉넉히
+  ///       잡았다
+  /// 미확인: 볼륨키를 누를 때 충격이 이어지는 길이. 실기기로 확인해야 한다
+  final int edgeTrimMs;
+
+  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 변수: defaultEdgeTrimMs
+  /// 목적: edgeTrimMs 기본값이다.
+  static const int defaultEdgeTrimMs = 500;
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 변수: defaultTargetSampleRateHz
   /// 목적: targetSampleRateHz 기본값이다.
@@ -73,6 +94,12 @@ class CaptureConfig {
   /// 반환: 격자 간격 (나노초)
   /// 식: 1,000,000,000 / targetSampleRateHz
   int get idealIntervalNs => 1000000000 ~/ targetSampleRateHz;
+
+  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 함수: edgeTrimNs
+  /// 목적: 앞뒤에서 각각 버리는 길이를 나노초로 반환한다.
+  /// 반환: 버리는 길이 (나노초)
+  int get edgeTrimNs => edgeTrimMs * 1000000;
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: isGridExact

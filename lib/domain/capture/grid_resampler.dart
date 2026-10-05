@@ -40,6 +40,7 @@ class GridSample {
 }
 
 /// 작성: 2026-08-19 08:04:05 · 박건준
+/// 수정: 2026-10-05 10:00:11 · nada
 /// 클래스: GridResampleResult
 /// 목적: 격자 환산 결과와 환산 과정에서 폐기·이상으로 집계된 수치를 함께 담는다.
 ///       실측되지 않은 값을 0 등으로 대신 채우면 실제 측정처럼 보여
@@ -47,6 +48,7 @@ class GridSample {
 ///       폐기됐는지만 집계해 결과에 함께 싣는다.
 class GridResampleResult {
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-10-05 10:00:11 · nada
   /// 함수: GridResampleResult
   /// 목적: 격자 환산 결과와 폐기·이상 집계값을 그대로 담는 생성자.
   /// 인자: samples — 격자 행 목록
@@ -59,6 +61,8 @@ class GridResampleResult {
   ///       droppedLinearCount — linear 종류라서 버린 이벤트 수
   ///       headTrimmedRows — 시작단에서 생성하지 않은 행 수
   ///       tailTrimmedRows — 끝단에서 생성하지 않은 행 수
+  ///       edgeTrimmedRows — 시작 · 종료 충격을 빼려고 앞뒤에서 버린 행
+  ///       수의 합. 안 주면 0
   ///       rawMaxSpanNs — raw 이벤트 사이 최대 간격 (나노초)
   ///       gravityMaxSpanNs — gravity 이벤트 사이 최대 간격 (나노초)
   ///       degenerateSpanCount — 비례 계산이 불가능했던 횟수
@@ -74,6 +78,7 @@ class GridResampleResult {
     required this.droppedLinearCount,
     required this.headTrimmedRows,
     required this.tailTrimmedRows,
+    this.edgeTrimmedRows = 0,
     required this.rawMaxSpanNs,
     required this.gravityMaxSpanNs,
     required this.degenerateSpanCount,
@@ -149,6 +154,10 @@ class GridResampleResult {
 
   /// 끝단에서 생성하지 않은 행 수 (두 센서 중 먼저 끝난 쪽 때문에 잘린 분량)
   final int tailTrimmedRows;
+
+  /// 시작 · 종료 입력 충격을 빼려고 두 센서가 겹친 구간의 앞뒤에서 버린 행
+  /// 수의 합 (`CaptureConfig.edgeTrimMs` 참고). 실패한 결과면 0
+  final int edgeTrimmedRows;
 
   /// raw 이벤트 사이 최대 간격 (나노초). 결손 판단용 참고값
   final int rawMaxSpanNs;
@@ -278,12 +287,13 @@ class GridResampler {
   }
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
-  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 수정: 2026-10-05 10:00:11 · nada
   /// 함수: resample
   /// 목적: 센서에서 들어오는 raw(가속도 원본) · gravity(중력 성분) 값은
   ///       일정한 시간 간격으로 오지 않는다. 이 함수는 그 값들을 갖고,
   ///       정해진 시간 간격마다(예: 1초에 256번) 값이 하나씩 있는 표를
-  ///       만든다. 시간 간격이 정확히 일정해야 출력 파일에 시각을
+  ///       만든다. 두 센서가 함께 값을 낸 구간의 앞뒤는 시작 · 종료 입력
+  ///       충격을 빼려고 `CaptureConfig.edgeTrimMs` 씩 버린다. 시간 간격이 정확히 일정해야 출력 파일에 시각을
   ///       따로 적지 않고도 행 번호만으로 각 행의 시각을 알 수 있기
   ///       때문이다. raw와 gravity는 `CaptureSession`(capture_session.dart)
   ///       이 센서 값을 받을 때마다 `onEvent()`를 불러 이미 쌓아 둔
@@ -294,7 +304,7 @@ class GridResampler {
   ///       나면 다시 부르지 않는다. 누적된 `_raw`, `_gravity`를 쓴다.
   /// 반환: 표 행 목록과 집계값을 담은 결과. 표를 만들 수 없는 조건을
   ///       만나면 표 없이 사유만 담긴 실패 결과를 대신 반환한다
-  /// 식: t(n) = t0Ns + n x gridIntervalNs
+  /// 식: t(n) = (t0Ns + edgeTrimNs) + n x gridIntervalNs
   ///     motion_x(n) = raw_x(n) - gravity_x(n)
   ///     motion_y(n) = -(raw_y(n) - gravity_y(n))
   ///     motion_z(n) = -(raw_z(n) - gravity_z(n))
@@ -341,7 +351,21 @@ class GridResampler {
       return fail('raw 와 gravity 의 수신 구간이 겹치지 않는다');
     }
 
-    final rowCount = (tEndNs - t0Ns) ~/ intervalNs + 1; // 만들 표 행 수
+    // 시작 · 종료 입력 충격을 빼려고 겹친 구간의 앞뒤를 각각 버린다
+    final trimNs = config.edgeTrimNs; // 앞뒤에서 각각 버리는 길이(나노초)
+    final startNs = t0Ns + trimNs; // 표 1행의 시각
+    final endNs = tEndNs - trimNs; // 표 마지막 행이 넘지 않을 시각
+    if (endNs <= startNs) {
+      return fail(
+        '측정이 너무 짧다: 두 센서가 겹친 구간 '
+        '${((tEndNs - t0Ns) / 1e9).toStringAsFixed(2)}초에서 앞뒤 '
+        '${config.edgeTrimMs}ms 씩 버리면 남는 구간이 없다',
+      );
+    }
+
+    final rowCount = (endNs - startNs) ~/ intervalNs + 1; // 만들 표 행 수
+    final edgeTrimmedRows = // 앞뒤에서 버린 행 수의 합
+        ((tEndNs - t0Ns) ~/ intervalNs + 1) - rowCount;
     final headTrimmedRows = // 못 넣은 앞쪽 행 수
         (t0Ns - math.min(rawFirstNs, gravityFirstNs)) ~/ intervalNs;
     // raw와 gravity 중 한쪽이 다른 쪽보다 늦게 시작했다면, 둘 다 값이
@@ -357,7 +381,7 @@ class GridResampler {
     final samples = <GridSample>[]; // 완성된 표 행을 쌓을 목록
 
     for (var n = 0; n < rowCount; n++) {
-      final tNs = t0Ns + n * intervalNs; // 표의 n번째 행이 나타내는 시각
+      final tNs = startNs + n * intervalNs; // 표의 n번째 행이 나타내는 시각
       // → 로직 이동: _ChannelCursor.valueAt()
       final rawPoint = rawCursor.valueAt(tNs); // 그 시각의 raw 값(비례 계산)
       // → 로직 이동: _ChannelCursor.valueAt()
@@ -390,7 +414,7 @@ class GridResampler {
 
     return GridResampleResult(
       samples: filledSamples,
-      t0Ns: t0Ns,
+      t0Ns: startNs,
       gridIntervalNs: intervalNs,
       rawUsedCount: _raw.length,
       gravityUsedCount: _gravity.length,
@@ -399,6 +423,7 @@ class GridResampler {
       droppedLinearCount: _droppedLinearCount,
       headTrimmedRows: headTrimmedRows,
       tailTrimmedRows: tailTrimmedRows,
+      edgeTrimmedRows: edgeTrimmedRows,
       rawMaxSpanNs: rawCursor.maxSpanNs,
       gravityMaxSpanNs: gravityCursor.maxSpanNs,
       degenerateSpanCount:
