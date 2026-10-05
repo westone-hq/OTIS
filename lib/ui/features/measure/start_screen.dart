@@ -36,7 +36,7 @@ class StartScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-17 13:31:30 · 박건준
-/// 수정: 2026-10-04 13:37:23 · nada
+/// 수정: 2026-10-05 10:03:35 · nada
 /// 클래스: _StartScreenState
 /// 목적: 측정 준비 화면의 상태를 관리한다.
 ///       - 센서 가용 여부(`_sensorsAvailable`)를 비동기로 확인해 저장한다
@@ -56,6 +56,11 @@ class _StartScreenState extends State<StartScreen> {
   /// 안내 바텀 시트를 최초 1회만 자동으로 띄우는 데 쓴다. static 필드라
   /// 앱을 재시작하면 초기화되고, `PrefsStore`에도 저장하지 않는다
   static bool _hasSeenPlacementSheet = false;
+
+  /// 시작 버튼을 눌러 권한 확인 · 화면 이동을 진행 중인지. true 인 동안
+  /// 버튼을 막아, 연타로 측정 화면이 두 번 열리거나 권한 요청이 겹치지
+  /// 않게 한다
+  bool _starting = false;
 
   /// 사용자가 고른 카운트다운 대기 시간 (초)
   int _selectedSeconds = 5;
@@ -122,16 +127,23 @@ class _StartScreenState extends State<StartScreen> {
   /// 목적: 마이크 권한을 먼저 받고, 고른 대기 시간을 `MeasurementSession`
   ///       에 실어 측정 화면으로 넘어간다. 측정은 모두 볼륨키로 끝낸다.
   ///       권한을 거절하고 진동만 재기도 마다하면 이 화면에 머문다.
+  ///       진행하는 동안에는 버튼을 막아 두 번 시작되지 않게 한다.
   Future<void> _startMeasuring() async {
-    // → 로직 이동: ensureMicPermission()
-    final proceed = await ensureMicPermission(
-      context,
-      _sensorManager,
-    ); // 측정 화면으로 넘어가도 되는지
-    if (!proceed || !mounted) return;
-    // → 로직 이동: MeasurementSession.instance.delaySec
-    MeasurementSession.instance.delaySec = _selectedSeconds;
-    context.push('/measuring'); // → 로직 이동: MeasuringScreen.build()
+    if (_starting) return;
+    setState(() => _starting = true);
+    try {
+      // → 로직 이동: ensureMicPermission()
+      final proceed = await ensureMicPermission(
+        context,
+        _sensorManager,
+      ); // 측정 화면으로 넘어가도 되는지
+      if (!proceed || !mounted) return;
+      // → 로직 이동: MeasurementSession.instance.delaySec
+      MeasurementSession.instance.delaySec = _selectedSeconds;
+      context.push('/measuring'); // → 로직 이동: MeasuringScreen.build()
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
@@ -194,7 +206,7 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-04 16:54:15 · nada
+  /// 수정: 2026-10-05 10:03:35 · nada
   /// 함수: build
   /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
   ///       - `appBar` — 제목만 있는 간단한 상단 바
@@ -302,7 +314,7 @@ class _StartScreenState extends State<StartScreen> {
             ],
             ElevatedButton.icon(
               // → 로직 이동: _startMeasuring()
-              onPressed: canStart ? _startMeasuring : null,
+              onPressed: canStart && !_starting ? _startMeasuring : null,
               icon: const Icon(Icons.volume_up_outlined),
               label: const Text('볼륨키로 측정 시작'),
             ),

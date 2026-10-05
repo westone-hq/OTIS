@@ -137,6 +137,10 @@ class _ResultScreenState extends State<ResultScreen> {
   /// 비운다. 비교하지 않으면 null
   MeasurementResult? _compare;
 
+  /// 테스트 재실행을 진행 중인지. true 인 동안 버튼을 막아, 연타로 측정
+  /// 화면이 두 번 열리거나 권한 요청이 겹치지 않게 한다
+  bool _rerunning = false;
+
   /// 작성: 2026-10-04 18:15:24 · nada
   /// 함수: initState
   /// 목적: 화면이 처음 만들어질 때 측정 결과를 읽기 시작한다.
@@ -203,22 +207,79 @@ class _ResultScreenState extends State<ResultScreen> {
 
   /// 작성: 2026-10-04 18:15:24 · nada
   /// 함수: _rerun
-  /// 목적: 이 결과와 같은 현장 정보로 곧바로 다시 측정한다. 시작 화면을
-  ///       거치지 않으므로 여기서 마이크 권한을 먼저 받는다. 이 화면을 측정
-  ///       화면으로 바꿔, 재측정이 끝난 뒤 뒤로 가면 이 화면을 연 곳으로
-  ///       돌아간다.
+  /// 목적: 이 결과와 같은 현장 정보로 곧바로 다시 측정한다. 순서대로
+  ///       진행한다.
+  ///       1. 운전 방향을 다시 고르게 한다. 상승 측정 다음은 보통 하강이라
+  ///          그대로 두면 리포트의 방향이 틀린다
+  ///       2. 시작 화면을 거치지 않으므로 여기서 마이크 권한을 받는다
+  ///       3. 이 화면을 측정 화면으로 바꾼다. 재측정이 끝난 뒤 뒤로 가면
+  ///          이 화면을 연 곳으로 돌아간다
+  ///       어느 단계에서든 취소하면 이 화면에 머문다. 진행하는 동안에는
+  ///       버튼을 막는다.
   Future<void> _rerun() async {
     final result = _result; // 다시 잴 측정 결과
-    if (result == null) return;
-    // → 로직 이동: SiteInfo.fromResult()
-    MeasurementSession.instance.currentSite = SiteInfo.fromResult(result);
-    // → 로직 이동: ensureMicPermission()
-    final proceed = await ensureMicPermission(
-      context,
-      _sensorManager,
-    ); // 측정 화면으로 넘어가도 되는지
-    if (!proceed || !mounted) return;
-    context.pushReplacement('/measuring'); // → 로직 이동: MeasuringScreen.build()
+    if (result == null || _rerunning) return;
+    setState(() => _rerunning = true);
+    try {
+      // → 로직 이동: _askDirection()
+      final direction = await _askDirection(result.direction); // 고른 방향
+      if (direction == null || !mounted) return;
+      // → 로직 이동: SiteInfo.fromResult()
+      final site = SiteInfo.fromResult(result); // 지난 측정의 현장 정보
+      MeasurementSession.instance.currentSite = SiteInfo(
+        jobNo: site.jobNo,
+        siteName: site.siteName,
+        address: site.address,
+        bottomFloor: site.bottomFloor,
+        topFloor: site.topFloor,
+        direction: direction,
+        model: site.model,
+      );
+      // → 로직 이동: ensureMicPermission()
+      final proceed = await ensureMicPermission(
+        context,
+        _sensorManager,
+      ); // 측정 화면으로 넘어가도 되는지
+      if (!proceed || !mounted) return;
+      // → 로직 이동: MeasuringScreen.build()
+      context.pushReplacement('/measuring');
+    } finally {
+      if (mounted) setState(() => _rerunning = false);
+    }
+  }
+
+  /// 작성: 2026-10-05 10:03:35 · nada
+  /// 함수: _askDirection
+  /// 목적: 다시 잴 운전 방향을 고르게 한다. 지난 측정과 반대 방향을 주
+  ///       버튼으로 두어 한 번에 고를 수 있게 한다. 바깥을 누르면 취소다.
+  /// 인자: last — 지난 측정의 운전 방향
+  /// 반환: 고른 방향(`SiteInfo.directionUp` 또는 `directionDown`).
+  ///       취소했으면 null
+  Future<String?> _askDirection(String last) {
+    final suggested = last == SiteInfo.directionUp
+        ? SiteInfo.directionDown
+        : SiteInfo.directionUp; // 주 버튼으로 둘 방향
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('운전 방향 확인', style: AppText.subhead),
+        content: Text(
+          '이번 측정의 운전 방향을 고르세요.\n지난 측정은 $last 이었습니다.',
+          style: AppText.body,
+        ),
+        actions: [
+          for (final option in <String>[
+            SiteInfo.directionUp,
+            SiteInfo.directionDown,
+          ])
+            AppDialogButton(
+              label: option,
+              onPressed: () => Navigator.of(ctx).pop(option),
+              primary: option == suggested,
+            ),
+        ],
+      ),
+    );
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
@@ -398,13 +459,13 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-05 10:03:35 · nada
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스
   ///       - `body` — 머리 카드 → (비교 중이면 비교 대상 줄) → 지표 여섯 줄
   ///       - `bottomNavigationBar` — 결과 비교 · 메일 보내기, 그 아래
-  ///         테스트 재실행
+  ///         테스트 재실행(진행 중에는 막는다)
   /// 인자: context — 이 화면이 어디에 놓이는지 알려주는 값
   /// 반환: 결과 화면 전체를 담는 `Scaffold` 위젯
   @override
@@ -471,7 +532,8 @@ class _ResultScreenState extends State<ResultScreen> {
                   ),
                   const SizedBox(height: AppDims.gap),
                   ElevatedButton.icon(
-                    onPressed: _rerun, // → 로직 이동: _rerun()
+                    // → 로직 이동: _rerun()
+                    onPressed: _rerunning ? null : _rerun,
                     icon: const Icon(Icons.replay),
                     label: const Text('테스트 재실행'),
                   ),

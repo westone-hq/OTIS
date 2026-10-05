@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 
 /// 작성: 2026-10-04 18:15:24 · nada
@@ -86,7 +87,8 @@ Future<void> _settle(WidgetTester tester) async {
 /// 작성: 2026-10-04 18:15:24 · nada
 /// 함수: main
 /// 목적: 결과 화면이 지표 여섯 줄을 보여주고 기준을 넘은 값만 표시하는지,
-///       다른 저장 결과와 비교하는지 시험한다.
+///       다른 저장 결과와 비교하는지, 재실행 전에 운전 방향을 묻는지
+///       시험한다.
 void main() {
   late Directory temp; // 이번 시험이 쓸 임시 폴더
 
@@ -153,6 +155,27 @@ void main() {
     expect(find.text('비교 8.0'), findsOneWidget);
     expect(find.text('차이 +12.0'), findsOneWidget, reason: 'Z: 20.0 − 8.0');
     expect(find.text('비교 해제'), findsOneWidget);
+  });
+
+  testWidgets('테스트 재실행은 운전 방향부터 묻고 반대 방향을 권한다', (tester) async {
+    await tester.runAsync(
+      () => MeasurementRepository.instance.save(
+        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 20.0),
+      ),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(home: ResultScreen(id: '20260114-110359')),
+    );
+    await _settle(tester);
+    await tester.tap(find.text('테스트 재실행'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('운전 방향 확인'), findsOneWidget);
+    final down = tester.widget<AppDialogButton>(
+      find.widgetWithText(AppDialogButton, '하강'),
+    ); // 지난 측정(상승)의 반대 방향 버튼
+    expect(down.primary, isTrue);
   });
 
   testWidgets('없는 결과는 찾을 수 없다고 알린다', (tester) async {
