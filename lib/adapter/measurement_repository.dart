@@ -8,6 +8,7 @@ import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-08-18 23:29:46 · 박건준
+/// 수정: 2026-10-05 10:03:35 · nada
 /// 클래스: MeasurementRepository
 /// 목적: 완성된 측정 결과를 기기에 파일 형태로 저장하거나, 목록을
 ///       불러오고, 삭제하는 저장소 역할을 한다.
@@ -323,5 +324,42 @@ class MeasurementRepository {
 
     // → 로직 이동: writeTuneReport()
     return writeTuneReport(result: result, path: file.path);
+  }
+
+  /// 작성: 2026-10-05 10:03:35 · nada
+  /// 함수: mailAttachmentName
+  /// 목적: 메일에 붙일 파일 이름을 정한다. 측정 폴더 안 이름(`report.pdf`
+  ///       등)은 모든 측정이 같아, 받는 쪽에서 여러 현장 메일을 모아 두면
+  ///       구분할 수 없다. 제번 속 파일 이름에 쓸 수 없는 글자는 `_` 로
+  ///       바꾼다.
+  /// 인자: result — 첨부할 측정 결과
+  ///       prefix — 자료 종류 머리말 (`TUNE`, `RAW`)
+  ///       extension — 확장자 (점 없이)
+  /// 반환: "머리말_제번_측정ID.확장자" 꼴 이름
+  static String mailAttachmentName(
+    MeasurementResult result,
+    String prefix,
+    String extension,
+  ) {
+    final safeJobNo = result.jobNo.trim().replaceAll(
+      RegExp(r'[^0-9A-Za-z가-힣_-]+'),
+      '_',
+    ); // 파일 이름에 쓸 수 있게 다듬은 제번
+    return '${prefix}_${safeJobNo}_${result.id}.$extension';
+  }
+
+  /// 작성: 2026-10-05 10:03:35 · nada
+  /// 함수: mailAttachmentCopy
+  /// 목적: 측정 폴더의 파일을 메일용 이름으로 앱 임시 폴더(`mail/`)에
+  ///       복사한다. 측정 폴더 안 이름은 리포트 생성 · 목록 읽기가 기대하는
+  ///       이름이라 바꾸지 않는다. 같은 이름이 있으면 덮어쓴다.
+  /// 인자: source — 복사할 원래 파일
+  ///       name — 붙일 이름 (`mailAttachmentName()` 이 만든 것)
+  /// 반환: 메일에 붙일 사본
+  Future<File> mailAttachmentCopy(File source, String name) async {
+    final temp = await getTemporaryDirectory(); // 앱 임시 폴더
+    final dir = Directory('${temp.path}/mail'); // 메일 첨부 사본 폴더
+    await dir.create(recursive: true);
+    return source.copy('${dir.path}/$name');
   }
 }

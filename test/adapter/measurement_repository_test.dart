@@ -270,6 +270,20 @@ void main() {
     });
   });
 
+  group('MeasurementRepository 메일 첨부 이름', () {
+    test('제번 · 측정 ID 를 넣고 파일 이름에 못 쓰는 글자는 _ 로 바꾼다', () {
+      final item = _result(
+        '20260114-110359',
+        DateTime(2026, 1, 14, 11, 3, 59),
+      ).copyWith(jobNo: '2024F 1447/R01'); // 공백 · 빗금이 든 제번
+
+      expect(
+        MeasurementRepository.mailAttachmentName(item, 'TUNE', 'pdf'),
+        'TUNE_2024F_1447_R01_20260114-110359.pdf',
+      );
+    });
+  });
+
   group('MeasurementRepository 삭제', () {
     test('폴더째 지운다', () async {
       final dir = await repo.save(

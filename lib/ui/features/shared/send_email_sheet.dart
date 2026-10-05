@@ -172,7 +172,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-05 10:03:35 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -180,6 +180,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       작성창에 본문이 그대로 뜨므로 보내는 사람도 누르기 전에 본다.
   ///       파일이 어디에 어떤 이름으로 있는지는 저장소에 묻는다. 화면이
   ///       경로를 짜 맞추면 저장 배치가 바뀔 때 여기가 조용히 어긋난다.
+  ///       첨부는 제번 · 측정 ID 가 들어간 이름의 사본으로 붙인다 — 받는
+  ///       쪽에서 여러 현장 메일을 구분하게 하려는 것이다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
@@ -204,10 +206,15 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
         jobId,
       ); // 만들어졌거나 이미 있던 PDF. 저장된 측정이 없으면 null
       if (pdfFile != null && await pdfFile.exists()) {
-        attachments.add(pdfFile.path);
-        attachmentDescriptions.add(
-          '- ${MeasurementRepository.reportFileName}: 앱 측정 결과(가공값)',
-        );
+        final name = MeasurementRepository.mailAttachmentName(
+          result,
+          'TUNE',
+          'pdf',
+        ); // 메일에 붙일 이름
+        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
+        final copy = await repo.mailAttachmentCopy(pdfFile, name); // 사본
+        attachments.add(copy.path);
+        attachmentDescriptions.add('- $name: 앱 측정 결과(가공값)');
       } else {
         missing.add(
           '누락: ${MeasurementRepository.reportFileName} — 리포트를 만들지 '
@@ -220,10 +227,15 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
         '${jobDir.path}/${MeasurementRepository.rawFileName}',
       ); // 격자에 맞춘 측정값 파일
       if (await rawFile.exists()) {
-        attachments.add(rawFile.path);
-        attachmentDescriptions.add(
-          '- ${MeasurementRepository.rawFileName}: 측정값 원본(256Hz)',
-        );
+        final name = MeasurementRepository.mailAttachmentName(
+          result,
+          'RAW',
+          'txt',
+        ); // 메일에 붙일 이름
+        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
+        final copy = await repo.mailAttachmentCopy(rawFile, name); // 사본
+        attachments.add(copy.path);
+        attachmentDescriptions.add('- $name: 측정값 원본(256Hz)');
       } else {
         missing.add(
           '누락: ${MeasurementRepository.rawFileName} — 측정값 원본 파일이 '

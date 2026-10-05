@@ -111,7 +111,10 @@ class TuneReportBuilder {
 /// 작성: 2026-09-26 09:30:00 · nada
 /// 함수: writeTuneReport
 /// 목적: TUNE 리포트 한 부를 만들어 파일로 떨군다. 부르는 쪽이 자산
-///       읽기와 쪽 조립을 몰라도 되게 한 줄로 감싼 것이다.
+///       읽기와 쪽 조립을 몰라도 되게 한 줄로 감싼 것이다. 같은 폴더의
+///       임시 파일에 다 쓴 뒤 이름을 바꾼다 — 쓰다 끊기면 깨진 파일이
+///       최종 경로에 남고, `MeasurementRepository.ensureReportPdf()` 는
+///       파일이 있으면 그대로 쓰므로 깨진 PDF 가 계속 첨부된다.
 /// 인자: result — 값을 가져올 측정 결과
 ///       path — 떨굴 파일 경로
 /// 반환: 써 넣은 파일
@@ -126,6 +129,7 @@ Future<File> writeTuneReport({
 
   final file = File(path); // 떨굴 파일
   await file.parent.create(recursive: true);
-  await file.writeAsBytes(bytes);
-  return file;
+  final temp = File('$path.part'); // 다 쓸 때까지 쓰는 임시 파일
+  await temp.writeAsBytes(bytes, flush: true);
+  return temp.rename(path);
 }

@@ -209,5 +209,50 @@ void main() {
         'accel 1 0 0 1000 3906\n',
       );
     });
+
+    test('원본을 옮긴 뒤 안드로이드 쪽 원본은 지운다', () async {
+      final native = File('${temp.path}/native_source.txt'); // 원본 자리
+      await native.writeAsString('accel 1 0 0 1000 3906\n');
+
+      await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: native.path,
+        measuredAt: measuredAt,
+      );
+
+      expect(await native.exists(), isFalse, reason: '측정마다 쌓이면 안 된다');
+    });
+
+    test('원본 복사가 실패해도 저장은 성공하고 집계 파일에 적는다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: '${temp.path}/missing_native.txt',
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.isSuccess, isTrue);
+      expect(
+        outcome.savedPaths.last,
+        endsWith(MeasurementRepository.metaFileName),
+        reason: '원본 사본은 빠진다',
+      );
+      final meta = await File(outcome.savedPaths.last).readAsString(); // 집계
+      expect(meta, contains('rawRecordCopyFailed'));
+    });
+
+    test('앞뒤 0.5초를 버려 너무 짧은 측정은 사유와 함께 실패한다', () async {
+      // 이벤트 200개 × 3.906ms ≈ 0.78초 — 앞뒤 0.5초씩 버리면 남지 않는다
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(count: 200),
+        site: _site,
+        nativeRecordPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.failure, RecordFailure.gridFailed);
+      expect(outcome.detail, contains('너무 짧다'));
+    });
   });
 }

@@ -84,6 +84,52 @@ class MeasurementRecorder {
   /// 목적: 상태가 없는 절차 묶음이라 인스턴스를 만들지 않게 막는다.
   MeasurementRecorder._();
 
+  /// 작성: 2026-10-05 10:03:35 · nada
+  /// 함수: _copyNativeRecord
+  /// 목적: 안드로이드가 따로 저장한 원본 기록을 이번 측정 폴더로 옮긴다.
+  ///       - 복사에 성공하면 안드로이드 쪽 원본을 지운다. 지우지 않으면
+  ///         측정할 때마다 앱 저장 공간에 쌓인다
+  ///       - 원본이 없거나 복사 · 삭제가 실패하면 그 사실을 집계 파일 끝에
+  ///         적고 넘어간다. 측정 결과는 이미 저장됐으므로 이것 때문에
+  ///         저장 전체를 실패로 알리지 않는다
+  /// 인자: nativeRecordPath — 안드로이드가 저장한 원본 경로, 없으면 null
+  ///       jobDirPath — 이번 측정 폴더 경로
+  ///       metaPath — 사실을 덧붙일 집계 파일 경로
+  /// 반환: 측정 폴더 안의 원본 사본 경로. 복사하지 못했으면 null
+  static Future<String?> _copyNativeRecord(
+    String? nativeRecordPath,
+    String jobDirPath,
+    String metaPath,
+  ) async {
+    final meta = File(metaPath); // 사실을 덧붙일 집계 파일
+    if (nativeRecordPath == null) {
+      await meta.writeAsString('rawRecordPath: null\n', mode: FileMode.append);
+      return null;
+    }
+    final copyPath =
+        '$jobDirPath/${MeasurementRepository.nativeRawFileName}'; // 사본 경로
+    try {
+      await File(nativeRecordPath).copy(copyPath);
+    } catch (e) {
+      debugPrint('원본 기록 복사 실패: $e');
+      await meta.writeAsString(
+        'rawRecordCopyFailed: $e\n',
+        mode: FileMode.append,
+      );
+      return null;
+    }
+    try {
+      await File(nativeRecordPath).delete();
+    } catch (e) {
+      debugPrint('원본 기록 삭제 실패: $e');
+      await meta.writeAsString(
+        'rawRecordDeleteFailed: $nativeRecordPath\n',
+        mode: FileMode.append,
+      );
+    }
+    return copyPath;
+  }
+
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 변수: _minimumSamples
   /// 목적: 가속도 · 중력 각각 이만큼은 모여야 저장을 시도한다.
@@ -101,8 +147,8 @@ class MeasurementRecorder {
   ///          집계 파일 쓰기가 실패해도 멈추지 않는다
   ///       3. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다
   ///       4. 측정 결과 모델로 바꿔 저장소에 저장한다
-  ///       5. 안드로이드가 따로 저장한 원본을 이번 측정 폴더로 복사한다.
-  ///          원본이 없으면 그 사실을 집계 파일 끝에 적는다
+  ///       5. 안드로이드가 따로 저장한 원본을 이번 측정 폴더로 옮긴다
+  ///          (`_copyNativeRecord()`). 옮기지 못해도 저장은 성공이다
   ///       6. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
   ///          기다리게 되고, 그 자리에서 실패하면 보내지 못한다. 실패해도
   ///          측정은 이미 저장됐으므로 멈추지 않는다 — 나중에
@@ -171,16 +217,12 @@ class MeasurementRecorder {
         assembled.result!,
       ); // → 로직 이동: MeasurementRepository.save()
 
-      String? rawCopyPath; // 복사해 둔 안드로이드 원본 경로, 없으면 null
-      if (nativeRecordPath != null) {
-        rawCopyPath =
-            '${jobDir.path}/${MeasurementRepository.nativeRawFileName}';
-        await File(nativeRecordPath).copy(rawCopyPath);
-      } else {
-        await File(
-          metaPath,
-        ).writeAsString('rawRecordPath: null\n', mode: FileMode.append);
-      }
+      // → 로직 이동: _copyNativeRecord()
+      final rawCopyPath = await _copyNativeRecord(
+        nativeRecordPath,
+        jobDir.path,
+        metaPath,
+      ); // 복사해 둔 안드로이드 원본 경로, 못 했으면 null
 
       String? reportPath; // 미리 만든 리포트 경로, 못 만들었으면 null
       try {
