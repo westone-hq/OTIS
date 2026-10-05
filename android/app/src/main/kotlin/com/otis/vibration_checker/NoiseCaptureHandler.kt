@@ -91,7 +91,11 @@ class NoiseCaptureHandler(private val context: Context) {
     /** 마이크 녹음기. `start()` 가 만들고 `stop()` 이 풀어 비운다. 없으면 null */
     private var audioRecord: AudioRecord? = null
 
-    /** 녹음 스레드가 계속 돌지 여부. `stop()` 이 false 로 바꿔 멈춘다 */
+    /**
+     * 녹음 스레드가 계속 돌지 여부. `stop()` 이 false 로 바꿔 멈춘다. 다른
+     * 스레드가 바꾼 값을 녹음 스레드가 바로 보도록 @Volatile 로 둔다
+     */
+    @Volatile
     private var isRecording = false
 
     /** 마이크를 읽고 소음을 계산하는 스레드. 돌고 있지 않으면 null */
@@ -258,11 +262,23 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
+     * 수정: 2026-10-05 10:03:35 · nada
      * 함수: stop
      * 목적: 소음 측정을 멈추고 마이크 자원을 반납한다. latestDba도 0.0으로 돌린다.
+     *       순서를 지킨다. 녹음을 먼저 멈춰 녹음 스레드의 읽기를 풀고, 그
+     *       스레드가 끝나길 기다린 뒤에 녹음기를 반납한다 — 읽는 중인
+     *       녹음기를 다른 스레드에서 반납하면 앱이 죽을 수 있다.
      */
     fun stop() {
         isRecording = false
+        val record = audioRecord // 멈추고 반납할 녹음기, 없으면 null
+        try {
+            if (record?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                record.stop()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping AudioRecord", e)
+        }
         try {
             captureThread?.interrupt()
             captureThread?.join(300)
@@ -272,10 +288,7 @@ class NoiseCaptureHandler(private val context: Context) {
         captureThread = null
 
         try {
-            if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                audioRecord?.stop()
-            }
-            audioRecord?.release()
+            record?.release()
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing AudioRecord", e)
         }

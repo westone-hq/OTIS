@@ -132,12 +132,15 @@ class MainActivity : FlutterActivity() {
                     }
                     /**
                      * 작성: 2026-09-15 13:30:00 · 박희정
+                     * 수정: 2026-10-05 10:03:35 · nada
                      * 함수: requestAudioPermission
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "requestAudioPermission" 요청에 응답한다.
                      *       마이크 권한이 이미 있으면 곧바로 성공을
                      *       알려주고, 없으면 시스템 권한 대화상자를 띄운
                      *       뒤 사용자 응답을 기다린다.
+                     *       권한 창이 이미 떠 있는 동안 들어온 요청은 바로
+                     *       false 로 거절한다.
                      * 반환: result.success(Boolean) 으로 응답. 이미
                      *       승인된 상태면 즉시 true, 아니면 사용자가
                      *       응답할 때까지 기다렸다가 아래
@@ -150,6 +153,11 @@ class MainActivity : FlutterActivity() {
                             ) == PackageManager.PERMISSION_GRANTED
                         ) {
                             result.success(true)
+                        } else if (permissionCallback != null) {
+                            // 권한 창이 이미 떠 있다. 앞 요청의 응답 자리를
+                            // 덮어쓰면 앞 요청은 끝내 응답을 못 받으므로,
+                            // 겹친 요청은 바로 거절한다
+                            result.success(false)
                         } else {
                             permissionCallback = result
                             ActivityCompat.requestPermissions(
@@ -263,27 +271,29 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-10-01 13:04:31 · 박희정
-     * 수정: 2026-10-04 13:50:15 · nada
+     * 수정: 2026-10-05 10:03:35 · nada
      * 함수: dispatchKeyEvent
      * 목적: 측정 중 볼륨 올림 · 내림 키를 소리 크기 변경 대신 측정 종료
-     *       요청으로 쓰고, 다른 곳으로 넘기지 않는다. 가로채기가 꺼져
-     *       있으면(측정 전 · 후) 본래 동작을 그대로 둔다. 길게 눌러 반복해
-     *       들어오는 키는 한 번만 센다.
+     *       요청으로 쓴다. 가로채는 동안에는 누름 · 뗌 · 길게 눌러 반복되는
+     *       키를 모두 소비해 시스템으로 넘기지 않는다 — 하나라도 넘기면
+     *       소리 크기가 바뀌고 볼륨 패널이 뜬다. 종료 알림은 처음 누를
+     *       때 한 번만 보낸다. 가로채기가 꺼져 있으면(측정 전 · 후) 본래
+     *       동작을 그대로 둔다.
      * 인자: event — 눌린 키 정보
      * 반환: 가로챘으면 true, 아니면 상위 클래스의 처리 결과
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (volumeKeyCaptureEnabled &&
-            event.action == KeyEvent.ACTION_DOWN &&
-            event.repeatCount == 0 &&
-            (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
-                event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
-        ) {
-            // → 로직 이동: SensorChannelManager._installMethodCallHandler()
-            methodChannel?.invokeMethod(
-                "volumeKeyPressed",
-                mapOf("keyCode" to event.keyCode)
-            )
+        val isVolumeKey = // 볼륨 올림 · 내림 키인지
+            event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+                event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+        if (volumeKeyCaptureEnabled && isVolumeKey) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                // → 로직 이동: SensorChannelManager._installMethodCallHandler()
+                methodChannel?.invokeMethod(
+                    "volumeKeyPressed",
+                    mapOf("keyCode" to event.keyCode)
+                )
+            }
             return true
         }
         return super.dispatchKeyEvent(event)

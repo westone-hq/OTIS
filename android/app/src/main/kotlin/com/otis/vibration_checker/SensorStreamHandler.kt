@@ -136,6 +136,7 @@ class SensorStreamHandler(
 
     /**
      * 작성: 2026-08-19 08:32:13 · 박건준
+     * 수정: 2026-10-05 10:03:35 · nada
      * 함수: start
      * 목적: 센서 수집을 시작한다. 요청 주기는 단말이 줄 수 있는 최대
      *       속도로 고정한다. 목표 주기(256Hz)는 Dart 격자에서 정하며,
@@ -145,6 +146,9 @@ class SensorStreamHandler(
      *       64Hz 요청 시 70Hz 로 수신됨 확인 (하드웨어 주기 2374.785us 의 정수배)
      */
     fun start() {
+        // 센서가 없어 아래에서 바로 끝나더라도, 다음 stop() 이 직전 측정의
+        // 기록 경로를 이번 것처럼 돌려주지 않게 먼저 비운다
+        lastClosedRecordPath = null
         sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager?
         accelSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gravitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_GRAVITY)
@@ -156,7 +160,6 @@ class SensorStreamHandler(
 
         lastAccelTsNs = 0L
         lastGravityTsNs = 0L
-        lastClosedRecordPath = null
         synchronized(batchBuffer) { batchBuffer.clear() }
         // → 로직 이동: openRecordFile()
         openRecordFile()
