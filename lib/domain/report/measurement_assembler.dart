@@ -47,11 +47,15 @@ class MeasurementAssembleResult {
 ///       수직 진동에서 가속도 · 속도 · 누적 이동량 · 저크를 만들고,
 ///       최대 속도와 운행 거리를 거기서 뽑는다.
 ///
-///       진동 P2P(X/Y/Z)는 필터 없이 원시 시계열 전체의 최대 − 최소로,
-///       진동 A95 는 같은 원시 시계열의 반주기 P2P 95백분위로 낸다.
-///       레퍼런스폰 · 개발폰 · EVA 를 같은 원시 기준으로 견주기 위해서다.
-///       Z 에는 엘리베이터 가감속이 그대로 섞여 있어 리포트의 적색 기준과
-///       견주면 늘 넘는다
+///       받는 격자는 지표 계산 전 신호 처리(`SignalConditioner`)를 거친
+///       100Hz 격자다 — 기준선 0 맞춤, 40Hz 저역(4차 버터워스, 양방향),
+///       256Hz → 100Hz 재표본. 수치는 `CaptureConfig` 에 있다. 오티스폰
+///       (OTIS iOS 앱)과 같은 주파수 범위에서 지표를 견주려는 것이다
+///       (2026-10-07 결정). 이 클래스 자신은 필터를 걸지 않는다.
+///
+///       진동 P2P(X/Y/Z)는 그 시계열 전체의 최대 − 최소로, 진동 A95 는 같은
+///       시계열의 반주기 P2P 95백분위로 낸다. Z 에는 엘리베이터 가감속이
+///       그대로 섞여 있어 리포트의 적색 기준과 견주면 늘 넘는다
 ///
 ///       소음 두 값의 계약
 ///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
@@ -172,14 +176,14 @@ class MeasurementAssembler {
         speedSeries: motion.speed,
         accelSeries: motion.accel,
         jerkSeries: motion.jerk,
-        // → 로직 이동: _rawPeakToPeak()
-        xPtp: _rawPeakToPeak(xSeries),
-        yPtp: _rawPeakToPeak(ySeries),
-        zPtp: _rawPeakToPeak(zSeries),
-        // → 로직 이동: _rawA95()
-        xA95: _rawA95(xSeries),
-        yA95: _rawA95(ySeries),
-        zA95: _rawA95(zSeries),
+        // → 로직 이동: _peakToPeak()
+        xPtp: _peakToPeak(xSeries),
+        yPtp: _peakToPeak(ySeries),
+        zPtp: _peakToPeak(zSeries),
+        // → 로직 이동: _a95()
+        xA95: _a95(xSeries),
+        yA95: _a95(ySeries),
+        zA95: _a95(zSeries),
         maxSpeed: motion.maxSpeed,
         distance: motion.distance,
         sampleRate: sampleRate,
@@ -188,17 +192,18 @@ class MeasurementAssembler {
   }
 
   /// 작성: 2026-10-04 16:03:06 · nada
-  /// 함수: _rawPeakToPeak
-  /// 목적: 진동 시계열 한 축의 P2P 를 필터 없이 낸다. 기기끼리 원시 값을
-  ///       견주는 용도다.
+  /// 함수: _peakToPeak
+  /// 목적: 진동 시계열 한 축의 P2P 를 낸다. 이 함수는 필터를 걸지 않는다 —
+  ///       받는 시계열이 이미 신호 처리(`SignalConditioner`)를 거친 값이다.
   /// 인자: series — 한 축의 진동 시계열 (mg)
   /// 반환: 최댓값 − 최솟값 (mg). 표본이 없으면 null
   /// 식: P2P = max(series) − min(series)
   /// 근거: 미정 — EVA 가 따르는 ISO 18738 은 주파수 가중을 거친 신호에서
   ///       0 을 지나는 사이 이웃 봉우리 · 골을 더해 세고, 출발 · 정지 0.5m
-  ///       구간을 뺀다. 그 가중의 세부 값이 확인되지 않아 이번에는 필터 없이
-  ///       전체 구간으로 낸다 (2026-10-04 결정)
-  static double? _rawPeakToPeak(List<double> series) {
+  ///       구간을 뺀다. 그 가중의 세부 값이 확인되지 않아, 가중 대신
+  ///       오티스폰에 맞춘 신호 처리를 거친 시계열의 전체 구간으로 낸다
+  ///       (2026-10-07 결정)
+  static double? _peakToPeak(List<double> series) {
     if (series.isEmpty) return null;
     var low = series.first; // 여기까지 본 최솟값 (mg)
     var high = series.first; // 여기까지 본 최댓값 (mg)
@@ -210,8 +215,9 @@ class MeasurementAssembler {
   }
 
   /// 작성: 2026-10-04 18:36:31 · nada
-  /// 함수: _rawA95
-  /// 목적: 진동 시계열 한 축의 A95 를 필터 없이 낸다. 신호가 0 을 지날
+  /// 함수: _a95
+  /// 목적: 진동 시계열 한 축의 A95 를 낸다. 이 함수는 필터를 걸지 않는다
+  ///       (`_peakToPeak()` 과 같은 입력). 신호가 0 을 지날
   ///       때마다 반주기로 끊고, 반주기마다 가장 큰 크기(봉우리 또는 골)를
   ///       잡는다. 이웃한 두 반주기의 크기를 더한 것이 반주기 P2P 이고,
   ///       그 값들의 95백분위가 A95 다. 정확히 0 인 표본은 어느 쪽 부호도
@@ -223,10 +229,11 @@ class MeasurementAssembler {
   /// 근거: 인용 — ISO 18738 의 P2P(0 을 한 번 지나는 사이 부호가 반대인 두
   ///       봉우리 크기의 합)와 A95(그 값들의 95%가 이하가 되는 값) 정의.
   ///       표준은 주파수 가중을 거친 신호와 출발 · 정지 0.5m 를 뺀 구간을
-  ///       쓰지만, 필터 없이 가기로 해 원시 신호 전체로 낸다 (2026-10-04
-  ///       결정). 백분위 산정법(최근접 순위)은 표준에서 확인하지 못했다
+  ///       쓰지만, 가중 대신 오티스폰에 맞춘 신호 처리를 거친 신호 전체로
+  ///       낸다 (2026-10-07 결정). 백분위 산정법(최근접 순위)은 표준에서
+  ///       확인하지 못했다
   /// 미확인: 표준이 쓰는 백분위 보간 방식
-  static double? _rawA95(List<double> series) {
+  static double? _a95(List<double> series) {
     final peaks = <double>[]; // 반주기마다의 가장 큰 크기 (mg)
     var current = 0.0; // 지금 반주기에서 본 가장 큰 크기 (mg)
     var sign = 0; // 지금 반주기의 부호. 아직 0 아닌 값을 못 봤으면 0

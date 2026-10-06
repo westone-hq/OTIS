@@ -12,6 +12,7 @@ import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_notice.dart';
+import 'record_failure_message.dart';
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
 /// 수정: 2026-10-04 13:33:18 · nada
@@ -278,23 +279,6 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     if (mounted) context.pop(); // 측정을 시작한 화면으로 돌아간다
   }
 
-  /// 작성: 2026-10-04 13:33:18 · nada
-  /// 함수: _failureMessage
-  /// 목적: 저장 실패 종류를 사용자에게 보여줄 안내 문구로 바꾼다.
-  /// 인자: outcome — 실패한 저장 결과
-  /// 반환: 대화상자에 넣을 문구
-  String _failureMessage(RecordOutcome outcome) {
-    final detail = outcome.detail; // 덧붙일 원인 문구, 없으면 null
-    return switch (outcome.failure!) {
-      RecordFailure.siteMissing => '현장 정보가 없습니다. 홈에서 다시 시작해 주세요.',
-      RecordFailure.noSamples =>
-        '센서 데이터가 수집되지 않았습니다.\n기기 지원 여부를 확인한 뒤 다시 측정해 주세요.',
-      RecordFailure.gridFailed => '측정 파일 생성에 실패했습니다.\n사유: $detail',
-      RecordFailure.assembleFailed => '측정 결과 변환에 실패했습니다.\n사유: $detail',
-      RecordFailure.ioError => '측정 저장 중 오류가 발생했습니다.\n$detail',
-    };
-  }
-
   /// 작성: 2026-08-18 18:17:48 · 박건준
   /// 수정: 2026-10-04 18:15:24 · nada
   /// 함수: _finishMeasurement
@@ -328,8 +312,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       measuredAt: DateTime.now(),
     ); // 저장 결과
     if (!outcome.isSuccess) {
+      // → 로직 이동: recordFailureMessage()
+      final message = recordFailureMessage(
+        outcome,
+        minimumRecordMs: _capture.resampler.config.minimumRecordMs,
+      ); // 실패 대화상자 문구
       // → 로직 이동: _showMeasureFailDialog()
-      await _showMeasureFailDialog(_failureMessage(outcome));
+      await _showMeasureFailDialog(message);
       return;
     }
     if (!mounted) return;

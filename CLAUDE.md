@@ -16,7 +16,7 @@ flutter test                                      # 전부 통과 유지
 | 경로 | 역할 |
 |---|---|
 | `lib/model/` | 순수 자료형 (`MeasurementResult`) |
-| `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`) |
+| `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`), 지표 계산 전 신호 처리 (`SignalConditioner`). 수집 · 처리 수치는 `CaptureConfig` |
 | `lib/domain/report/` | 리포트 좌표·임계값·지표 계산. 숫자는 여기에만 둔다 |
 | `lib/domain/session/` | 화면 사이에 넘기는 이번 측정 상태 (`MeasurementSession`) |
 | `lib/adapter/` | 플랫폼 경계 — 센서 채널, 파일·저장소, PDF 렌더링, 환경설정. 측정 한 번의 수집 절차는 `capture_session.dart`, 저장 절차는 `measurement_recorder.dart` |
@@ -45,12 +45,62 @@ flutter test                                      # 전부 통과 유지
   측정 중에는 휴대폰이 뒤집혀 있어 권한 창을 누를 수 없다.
 - 바텀 시트는 `showAppSheet()` 로만 띄운다. 아래쪽 시스템 막대를 비켜 준다.
 
+## 진동 신호 처리
+
+저장 절차(`MeasurementRecorder.record()`)는 이 순서로 진행한다.
+
+```
+GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤 0.5초 버림
+  ├─▶ raw.txt (EVIMP1, 256Hz)    필터 · 기준선 보정 없음. 원시 보존용
+  └─▶ SignalConditioner.condition()
+        1. 기준선 0 맞춤          첫 1초 평균을 X · Y · Z 마다 뺀다
+        2. 40Hz 저역              4차 버터워스, 양방향(영위상)
+        3. 256Hz → 100Hz 재표본   25/64 다상 FIR, 카이저 창 β 5.0
+        소음 열은 거르지 않고 100Hz 시각에 선형 보간한다
+      ─▶ MeasurementAssembler.assemble()   지표 · 리포트 · result.json
+```
+
+- **설정 상수**: `CaptureConfig` 의 `conditionedRateHz`(100) ·
+  `lowpassCutoffHz`(40) · `lowpassOrder`(4) · `baselineWindowMs`(1000).
+  재표본 비 · 기준선 행 수 · 최소 측정 길이(`minimumRecordMs`, 2초)는 같은
+  클래스의 게터가 유도한다. SciPy 정의를 따르는 알고리즘 상수(`halfLenPerRate`
+  10, `kaiserBeta` 5.0)는 `signal_conditioner.dart` 의 `PolyphaseResampler` 에
+  있다. 차수가 홀수이거나 차단 주파수가 100Hz 의 절반 이상이면 `ArgumentError`.
+- **실패**: `RecordFailure.conditioningFailed`. 원인은
+  `RecordOutcome.conditioningCause` 로 가른다 — 격자가 기준선 구간보다 짧으면
+  `ConditioningFailure.gridTooShort`(측정 화면이 "N초 이상 측정" 안내),
+  설정 오류면 `invalidConfig`. 실패해도 `raw.txt` 는 이미 써 두어 남는다.
+- **meta.txt**: 기존 집계 뒤에 `conditioning` · `baselineX/Y/Zmg` ·
+  `baselineStdX/Y/Zmg`(기준선 구간 모표준편차, 판정에 안 씀) ·
+  `conditionedRateHz` · `conditionedRowCount` 줄을 덧붙인다. 실패면
+  `conditioningFailureReason` 한 줄만.
+- **result.json**: `signalConditioning` 에 처리 방식 문자열
+  (`baseline+lp40bw4zp+rs100`, `SignalConditioner.methodLabel`). 이 처리 전
+  예전 결과는 null 이고 지표가 원시 256Hz 기준이다. 화면에는 보이지 않는다.
+- **정본과 픽스처**: 처리 결과는 SciPy 1.18.1 과 같아야 한다
+  (`test/domain/capture/signal_conditioner_test.dart`). 픽스처는
+  `test/fixtures/` 에 있고, 만드는 스크립트는 저장소에 없다.
+  - `conditioning_input_dev_256hz.txt` — 2026-10-06 개발폰 실측
+    (`RAW_1_20261006-091841`, 앱이 앞뒤 0.5초 버림) EVIMP1 9,439행
+  - `conditioning_expected_100hz.txt` — 위 입력의 X · Y · Z 에 아래를 적용한
+    3,688행. `#` 머리말 한 줄
+  - `conditioning_unit_cases.json` — 300표본 `input`, 그 `filtfilt` 출력,
+    `input` 을 바로 재표본한 `resample_25_64`, 계수 `sos`
+
+  ```python
+  x = x - x[:256].mean()                                  # 축마다 첫 1초 평균
+  sos = scipy.signal.butter(4, 40, fs=256, output='sos')
+  y = scipy.signal.sosfiltfilt(sos, x)                    # padtype='odd', padlen 기본
+  y100 = scipy.signal.resample_poly(y, 25, 64)            # window=('kaiser', 5.0), padtype='constant'
+  ```
+
 ## 관통 원칙
 
 1. **재지 않은 값을 0 이나 빈 문자열로 채우지 않는다.** 미측정은 `null`.
    `MeasurementResult` 의 지표는 `double?`, 판정 게터는 `bool?` 이다.
 2. **숫자는 한 곳에만 둔다.** 리포트 좌표는 `report_layout.dart`, 임계값은
-   `report_thresholds.dart`, 화면 색·치수·글자는 `ui/core/theme.dart`.
+   `report_thresholds.dart`, 화면 색·치수·글자는 `ui/core/theme.dart`,
+   수집 · 신호 처리 수치는 `capture_config.dart`.
 3. **도달 불가 방어 분기 대신 `assert`** 를 쓰고 이유를 주석에 적는다.
 4. **실패를 삼키지 않는다.** 변환 실패는 빈 결과가 아니라 사유를 올린다.
 5. **주석은 `docs/comment_rules.md` 를 따른다.**
@@ -82,16 +132,28 @@ flutter test                                      # 전부 통과 유지
 
 ## 알려진 미해결
 
-- 진동 필터 · 정속 구간 감지는 넣지 않는다(2026-10-04 결정). 진동 최대 P2P 는
-  필터 없는 원시 값(최대 − 최소)으로 내서 레퍼런스폰 · 개발폰 · EVA 를
-  견준다. Z 에는 운행 가감속이 섞여 적색 기준을 늘 넘는다. 평균(A95)도 같은
-  원시 시계열에서 반주기 P2P 의 95백분위(최근접 순위)로 낸다.
-  EVA 가 따르는 ISO 18738 방식(ISO 8041 가중, 출발 · 정지 0.5m 제외 구간)은
-  조사만 해 두었다. 차트 X/Y 축은 원본(±4/±10)보다 넓혀 두었다.
+- 2026-10-07 결정으로 진동 지표 · 리포트는 기준선 0 맞춤 + 40Hz 저역(4차
+  버터워스, 양방향) + 100Hz 재표본 후 값으로 낸다(2026-10-04 "진동 필터를
+  넣지 않는다" 결정을 바꿈, 처리는 위 "진동 신호 처리"). 근거는 오티스폰 ·
+  개발폰 동시 측정 6쌍이다 — 개발폰 Z 가 정지 상태에서 −2 ~ −4mg 에 떠 있고,
+  오티스폰(100Hz)이 담지 못하는 50Hz 위 성분이 개발폰 최대 P2P 를 키웠다.
+  `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다. 정속 구간 감지는 여전히
+  넣지 않는다. 최대 P2P 는 처리 후 시계열의 최대 − 최소, 평균(A95)은 같은
+  시계열에서 반주기 P2P 의 95백분위(최근접 순위)로 낸다. Z 에는 운행 가감속이
+  섞여 적색 기준을 늘 넘는다. EVA 가 따르는 ISO 18738 방식(ISO 8041 가중,
+  출발 · 정지 0.5m 제외 구간)은 조사만 해 두었다. 차트 X/Y 축은 처리 후
+  원본 범위(±4/±10)로 되돌렸다(처리 후 ±4 밖 표본 0.3~0.9%).
+- 신호 처리 남은 과제
+  - 26.5Hz 봉우리가 개발폰에서 1.25~2.1배 크다. 40Hz 아래라 이 처리로 줄지
+    않는다.
+  - 차단 주파수 40Hz 는 비교 측정을 더 모아 조정할 수 있다.
+  - `pdf_report_dev` 프로토타입에는 이 처리를 넣지 않았다.
+  - 이 처리 전에 저장한 결과(`signalConditioning` 이 null)는 원시 256Hz
+    지표라 새 결과와 기준이 다르다.
 - 격자는 두 센서가 겹친 구간의 앞뒤를 0.5초씩 버리고 만든다(2026-10-05,
   `CaptureConfig.edgeTrimMs`). 시작 · 종료 입력(볼륨키) 충격을 빼려는 것이고,
   볼륨키 충격 길이는 실기기 확인 전이다. 원본 기록(`native_raw.txt`)은 자르지
-  않는다.
+  않는다. 기준선 1초까지 남아야 하므로 측정은 2초 이상이어야 저장된다.
 - `ride_reference.txt` 와 원본 TUNE 리포트는 레퍼런스폰 산출물이다(EVA 아님).
   리포트 적색 기준은 요구사항서(Z 15, X·Y 10)를 따르는데, 레퍼런스폰 리포트
   서식에는 다른 값(수직 30/21, 수평 25.5/13.5)이 찍혀 있다 — 미확인.

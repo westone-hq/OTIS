@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 
@@ -16,12 +17,16 @@ import 'package:vibration_checker/domain/session/measurement_session.dart';
 ///       - `siteMissing` — 현장 정보가 없거나 층수가 숫자가 아니다
 ///       - `noSamples` — 가속도 또는 중력 값이 2개 미만이다
 ///       - `gridFailed` — 격자 환산이 사유를 올리며 실패했다
+///       - `conditioningFailed` — 지표 계산 전 신호 처리가 실패했다. 격자가
+///         기준선 구간보다 짧거나 처리 설정이 잘못된 경우다. 값 파일
+///         (`raw.txt`)은 이미 써 두어 남는다
 ///       - `assembleFailed` — 측정 결과 모델로 바꾸지 못했다
 ///       - `ioError` — 파일을 쓰는 중 예외가 났다
 enum RecordFailure {
   siteMissing,
   noSamples,
   gridFailed,
+  conditioningFailed,
   assembleFailed,
   ioError,
 }
@@ -30,7 +35,9 @@ enum RecordFailure {
 /// 클래스: RecordOutcome
 /// 목적: `MeasurementRecorder.record()` 의 결과. 성공이면 측정 ID 와
 ///       저장한 파일 목록을, 실패면 사유를 담는다. 성공과 실패를 같은 형태로
-///       돌려줘 화면이 예외를 잡지 않고 갈래만 나누게 한다.
+///       돌려줘 화면이 예외를 잡지 않고 갈래만 나누게 한다. 신호 처리
+///       실패는 원인 종류(`conditioningCause`)까지 담아, 화면이 사유
+///       문자열을 비교하지 않고 문구를 고르게 한다.
 class RecordOutcome {
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: RecordOutcome.success
@@ -41,6 +48,7 @@ class RecordOutcome {
     required String this.id,
     required this.savedPaths,
   }) : failure = null,
+       conditioningCause = null,
        detail = null;
 
   /// 작성: 2026-10-04 13:29:41 · nada
@@ -49,11 +57,29 @@ class RecordOutcome {
   /// 인자: failure — 실패 종류
   ///       detail — 화면에 덧붙일 원인 문구. 없으면 null
   const RecordOutcome.failure(RecordFailure this.failure, [this.detail])
-    : id = null,
+    : conditioningCause = null,
+      id = null,
       savedPaths = const <String>[];
+
+  /// 작성: 2026-10-07 02:22:28 · nada
+  /// 함수: RecordOutcome.conditioningFailed
+  /// 목적: 지표 계산 전 신호 처리에 실패한 결과를 만든다. 실패 종류는
+  ///       `RecordFailure.conditioningFailed` 이고 원인 종류를 함께 담는다.
+  /// 인자: cause — 처리 실패 원인 종류
+  ///       detail — 화면에 덧붙일 원인 문구. 없으면 null
+  const RecordOutcome.conditioningFailed(
+    ConditioningFailure this.conditioningCause, [
+    this.detail,
+  ]) : failure = RecordFailure.conditioningFailed,
+       id = null,
+       savedPaths = const <String>[];
 
   /// 실패 종류. 성공이면 null
   final RecordFailure? failure;
+
+  /// 신호 처리 실패의 원인 종류. 실패 종류가
+  /// `RecordFailure.conditioningFailed` 일 때만 있고, 그 밖에는 null
+  final ConditioningFailure? conditioningCause;
 
   /// 실패 원인 문구 (환산 · 변환 실패 사유, 예외 문구). 성공이거나 덧붙일
   /// 원인이 없으면 null
@@ -130,6 +156,80 @@ class MeasurementRecorder {
     return copyPath;
   }
 
+  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 함수: _condition
+  /// 목적: 격자에 지표 계산 전 신호 처리를 하고, 그 결과를 집계 파일 끝에
+  ///       덧붙인다.
+  ///       - 처리 설정이 잘못돼 `ArgumentError` 가 나면 원인 종류를
+  ///         `ConditioningFailure.invalidConfig` 로 둔다. 격자가 짧아 사유를
+  ///         담은 실패가 오면 처리기가 정한 원인 종류를 그대로 쓴다. 파일
+  ///         쓰기 예외(`RecordFailure.ioError`)와 섞지 않으려고 여기서 잡는다
+  ///       - 집계 파일 덧붙이기가 실패해도 멈추지 않는다. `record()` 가
+  ///         처음 집계를 쓸 때와 같은 규칙이다
+  /// 인자: grid — 격자 환산에 성공한 격자
+  ///       conditioner — 격자를 만든 수집 설정을 받은 처리기
+  ///       metaPath — 결과를 덧붙일 집계 파일 경로
+  /// 반환: 처리한 격자. 실패면 격자는 null 이고 원인 종류와 사유가 있다
+  static Future<
+    ({
+      GridResampleResult? grid,
+      ConditioningFailure? cause,
+      String? failureReason,
+    })
+  >
+  _condition(
+    GridResampleResult grid,
+    SignalConditioner conditioner,
+    String metaPath,
+  ) async {
+    final ConditionedGrid conditioned; // 처리 결과
+    try {
+      // → 로직 이동: SignalConditioner.condition()
+      conditioned = conditioner.condition(grid);
+    } on ArgumentError catch (e) {
+      // → 로직 이동: _appendMeta()
+      await _appendMeta(
+        metaPath,
+        VibrationFileWriter.encodeConditioningFailure('$e'),
+      );
+      return (
+        grid: null,
+        cause: ConditioningFailure.invalidConfig,
+        failureReason: '$e',
+      );
+    }
+    // → 로직 이동: _appendMeta()
+    await _appendMeta(
+      metaPath,
+      VibrationFileWriter.encodeConditioningMeta(
+        conditioned,
+        conditioner.config,
+      ),
+    );
+    return conditioned.isSuccess
+        ? (grid: conditioned.grid, cause: null, failureReason: null)
+        : (
+            grid: null,
+            cause: conditioned.failureCause,
+            failureReason: conditioned.failureReason,
+          );
+  }
+
+  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 함수: _appendMeta
+  /// 목적: 집계 파일 끝에 문자열을 덧붙인다. 집계 파일은 진단용이라 쓰기가
+  ///       실패해도 저장 절차를 멈추지 않고 기록만 남긴다.
+  /// 인자: metaPath — 집계 파일 경로
+  ///       text — 덧붙일 문자열
+  static Future<void> _appendMeta(String metaPath, String text) async {
+    try {
+      // → 로직 이동: VibrationFileWriter.appendMeta()
+      await VibrationFileWriter.appendMeta(metaPath, text);
+    } catch (e, st) {
+      debugPrint('집계 파일 덧붙이기 실패: $e\n$st');
+    }
+  }
+
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 변수: _minimumSamples
   /// 목적: 가속도 · 중력 각각 이만큼은 모여야 저장을 시도한다.
@@ -145,11 +245,16 @@ class MeasurementRecorder {
   ///       2. 격자로 환산하고, 성공 여부와 상관없이 집계 파일을 먼저
   ///          남긴다 — 환산이 실패한 이유를 나중에 집계에서 본다.
   ///          집계 파일 쓰기가 실패해도 멈추지 않는다
-  ///       3. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다
-  ///       4. 측정 결과 모델로 바꿔 저장소에 저장한다
-  ///       5. 안드로이드가 따로 저장한 원본을 이번 측정 폴더로 옮긴다
+  ///       3. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다.
+  ///          측정값 파일은 처리 전 격자 그대로다
+  ///       4. 지표 계산 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)를
+  ///          하고 결과를 집계 파일에 덧붙인다(`_condition()`). 실패하면
+  ///          멈추되 측정값 파일은 지우지 않는다
+  ///       5. 처리한 격자를 측정 결과 모델로 바꾸고, 처리 방식
+  ///          (`SignalConditioner.methodLabel`)을 실어 저장소에 저장한다
+  ///       6. 안드로이드가 따로 저장한 원본을 이번 측정 폴더로 옮긴다
   ///          (`_copyNativeRecord()`). 옮기지 못해도 저장은 성공이다
-  ///       6. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
+  ///       7. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
   ///          기다리게 되고, 그 자리에서 실패하면 보내지 못한다. 실패해도
   ///          측정은 이미 저장됐으므로 멈추지 않는다 — 나중에
   ///          `ensureReportPdf()` 가 다시 만든다
@@ -200,9 +305,27 @@ class MeasurementRecorder {
       // → 로직 이동: VibrationFileWriter.write()
       await VibrationFileWriter.write(valuePath, grid);
 
+      final conditioner = SignalConditioner(
+        config: resampler.config,
+      ); // 격자를 만든 설정 그대로 쓰는 처리기
+      // → 로직 이동: _condition()
+      final conditioned = await _condition(
+        grid,
+        conditioner,
+        metaPath,
+      ); // 처리한 격자, 실패면 격자 없이 원인 종류와 사유
+      final conditionedGrid = conditioned.grid; // 처리한 격자, 실패면 null
+      if (conditionedGrid == null) {
+        // 실패면 원인 종류가 늘 있다 — `_condition()` 이 함께 채운다
+        return RecordOutcome.conditioningFailed(
+          conditioned.cause!,
+          conditioned.failureReason,
+        );
+      }
+
       // → 로직 이동: MeasurementAssembler.assemble()
       final assembled = MeasurementAssembler.assemble(
-        grid: grid,
+        grid: conditionedGrid,
         site: site,
         id: id,
         measuredAt: measuredAt,
@@ -213,9 +336,10 @@ class MeasurementRecorder {
           assembled.failureReason,
         );
       }
+      // → 로직 이동: MeasurementRepository.save()
       await repo.save(
-        assembled.result!,
-      ); // → 로직 이동: MeasurementRepository.save()
+        assembled.result!.copyWith(signalConditioning: conditioner.methodLabel),
+      );
 
       // → 로직 이동: _copyNativeRecord()
       final rawCopyPath = await _copyNativeRecord(

@@ -155,33 +155,38 @@ class ChartAxisSpec {
 class ReportChartAxes {
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 변수: x
-  /// 목적: X축(가로 진동) 차트의 세로축.
-  /// 근거: 미정 — 원본 리포트의 범위는 ±4 mg 인데, 그 값은 저역통과
-  ///       필터(빠르게 흔들리는 성분을 깎아 내는 계산)를 거친 파형을
-  ///       담기 위한 것이다. 필터를 아직 정하지 못해 지금은 거르지 않은
-  ///       원시 데이터를 그리는데, 이를 원본 범위에 넣으면 표본의 8%
-  ///       넘게가 축 밖으로 잘려 파형이 뭉개진다. 잘리지 않을 만큼만
-  ///       임시로 넓혀 둔다. 필터가 정해지면 원본 범위로 되돌린다.
-  ///       잘리는 비율은 `pdf_report_dev/tune_report/charts.py` 의
-  ///       `ORIGINAL_VIBRATION_YLIM` 주석에서 옮겨 적었다
+  /// 목적: X축(가로 진동) 차트의 세로축. 차트는 지표 계산 전 신호
+  ///       처리(기준선 0 맞춤 · 40Hz 저역 필터 · 100Hz 재표본)를 거친
+  ///       시계열을 그린다.
+  /// 근거: 인용 — 원본 리포트 `docs/reference/sample_evimp.pdf` 의 X 진동
+  ///       차트 범위 ±4 mg, 눈금 2 mg 이다. 이 범위는 저역통과 필터를 거친
+  ///       파형을 담기 위한 것이라, 2026-10-07 에 필터를 정한 뒤 원본
+  ///       범위로 되돌렸다.
+  ///       측정 — 처리 후 오티스폰 · 개발폰 동시 측정 6쌍에서 ±4 mg 밖
+  ///       표본 비율이 현재 앱 측정(최종1·2, 3·4)은 0.3~0.9%, 오티스폰은
+  ///       0.1~1.0% 다. 초기 측정 1·2번만 9~11% 인데, 25~58 mg 충격이 섞인
+  ///       측정이다
   static const ChartAxisSpec x = ChartAxisSpec(
     key: 'x',
     label: 'X-Vibration (milli-g)',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: -10.0, max: 10.0, tickStep: 5.0),
-    ],
+    steps: <ChartAxisRange>[ChartAxisRange(min: -4.0, max: 4.0, tickStep: 2.0)],
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 변수: y
-  /// 목적: Y축(가로 진동) 차트의 세로축.
-  /// 근거: 미정 — 원본 리포트의 범위는 ±10 mg 다. 넓힌 이유와 되돌릴
-  ///       시점은 `x` 와 같다
+  /// 목적: Y축(가로 진동) 차트의 세로축. 그리는 시계열은 `x` 와 같이 신호
+  ///       처리를 거친 값이다.
+  /// 근거: 인용 — 원본 리포트의 Y 진동 차트 범위 ±10 mg, 눈금 5 mg 이다.
+  ///       `x` 와 같은 때 원본 범위로 되돌렸다.
+  ///       측정 — 픽스처(`test/fixtures/conditioning_expected_100hz.txt`,
+  ///       2026-10-06 개발폰 처리 후)의 Y 는 -4.94 ~ 5.71 mg 이라 ±10 mg
+  ///       밖 표본이 없다
+  /// 미확인: 동시 측정 6쌍 전체에서 ±10 mg 밖 표본 비율
   static const ChartAxisSpec y = ChartAxisSpec(
     key: 'y',
     label: 'Y-Vibration (milli-g)',
     steps: <ChartAxisRange>[
-      ChartAxisRange(min: -15.0, max: 15.0, tickStep: 5.0),
+      ChartAxisRange(min: -10.0, max: 10.0, tickStep: 5.0),
     ],
   );
 

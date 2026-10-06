@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 
 /// 작성: 2026-08-18 23:43:06 · 박건준
 /// 클래스: VibrationFileWriter
@@ -198,4 +200,79 @@ class VibrationFileWriter {
     await file.writeAsString(body.toString());
     return file;
   }
+
+  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 함수: encodeConditioningMeta
+  /// 목적: 지표 계산 전 신호 처리(`SignalConditioner.condition()`)를 어떻게
+  ///       했는지 집계 파일 끝에 덧붙일 문자열로 만든다. 값 파일(`raw.txt`)은
+  ///       처리 전 격자이고 지표는 처리 후 격자로 내므로, 두 값이 왜 다른지
+  ///       집계 파일만 보고 알 수 있어야 한다.
+  ///       - 처리 방식 한 줄 — 수치는 실제로 쓴 설정에서 옮긴다
+  ///       - 축별 기준선과 기준선 구간 표준편차 (mg). 표준편차는 기준선 구간에
+  ///         손 움직임이 섞였는지 나중에 보려는 값이고 판정하지 않는다
+  ///       - 처리 후 표본 속도와 행 수
+  ///       처리가 실패했으면 기준선 대신 실패 사유만 적는다
+  ///       (`encodeConditioningFailure()`).
+  /// 인자: conditioned — 처리 결과
+  ///       config — 처리에 쓴 수집 설정
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
+  static String encodeConditioningMeta(
+    ConditionedGrid conditioned,
+    CaptureConfig config,
+  ) {
+    if (!conditioned.isSuccess) {
+      // → 로직 이동: encodeConditioningFailure()
+      return encodeConditioningFailure(conditioned.failureReason!);
+    }
+    final buffer = StringBuffer(lineEnding); // 앞 집계와 빈 줄로 나눈다
+    // 한 줄을 쓰고 줄바꿈 문자를 붙인다
+    void line(String text) => buffer
+      ..write(text)
+      ..write(lineEnding);
+    // 성공이면 세 값 모두 있다 — `ConditionedGrid` 생성자가 요구한다
+    String mg(double? value) => value!.toStringAsFixed(decimalDigits);
+
+    line(
+      'conditioning: baseline + lowpass ${config.lowpassCutoffHz}Hz '
+      '(butterworth ${config.lowpassOrder}, zero-phase) + resample '
+      '${config.targetSampleRateHz}->${config.conditionedRateHz}Hz',
+    );
+    line('baselineXmg: ${mg(conditioned.baselineXMg)}');
+    line('baselineYmg: ${mg(conditioned.baselineYMg)}');
+    line('baselineZmg: ${mg(conditioned.baselineZMg)}');
+    line('baselineStdXmg: ${mg(conditioned.baselineStdXMg)}');
+    line('baselineStdYmg: ${mg(conditioned.baselineStdYMg)}');
+    line('baselineStdZmg: ${mg(conditioned.baselineStdZMg)}');
+    line('conditionedRateHz: ${conditioned.sampleRateHz.round()}');
+    line('conditionedRowCount: ${conditioned.rowCount}');
+    line(
+      '# raw.txt 는 필터 · 기준선 보정 전 ${config.targetSampleRateHz}Hz '
+      '격자다. 지표 · 리포트는 위 처리 후 값으로 낸다.',
+    );
+    line(
+      '# baselineStd 는 기준선 구간(처음 ${config.baselineWindowMs}ms)의 '
+      '표준편차다. 판정에는 쓰지 않는다.',
+    );
+    return buffer.toString();
+  }
+
+  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 함수: encodeConditioningFailure
+  /// 목적: 지표 계산 전 신호 처리가 실패한 사유를 집계 파일 끝에 덧붙일
+  ///       문자열로 만든다. 처리가 실패해도 값 파일(`raw.txt`)은 이미 써
+  ///       두었으므로, 왜 지표가 없는지 집계 파일에서 찾을 수 있어야 한다.
+  /// 인자: reason — 실패 사유 (설정 오류 예외 문구 포함)
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 한 줄
+  static String encodeConditioningFailure(String reason) =>
+      '${lineEnding}conditioningFailureReason: $reason$lineEnding';
+
+  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 함수: appendMeta
+  /// 목적: 이미 쓴 집계 파일 끝에 문자열을 덧붙인다. 집계는 격자 환산
+  ///       직후에 먼저 쓰고, 신호 처리 결과는 그 뒤에 알 수 있기 때문이다.
+  /// 인자: path — 집계 파일 절대 경로
+  ///       text — 덧붙일 문자열 (`encodeConditioningMeta()` 등)
+  /// 반환: 덧붙인 파일
+  static Future<File> appendMeta(String path, String text) =>
+      File(path).writeAsString(text, mode: FileMode.append);
 }

@@ -8,6 +8,7 @@ import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 
 /// 작성: 2026-10-04 13:36:00 · nada
@@ -50,12 +51,18 @@ const _site = SiteInfo(
 
 /// 작성: 2026-10-04 13:36:00 · nada
 /// 함수: _filledResampler
-/// 목적: 가속도 · 중력 이벤트를 2초 동안 256Hz 로 채운 환산기를 만든다.
+/// 목적: 가속도 · 중력 이벤트를 4초 동안 256Hz 로 채운 환산기를 만든다.
+///       앞뒤 0.5초씩 버린 뒤에도 기준선 구간 1초가 남아 신호 처리까지
+///       지나는 길이다.
 ///       가속도에는 1Hz 사인 진동을 얹어 격자 값이 0 으로만 차지 않게 한다.
 /// 인자: count — 센서마다 넣을 이벤트 수
+///       config — 환산기 설정. 기본은 앱과 같은 기본 설정
 /// 반환: 이벤트가 쌓인 환산기
-GridResampler _filledResampler({int count = 512}) {
-  final resampler = GridResampler(config: const CaptureConfig()); // 채울 환산기
+GridResampler _filledResampler({
+  int count = 1024,
+  CaptureConfig config = const CaptureConfig(),
+}) {
+  final resampler = GridResampler(config: config); // 채울 환산기
   const stepUs = 3906; // 256Hz 한 칸 간격 (마이크로초)
   for (var i = 0; i < count; i++) {
     final tsUs = 1000000 + i * stepUs; // 이 이벤트의 시각 (마이크로초)
@@ -253,6 +260,106 @@ void main() {
 
       expect(outcome.failure, RecordFailure.gridFailed);
       expect(outcome.detail, contains('너무 짧다'));
+    });
+  });
+
+  group('MeasurementRecorder.record 지표 계산 전 신호 처리', () {
+    /// 작성: 2026-10-07 02:10:57 · nada
+    /// 함수: rawFileExists
+    /// 목적: 이번 측정 폴더에 값 파일(`raw.txt`)이 남아 있는지 본다.
+    /// 반환: 남아 있으면 true
+    Future<bool> rawFileExists() async {
+      final dir = await MeasurementRepository.instance.jobDirectory(
+        '20260114-110359',
+      ); // 이번 측정 폴더
+      return File('${dir.path}/${MeasurementRepository.rawFileName}').exists();
+    }
+
+    /// 작성: 2026-10-07 02:10:57 · nada
+    /// 함수: metaText
+    /// 목적: 이번 측정 폴더의 집계 파일(`meta.txt`) 내용을 읽는다.
+    /// 반환: 집계 파일 내용
+    Future<String> metaText() async {
+      final dir = await MeasurementRepository.instance.jobDirectory(
+        '20260114-110359',
+      ); // 이번 측정 폴더
+      return File(
+        '${dir.path}/${MeasurementRepository.metaFileName}',
+      ).readAsString();
+    }
+
+    test('저장한 결과의 표본 속도는 100Hz 이고 집계 파일에 처리 내역을 남긴다', () async {
+      // 이벤트 1024개 × 3.906ms ≈ 4초 — 앞뒤 0.5초를 버려도 기준선 1초가 남는다
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(count: 1024),
+        site: _site,
+        nativeRecordPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
+      final saved = await MeasurementRepository.instance.load(
+        '20260114-110359',
+      ); // 저장한 측정 결과
+      expect(saved?.sampleRate, 100.0);
+      expect(saved?.signalConditioning, 'baseline+lp40bw4zp+rs100');
+
+      final meta = await metaText(); // 집계 파일 내용
+      expect(meta, contains('gridRateHz: 256'), reason: '처리 전 격자 집계');
+      expect(
+        meta,
+        contains(
+          'conditioning: baseline + lowpass 40Hz (butterworth 4, '
+          'zero-phase) + resample 256->100Hz',
+        ),
+      );
+      for (final key in [
+        'baselineXmg',
+        'baselineYmg',
+        'baselineZmg',
+        'baselineStdXmg',
+        'baselineStdYmg',
+        'baselineStdZmg',
+      ]) {
+        expect(meta, contains('$key: '), reason: key);
+      }
+      expect(meta, contains('conditionedRateHz: 100'));
+      expect(meta, contains('conditionedRowCount: ${saved!.xSeries.length}'));
+    });
+
+    test('처리 설정이 잘못되면 컨디셔닝 실패로 돌려주고 값 파일은 남긴다', () async {
+      // 차단 50Hz 는 재표본 100Hz 의 절반이라 ArgumentError 가 난다
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(
+          count: 1024,
+          config: const CaptureConfig(lowpassCutoffHz: 50),
+        ),
+        site: _site,
+        nativeRecordPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.failure, RecordFailure.conditioningFailed);
+      expect(outcome.conditioningCause, ConditioningFailure.invalidConfig);
+      expect(outcome.detail, contains('lowpassCutoffHz'));
+      expect(await rawFileExists(), isTrue);
+      expect(await metaText(), contains('conditioningFailureReason: '));
+    });
+
+    test('격자가 기준선 구간보다 짧으면 컨디셔닝 실패로 돌려주고 값 파일은 남긴다', () async {
+      // 이벤트 512개 ≈ 2초 — 앞뒤 0.5초를 버리면 255행으로 256행에 모자란다
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(count: 512),
+        site: _site,
+        nativeRecordPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.failure, RecordFailure.conditioningFailed);
+      expect(outcome.conditioningCause, ConditioningFailure.gridTooShort);
+      expect(outcome.detail, contains('255행'));
+      expect(await rawFileExists(), isTrue);
+      expect(await metaText(), contains('conditioningFailureReason: '));
     });
   });
 }
