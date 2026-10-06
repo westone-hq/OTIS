@@ -47,11 +47,11 @@ abstract final class _DiagramSize {
 }
 
 /// 작성: 2026-08-17 18:55:14 · 박건준
-/// 수정: 2026-10-04 16:54:15 · nada
+/// 수정: 2026-10-07 01:36:03 · nada
 /// 클래스: PlacementSheet
-/// 목적: 휴대폰을 엘리베이터 카 바닥 중앙에 뒤집어서, 휴대폰 위쪽이
-///       출입구 기준 오른쪽을 보게 놓으라고 안내하는 바텀 시트. 화면이
-///       바닥을 보므로 측정은 볼륨키로 끝낸다.
+/// 목적: 휴대폰을 엘리베이터 카 바닥 중앙에 뒤집어서, 출입구를 바라보고
+///       섰을 때 휴대폰 위쪽이 왼쪽을 보게 놓으라고 안내하는 바텀 시트.
+///       화면이 바닥을 보므로 측정은 볼륨키로 끝낸다.
 ///       - 어르신도 쓰기 쉽도록 도식은 크게, 단계 번호는 40dp 원형
 ///         뱃지로, 확인 버튼은 64dp로 키운다
 class PlacementSheet extends StatelessWidget {
@@ -96,7 +96,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-04 16:54:15 · nada
+  /// 수정: 2026-10-07 01:36:03 · nada
   /// 함수: build
   /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다.
   ///       - 상단 헤더 — 제목과 닫기 버튼
@@ -157,7 +157,11 @@ class PlacementSheet extends StatelessWidget {
 
                     // 4단계 안내
                     _buildStepItem(1, '카운트다운이 끝나기 전에 휴대폰을 카 바닥 중앙에 놓으세요'),
-                    _buildStepItem(2, '휴대폰을 뒤집어 그림과 같은 방향으로 놓으세요'),
+                    _buildStepItem(
+                      2,
+                      '휴대폰을 뒤집어 그림과 같은 방향으로 놓으세요. '
+                      '출입구를 바라보고 섰을 때 휴대폰 위쪽이 왼쪽입니다',
+                    ),
                     _buildStepItem(3, '측정이 시작되면 엘리베이터를 움직이세요'),
                     _buildStepItem(4, '엘리베이터가 완전히 멈추면 볼륨키를 눌러 측정을 끝내세요'),
                     const SizedBox(height: AppDims.gap),
@@ -188,16 +192,19 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-04 16:54:15 · nada
+  /// 수정: 2026-10-07 01:36:03 · nada
   /// 함수: _buildDiagram
   /// 목적: 엘리베이터 카 안에서 휴대폰을 어느 위치에 어느 방향으로
   ///       놓을지 보여주는 도식을 만든다. 위쪽에 출입구, 가운데에 뒤집어
   ///       가로로 눕힌 휴대폰(뒷면과 카메라가 보인다)을 두고, 휴대폰
-  ///       위쪽이 오른쪽을 향한다는 화살표와 설명을 붙인다.
+  ///       위쪽이 왼쪽을 향한다는 화살표와 설명을 붙인다. 출입구를 위에
+  ///       두었으므로 그림의 왼쪽은 출입구를 바라보고 선 사람의 왼쪽이다.
   /// 반환: 거치 방향 안내 도식 위젯
-  /// 근거: 인용 — 격자 환산의 부호 기준이 이 거치 방식(화면을 아래로,
-  ///       위쪽은 출입구 기준 오른쪽)을 전제로 한다
-  ///       (`GridResampler.resample()`)
+  /// 근거: 미정 — 2026-10-07 에 거치 방향을 위쪽 오른쪽에서 왼쪽으로
+  ///       바꿨다. 격자 환산(`GridResampler.resample()`)의 Y · Z 부호
+  ///       뒤집기는 아직 예전 거치(위쪽 오른쪽)를 전제로 한다. 휴대폰을
+  ///       180도 돌린 것이라 X · Y 부호가 함께 바뀌고, 부호와 무관한 P2P ·
+  ///       A95 는 그대로지만 X · Y 차트 파형은 위아래가 뒤집힌다
   Widget _buildDiagram() {
     return Container(
       height: _DiagramSize.height,
@@ -255,7 +262,7 @@ class PlacementSheet extends StatelessWidget {
               _buildPhoneBack(), // → 로직 이동: _buildPhoneBack()
               const SizedBox(height: AppDims.gap),
               Text(
-                '뒤집어서, 휴대폰 위쪽이 오른쪽',
+                '뒤집어서, 휴대폰 위쪽이 왼쪽',
                 style: AppText.caption.copyWith(
                   color: AppColors.navy,
                   fontWeight: FontWeight.w700,
@@ -269,10 +276,14 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-10-04 16:54:15 · nada
+  /// 수정: 2026-10-07 01:36:03 · nada
   /// 함수: _buildPhoneBack
   /// 목적: 위에서 내려다본, 뒤집어 놓은 휴대폰을 그린다. 뒷면이 보이므로
-  ///       남색으로 칠하고, 휴대폰 위쪽 끝(오른쪽)에 카메라 모듈을 둔다.
-  ///       가운데의 "위쪽 →" 이 휴대폰 위쪽이 가리킬 방향이다.
+  ///       남색으로 칠하고, 휴대폰 위쪽 끝(왼쪽)에 카메라 모듈을 둔다.
+  ///       가운데의 "← 위쪽" 이 휴대폰 위쪽이 가리킬 방향이다.
+  ///       카메라는 왼쪽 끝의 아래 모서리에 둔다. 뒷면을 위쪽이 위로
+  ///       가게 들었을 때 왼쪽 위에 있는 카메라가, 위쪽을 왼쪽으로 돌려
+  ///       눕히면 왼쪽 아래로 오기 때문이다.
   /// 반환: 휴대폰 뒷면 그림 위젯
   Widget _buildPhoneBack() {
     return Container(
@@ -290,8 +301,8 @@ class PlacementSheet extends StatelessWidget {
         children: [
           // 뒷면 카메라 모듈 — 휴대폰 위쪽 끝에 붙어 있다
           Positioned(
-            top: _DiagramSize.cameraInset,
-            right: _DiagramSize.cameraInset,
+            bottom: _DiagramSize.cameraInset,
+            left: _DiagramSize.cameraInset,
             child: Container(
               width: _DiagramSize.cameraSize,
               height: _DiagramSize.cameraSize,
@@ -320,17 +331,17 @@ class PlacementSheet extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.onDark,
+                  size: AppDims.iconM,
+                ),
                 Text(
                   '위쪽',
                   style: AppText.caption.copyWith(
                     color: AppColors.onDark,
                     fontWeight: FontWeight.w700,
                   ),
-                ),
-                const Icon(
-                  Icons.arrow_forward,
-                  color: AppColors.onDark,
-                  size: AppDims.iconM,
                 ),
               ],
             ),
