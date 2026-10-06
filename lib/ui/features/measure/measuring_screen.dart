@@ -167,11 +167,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   /// 목적: 수집을 시작했는데 센서 값이 한 번도 오지 않았을 때
   ///       `CaptureSession` 이 부른다. 측정을 끝난 것으로 표시하고 정리한
   ///       뒤, 수집 시작 요청이 실패한 원인이 있으면 덧붙여 실패 안내를
-  ///       띄운다.
+  ///       띄운다. 저장하지 않는 측정이라 안드로이드 원본도 지운다.
   Future<void> _onNoResponse() async {
     if (!mounted) return;
     _isFinished = true;
-    await _cleanup(); // → 로직 이동: _cleanup()
+    await _cleanup(discardRecord: true); // → 로직 이동: _cleanup()
     final cause = _capture.lastCaptureError; // 실패 원인 문구, 없으면 null
     const message = '센서 응답이 없습니다. 측정을 중단합니다.'; // 기본 안내 문구
     // → 로직 이동: _showMeasureFailDialog()
@@ -179,21 +179,31 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:33:18 · nada
+  /// 수정: 2026-10-07 03:30:18 · nada
   /// 함수: _cleanup
   /// 목적: 화면 타이머 두 개(경과 시간, 카운트다운)를 멈추고 센서 수집을
   ///       정리한다. 측정을 중단하거나 끝낼 때, 화면이 사라질 때 등 여러
   ///       곳에서 공통으로 부른다. 수집 정리의 순서와 시간 한도는
   ///       `CaptureSession.stop()` 이 지킨다.
-  Future<void> _cleanup() async {
+  ///       저장하지 않는 중단이면 안드로이드 원본 기록까지 지운다
+  ///       (`CaptureSession.discard()`). 저장하는 마무리는 원본을
+  ///       `MeasurementRecorder.record()` 가 측정 폴더로 옮겨야 하므로
+  ///       지우지 않는다.
+  /// 인자: discardRecord — true 면 저장하지 않는 중단이라 원본을 지운다
+  Future<void> _cleanup({bool discardRecord = false}) async {
     _timeTimer?.cancel();
     _countdownTimer?.cancel();
     _timeTimer = null;
     _countdownTimer = null;
-    await _capture.stop(); // → 로직 이동: CaptureSession.stop()
+    if (discardRecord) {
+      await _capture.discard(); // → 로직 이동: CaptureSession.discard()
+    } else {
+      await _capture.stop(); // → 로직 이동: CaptureSession.stop()
+    }
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-10-07 03:30:18 · nada
   /// 함수: dispose
   /// 목적: 이 화면이 완전히 사라질 때 한 번만 실행된다.
   ///       - `initState`에서 걸어둔 앱 상태 감시(`WidgetsBinding`이
@@ -204,20 +214,25 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///         `_cleanup()`은 화면 없이도 안전하게 뒤에서 계속
   ///         실행된다. `unawaited(...)`는 그걸 일부러 안 기다린다는
   ///         표시이다
+  ///       - 측정을 마무리하지 않은 채 사라지면 저장하지 않는 중단이라
+  ///         안드로이드 원본도 지운다
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_cleanup()); // → 로직 이동: _cleanup()
+    // → 로직 이동: _cleanup()
+    unawaited(_cleanup(discardRecord: !_isFinished));
     super.dispose();
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-10-07 03:30:18 · nada
   /// 함수: didChangeAppLifecycleState
   /// 목적: 앱이 화면 밖으로 밀려나거나(전화 수신, 홈 버튼 등) 다시
   ///       돌아올 때 Flutter가 불러주는 함수다. 측정 중 앱이 밀려나면
   ///       측정을 중단하고, 다시 돌아오면 중단됐었다는 안내를 띄운다.
   ///       - `paused`(화면이 안 보이게 됨) 상태고, 아직 측정이 끝나지도
-  ///         이미 중단되지도 않았으면 측정을 정리하고 중단 상태로 표시한다
+  ///         이미 중단되지도 않았으면 측정을 정리하고 중단 상태로 표시한다.
+  ///         저장하지 않는 중단이라 안드로이드 원본도 지운다
   ///       - `resumed`(다시 화면에 보임) 상태고 중단된 적이 있으면,
   ///         중단 안내 대화상자를 띄운다
   /// 인자: state — 앱이 지금 어떤 상태로 바뀌었는지 (화면에 보임 ·
@@ -228,7 +243,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     if (state == AppLifecycleState.paused &&
         !_isFinished &&
         !_measurementAborted) {
-      unawaited(_cleanup()); // → 로직 이동: _cleanup()
+      // → 로직 이동: _cleanup()
+      unawaited(_cleanup(discardRecord: true));
       _measurementAborted = true;
     } else if (state == AppLifecycleState.resumed && _measurementAborted) {
       _showAbortedDialog(); // → 로직 이동: _showAbortedDialog()
@@ -327,14 +343,14 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-07 03:30:18 · nada
   /// 함수: _confirmAndExit
   /// 목적: 기기 뒤로가기(제스처 · 버튼)를 눌렀을 때와 앱바의 뒤로가기
   ///       버튼을 눌렀을 때, 둘 다 이 함수가 실행된다.
   ///       저장 없이 중단된다는 것을 알리는 확인 대화상자를 띄우고,
   ///       "중단하기"를 선택하면 타이머를 멈추고 센서 수집을
   ///       끄는 정리(`_cleanup()`)를 한 뒤 이 화면에서 나가 이전
-  ///       화면으로 돌아간다.
+  ///       화면으로 돌아간다. 저장하지 않으므로 안드로이드 원본도 지운다.
   ///       대화상자를 기다리는 사이에 화면이 사라질 수 있으므로, 기다린
   ///       뒤에는 매번 이 화면이 아직 살아 있는지 보고 움직인다. 화면이
   ///       가진 `mounted` 를 보는 이유는 `context.mounted` 가 화면이
@@ -353,7 +369,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     ); // 사용자 선택. true 면 중단
     if (confirm && mounted) {
       _isFinished = true;
-      await _cleanup(); // → 로직 이동: _cleanup()
+      await _cleanup(discardRecord: true); // → 로직 이동: _cleanup()
       if (mounted) context.pop();
     }
   }

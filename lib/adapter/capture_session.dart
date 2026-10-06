@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:vibration_checker/adapter/sensor_channel.dart';
@@ -16,6 +18,8 @@ import 'package:vibration_checker/domain/capture/noise_offset.dart';
 ///       - `start()` — 화면 꺼짐 방지, 마이크 권한, 센서 구독, 볼륨키
 ///         가로채기, 무응답 감시를 차례로 건다
 ///       - `stop()` — 건 것을 거꾸로 푼다. 여러 번 불러도 안전하다
+///       - `discard()` — 저장하지 않는 중단이면 멈춘 뒤 안드로이드 원본
+///         기록 파일까지 지운다
 ///       수집한 이벤트는 `resampler` 에 쌓이고, 저장은
 ///       `MeasurementRecorder`(measurement_recorder.dart)가 한다.
 class CaptureSession {
@@ -190,6 +194,27 @@ class CaptureSession {
   Future<void> stop() async {
     _stopped = true;
     await _teardown(); // → 로직 이동: _teardown()
+  }
+
+  /// 작성: 2026-10-07 03:30:18 · nada
+  /// 함수: discard
+  /// 목적: 저장하지 않고 끝내는 측정(뒤로가기 중단, 앱 전환 중단, 센서
+  ///       무응답)의 수집을 멈추고, 안드로이드가 남긴 원본 기록 파일을
+  ///       지운다. 저장하지 않으면 측정 폴더가 생기지 않아 원본이 앱 저장
+  ///       공간 맨 위에 쌓이고, 쓰는 곳도 없다. 중단 확인 창도 "진행 중인
+  ///       측정 데이터는 저장되지 않습니다"라고 안내한다.
+  ///       지우지 못해도 기록만 남기고 넘어간다 — 화면 나가기를 막지 않는다.
+  ///       `stop()` 처럼 여러 번 불러도 안전하다.
+  Future<void> discard() async {
+    await stop(); // → 로직 이동: stop()
+    final path = nativeRecordPath; // 지울 원본 경로, 저장 안 됐으면 null
+    if (path == null) return;
+    try {
+      final file = File(path); // 지울 원본 파일
+      if (await file.exists()) await file.delete();
+    } catch (e) {
+      debugPrint('중단한 측정의 원본 삭제 실패: $path, $e');
+    }
   }
 
   /// 작성: 2026-10-05 10:00:11 · nada
