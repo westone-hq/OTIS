@@ -116,8 +116,8 @@ class MeasurementRecorder {
   ///       - 복사에 성공하면 안드로이드 쪽 원본을 지운다. 지우지 않으면
   ///         측정할 때마다 앱 저장 공간에 쌓인다
   ///       - 원본이 없거나 복사 · 삭제가 실패하면 그 사실을 집계 파일 끝에
-  ///         적고 넘어간다. 측정 결과는 이미 저장됐으므로 이것 때문에
-  ///         저장 전체를 실패로 알리지 않는다
+  ///         적고 넘어간다. 원본 사본은 확인용 자료라 이것 때문에 저장
+  ///         전체를 실패로 알리지 않는다
   /// 인자: nativeRecordPath — 안드로이드가 저장한 원본 경로, 없으면 null
   ///       jobDirPath — 이번 측정 폴더 경로
   ///       metaPath — 사실을 덧붙일 집계 파일 경로
@@ -245,15 +245,18 @@ class MeasurementRecorder {
   ///       2. 격자로 환산하고, 성공 여부와 상관없이 집계 파일을 먼저
   ///          남긴다 — 환산이 실패한 이유를 나중에 집계에서 본다.
   ///          집계 파일 쓰기가 실패해도 멈추지 않는다
-  ///       3. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다.
+  ///       3. 안드로이드가 따로 저장한 원본을 이번 측정 폴더로 옮긴다
+  ///          (`_copyNativeRecord()`). 뒤 단계가 실패해도 원본이 측정 폴더에
+  ///          남도록 실패 여부를 가르기 전에 옮긴다 — 실패한 측정의 원본이
+  ///          앱 저장 공간 맨 위에 쌓이지 않게 한다. 옮기지 못해도 멈추지
+  ///          않는다
+  ///       4. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다.
   ///          측정값 파일은 처리 전 격자 그대로다
-  ///       4. 지표 계산 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)를
+  ///       5. 지표 계산 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)를
   ///          하고 결과를 집계 파일에 덧붙인다(`_condition()`). 실패하면
   ///          멈추되 측정값 파일은 지우지 않는다
-  ///       5. 처리한 격자를 측정 결과 모델로 바꾸고, 처리 방식
+  ///       6. 처리한 격자를 측정 결과 모델로 바꾸고, 처리 방식
   ///          (`SignalConditioner.methodLabel`)을 실어 저장소에 저장한다
-  ///       6. 안드로이드가 따로 저장한 원본을 이번 측정 폴더로 옮긴다
-  ///          (`_copyNativeRecord()`). 옮기지 못해도 저장은 성공이다
   ///       7. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
   ///          기다리게 되고, 그 자리에서 실패하면 보내지 못한다. 실패해도
   ///          측정은 이미 저장됐으므로 멈추지 않는다 — 나중에
@@ -293,6 +296,13 @@ class MeasurementRecorder {
       } catch (e, st) {
         debugPrint('집계 파일 기록 실패: $e\n$st');
       }
+
+      // → 로직 이동: _copyNativeRecord()
+      final rawCopyPath = await _copyNativeRecord(
+        nativeRecordPath,
+        jobDir.path,
+        metaPath,
+      ); // 복사해 둔 안드로이드 원본 경로, 못 했으면 null
 
       if (!grid.isSuccess) {
         return RecordOutcome.failure(
@@ -340,13 +350,6 @@ class MeasurementRecorder {
       await repo.save(
         assembled.result!.copyWith(signalConditioning: conditioner.methodLabel),
       );
-
-      // → 로직 이동: _copyNativeRecord()
-      final rawCopyPath = await _copyNativeRecord(
-        nativeRecordPath,
-        jobDir.path,
-        metaPath,
-      ); // 복사해 둔 안드로이드 원본 경로, 못 했으면 null
 
       String? reportPath; // 미리 만든 리포트 경로, 못 만들었으면 null
       try {

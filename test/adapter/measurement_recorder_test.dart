@@ -361,5 +361,29 @@ void main() {
       expect(await rawFileExists(), isTrue);
       expect(await metaText(), contains('conditioningFailureReason: '));
     });
+
+    test('측정이 실패해도 안드로이드 원본은 측정 폴더로 옮기고 원래 자리에서 지운다', () async {
+      final native = File('${temp.path}/native_source.txt'); // 원본 자리
+      await native.writeAsString('accel 1 0 0 1000 3906\n');
+
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(count: 512),
+        site: _site,
+        nativeRecordPath: native.path,
+        measuredAt: measuredAt,
+      ); // 저장 결과 (기준선 구간 부족으로 실패)
+
+      expect(outcome.failure, RecordFailure.conditioningFailed);
+      expect(await native.exists(), isFalse, reason: '실패한 측정도 쌓이면 안 된다');
+      final dir = await MeasurementRepository.instance.jobDirectory(
+        '20260114-110359',
+      ); // 이번 측정 폴더
+      expect(
+        await File(
+          '${dir.path}/${MeasurementRepository.nativeRawFileName}',
+        ).readAsString(),
+        'accel 1 0 0 1000 3906\n',
+      );
+    });
   });
 }

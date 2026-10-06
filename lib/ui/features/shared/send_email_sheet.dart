@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
@@ -52,17 +50,17 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-04 16:44:32 · nada
+/// 수정: 2026-10-07 03:21:55 · nada
 /// 클래스: _SendEmailSheetState
 /// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신 이메일
 ///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
 ///       발송을 실행한다. 보낸 주소는 기억해 다음에 미리 골라 둔다.
+///       보낼 수 있는 항목은 PDF 리포트 하나다. 센서 원본 값(`raw.txt`,
+///       `native_raw.txt`)은 기기에만 남기고 메일로 보내지 않는다
+///       (2026-10-07 결정).
 class _SendEmailSheetState extends State<SendEmailSheet> {
   /// PDF 리포트를 보낼 항목에 포함할지 여부
   bool _sendPdf = true;
-
-  /// 측정값 원본(`raw.txt`)을 보낼 항목에 포함할지 여부
-  bool _sendRaw = true;
 
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
   /// 버튼을 비활성화해 중복 실행을 막는다
@@ -172,7 +170,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-05 10:03:35 · nada
+  /// 수정: 2026-10-07 03:21:55 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -194,8 +192,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     }
 
     final repo = MeasurementRepository.instance; // 저장소 인스턴스
-    // → 로직 이동: MeasurementRepository.jobDirectory()
-    final jobDir = await repo.jobDirectory(jobId); // 이 측정의 폴더
     final List<String> attachments = []; // 실제로 첨부할 파일 경로
     final List<String> attachmentDescriptions = []; // 본문에 나열할 첨부 설명 줄
     final List<String> missing = []; // 보내기로 했는데 없는 자료
@@ -219,27 +215,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
         missing.add(
           '누락: ${MeasurementRepository.reportFileName} — 리포트를 만들지 '
           '못했습니다',
-        );
-      }
-    }
-    if (_sendRaw) {
-      final rawFile = File(
-        '${jobDir.path}/${MeasurementRepository.rawFileName}',
-      ); // 격자에 맞춘 측정값 파일
-      if (await rawFile.exists()) {
-        final name = MeasurementRepository.mailAttachmentName(
-          result,
-          'RAW',
-          'txt',
-        ); // 메일에 붙일 이름
-        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
-        final copy = await repo.mailAttachmentCopy(rawFile, name); // 사본
-        attachments.add(copy.path);
-        attachmentDescriptions.add('- $name: 측정값 원본(256Hz)');
-      } else {
-        missing.add(
-          '누락: ${MeasurementRepository.rawFileName} — 측정값 원본 파일이 '
-          '없습니다',
         );
       }
     }
@@ -312,7 +287,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       1. 제목과 닫기 버튼
   ///       2. 받는 사람 — 등록된 이메일마다 체크 한 줄. 여러 개 고를 수
   ///          있다. "관리"를 누르면 설정 화면으로 간다
-  ///       3. 보낼 항목 체크 목록 (PDF 리포트, 측정값 원본)
+  ///       3. 보낼 항목 체크 목록 (PDF 리포트)
   ///       4. 고를 것이 빠졌을 때의 안내와 "보내기" 버튼
   ///       2 · 3 은 함께 스크롤되고 4 는 아래에 고정한다. 시트 아래쪽
   ///       시스템 영역은 `showAppSheet()` 가 비켜 준다.
@@ -320,7 +295,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
-    final noItem = !_sendPdf && !_sendRaw; // 보낼 항목을 고르지 않았는지
+    final noItem = !_sendPdf; // 보낼 항목을 고르지 않았는지
     final noRecipient = _selected.isEmpty; // 받을 주소를 고르지 않았는지
     final warning = _emails.isEmpty
         ? null
@@ -404,13 +379,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       value: _sendPdf,
                       onChanged: (val) =>
                           setState(() => _sendPdf = val ?? false),
-                    ),
-                    const Divider(height: 1, color: AppColors.border),
-                    _buildCheckboxItem(
-                      title: '측정값 원본 (raw.txt)',
-                      value: _sendRaw,
-                      onChanged: (val) =>
-                          setState(() => _sendRaw = val ?? false),
                     ),
                   ],
                 ),

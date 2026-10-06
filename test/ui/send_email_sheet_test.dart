@@ -49,8 +49,9 @@ bool _checked(WidgetTester tester, String email) {
 /// 작성: 2026-10-04 16:44:32 · nada
 /// 함수: main
 /// 목적: 메일 시트가 등록된 주소를 전부 보여주고 지난번 보낸 주소만 미리
-///       고르는지, 여러 개를 고를 수 있는지, 보내기 버튼이 아래쪽 시스템
-///       영역에 가리지 않는지 시험한다.
+///       고르는지, 여러 개를 고를 수 있는지, 보낼 항목에 센서 원본 없이 PDF
+///       리포트만 있는지, 보내기 버튼이 아래쪽 시스템 영역에 가리지
+///       않는지 시험한다.
 void main() {
   testWidgets('지난번 보낸 주소만 미리 고른다', (tester) async {
     SharedPreferences.setMockInitialValues({
@@ -77,6 +78,18 @@ void main() {
 
     expect(_checked(tester, 'a@otis.com'), isTrue);
     expect(_checked(tester, 'b@otis.com'), isTrue);
+  });
+
+  testWidgets('보낼 항목은 PDF 리포트뿐이고 센서 원본은 없다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+
+    await _openSheet(tester);
+
+    expect(find.text('PDF 리포트'), findsOneWidget);
+    expect(find.textContaining('raw'), findsNothing);
+    expect(find.textContaining('원본'), findsNothing);
   });
 
   testWidgets('보내기 버튼이 아래쪽 시스템 영역 위에 놓인다', (tester) async {
