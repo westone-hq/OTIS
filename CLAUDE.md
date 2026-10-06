@@ -79,13 +79,19 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   예전 결과는 null 이고 지표가 원시 256Hz 기준이다. 화면에는 보이지 않는다.
 - **정본과 픽스처**: 처리 결과는 SciPy 1.18.1 과 같아야 한다
   (`test/domain/capture/signal_conditioner_test.dart`). 픽스처는
-  `test/fixtures/` 에 있고, 만드는 스크립트는 저장소에 없다.
+  `test/fixtures/` 에 있고 `pdf_report_dev/gen_conditioning_fixtures.py` 가
+  만든다(저장소 루트에서 `python pdf_report_dev/gen_conditioning_fixtures.py
+  test/fixtures/conditioning_input_dev_256hz.txt test/fixtures`).
   - `conditioning_input_dev_256hz.txt` — 2026-10-06 개발폰 실측
-    (`RAW_1_20261006-091841`, 앱이 앞뒤 0.5초 버림) EVIMP1 9,439행
+    (`RAW_1_20261006-091841`, 앱이 앞뒤 0.5초 버림) EVIMP1 9,439행. 스크립트의
+    입력이며 스크립트가 만들지 않는다
   - `conditioning_expected_100hz.txt` — 위 입력의 X · Y · Z 에 아래를 적용한
-    3,688행. `#` 머리말 한 줄
-  - `conditioning_unit_cases.json` — 300표본 `input`, 그 `filtfilt` 출력,
-    `input` 을 바로 재표본한 `resample_25_64`, 계수 `sos`
+    3,688행. `#` 머리말 한 줄(원래 파일은 `RAW_1_…` 에서 만들어 머리말의 입력
+    파일 이름만 다르다)
+  - `conditioning_unit_cases.json` — 10Hz + 60Hz 합성 신호 300표본 `input`,
+    그 `filtfilt` 출력, `input` 을 바로 재표본한 `resample_25_64`, 계수 `sos`.
+    값을 소수 12자리로 반올림해 저장하므로, 다시 만들거나 반올림한 `input`
+    으로 다시 계산하면 1e-12 대 차이가 날 수 있다(시험 기준 1e-9)
 
   ```python
   x = x - x[:256].mean()                                  # 축마다 첫 1초 평균
