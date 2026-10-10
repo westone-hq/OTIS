@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
+import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
@@ -98,10 +99,11 @@ MeasurementResult _result() {
 }
 
 /// 작성: 2026-09-17 10:05:00 · nada
+/// 수정: 2026-10-10 11:48:41 · nada
 /// 함수: main
 /// 목적: 차트 계층을 시험한다. 크게 셋을 본다.
-///       1. 축 단계 고르기 — 경계값과 적분 잔차를 포함해 어떤 단계를
-///          고르는지
+///       1. 축마다 세로축 범위 — 최소 범위를 지키는지, 넘치면 넓어지는지,
+///          축마다 넓히는 모양이 맞는지
 ///       2. 눈금 만들기 — 마지막 눈금이 축 위끝에 정확히 떨어지는지
 ///       3. 표본 줄이기 — 최댓값과 최솟값이 살아남는지
 ///       마지막으로 실제 PDF 를 한 장 그려 그리기 과정이 끝까지 도는지
@@ -109,37 +111,30 @@ MeasurementResult _result() {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('ChartAxisSpec.rangeFor — 축 단계 고르기', () {
-    test('데이터가 비면 가장 좁은 단계를 쓴다', () {
+  group('ChartAxisSpec.rangeFor — 축마다 세로축 범위', () {
+    test('데이터가 비면 최소 범위를 쓴다', () {
       final range = ReportChartAxes.position.rangeFor(const <double>[]);
 
-      expect(range.max, ReportChartAxes.position.steps.first.max);
-    });
-
-    test('고정 축은 데이터와 상관없이 같은 범위를 쓴다', () {
-      final narrow = ReportChartAxes.x.rangeFor(const <double>[0.1]);
-      final wide = ReportChartAxes.x.rangeFor(const <double>[-999.0, 999.0]);
-
-      expect(narrow.min, wide.min);
-      expect(narrow.max, wide.max);
-    });
-
-    test('데이터가 들어가는 가장 좁은 단계를 고른다', () {
-      final range = ReportChartAxes.position.rangeFor(const <double>[0.0, 9.5]);
-
+      expect(range.min, 0.0);
       expect(range.max, 10.0);
     });
 
-    test('축 위끝과 똑같은 값은 그 단계 안이다', () {
-      final range = ReportChartAxes.position.rangeFor(const <double>[
-        0.0,
-        10.0,
-      ]);
+    test('최소 범위 안의 값은 원본 리포트 범위 그대로 보인다', () {
+      final x = ReportChartAxes.x.rangeFor(const <double>[0.1]);
+      final noise = ReportChartAxes.noise.rangeFor(const <double>[41.0, 53.5]);
 
-      expect(range.max, 10.0);
+      expect(<double>[x.min, x.max], const <double>[-4.0, 4.0]);
+      expect(<double>[noise.min, noise.max], const <double>[40.0, 54.0]);
     });
 
-    test('여유 폭 끝에 걸친 값도 그 단계 안이다', () {
+    test('최소 범위를 넘는 진동은 축이 넓어져 잘리지 않는다', () {
+      final range = ReportChartAxes.x.rangeFor(const <double>[-999.0, 999.0]);
+
+      expect(range.min, lessThanOrEqualTo(-999.0));
+      expect(range.max, greaterThanOrEqualTo(999.0));
+    });
+
+    test('여유 폭 끝에 걸친 값은 최소 범위 안이다', () {
       // 여유는 축 길이에 비례한다. 코드와 같은 식으로 끝값을 만들어
       // 부동소수점 오차 때문에 갈라지지 않게 한다
       final edge = 10.0 + 10.0 * ChartAxisRange.toleranceRatio; // 여유의 끝
@@ -148,125 +143,90 @@ void main() {
       expect(range.max, 10.0);
     });
 
-    test('여유 폭을 넘으면 다음 단계로 올라간다', () {
-      final range = ReportChartAxes.position.rangeFor(const <double>[
-        0.0,
-        10.25,
-      ]);
-
-      expect(range.max, 25.0);
-    });
-
-    test('적분 잔차로 0 아래로 살짝 내려간 값은 단계를 올리지 않는다', () {
+    test('적분 잔차로 0 아래로 살짝 내려간 위치는 축을 넓히지 않는다', () {
       final range = ReportChartAxes.position.rangeFor(const <double>[
         -0.15,
         9.0,
       ]);
 
+      expect(range.min, 0.0);
       expect(range.max, 10.0);
     });
 
-    test('아래로 여유를 넘게 내려가면 다음 단계로 올라간다', () {
-      final range = ReportChartAxes.position.rangeFor(const <double>[
-        -0.25,
-        9.0,
-      ]);
-
-      expect(range.max, 25.0);
-    });
-
-    test('어느 단계에도 안 들어가면 가장 넓은 단계를 쓴다', () {
-      final range = ReportChartAxes.position.rangeFor(const <double>[0.0, 400]);
-
-      expect(range.max, ReportChartAxes.position.steps.last.max);
-    });
-
-    test('실측 최대 속도는 두 번째 단계에 들어간다', () {
+    test('실측 최대 속도는 0 ~ 2 m/s 에 담긴다', () {
       final range = ReportChartAxes.speed.rangeFor(const <double>[
         0.0,
         1.743390961,
       ]);
 
-      expect(range.max, 2.0);
+      expect(range.min, 0.0);
+      expect(range.max, closeTo(2.0, 1e-9));
     });
 
-    test('조용한 운행은 소음 축 첫 단계에 그대로 머문다', () {
-      // 첫 단계는 원본 리포트와 같은 범위다. 원본과 똑같이 보여야 한다
-      final range = ReportChartAxes.noise.rangeFor(const <double>[41.0, 53.5]);
+    test('음수 쪽으로 나온 속도는 0 이 위끝이 된다', () {
+      final range = ReportChartAxes.speed.rangeFor(const <double>[
+        -1.743390961,
+        0.0,
+      ]);
+
+      expect(range.min, closeTo(-2.0, 1e-9));
+      expect(range.max, 0.0);
+    });
+
+    test('앱 실측 소음은 0 을 빼고 40 ~ 65 dBA 로 넓어진다', () {
+      // `test/fixtures/app_measurement.xlsx` 의 `noiseDba` 열 양 끝값.
+      // 앞쪽 0 은 마이크 창이 차기 전 미측정 구간이다
+      final range = ReportChartAxes.noise.rangeFor(const <double>[
+        0.0,
+        44.8,
+        63.0,
+      ]);
 
       expect(range.min, 40.0);
-      expect(range.max, 54.0);
+      expect(range.max, closeTo(65.0, 1e-9));
     });
 
-    test('앱 실측 소음 범위는 두 번째 단계에 들어간다', () {
-      // `test/fixtures/app_measurement.xlsx` 의 `noiseDba` 열 양 끝값
-      final range = ReportChartAxes.noise.rangeFor(const <double>[44.8, 63.0]);
-
-      expect(range.min, 35.0);
-      expect(range.max, 70.0);
-    });
-
-    test('가속도는 아래쪽 경계도 여유를 두고 견준다', () {
-      final inside = ReportChartAxes.accel.rangeFor(const <double>[
-        -0.61,
-        0.5,
-      ]); // 여유 안쪽
-      final outside = ReportChartAxes.accel.rangeFor(const <double>[
-        -0.63,
-        0.5,
-      ]); // 여유 바깥쪽
-
-      expect(inside.max, 0.6);
-      expect(outside.max, 1.0);
+    test('축마다 넓히는 모양이 정해져 있다', () {
+      for (final spec in <ChartAxisSpec>[
+        ReportChartAxes.x,
+        ReportChartAxes.y,
+        ReportChartAxes.z,
+        ReportChartAxes.accel,
+        ReportChartAxes.jerk,
+      ]) {
+        expect(spec.scale.kind, ChartScaleKind.symmetric, reason: spec.key);
+      }
+      for (final spec in <ChartAxisSpec>[
+        ReportChartAxes.position,
+        ReportChartAxes.speed,
+      ]) {
+        expect(spec.scale.kind, ChartScaleKind.zeroAnchored, reason: spec.key);
+      }
+      expect(ReportChartAxes.noise.scale.kind, ChartScaleKind.free);
+      expect(ReportChartAxes.noise.scale.ignoreZeros, isTrue);
     });
   });
 
   group('ChartAxisRange.ticks — 눈금 만들기', () {
-    test('소음 축은 40 부터 54 까지 2 씩 놓인다', () {
-      final ticks = ReportChartAxes.noise.steps.first.ticks();
+    test('소음 최소 범위는 40 부터 54 까지 2 씩 놓인다', () {
+      final ticks = ReportChartAxes.noise.scale.minimum.ticks();
 
       expect(ticks, const <double>[40, 42, 44, 46, 48, 50, 52, 54]);
     });
 
-    test('마지막 눈금은 어느 단계에서도 축 위끝에 정확히 떨어진다', () {
-      final specs = <ChartAxisSpec>[
-        ReportChartAxes.x,
-        ReportChartAxes.y,
-        ReportChartAxes.z,
-        ReportChartAxes.noise,
-        ReportChartAxes.position,
-        ReportChartAxes.speed,
-        ReportChartAxes.accel,
-        ReportChartAxes.jerk,
-      ]; // 축 여덟 개 전부
+    test('마지막 눈금은 어느 축의 최소 범위에서도 위끝에 정확히 떨어진다', () {
+      for (final spec in ReportChartAxes.all) {
+        final minimum = spec.scale.minimum; // 이 축의 최소 범위
+        final ticks = minimum.ticks(); // 그 눈금
 
-      for (final spec in specs) {
-        for (final step in spec.steps) {
-          final ticks = step.ticks(); // 이 단계의 눈금
-
-          expect(
-            ticks.first,
-            step.min,
-            reason: '${spec.key} 단계 ${step.min}~${step.max} 의 첫 눈금',
-          );
-          expect(
-            ticks.last,
-            step.max,
-            reason: '${spec.key} 단계 ${step.min}~${step.max} 의 마지막 눈금',
-          );
-        }
-      }
-    });
-
-    test('소음 축은 어느 단계에서나 눈금이 여덟 개다', () {
-      for (final step in ReportChartAxes.noise.steps) {
-        expect(step.ticks().length, 8, reason: '${step.min}~${step.max} 단계');
+        expect(ticks.first, minimum.min, reason: '${spec.key} 첫 눈금');
+        expect(ticks.last, minimum.max, reason: '${spec.key} 마지막 눈금');
       }
     });
 
     test('이진수로 안 떨어지는 간격에서도 오차가 쌓이지 않는다', () {
       // 0.2 씩 다섯 번은 거듭 더하면 1.0 에서 벗어난다
-      final ticks = ReportChartAxes.speed.steps.first.ticks();
+      final ticks = ReportChartAxes.speed.scale.minimum.ticks();
 
       expect(ticks.length, 6);
       expect(ticks.last, 1.0);
@@ -397,7 +357,10 @@ void main() {
       const unknown = ChartAxisSpec(
         key: '없는축',
         label: '없는 축',
-        steps: <ChartAxisRange>[ChartAxisRange(min: 0, max: 1, tickStep: 1)],
+        scale: ChartScale(
+          minimum: ChartAxisRange(min: 0, max: 1, tickStep: 1),
+          kind: ChartScaleKind.free,
+        ),
       ); // 사양에 없는 축
 
       expect(

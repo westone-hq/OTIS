@@ -6,81 +6,13 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart' show Matrix4;
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
+import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-17 10:05:00 · nada
-/// 클래스: ChartAxisRange
-/// 목적: 세로축 한 단계의 아래끝 · 위끝과 눈금 간격을 담는다. 범위가 하나로
-///       고정된 축은 이 단계를 하나만 갖고, 데이터에 따라 넓어지는 축은
-///       좁은 것부터 차례로 여러 개 갖는다.
-class ChartAxisRange {
-  /// 축 아래끝. 단위는 그 축이 그리는 값의 단위를 따른다
-  final double min;
-
-  /// 축 위끝. 단위는 `min` 과 같다
-  final double max;
-
-  /// 눈금 사이 간격. 아래끝에서 위끝까지 나머지 없이 나누어떨어져야 한다
-  final double tickStep;
-
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 변수: toleranceRatio
-  /// 목적: 데이터가 이 단계 안에 든다고 볼 때 봐주는 여유를, 축 길이에
-  ///       대한 비로 둔 것.
-  /// 근거: 인용 — 파이썬 프로토타입
-  ///       `pdf_report_dev/tune_report/charts.py` 의 `_resolve_ylim()` 이
-  ///       쓰는 값과 같다
-  static const double toleranceRatio = 0.02;
-
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 함수: ChartAxisRange
-  /// 목적: 축 한 단계의 범위와 눈금 간격을 그대로 담는 생성자.
-  /// 인자: min, max — 축 아래끝 · 위끝
-  ///       tickStep — 눈금 사이 간격
-  const ChartAxisRange({
-    required this.min,
-    required this.max,
-    required this.tickStep,
-  });
-
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 함수: span
-  /// 목적: 축 아래끝에서 위끝까지의 길이.
-  double get span => max - min;
-
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 함수: contains
-  /// 목적: 데이터가 이 단계 안에 들어가는지 본다. 위치와 속도는 가속도를
-  ///       적분(잘게 나눈 값을 더해 나가는 계산)해 만든 값이라, 0 이어야
-  ///       할 자리가 쌓인 오차 때문에 아주 조금 음수로 나온다. 그만한
-  ///       차이로 단계를 한 칸 올리면 축이 쓸데없이 넓어져 파형이 납작해
-  ///       보이므로 여유를 두고 견준다.
-  /// 인자: dataMin, dataMax — 그릴 데이터의 최솟값 · 최댓값
-  /// 반환: 여유를 포함해 이 단계 안에 들어가면 true
-  /// 식: tol = span x toleranceRatio
-  ///     min - tol <= dataMin 이고 dataMax <= max + tol
-  bool contains(double dataMin, double dataMax) {
-    final tolerance = span * toleranceRatio; // 이 단계에서 봐주는 여유 폭
-    return min - tolerance <= dataMin && dataMax <= max + tolerance;
-  }
-
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 함수: ticks
-  /// 목적: 눈금 값을 아래끝부터 차례로 만든다. 간격을 거듭 더하지 않고
-  ///       번호에 곱해 더하는 이유는, 0.2 처럼 이진수로 딱 떨어지지 않는
-  ///       간격을 거듭 더하면 오차가 쌓여 마지막 눈금이 위끝에서 벗어나기
-  ///       때문이다.
-  /// 반환: 아래끝부터 위끝까지의 눈금 값 목록
-  /// 식: tick_i = min + i x tickStep,  i = 0 .. round(span / tickStep)
-  List<double> ticks() {
-    final count = (span / tickStep).round(); // 눈금이 나누는 칸 수
-    return List<double>.generate(count + 1, (i) => min + i * tickStep);
-  }
-}
-
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 수정: 2026-10-10 11:48:41 · nada
 /// 클래스: ChartAxisSpec
 /// 목적: 차트 하나가 어떤 값을 어떤 세로축에 그리는지 담는다.
 class ChartAxisSpec {
@@ -90,8 +22,9 @@ class ChartAxisSpec {
   /// 세로축 옆에 세로로 찍는 라벨. 원본 리포트 표기를 그대로 쓴다
   final String label;
 
-  /// 좁은 것부터 차례로 늘어놓은 범위 단계. 하나뿐이면 고정 축이다
-  final List<ChartAxisRange> steps;
+  /// 세로축 범위를 데이터에 맞춰 정하는 규칙. 최소 범위와 넓히는 모양을
+  /// 갖는다
+  final ChartScale scale;
 
   /// 평균 기준선을 그을 때 값을 가져올 지표 행 이름. 기준선을 긋지 않는
   /// 축은 null
@@ -102,186 +35,180 @@ class ChartAxisSpec {
   final String? peakKey;
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 함수: ChartAxisSpec
-  /// 목적: 축 하나의 이름 · 라벨 · 범위 단계를 그대로 담는 생성자.
+  /// 목적: 축 하나의 이름 · 라벨 · 범위 규칙을 그대로 담는 생성자.
   /// 인자: key — 축 이름
   ///       label — 세로축 라벨
-  ///       steps — 좁은 것부터 늘어놓은 범위 단계
+  ///       scale — 세로축 범위 규칙
   ///       meanKey — 평균 기준선 값을 가져올 지표 행 이름. 기본 null
   ///       peakKey — 최댓값 표시점 값을 가져올 지표 행 이름. 기본 null
   const ChartAxisSpec({
     required this.key,
     required this.label,
-    required this.steps,
+    required this.scale,
     this.meanKey,
     this.peakKey,
   });
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 함수: rangeFor
-  /// 목적: 데이터가 들어가는 가장 좁은 단계를 고른다.
-  ///       - 데이터가 비면 가장 좁은 단계를 쓴다. 축 틀과 눈금은 그려야
-  ///         해서 범위가 하나는 있어야 한다
-  ///       - 어느 단계에도 안 들어가면 가장 넓은 단계를 쓴다. 그리지 않고
-  ///         비우는 것보다 잘린 채로라도 보여 주는 편이 낫다
-  ///       고정 축은 단계가 하나뿐이라 어느 갈래로 가도 같은 범위가 나온다.
+  /// 목적: 그릴 값이 모두 들어가는 세로축 범위를 고른다. 규칙은
+  ///       `ChartScale` 이 갖는다 — 결과 화면 그래프도 같은 규칙을 써야
+  ///       PDF 와 화면이 같은 눈금을 보인다.
   /// 인자: values — 그릴 값 목록
-  /// 반환: 고른 범위 단계
-  ChartAxisRange rangeFor(List<double> values) {
-    if (values.isEmpty) return steps.first;
-
-    var dataMin = values.first; // 지금까지 본 가장 작은 값
-    var dataMax = values.first; // 지금까지 본 가장 큰 값
-    for (final value in values) {
-      if (value < dataMin) dataMin = value;
-      if (value > dataMax) dataMax = value;
-    }
-
-    for (final step in steps) {
-      if (step.contains(dataMin, dataMax)) return step;
-    }
-    return steps.last;
-  }
+  /// 반환: 고른 범위. 값이 없으면 최소 범위
+  ChartAxisRange rangeFor(List<double> values) =>
+      scale.rangeFor(values); // → 로직 이동: ChartScale.rangeFor()
 }
 
 /// 작성: 2026-09-17 10:05:00 · nada
+/// 수정: 2026-10-10 11:48:41 · nada
 /// 클래스: ReportChartAxes
-/// 목적: 차트 여덟 개의 축 사양을 모아 둔다. 축 범위와 눈금 간격 숫자는
-///       전부 이 파일에만 있고, 그리는 쪽은 여기서 꺼내 쓴다. 범위를
-///       고치려면 이 묶음만 고치면 된다.
+/// 목적: 차트 여덟 개의 축 사양을 모아 둔다. 축마다 최소 범위와 넓히는
+///       모양을 정하고, 실제 범위는 데이터에 맞춰 `ChartScale` 이 낸다.
+///       최소 범위는 원본 리포트 범위를 따른다 — 조용한 운행은 원본과
+///       같은 눈금으로 보이고, 넘칠 때만 넓어져 잘리는 값이 없다.
 ///
 ///       단위는 축마다 다르다. 진동 세 축은 mg, 소음은 dBA, 위치는 m,
 ///       속도는 m/s, 가속도는 m/s2, 저크는 m/s3 이다.
 class ReportChartAxes {
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: x
-  /// 목적: X축(가로 진동) 차트의 세로축. 차트는 지표 계산 전 신호
-  ///       처리(기준선 0 맞춤 · 40Hz 저역 필터 · 100Hz 재표본)를 거친
-  ///       시계열을 그린다.
-  /// 근거: 인용 — 원본 리포트 `docs/reference/sample_evimp.pdf` 의 X 진동
-  ///       차트 범위 ±4 mg, 눈금 2 mg 이다. 이 범위는 저역통과 필터를 거친
-  ///       파형을 담기 위한 것이라, 2026-10-07 에 필터를 정한 뒤 원본
-  ///       범위로 되돌렸다.
+  /// 목적: X축(가로 진동) 차트의 세로축. 0 을 가운데 둔다. 차트는 지표 계산
+  ///       전 신호 처리(기준선 0 맞춤 · 40Hz 저역 필터 · 100Hz 재표본)를
+  ///       거친 시계열을 그린다.
+  /// 근거: 인용 — 최소 범위는 원본 리포트 `docs/reference/sample_evimp.pdf`
+  ///       의 X 진동 차트 범위 ±4 mg, 눈금 2 mg 이다.
   ///       측정 — 처리 후 오티스폰 · 개발폰 동시 측정 6쌍에서 ±4 mg 밖
   ///       표본 비율이 현재 앱 측정(최종1·2, 3·4)은 0.3~0.9%, 오티스폰은
   ///       0.1~1.0% 다. 초기 측정 1·2번만 9~11% 인데, 25~58 mg 충격이 섞인
-  ///       측정이다
+  ///       측정이다. 이 표본들 때문에 축이 넓어진다
   static const ChartAxisSpec x = ChartAxisSpec(
     key: 'x',
     label: 'X-Vibration (milli-g)',
-    steps: <ChartAxisRange>[ChartAxisRange(min: -4.0, max: 4.0, tickStep: 2.0)],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: -4.0, max: 4.0, tickStep: 2.0),
+      kind: ChartScaleKind.symmetric,
+    ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: y
-  /// 목적: Y축(가로 진동) 차트의 세로축. 그리는 시계열은 `x` 와 같이 신호
-  ///       처리를 거친 값이다.
-  /// 근거: 인용 — 원본 리포트의 Y 진동 차트 범위 ±10 mg, 눈금 5 mg 이다.
-  ///       `x` 와 같은 때 원본 범위로 되돌렸다.
+  /// 목적: Y축(가로 진동) 차트의 세로축. 0 을 가운데 둔다. 그리는 시계열은
+  ///       `x` 와 같이 신호 처리를 거친 값이다.
+  /// 근거: 인용 — 최소 범위는 원본 리포트의 Y 진동 차트 범위 ±10 mg, 눈금
+  ///       5 mg 이다.
   ///       측정 — 픽스처(`test/fixtures/conditioning_expected_100hz.txt`,
-  ///       2026-10-06 개발폰 처리 후)의 Y 는 -4.94 ~ 5.71 mg 이라 ±10 mg
-  ///       밖 표본이 없다
-  /// 미확인: 동시 측정 6쌍 전체에서 ±10 mg 밖 표본 비율
+  ///       2026-10-06 개발폰 처리 후)의 Y 는 -4.94 ~ 5.71 mg 이라 최소
+  ///       범위 그대로 그려진다
   static const ChartAxisSpec y = ChartAxisSpec(
     key: 'y',
     label: 'Y-Vibration (milli-g)',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: -10.0, max: 10.0, tickStep: 5.0),
-    ],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: -10.0, max: 10.0, tickStep: 5.0),
+      kind: ChartScaleKind.symmetric,
+    ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: z
-  /// 목적: 수직 진동 차트의 세로축.
-  /// 근거: 인용 — 원본 리포트 `docs/reference/sample_evimp.pdf` 의 수직
-  ///       진동 차트 눈금이다. 이 축은 원본 그대로 쓴다
+  /// 목적: 수직 진동 차트의 세로축. 0 을 가운데 둔다. 운행 가감속이 섞여
+  ///       최소 범위를 자주 넘는다.
+  /// 근거: 인용 — 최소 범위는 원본 리포트 `docs/reference/sample_evimp.pdf`
+  ///       의 수직 진동 차트 범위 ±20 mg, 눈금 10 mg 이다
   static const ChartAxisSpec z = ChartAxisSpec(
     key: 'z',
     label: 'Vertical Vibration (milli-g)',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: -20.0, max: 20.0, tickStep: 10.0),
-    ],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: -20.0, max: 20.0, tickStep: 10.0),
+      kind: ChartScaleKind.symmetric,
+    ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: noise
-  /// 목적: 소음 차트의 세로축. 단계형이다. 첫 단계를 원본 리포트와 똑같이
-  ///       둬서, 조용한 운행은 원본과 같은 눈금으로 보이고 넘칠 때만
-  ///       위 단계로 올라간다. 어느 단계에서나 눈금은 여덟 개다.
+  /// 목적: 소음 차트의 세로축. 데이터 최소 · 최대에 맞추고, 0 은
+  ///       미측정이라 범위에 넣지 않는다.
   ///       평균 기준선과 최댓값 표시점도 이 축에만 붙는다. 값은 1쪽 표가
   ///       쓰는 것과 같은 지표에서 가져와, 차트와 표가 다른 숫자를 말하지
   ///       않게 한다.
-  /// 근거: 인용 — 첫 단계는 원본 리포트의 소음 차트 눈금이 40 부터 54 까지
-  ///       2 씩 놓인 것을 그대로 옮겼다.
-  ///       측정 — 위 두 단계를 더한 이유는 앱 실측이 원본 범위를 크게
-  ///       넘기 때문이다. `test/fixtures/app_measurement.xlsx` 의
-  ///       `noiseDba` 열은 44.8 에서 63.0 dBA 사이이고, 40~54 하나만 두면
-  ///       값이 있는 표본 3,866 개 중 3,544 개(91.7%)가 축 밖으로 잘린다.
-  ///       35~70 단계에서는 하나도 잘리지 않는다. 25~95 는 그보다 시끄러운
-  ///       현장을 위해 한 칸 더 둔 것이다
+  /// 근거: 인용 — 최소 범위는 원본 리포트의 소음 차트 눈금이 40 부터 54
+  ///       까지 2 씩 놓인 것을 그대로 옮겼다. 이 범위만 눈금이 7칸이다.
+  ///       측정 — `test/fixtures/app_measurement.xlsx` 의 `noiseDba` 열은
+  ///       0 을 빼면 44.8 에서 63.0 dBA 사이라 최소 범위를 넘는다. 이
+  ///       측정은 40 ~ 65 로 넓어진다
   static const ChartAxisSpec noise = ChartAxisSpec(
     key: 'noise',
     label: 'Noise Level (dBA)',
     meanKey: 'noise_avg',
     peakKey: 'noise_max',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: 40.0, max: 54.0, tickStep: 2.0),
-      ChartAxisRange(min: 35.0, max: 70.0, tickStep: 5.0),
-      ChartAxisRange(min: 25.0, max: 95.0, tickStep: 10.0),
-    ],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: 40.0, max: 54.0, tickStep: 2.0),
+      kind: ChartScaleKind.free,
+      ignoreZeros: true,
+    ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: position
-  /// 목적: 누적 이동량 차트의 세로축. 운행 거리가 현장마다 크게 달라
-  ///       단계형으로 둔다.
-  /// 근거: 인용 — 파이썬 프로토타입 `charts.py` 의 `AXES` 위치 축 단계와
-  ///       같다. 눈금 간격은 어느 단계에서도 눈금이 다섯 칸을 넘지 않게
-  ///       맞췄다 — 차트 높이가 낮아 그보다 촘촘하면 라벨이 겹친다
+  /// 목적: 누적 이동량 차트의 세로축. 0 을 한쪽 끝으로 둔다. 운행 거리가
+  ///       현장마다 크게 달라 대부분 넓어진다.
+  /// 근거: 인용 — 최소 범위는 파이썬 프로토타입 `charts.py` 의 `AXES` 위치
+  ///       축 첫 단계와 같다
   static const ChartAxisSpec position = ChartAxisSpec(
     key: 'pos',
     label: 'pos (m)',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: 0.0, max: 10.0, tickStep: 2.0),
-      ChartAxisRange(min: 0.0, max: 25.0, tickStep: 5.0),
-      ChartAxisRange(min: 0.0, max: 50.0, tickStep: 10.0),
-      ChartAxisRange(min: 0.0, max: 100.0, tickStep: 20.0),
-      ChartAxisRange(min: 0.0, max: 150.0, tickStep: 30.0),
-    ],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: 0.0, max: 10.0, tickStep: 2.0),
+      kind: ChartScaleKind.zeroAnchored,
+    ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: speed
-  /// 목적: 속도 차트의 세로축. 기종마다 정격 속도가 달라 단계형으로 둔다.
-  /// 근거: 인용 — 프로토타입 `charts.py` 의 `AXES` 속도 축 단계와 같다
+  /// 목적: 속도 차트의 세로축. 0 을 한쪽 끝으로 둔다. 속도는 부호를 지우지
+  ///       않아 운행 방향 한쪽은 음수로 나오고, 그때는 0 이 위끝이 된다.
+  /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 속도 축 첫
+  ///       단계와 같다
   static const ChartAxisSpec speed = ChartAxisSpec(
     key: 'vel',
     label: 'vel (m/s)',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: 0.0, max: 1.0, tickStep: 0.2),
-      ChartAxisRange(min: 0.0, max: 2.0, tickStep: 0.5),
-      ChartAxisRange(min: 0.0, max: 4.0, tickStep: 1.0),
-    ],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: 0.0, max: 1.0, tickStep: 0.2),
+      kind: ChartScaleKind.zeroAnchored,
+    ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: accel
-  /// 목적: 수직 가속도 차트의 세로축. 단계형이다.
-  /// 근거: 인용 — 프로토타입 `charts.py` 의 `AXES` 가속도 축 단계와 같다
+  /// 목적: 수직 가속도 차트의 세로축. 0 을 가운데 둔다.
+  /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 가속도 축
+  ///       첫 단계와 같다
   static const ChartAxisSpec accel = ChartAxisSpec(
     key: 'acc',
     label: 'acc (m/s^2)',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.3),
-      ChartAxisRange(min: -1.0, max: 1.0, tickStep: 0.5),
-      ChartAxisRange(min: -2.0, max: 2.0, tickStep: 1.0),
-    ],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.3),
+      kind: ChartScaleKind.symmetric,
+    ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: jerk
-  /// 목적: 저크(가속도가 얼마나 빠르게 변하는지) 차트의 세로축. 단계형이다.
-  /// 근거: 인용 — 프로토타입 `charts.py` 의 `AXES` 저크 축 단계와 같다
+  /// 목적: 저크(가속도가 얼마나 빠르게 변하는지) 차트의 세로축. 0 을
+  ///       가운데 둔다.
+  /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 저크 축 첫
+  ///       단계와 같다
   /// 미구현: 저크는 거르지 않은 가속도를 그대로 미분해 만든 값이라 빠르게
   ///       흔들리는 성분이 남아 있다. 원본 리포트의 저크 곡선은 저역통과
   ///       필터를 거친 뒤 미분한 것이라 훨씬 매끈하다. 이 차트는 지금
@@ -290,11 +217,10 @@ class ReportChartAxes {
   static const ChartAxisSpec jerk = ChartAxisSpec(
     key: 'jerk',
     label: 'jerk (m/s^3)',
-    steps: <ChartAxisRange>[
-      ChartAxisRange(min: -0.5, max: 0.5, tickStep: 0.25),
-      ChartAxisRange(min: -1.5, max: 1.5, tickStep: 0.5),
-      ChartAxisRange(min: -3.0, max: 3.0, tickStep: 1.0),
-    ],
+    scale: ChartScale(
+      minimum: ChartAxisRange(min: -0.5, max: 0.5, tickStep: 0.25),
+      kind: ChartScaleKind.symmetric,
+    ),
   );
 
   /// 작성: 2026-09-26 14:10:00 · nada
@@ -594,11 +520,14 @@ class ReportChartRenderer {
   static const int timeTickTarget = 6;
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 변수: tickLabelDecimals
   /// 목적: 눈금 라벨을 만들 때 일단 남길 소수 자리 수. 뒤따르는 0 은
   ///       지우므로 실제로 찍히는 자리 수는 이보다 적을 수 있다.
-  /// 근거: 측정 — 축 단계에 쓰는 간격 중 가장 잘게 나뉜 것이 저크의
-  ///       0.25 라 두 자리면 모든 눈금이 정확히 표기된다
+  /// 근거: 측정 — 최소 범위 간격 중 가장 잘게 나뉜 것이 저크의 0.25 다.
+  ///       넓힌 축은 최소 범위보다 넓고, 최소 범위 폭이 가장 좁은 저크도
+  ///       1.0 이라 6칸으로 나눠도 간격이 0.1 아래로 내려가지 않는다.
+  ///       0.1 · 0.2 · 0.25 모두 두 자리면 정확히 표기된다
   static const int tickLabelDecimals = 2;
 
   /// 눈금 라벨과 축 라벨에 쓰는 글꼴
@@ -950,11 +879,13 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-10 11:48:41 · nada
   /// 함수: _drawSeries
   /// 목적: 파형을 꺾은선으로 얹는다.
   ///       1. 표본을 가로 픽셀 열 수만큼으로 줄인다
-  ///       2. 축 틀 밖으로 나가는 부분을 잘라 낸다. 고른 단계보다 큰 값이
-  ///          섞여 있으면 선이 옆 차트 자리까지 뻗기 때문이다
+  ///       2. 축 틀 밖으로 나가는 부분을 잘라 낸다. 축 범위는 모든 값을
+  ///          담게 고르지만 소음 0(미측정)은 범위에서 빠져 축 아래로
+  ///          나간다. 그 선이 옆 차트 자리까지 뻗지 않게 한다
   ///       3. 줄인 표본을 차례로 이어 긋는다
   ///       자르기와 선 모양 설정은 그리기 도구에 그대로 남으므로, 저장한
   ///       상태를 되돌려 다음 차트에 새지 않게 한다.
