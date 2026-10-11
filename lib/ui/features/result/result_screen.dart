@@ -89,14 +89,14 @@ final List<_Metric> _metrics = <_Metric>[
 ];
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-11 19:28:11 · nada
 /// 클래스: ResultScreen
 /// 목적: 저장된 측정 결과 하나를 보여주는 화면. 측정을 마쳤을 때와 저장
 ///       결과 목록에서 하나를 골랐을 때 같은 화면을 쓴다.
 ///       - 진동 세 축 · 소음 최대 · 운행 거리 · 최대 속도를 보여주고,
 ///         기준을 넘은 값은 붉게 표시한다
 ///       - 다른 저장 결과를 골라 지표마다 나란히 비교한다
-///       - 메일 보내기, 같은 현장 정보로 테스트 재실행
+///       - 메일 발송, 같은 현장 정보로 테스트 재실행
 class ResultScreen extends StatefulWidget {
   /// 표시할 측정 결과의 식별자
   final String id;
@@ -475,13 +475,16 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-05 10:03:35 · nada
+  /// 수정: 2026-10-11 19:28:11 · nada
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스
   ///       - `body` — 머리 카드 → (비교 중이면 비교 대상 줄) → 지표 여섯 줄
-  ///       - `bottomNavigationBar` — 결과 비교 · 메일 보내기, 그 아래
-  ///         테스트 재실행(진행 중에는 막는다)
+  ///       - `bottomNavigationBar` — 결과 비교 · 메일 발송, 그 아래
+  ///         테스트 재실행(진행 중에는 막는다). 반 폭 버튼 두 개라 문구를
+  ///         다섯 글자로 맞춘다 — "메일 보내기" 는 360dp 폭에서 두 줄로
+  ///         꺾였다(2026-10-11 캡처). 메일 시트 제목 "이메일 발송" 과도
+  ///         맞는다
   /// 인자: context — 이 화면이 어디에 놓이는지 알려주는 값
   /// 반환: 결과 화면 전체를 담는 `Scaffold` 위젯
   @override
@@ -541,7 +544,7 @@ class _ResultScreenState extends State<ResultScreen> {
                           onPressed: () =>
                               showSendEmailSheet(context, jobId: widget.id),
                           icon: const Icon(Icons.mail_outline),
-                          label: const Text('메일 보내기'),
+                          label: const Text('메일 발송'),
                         ),
                       ),
                     ],
