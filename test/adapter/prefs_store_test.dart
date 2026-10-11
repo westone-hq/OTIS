@@ -55,6 +55,16 @@ void main() {
     expect(loaded['direction'], '하부 → 상부');
   });
 
+  test('엔지니어 이름을 앞뒤 공백 없이 저장하고 비우면 지운다', () async {
+    expect(await store.loadEngineerName(), isNull);
+
+    await store.saveEngineerName('  홍길동 ');
+    expect(await store.loadEngineerName(), '홍길동');
+
+    await store.saveEngineerName('   ');
+    expect(await store.loadEngineerName(), isNull);
+  });
+
   test('깨진 현장 정보는 저장된 적 없는 것처럼 빈 표로 읽는다', () async {
     SharedPreferences.setMockInitialValues({'lastSite': '{깨진'});
 

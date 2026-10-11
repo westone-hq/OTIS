@@ -65,10 +65,13 @@ class ReportTextWriter {
   }
 
   /// 작성: 2026-09-25 09:30:00 · nada
+  /// 수정: 2026-10-11 19:15:25 · nada
   /// 함수: drawAt
   /// 목적: 글자 한 덩이를 서식 좌표에 찍는다. 서식에 칸으로 잡혀 있지 않은
   ///       자리, 이를테면 표 안의 값처럼 좌표를 그때그때 셈해 넣는 곳에
-  ///       쓴다.
+  ///       쓴다. 쓸 수 있는 폭이 주어지고 문구가 그보다 넓으면, 한 줄을
+  ///       지키며 폭에 맞을 만큼 글자를 줄인다 — 서식 오른쪽 끝을 넘거나
+  ///       옆 칸을 덮지 않게 한다.
   /// 인자: canvas — 그리기 도구
   ///       xPx, yPx — 서식 이미지 좌표 (픽셀). `yPx` 는 글자의 수직 중심
   ///       text — 찍을 문구. 비어 있으면 아무것도 하지 않는다
@@ -76,7 +79,9 @@ class ReportTextWriter {
   ///       align — 기준 좌표의 어느 쪽에 붙일지
   ///       weight — 글자 굵기
   ///       color — 글자색 (0xRRGGBB)
+  ///       maxWidthPx — 쓸 수 있는 폭 (픽셀). null 이면 재지 않는다
   /// 식: baseline = y_pt - size_pt x ReportLayout.textBaselineDropRatio
+  ///     문구 너비 > 쓸 폭이면 size_pt = size_pt x 쓸 폭 / 문구 너비
   void drawAt(
     PdfGraphics canvas, {
     required num xPx,
@@ -86,16 +91,23 @@ class ReportTextWriter {
     required LayoutAlign align,
     required LayoutWeight weight,
     required int color,
+    num? maxWidthPx,
   }) {
     if (text.isEmpty) return;
 
     final font = fontOf(weight); // 쓸 글꼴
-    final size = ReportLayout.lengthToPoints(sizePx); // 글자 크기 (포인트)
+    var size = ReportLayout.lengthToPoints(sizePx); // 글자 크기 (포인트)
+    var width = font.stringMetrics(text).advanceWidth * size; // 문구 전체 너비 (포인트)
+    if (maxWidthPx != null) {
+      final limit = ReportLayout.lengthToPoints(maxWidthPx); // 쓸 폭 (포인트)
+      if (width > limit) {
+        size *= limit / width;
+        width = limit;
+      }
+    }
     final baseline =
         ReportLayout.yToPoints(yPx) -
         size * ReportLayout.textBaselineDropRatio; // 글자가 앉는 선 (포인트)
-    final width =
-        font.stringMetrics(text).advanceWidth * size; // 문구 전체 너비 (포인트)
 
     var x = ReportLayout.xToPoints(xPx); // 찍기 시작할 가로 자리 (포인트)
     if (align == LayoutAlign.right) {

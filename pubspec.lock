@@ -151,7 +151,7 @@ packages:
     source: hosted
     version: "1.0.1"
   flutter_email_sender_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: flutter_email_sender_platform_interface
       sha256: "576fb2b08790040693bd02b1911ad51bf52ccabba87dc2964d6805552f27c39a"

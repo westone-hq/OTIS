@@ -57,3 +57,7 @@ pdf_report_dev/out/
 pdf_report_dev/*.pdf
 pdf_report_dev/**/__pycache__/
 pdf_report_dev/**/*.pyc
+
+# 원본 TUNE 리포트(실제 현장 리포트). 엔지니어명 · 현장명이 들어 있어
+# 저장소에 올리지 않고 로컬에만 둔다. 코드 주석은 파일 이름만 인용한다
+docs/reference/H6N1AP65.pdf

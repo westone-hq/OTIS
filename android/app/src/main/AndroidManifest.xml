@@ -36,15 +36,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.file_provider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
+        <!-- 메일 첨부용 FileProvider 는 flutter_email_sender 플러그인이
+             ${applicationId}.file_provider 로 선언한다. 같은 authority 를
+             여기서 다시 선언하지 않는다 — 두 개가 되면 기기가 한쪽만
+             등록한다. 경로 설정은 res/xml/shared_file_paths.xml 이 덮는다 -->
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

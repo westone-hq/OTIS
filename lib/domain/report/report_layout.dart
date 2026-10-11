@@ -322,7 +322,8 @@ class ReportPage1 {
     color: ReportColors.navy,
   );
 
-  /// 엔지니어명. 지금은 비워 둔다 — 앱에 사용자 계정이 없다
+  /// 엔지니어명. 측정을 저장할 때 설정에 있던 이름이다. 없으면
+  /// `placeholder`
   static const LayoutField engineerName = LayoutField(
     key: 'engineer_name',
     x: 1023,
@@ -344,7 +345,13 @@ class ReportPage1 {
     color: ReportColors.navy,
   );
 
-  /// 제품. "엘리베이터" 고정
+  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 변수: product
+  /// 목적: 제품. "엘리베이터, 기종" 이다. 기종이 없는 예전 결과는
+  ///       "엘리베이터".
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
+  ///       현장 리포트) 1쪽 머리말 "엘리베이터, Gen2"
   static const LayoutField product = LayoutField(
     key: 'product',
     x: 1340,
@@ -355,7 +362,13 @@ class ReportPage1 {
     color: ReportColors.white,
   );
 
-  /// 하중. 앱에 값이 없어 비워 둔다
+  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 변수: load
+  /// 목적: 하중. 입력 숫자와 단위의 리포트 표기("2000 킬로그램")다. 값이
+  ///       없는 예전 결과는 `placeholder`.
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
+  ///       현장 리포트) 1쪽 머리말 "2000 킬로그램"
   static const LayoutField load = LayoutField(
     key: 'load',
     x: 1340,
@@ -377,7 +390,13 @@ class ReportPage1 {
     color: ReportColors.white,
   );
 
-  /// 측정 종류. "층간 시험" 고정
+  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 변수: testType
+  /// 목적: 측정 종류. 홈 화면에서 고른 해석 종류 문구 그대로다. 값이 없는
+  ///       예전 결과는 기본값 "층간 시험".
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
+  ///       현장 리포트) 1쪽 머리말 "층간 시험"
   static const LayoutField testType = LayoutField(
     key: 'test_type',
     x: 1340,
@@ -421,7 +440,13 @@ class ReportPage1 {
     color: ReportColors.text,
   );
 
-  /// 주소. 홈 화면에서 받은 현장 주소
+  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 변수: address
+  /// 목적: 주소. "주소, 우편번호" 다. 둘 다 없는 예전 결과는
+  ///       `placeholder`.
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
+  ///       현장 리포트) 1쪽 머리말 "…, 경기도, 10575"
   static const LayoutField address = LayoutField(
     key: 'address',
     x: 1062,
@@ -431,6 +456,43 @@ class ReportPage1 {
     weight: LayoutWeight.regular,
     color: ReportColors.text,
   );
+
+  /// 작성: 2026-10-11 19:15:25 · nada
+  /// 변수: placeholder
+  /// 목적: 값이 없는 머리말 칸(엔지니어 · 하중 · 주소)에 찍는 자리 표시
+  ///       문구. 칸을 비우면 빠뜨린 것처럼 보인다. 0 이나 지어낸 값은 찍지
+  ///       않는다(관통 원칙 1).
+  /// 근거: 인용 — 2026-10-11 사용자 결정
+  static const String placeholder = '미입력';
+
+  /// 작성: 2026-10-11 19:15:25 · nada
+  /// 변수: headerRightLimitX
+  /// 목적: 머리말 글자가 넘지 않을 오른쪽 끝의 가로 좌표 (픽셀). 측정 일시
+  ///       칸의 오른쪽 맞춤 자리와 같은 여백이다.
+  /// 근거: 인용 — `datetime` 칸의 x 와 같다
+  static const int headerRightLimitX = 2192;
+
+  /// 작성: 2026-10-11 19:15:25 · nada
+  /// 변수: fitToRightKeys
+  /// 목적: 문구가 길어 `headerRightLimitX` 를 넘을 수 있는 칸. 넘칠 때만
+  ///       한 줄을 지키며 글자를 줄인다. 긴 주소 · 해석 종류 · 기종이
+  ///       들어오는 칸이다.
+  /// 근거: 측정 — 주소 칸은 x 1062, 24 픽셀이라 한글 약 47자를 넘으면
+  ///       오른쪽 여백에 닿는다
+  static const Set<String> fitToRightKeys = <String>{
+    'product',
+    'load',
+    'test_type',
+    'address',
+  };
+
+  /// 작성: 2026-10-11 19:15:25 · nada
+  /// 함수: maxWidthOf
+  /// 목적: 칸 하나가 쓸 수 있는 가장 큰 폭을 정한다.
+  /// 인자: field — 머리말 칸
+  /// 반환: 쓸 수 있는 폭 (픽셀). 폭을 재지 않는 칸이면 null
+  static int? maxWidthOf(LayoutField field) =>
+      fitToRightKeys.contains(field.key) ? headerRightLimitX - field.x : null;
 
   /// 작성: 2026-09-15 19:43:50 · nada
   /// 변수: fields
