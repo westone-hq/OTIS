@@ -254,6 +254,43 @@ class SiteInfo {
     );
   }
 
+  /// 작성: 2026-10-11 19:09:59 · nada
+  /// 함수: copyWith
+  /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 현장 정보의
+  ///       값을 그대로 쓴다. 결과 화면 재실행이 운전 방향만 바꿔 다시 잴 때
+  ///       쓴다 — 항목을 하나씩 옮겨 적으면 새 항목이 생길 때 빠뜨린다.
+  /// 인자: 생성자 `SiteInfo` 와 같다. 모두 생략할 수 있다
+  /// 반환: 새 현장 정보
+  SiteInfo copyWith({
+    String? jobNo,
+    String? siteName,
+    String? address,
+    String? bottomFloor,
+    String? topFloor,
+    String? direction,
+    String? model,
+    String? load,
+    String? loadUnit,
+    String? analysisType,
+    String? postalCode,
+    String? notes,
+  }) {
+    return SiteInfo(
+      jobNo: jobNo ?? this.jobNo,
+      siteName: siteName ?? this.siteName,
+      address: address ?? this.address,
+      bottomFloor: bottomFloor ?? this.bottomFloor,
+      topFloor: topFloor ?? this.topFloor,
+      direction: direction ?? this.direction,
+      model: model ?? this.model,
+      load: load ?? this.load,
+      loadUnit: loadUnit ?? this.loadUnit,
+      analysisType: analysisType ?? this.analysisType,
+      postalCode: postalCode ?? this.postalCode,
+      notes: notes ?? this.notes,
+    );
+  }
+
   /// 작성: 2026-10-04 18:15:24 · nada
   /// 함수: _knownDirection
   /// 목적: 저장돼 있던 운전 방향을 지금 선택지로 맞춘다. 예전 표기

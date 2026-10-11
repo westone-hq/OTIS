@@ -35,13 +35,21 @@ class _TempPathProvider extends PathProviderPlatform {
 }
 
 /// 작성: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-11 19:09:59 · nada
 /// 함수: _result
-/// 목적: 결과 화면에 띄울 측정 결과를 꾸민다.
+/// 목적: 결과 화면에 띄울 측정 결과를 꾸민다. 기본은 지금 필수 항목(주소 ·
+///       우편번호 · 하중)을 다 갖춘 결과다.
 /// 인자: id — 측정 ID
 ///       measuredAt — 측정 시각
 ///       zPtp — Z축 진동 P2P (mg)
+///       legacy — true 면 하중 · 우편번호를 받기 전의 예전 결과
 /// 반환: 측정 결과
-MeasurementResult _result(String id, DateTime measuredAt, double zPtp) {
+MeasurementResult _result(
+  String id,
+  DateTime measuredAt,
+  double zPtp, {
+  bool legacy = false,
+}) {
   return MeasurementResult(
     id: id,
     jobNo: 'J-1',
@@ -51,6 +59,9 @@ MeasurementResult _result(String id, DateTime measuredAt, double zPtp) {
     topFloor: 8,
     direction: '상승',
     model: 'Gen2',
+    load: legacy ? null : 2000.0,
+    loadUnit: legacy ? null : 'kg',
+    postalCode: legacy ? null : '06236',
     dateTime: measuredAt,
     xPtp: 12.0,
     yPtp: 5.0,
@@ -176,6 +187,30 @@ void main() {
       find.widgetWithText(AppDialogButton, '하강'),
     ); // 지난 측정(상승)의 반대 방향 버튼
     expect(down.primary, isTrue);
+  });
+
+  testWidgets('필수 항목이 빠진 예전 결과는 재실행하지 않고 홈 입력을 안내한다', (tester) async {
+    await tester.runAsync(
+      () => MeasurementRepository.instance.save(
+        _result(
+          '20260114-110359',
+          DateTime(2026, 1, 14, 11, 3, 59),
+          20.0,
+          legacy: true,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(home: ResultScreen(id: '20260114-110359')),
+    );
+    await _settle(tester);
+    await tester.tap(find.text('테스트 재실행'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('현장 정보 확인'), findsOneWidget);
+    expect(find.textContaining('홈에서 빠진 항목을 입력한 뒤 측정하세요'), findsOneWidget);
+    expect(find.text('운전 방향 확인'), findsNothing);
   });
 
   testWidgets('없는 결과는 찾을 수 없다고 알린다', (tester) async {

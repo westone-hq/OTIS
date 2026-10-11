@@ -161,6 +161,20 @@ void main() {
     });
   });
 
+  group('SiteInfo.copyWith', () {
+    test('넘긴 값만 바꾸고 나머지 새 항목까지 그대로 옮긴다', () {
+      final changed = _site().copyWith(direction: SiteInfo.directionUp);
+
+      expect(changed.direction, SiteInfo.directionUp);
+      expect(changed.load, '4400');
+      expect(changed.loadUnit, 'lb');
+      expect(changed.analysisType, '브레이크 기능');
+      expect(changed.postalCode, '04524');
+      expect(changed.notes, '참고');
+      expect(changed.address, _site().address);
+    });
+  });
+
   group('SiteInfo.validate — 새 필수 항목', () {
     test('모두 채우면 통과하고, 참고사항은 비어도 된다', () {
       expect(_siteWith().validate(), isEmpty);
