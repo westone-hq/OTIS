@@ -174,7 +174,8 @@ class ReportChartPageRenderer {
       ReportLayout.pageHeightPt,
     );
 
-    final header = _headerValues(result, plan.pageNumber); // 머리말에 채울 문구
+    // → 로직 이동: headerValues()
+    final header = headerValues(result, plan.pageNumber); // 머리말에 채울 문구
     for (final field in ReportChartPage.fields) {
       // → 로직 이동: ReportTextWriter.drawField()
       textWriter.drawField(canvas, field: field, text: header[field.key] ?? '');
@@ -195,21 +196,28 @@ class ReportChartPageRenderer {
   }
 
   /// 작성: 2026-09-23 09:40:00 · nada
-  /// 함수: _headerValues
+  /// 수정: 2026-10-11 19:24:37 · nada
+  /// 함수: headerValues
   /// 목적: 머리말 네 칸에 채울 문구를 만든다.
   ///       - 제번 → 측정 ID, 쪽 번호 → 받은 번호
-  ///       - 엔지니어명은 비운다. 앱에 사용자 계정이 없어 채울 값이
-  ///         없고, 원본 리포트의 차트 쪽에도 이 칸이 비어 있다
+  ///       - 엔지니어명 → 1쪽과 같은 저장 시점 이름. 없으면 자리 표시
+  ///         문구(`ReportPage1.placeholder`). 서식에 "엔지니어:" 라벨이
+  ///         찍혀 있어 비우면 빠뜨린 것처럼 보인다(2026-10-11 사용자 지시
+  ///         "엔지니어 칸에 무조건 기입")
+  ///       시험이 칸마다 문구를 확인할 수 있게 공개해 둔다.
   /// 인자: result — 값을 가져올 측정 결과
   ///       pageNumber — 이 쪽의 번호
   /// 반환: 서식 칸 이름을 열쇠로 하는 문구 표
-  Map<String, String> _headerValues(MeasurementResult result, int pageNumber) {
+  static Map<String, String> headerValues(
+    MeasurementResult result,
+    int pageNumber,
+  ) {
     final stamp = DateFormat(
       ReportLayout.datetimePattern,
     ).format(result.dateTime); // 머리말에 쓸 측정 일시
     return <String, String>{
       'measurement_id': result.jobNo,
-      'engineer_name': '',
+      'engineer_name': result.engineerName ?? ReportPage1.placeholder,
       'datetime': stamp,
       'page_number': '$pageNumber',
     };
