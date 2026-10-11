@@ -7,6 +7,7 @@ import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
+import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-16 09:12:40 · nada
@@ -110,7 +111,8 @@ class ReportPage1Renderer {
 
     // → 로직 이동: ReportMetrics.from()
     final metrics = ReportMetrics.from(result); // 표에 올릴 지표 여덟 개
-    final header = _headerValues(result); // 머리말 칸마다 채울 문구
+    // → 로직 이동: headerValues()
+    final header = headerValues(result); // 머리말 칸마다 채울 문구
 
     for (final field in ReportPage1.fields) {
       _text(
@@ -124,6 +126,8 @@ class ReportPage1Renderer {
         color: field.color,
         key: field.key,
         debug: debug,
+        // → 로직 이동: ReportPage1.maxWidthOf()
+        maxWidthPx: ReportPage1.maxWidthOf(field),
       );
     }
 
@@ -271,33 +275,60 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · nada
-  /// 함수: _headerValues
-  /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 앱이 들고 있지 않은 칸은
-  ///       고정값으로 채우거나 비운다.
+  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 함수: headerValues
+  /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
+  ///       자리 표시 문구(`ReportPage1.placeholder`, "미입력")를 찍는다.
   ///       - 제번 → 측정 ID, 현장명 → 건물명, 최하층·최상층 → 층 정보
-  ///       - 제품 · 품질성능기준 · 측정 종류는 고정 문구
-  ///       - 주소는 홈 화면에서 받은 값. 하중은 앱이 입력받지 않아 비운다
-  ///       - 엔지니어명은 비운다. 앱에 사용자 계정이 없어 채울 값이 없다
+  ///       - 엔지니어 → 저장 시점 설정의 이름
+  ///       - 제품 → "엘리베이터, 기종". 기종의 쉼표는 이 표기에서만
+  ///         공백으로 바꾼다("엘리베이터, 줄-로우프 2:1") — 제품 칸의 쉼표가
+  ///         제품과 기종을 가르는 자리라 기종 안 쉼표가 섞이면 읽기
+  ///         어렵다. 저장 값과 화면 표기는 그대로다. 기종이 없으면
+  ///         "엘리베이터"
+  ///       - 하중 → "숫자 단위표기"("2000 킬로그램"). 환산하지 않는다
+  ///       - 측정 종류 → 해석 종류. 없으면 기본값 "층간 시험"
+  ///       - 주소 → "주소, 우편번호". 하나만 있으면 그것만
+  ///       - 품질성능기준은 고정 문구
+  ///       시험이 칸마다 문구를 확인할 수 있게 공개해 둔다.
   /// 인자: result — 값을 가져올 측정 결과
   /// 반환: 서식 칸 이름을 열쇠로 하는 문구 표
   /// 근거: 인용 — `pdf_report_dev/README.md` 의 헤더 대응표. 그 표는
-  ///       요구사항서 "현장 정보" 를 우선 배치하도록 정하고 있다
-  Map<String, String> _headerValues(MeasurementResult result) {
+  ///       요구사항서 "현장 정보" 를 우선 배치하도록 정하고 있다.
+  ///       제품 · 하중 · 주소 표기는 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
+  ///       현장 리포트) 1쪽 머리말
+  static Map<String, String> headerValues(MeasurementResult result) {
     final stamp = DateFormat(
       'dd/MM/yyyy hh:mm:ss a',
     ).format(result.dateTime); // 머리말에 쓸 측정 일시
+    final model = result.model; // 기종, 없으면 null
+    final load = result.load; // 하중 숫자, 없으면 null
+    final unit = result.loadUnit; // 하중 단위, 없으면 null
+    final unitLabel = unit == null
+        ? ''
+        : SiteInfo.loadUnitReportLabels[unit] ?? unit; // 리포트 단위 표기
+    final addressParts = <String>[
+      if (result.address.isNotEmpty) result.address,
+      if (result.postalCode case final code? when code.isNotEmpty) code,
+    ]; // 주소 칸에 이어 쓸 조각
+    const placeholder = ReportPage1.placeholder; // 값이 없을 때 찍는 문구
+
     return <String, String>{
       'measurement_id': result.jobNo,
-      'engineer_name': '',
+      'engineer_name': result.engineerName ?? placeholder,
       'datetime': stamp,
-      'product': '엘리베이터',
-      'load': '',
+      'product': model == null
+          ? '엘리베이터'
+          : '엘리베이터, ${model.replaceAll(RegExp(r'\s*,\s*'), ' ')}',
+      'load': load == null
+          ? placeholder
+          : '${SiteInfo.loadText(load)} $unitLabel'.trim(),
       'standard': 'Standard',
-      'test_type': '층간 시험',
+      'test_type': result.analysisType ?? SiteInfo.defaultAnalysisType,
       'direction': result.direction,
       'floors': '시작층 : ${result.bottomFloor}, 도착층 : ${result.topFloor}',
       'building_name': result.siteName,
-      'address': result.address,
+      'address': addressParts.isEmpty ? placeholder : addressParts.join(', '),
     };
   }
 
@@ -321,6 +352,7 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · nada
+  /// 수정: 2026-10-11 19:15:25 · nada
   /// 함수: _text
   /// 목적: 글자 한 덩이를 서식 좌표에 찍는다. 찍는 일 자체는
   ///       `ReportTextWriter` 가 하고, 여기서는 디버그 표식을 얹을지만
@@ -334,6 +366,8 @@ class ReportPage1Renderer {
   ///       color — 글자색 (0xRRGGBB)
   ///       key — 디버그 표식에 쓸 이름
   ///       debug — 표식을 함께 찍을지
+  ///       maxWidthPx — 쓸 수 있는 폭 (픽셀). 넘으면 글자를 줄인다. null
+  ///       이면 재지 않는다
   void _text(
     PdfGraphics canvas, {
     required num xPx,
@@ -345,6 +379,7 @@ class ReportPage1Renderer {
     required int color,
     required String key,
     required bool debug,
+    num? maxWidthPx,
   }) {
     if (debug) {
       _debugMark(canvas, xPx: xPx, yPx: yPx, label: key);
@@ -359,6 +394,7 @@ class ReportPage1Renderer {
       align: align,
       weight: weight,
       color: color,
+      maxWidthPx: maxWidthPx,
     );
   }
 

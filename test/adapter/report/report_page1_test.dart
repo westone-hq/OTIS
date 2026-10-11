@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart';
+import 'package:vibration_checker/domain/report/report_layout.dart';
+import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-16 09:12:40 · nada
@@ -38,11 +40,36 @@ MeasurementResult _result() {
   );
 }
 
+/// 작성: 2026-10-11 19:15:25 · nada
+/// 함수: _siteResult
+/// 목적: 현장 정보 새 항목을 모두 채운 측정 결과를 만든다.
+/// 인자: loadUnit — 하중 단위
+///       analysisType — 해석 종류
+///       model — 기종
+/// 반환: 머리말 문구를 볼 측정 결과
+MeasurementResult _siteResult({
+  String loadUnit = 'kg',
+  String analysisType = '층간 시험',
+  String model = 'Gen2',
+}) {
+  return _result().copyWith(
+    address: '덕양구 오금동, 고양시, 경기도',
+    postalCode: '10575',
+    model: model,
+    load: 2000.0,
+    loadUnit: loadUnit,
+    analysisType: analysisType,
+    engineerName: '홍길동',
+  );
+}
+
 /// 작성: 2026-09-16 09:12:40 · nada
+/// 수정: 2026-10-11 19:15:25 · nada
 /// 함수: main
 /// 목적: 1쪽 렌더링을 시험한다. 자리가 맞는지는 `ReportLayout` 과 대조하는
 ///       `report_layout_test.dart` 가 맡으므로, 여기서는 PDF 가 실제로
-///       만들어지는지와 디버그 모드가 제품 흐름에 섞이지 않는지를 본다.
+///       만들어지는지, 디버그 모드가 제품 흐름에 섞이지 않는지, 머리말
+///       칸마다 찍을 문구가 맞는지 본다.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -72,6 +99,100 @@ void main() {
       ); // 표식을 켠 것
 
       expect(marked.length, greaterThan(plain.length));
+    });
+  });
+
+  group('ReportPage1Renderer.headerValues — 머리말 문구', () {
+    test('하중은 입력 숫자와 단위 표기를 이어 쓴다', () {
+      expect(
+        ReportPage1Renderer.headerValues(_siteResult())['load'],
+        '2000 킬로그램',
+      );
+      expect(
+        ReportPage1Renderer.headerValues(_siteResult(loadUnit: 'lb'))['load'],
+        '2000 파운드',
+      );
+      final decimal = _siteResult().copyWith(load: 1350.5); // 소수 하중
+      expect(ReportPage1Renderer.headerValues(decimal)['load'], '1350.5 킬로그램');
+    });
+
+    test('측정 칸은 해석 종류 문구 그대로다', () {
+      for (final type in SiteInfo.analysisTypeOptions) {
+        expect(
+          ReportPage1Renderer.headerValues(
+            _siteResult(analysisType: type),
+          )['test_type'],
+          type,
+        );
+      }
+    });
+
+    test('주소 칸은 주소 끝에 우편번호를 붙인다', () {
+      expect(
+        ReportPage1Renderer.headerValues(_siteResult())['address'],
+        '덕양구 오금동, 고양시, 경기도, 10575',
+      );
+    });
+
+    test('제품 칸은 엘리베이터와 기종이고 기종의 쉼표는 공백으로 바꾼다', () {
+      expect(
+        ReportPage1Renderer.headerValues(_siteResult())['product'],
+        '엘리베이터, Gen2',
+      );
+      expect(
+        ReportPage1Renderer.headerValues(
+          _siteResult(model: '줄-로우프, 2:1'),
+        )['product'],
+        '엘리베이터, 줄-로우프 2:1',
+      );
+    });
+
+    test('엔지니어 칸은 저장된 이름이다', () {
+      expect(
+        ReportPage1Renderer.headerValues(_siteResult())['engineer_name'],
+        '홍길동',
+      );
+    });
+
+    test('값이 없는 예전 결과는 빈 칸 대신 자리 표시와 기본 문구를 찍는다', () {
+      final header = ReportPage1Renderer.headerValues(_result()); // 예전 결과
+
+      expect(header['engineer_name'], ReportPage1.placeholder);
+      expect(header['load'], ReportPage1.placeholder);
+      expect(header['address'], ReportPage1.placeholder);
+      expect(header['test_type'], '층간 시험');
+      expect(header['product'], '엘리베이터');
+      expect(header.values, everyElement(isNot(contains('null'))));
+      expect(header.values, everyElement(isNot('0')));
+    });
+
+    test('주소만 있고 우편번호가 없으면 주소만 쓴다', () {
+      final onlyAddress = _result().copyWith(address: '서울시'); // 예전 결과
+      expect(ReportPage1Renderer.headerValues(onlyAddress)['address'], '서울시');
+    });
+
+    test('긴 주소 · 해석 종류도 PDF 를 만들어 낸다', () async {
+      final long =
+          _siteResult(
+            analysisType: '사이클 저크(가속도증가율) 테스트',
+            model: '줄-로우프, 2:1',
+          ).copyWith(
+            address:
+                '경기도 고양시 덕양구 오금동 690 한화 고양 삼송 이지스 '
+                '데이터센터 B동 지하 3층 승강기 기계실 옆',
+          ); // 가장 긴 문구들
+      final bytes = await renderReportPage1(result: long); // 만든 PDF
+
+      expect(bytes.length, greaterThan(1000));
+    });
+
+    test('넘칠 수 있는 칸만 폭을 재고 폭은 오른쪽 여백까지다', () {
+      expect(
+        ReportPage1.maxWidthOf(ReportPage1.address),
+        ReportPage1.headerRightLimitX - ReportPage1.address.x,
+      );
+      expect(ReportPage1.maxWidthOf(ReportPage1.testType), isNotNull);
+      expect(ReportPage1.maxWidthOf(ReportPage1.measurementId), isNull);
     });
   });
 }
