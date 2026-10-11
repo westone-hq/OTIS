@@ -365,10 +365,16 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-10-05 10:03:35 · nada
+  /// 수정: 2026-10-11 17:10:57 · nada
   /// 함수: mailAttachmentCopy
   /// 목적: 측정 폴더의 파일을 메일용 이름으로 앱 임시 폴더(`mail/`)에
   ///       복사한다. 측정 폴더 안 이름은 리포트 생성 · 목록 읽기가 기대하는
   ///       이름이라 바꾸지 않는다. 같은 이름이 있으면 덮어쓴다.
+  ///       메일 앱에 넘기는 FileProvider 는 이 폴더 하나만 연다
+  ///       (`android/app/src/main/res/xml/shared_file_paths.xml` 의
+  ///       `cache-path mail/`). 폴더 이름 `mail` 을 바꾸면 그 파일도 같이
+  ///       바꿔야 한다 — 어긋나면 첨부가 "Failed to find configured root"
+  ///       로 실패한다.
   /// 인자: source — 복사할 원래 파일
   ///       name — 붙일 이름 (`mailAttachmentName()` 이 만든 것)
   /// 반환: 메일에 붙일 사본
