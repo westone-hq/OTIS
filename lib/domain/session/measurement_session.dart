@@ -1,18 +1,29 @@
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-10-04 13:31:53 · nada
+/// 수정: 2026-10-11 17:26:58 · nada
 /// 클래스: SiteFieldError
 /// 목적: 현장 정보 입력 검사에서 걸린 항목의 종류. 화면이 종류마다 안내
-///       문구와 옮겨 갈 입력칸을 고른다. 층수 오류 셋은 한 번에 하나만
-///       나온다.
+///       문구와 옮겨 갈 입력칸을 고른다. 층수 오류 셋, 하중 오류 둘,
+///       우편번호 오류 둘은 각각 한 번에 하나만 나온다.
 ///       - `jobNoMissing` — 제번이 비었다
 ///       - `siteNameMissing` — 현장명이 비었다
+///       - `addressMissing` — 주소가 비었다
+///       - `postalCodeMissing` — 우편번호가 비었다
+///       - `postalCodeInvalid` — 우편번호가 숫자 5자리가 아니다
+///       - `loadMissing` — 하중이 비었다
+///       - `loadNotNumber` — 하중이 0 보다 큰 유한한 숫자가 아니다
 ///       - `floorMissing` — 최하층이나 최상층이 비었다
 ///       - `floorNotNumber` — 층수가 정수가 아니다
 ///       - `floorNotAscending` — 최상층이 최하층보다 크지 않다
 enum SiteFieldError {
   jobNoMissing,
   siteNameMissing,
+  addressMissing,
+  postalCodeMissing,
+  postalCodeInvalid,
+  loadMissing,
+  loadNotNumber,
   floorMissing,
   floorNotNumber,
   floorNotAscending,
@@ -92,6 +103,15 @@ class SiteInfo {
     '브레이크 기능',
     '사이클 저크(가속도증가율) 테스트',
   ];
+
+  /// 작성: 2026-10-11 17:26:58 · nada
+  /// 변수: postalCodeLength
+  /// 목적: 우편번호 자릿수. 검사(`validate()`)와 홈 화면 입력 길이 제한이
+  ///       함께 쓴다.
+  /// 근거: 표준 — 2015-08-01 시행 국가기초구역 우편번호(숫자 5자리).
+  ///       원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제 현장 리포트)
+  ///       1쪽 머리말 주소 끝 "10575" 도 5자리다
+  static const int postalCodeLength = 5;
 
   /// 작성: 2026-10-11 16:58:59 · nada
   /// 변수: defaultAnalysisType
@@ -270,6 +290,22 @@ class SiteInfo {
     String fallback,
   ) => options.contains(saved) ? saved! : fallback;
 
+  /// 작성: 2026-10-11 17:26:58 · nada
+  /// 함수: parseLoad
+  /// 목적: 하중 입력 문자열을 숫자로 바꾼다. 하중을 받아들이는 기준을 한
+  ///       곳에 둔다 — 홈 화면 검사(`validate()`)와 저장할 때 변환
+  ///       (`MeasurementAssembler.assemble()`)이 둘 다 이 함수를 쓴다. 두
+  ///       곳이 따로 판정하면 홈은 통과했는데 측정 뒤 저장이 거절될 수 있다.
+  ///       `double.tryParse` 는 "Infinity" · "NaN" 도 숫자로 읽으므로
+  ///       유한한지까지 본다.
+  /// 인자: text — 하중 입력 문자열. 앞뒤 공백은 지우고 본다
+  /// 반환: 0 보다 큰 유한한 하중. 비었거나 그런 수가 아니면 null
+  static double? parseLoad(String text) {
+    final value = double.tryParse(text.trim()); // 숫자로 읽은 값, 못 읽으면 null
+    if (value == null || !value.isFinite || value <= 0) return null;
+    return value;
+  }
+
   /// 작성: 2026-10-11 16:58:59 · nada
   /// 함수: loadText
   /// 목적: 하중 숫자를 화면 입력칸 · 리포트에 쓸 문자열로 바꾼다. 정수면
@@ -301,16 +337,35 @@ class SiteInfo {
   };
 
   /// 작성: 2026-10-04 13:31:53 · nada
+  /// 수정: 2026-10-11 17:26:58 · nada
   /// 함수: validate
   /// 목적: 측정을 시작해도 되는 현장 정보인지 검사한다. 홈 화면이 측정
-  ///       시작 전에, `MeasurementRecorder` 가 저장 전에 같은 기준으로
-  ///       부른다 — 두 곳의 기준이 갈라지면 화면은 통과시켰는데 저장이
-  ///       거절하는 일이 생긴다.
+  ///       시작 전에, `MeasurementRecorder` 가 저장 전에, 결과 화면이
+  ///       재실행 전에 같은 기준으로 부른다 — 기준이 갈라지면 화면은
+  ///       통과시켰는데 저장이 거절하는 일이 생긴다.
+  ///       필수: 제번 · 현장명 · 주소 · 우편번호 · 하중 · 층수. 참고사항만
+  ///       선택이다(2026-10-10 사용자 결정).
   /// 반환: 걸린 항목 목록. 문제가 없으면 빈 목록
   List<SiteFieldError> validate() {
     final errors = <SiteFieldError>[]; // 걸린 항목을 모을 목록
     if (jobNo.trim().isEmpty) errors.add(SiteFieldError.jobNoMissing);
     if (siteName.trim().isEmpty) errors.add(SiteFieldError.siteNameMissing);
+    if (address.trim().isEmpty) errors.add(SiteFieldError.addressMissing);
+
+    final postalText = postalCode.trim(); // 앞뒤 공백을 지운 우편번호
+    if (postalText.isEmpty) {
+      errors.add(SiteFieldError.postalCodeMissing);
+    } else if (!RegExp('^[0-9]{$postalCodeLength}\$').hasMatch(postalText)) {
+      errors.add(SiteFieldError.postalCodeInvalid);
+    }
+
+    // → 로직 이동: parseLoad()
+    final loadValue = parseLoad(load); // 0 보다 큰 유한한 하중, 아니면 null
+    if (load.trim().isEmpty) {
+      errors.add(SiteFieldError.loadMissing);
+    } else if (loadValue == null) {
+      errors.add(SiteFieldError.loadNotNumber);
+    }
 
     final bottomText = bottomFloor.trim(); // 앞뒤 공백을 지운 최하층
     final topText = topFloor.trim(); // 앞뒤 공백을 지운 최상층

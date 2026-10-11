@@ -362,6 +362,44 @@ void main() {
       expect(model.analysisType, SiteInfo.defaultAnalysisType);
     });
 
+    test('하중 판정이 홈 화면 검사와 저장 변환에서 어긋나지 않는다', () {
+      // 홈은 통과했는데 측정 뒤 저장이 거절되는 일이 없어야 한다. 두 곳이
+      // `SiteInfo.parseLoad()` 하나를 쓰는지 같은 입력으로 본다
+      for (final load in <String>[
+        'abc',
+        '0',
+        '-5',
+        'Infinity',
+        'NaN',
+        ' 2000 ',
+        '1.5',
+      ]) {
+        final site = SiteInfo(
+          jobNo: 'T-1001',
+          siteName: '서울 본사',
+          address: '서울시',
+          bottomFloor: '1',
+          topFloor: '8',
+          direction: '하부 → 상부',
+          model: 'Gen2',
+          load: load,
+          postalCode: '04524',
+        ); // 하중만 바꾼 현장 정보
+        final passes = site.validate().isEmpty; // 홈 화면 검사 통과 여부
+        final assembled = MeasurementAssembler.assemble(
+          grid: _grid(_threeRows),
+          site: site,
+          id: 'id',
+          measuredAt: measuredAt,
+        ); // 저장 변환 결과
+
+        expect(assembled.isSuccess, passes, reason: '"$load"');
+        if (passes) {
+          expect(assembled.result!.load, SiteInfo.parseLoad(load));
+        }
+      }
+    });
+
     test('하중을 0 보다 큰 숫자로 바꿀 수 없으면 사유를 올린다', () {
       for (final load in <String>['abc', '0', '-5', 'Infinity', 'NaN']) {
         final result = MeasurementAssembler.assemble(

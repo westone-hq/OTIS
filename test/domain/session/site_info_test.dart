@@ -21,6 +21,29 @@ SiteInfo _site() => const SiteInfo(
   notes: '참고',
 );
 
+/// 작성: 2026-10-11 17:28:28 · nada
+/// 함수: _siteWith
+/// 목적: 검사를 통과하는 현장 정보에서 몇 칸만 바꾼 것을 만든다.
+/// 인자: address, postalCode, load, notes — 바꿀 값. 안 주면 통과하는 값
+/// 반환: 시험용 현장 정보
+SiteInfo _siteWith({
+  String address = '서울시 중구 세종대로 110',
+  String postalCode = '04524',
+  String load = '2000',
+  String notes = '',
+}) => SiteInfo(
+  jobNo: '2025F 1234R01',
+  siteName: '시험 현장',
+  address: address,
+  bottomFloor: '1',
+  topFloor: '8',
+  direction: SiteInfo.directionUp,
+  model: 'Gen2',
+  load: load,
+  postalCode: postalCode,
+  notes: notes,
+);
+
 /// 작성: 2026-10-11 16:58:59 · nada
 /// 함수: _result
 /// 목적: 현장 정보만 의미 있는 측정 결과를 만든다.
@@ -61,10 +84,12 @@ MeasurementResult _result({
 }
 
 /// 작성: 2026-10-11 16:58:59 · nada
+/// 수정: 2026-10-11 17:28:28 · nada
 /// 함수: main
 /// 목적: 현장 정보의 새 항목(하중 · 단위 · 해석 종류 · 우편번호 · 참고사항)
 ///       을 시험한다. 기기 저장 표 왕복, 선택지 밖 값의 기본값 처리, 저장된
-///       결과에서 되살리기, 하중 문자열 만들기, 선택지 목록을 본다.
+///       결과에서 되살리기, 필수 검사, 하중 문자열 만들기, 선택지 목록을
+///       본다.
 void main() {
   group('SiteInfo 저장 표', () {
     test('toMap → fromMap 왕복에서 새 항목이 그대로 남는다', () {
@@ -133,6 +158,53 @@ void main() {
       expect(site.postalCode, '');
       expect(site.loadUnit, SiteInfo.defaultLoadUnit);
       expect(site.analysisType, SiteInfo.defaultAnalysisType);
+    });
+  });
+
+  group('SiteInfo.validate — 새 필수 항목', () {
+    test('모두 채우면 통과하고, 참고사항은 비어도 된다', () {
+      expect(_siteWith().validate(), isEmpty);
+      expect(_siteWith(notes: '').validate(), isEmpty);
+      expect(_site().validate(), isEmpty);
+    });
+
+    test('주소가 비면 addressMissing', () {
+      expect(_siteWith(address: '  ').validate(), [
+        SiteFieldError.addressMissing,
+      ]);
+    });
+
+    test('우편번호가 비면 postalCodeMissing, 숫자 5자리가 아니면 '
+        'postalCodeInvalid', () {
+      expect(_siteWith(postalCode: '').validate(), [
+        SiteFieldError.postalCodeMissing,
+      ]);
+      for (final code in <String>['1057', '123456', '1057a', '10 57']) {
+        expect(_siteWith(postalCode: code).validate(), [
+          SiteFieldError.postalCodeInvalid,
+        ], reason: code);
+      }
+      expect(_siteWith(postalCode: ' 10575 ').validate(), isEmpty);
+    });
+
+    test('하중이 비면 loadMissing, 0 보다 큰 유한한 수가 아니면 loadNotNumber', () {
+      expect(_siteWith(load: ' ').validate(), [SiteFieldError.loadMissing]);
+      for (final load in <String>['abc', '0', '-5', 'Infinity', 'NaN']) {
+        expect(_siteWith(load: load).validate(), [
+          SiteFieldError.loadNotNumber,
+        ], reason: load);
+      }
+      for (final load in <String>[' 2000 ', '1.5', '0.01']) {
+        expect(_siteWith(load: load).validate(), isEmpty, reason: load);
+      }
+    });
+
+    test('parseLoad 는 0 보다 큰 유한한 수만 숫자로 돌려준다', () {
+      expect(SiteInfo.parseLoad(' 2000 '), 2000.0);
+      expect(SiteInfo.parseLoad('1.5'), 1.5);
+      for (final load in <String>['', 'abc', '0', '-5', 'Infinity', 'NaN']) {
+        expect(SiteInfo.parseLoad(load), isNull, reason: load);
+      }
     });
   });
 

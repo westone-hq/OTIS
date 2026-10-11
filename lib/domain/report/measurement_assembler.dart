@@ -80,7 +80,7 @@ class MeasurementAssembleResult {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-11 17:31:16 · nada
+  /// 수정: 2026-10-11 17:28:06 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -99,9 +99,10 @@ class MeasurementAssembler {
   ///         현장 정보를 따로 들고 다니지 않아도 된다
   ///       - 하중 · 하중 단위 · 해석 종류 · 우편번호 · 참고사항도 옮긴다.
   ///         앞뒤 공백을 지우고, 비어 있으면 null 로 둔다(재지 않은 값을
-  ///         빈 문자열로 채우지 않는다). 하중은 숫자로 바꾼다. 비어 있지
-  ///         않은데 0 보다 큰 유한한 숫자가 아니면 층수처럼 사유를 올린다.
-  ///         하중이 없으면 단위도 뜻이 없어 null 로 둔다
+  ///         빈 문자열로 채우지 않는다). 하중은 홈 화면 검사와 같은
+  ///         기준(`SiteInfo.parseLoad()`)으로 숫자로 바꾼다. 비어 있지
+  ///         않은데 바꿀 수 없으면 층수처럼 사유를 올린다. 하중이 없으면
+  ///         단위도 뜻이 없어 null 로 둔다
   ///       - 소음 시계열을 격자에서 그대로 옮기고, 0 이 아닌 표본의
   ///         최대를 `noiseMax` 에 담는다. 쓸 표본이 하나도 없으면 null 로
   ///         둔다. 자세한 까닭은 클래스 주석의 소음 계약을 본다
@@ -142,11 +143,10 @@ class MeasurementAssembler {
       );
     }
 
-    final loadText = site.load.trim(); // 하중 입력. 비었으면 하중 없음
-    final load = loadText.isEmpty
-        ? null
-        : double.tryParse(loadText); // 하중 숫자, 없거나 못 바꾸면 null
-    if (loadText.isNotEmpty && (load == null || !load.isFinite || load <= 0)) {
+    final hasLoad = site.load.trim().isNotEmpty; // 하중을 입력했는지
+    // → 로직 이동: SiteInfo.parseLoad()
+    final load = SiteInfo.parseLoad(site.load); // 하중 숫자, 못 바꾸면 null
+    if (hasLoad && load == null) {
       return MeasurementAssembleResult.failure(
         '하중을 0 보다 큰 숫자로 바꿀 수 없다: "${site.load}"',
       );
