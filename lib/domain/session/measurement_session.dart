@@ -19,7 +19,7 @@ enum SiteFieldError {
 }
 
 /// 작성: 2026-07-04 15:04:38 · 박건준
-/// 수정: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-11 16:58:59 · nada
 /// 클래스: SiteInfo
 /// 목적: 측정 현장 정보. 홈 화면에서 입력받아 `MeasurementSession` 에
 ///       싣고, 저장할 때 `MeasurementAssembler` 가 측정 결과로 옮긴다.
@@ -53,6 +53,53 @@ class SiteInfo {
   /// 목적: 처음 입력할 때 미리 골라 둘 기종.
   static const String defaultModel = 'Gen2';
 
+  /// 작성: 2026-10-11 16:58:59 · nada
+  /// 변수: loadUnitOptions
+  /// 목적: 하중 단위 선택 버튼에 보여줄 선택지와 그 차례. 측정 결과에 이
+  ///       문구 그대로 저장된다. 리포트에 찍는 말은 `loadUnitReportLabels`
+  ///       가 짝지어 정한다.
+  /// 근거: 인용 — 2026-10-08 사용자 지정 목록
+  static const List<String> loadUnitOptions = <String>['kg', 'lb'];
+
+  /// 작성: 2026-10-11 16:58:59 · nada
+  /// 변수: defaultLoadUnit
+  /// 목적: 처음 입력할 때 미리 골라 둘 하중 단위.
+  static const String defaultLoadUnit = 'kg';
+
+  /// 작성: 2026-10-11 16:58:59 · nada
+  /// 변수: loadUnitReportLabels
+  /// 목적: 하중 단위의 화면 표기와 리포트 표기의 짝. 하중은 환산하지 않고
+  ///       입력 숫자 뒤에 이 말을 붙여 찍는다("2000 킬로그램").
+  ///       `loadUnitOptions` 의 모든 선택지가 여기 있어야 한다.
+  /// 근거: 인용 — "킬로그램" 은 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제 현장
+  ///       리포트) 1쪽 머리말 "2000 킬로그램" 표기.
+  ///       "파운드" 는 2026-10-08 사용자 지정("4400 파운드")
+  static const Map<String, String> loadUnitReportLabels = <String, String>{
+    'kg': '킬로그램',
+    'lb': '파운드',
+  };
+
+  /// 작성: 2026-10-11 16:58:59 · nada
+  /// 변수: analysisTypeOptions
+  /// 목적: 해석 종류(분석 내용) 드롭다운에 보여줄 선택지와 그 차례. 측정
+  ///       결과에 이 문구 그대로 저장되고 리포트 머리말 측정 칸에 찍힌다.
+  ///       기록 · 표시만 하고 측정 · 지표 계산을 종류마다 달리하지 않는다.
+  /// 근거: 인용 — 2026-10-08 사용자 지정 목록
+  static const List<String> analysisTypeOptions = <String>[
+    '일반',
+    '층간 시험',
+    '문 열림 사이클',
+    '브레이크 기능',
+    '사이클 저크(가속도증가율) 테스트',
+  ];
+
+  /// 작성: 2026-10-11 16:58:59 · nada
+  /// 변수: defaultAnalysisType
+  /// 목적: 처음 입력할 때 미리 골라 둘 해석 종류.
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제 현장
+  ///       리포트) 1쪽 머리말 측정 칸 "층간 시험"
+  static const String defaultAnalysisType = '층간 시험';
+
   /// 제번
   final String jobNo;
 
@@ -74,8 +121,24 @@ class SiteInfo {
   /// 엘리베이터 기종. `modelOptions` 가운데 하나
   final String model;
 
+  /// 하중. 입력한 문자열 그대로 (예: "2000", "1.5"). 숫자로 바꾸는 일은
+  /// 저장할 때 한다. 입력하지 않았으면 빈 문자열
+  final String load;
+
+  /// 하중 단위. `loadUnitOptions` 가운데 하나
+  final String loadUnit;
+
+  /// 해석 종류. `analysisTypeOptions` 가운데 하나
+  final String analysisType;
+
+  /// 우편번호. 입력한 문자열 그대로. 입력하지 않았으면 빈 문자열
+  final String postalCode;
+
+  /// 추가 참고사항. 메일 본문에 들어간다. 비워 둘 수 있다
+  final String notes;
+
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-11 16:58:59 · nada
   /// 함수: SiteInfo
   /// 목적: 입력받은 현장 정보 값을 그대로 담는 생성자.
   /// 인자: jobNo — 제번
@@ -85,6 +148,11 @@ class SiteInfo {
   ///       topFloor — 최상층
   ///       direction — 방향
   ///       model — 엘리베이터 모델명
+  ///       load — 하중 입력 문자열. 안 주면 빈 문자열
+  ///       loadUnit — 하중 단위. 안 주면 `defaultLoadUnit`
+  ///       analysisType — 해석 종류. 안 주면 `defaultAnalysisType`
+  ///       postalCode — 우편번호 입력 문자열. 안 주면 빈 문자열
+  ///       notes — 추가 참고사항. 안 주면 빈 문자열
   const SiteInfo({
     required this.jobNo,
     required this.siteName,
@@ -93,14 +161,21 @@ class SiteInfo {
     required this.topFloor,
     required this.direction,
     required this.model,
+    this.load = '',
+    this.loadUnit = defaultLoadUnit,
+    this.analysisType = defaultAnalysisType,
+    this.postalCode = '',
+    this.notes = '',
   });
 
   /// 작성: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-11 16:58:59 · nada
   /// 함수: SiteInfo.fromMap
   /// 목적: 기기에 저장해 둔 표에서 현장 정보를 되살린다. 홈 화면이 지난번
   ///       입력을 다시 채울 때 쓴다. 빠진 항목은 빈 값으로 두고, 운전
-  ///       방향 · 기종은 `_knownDirection()` · `_knownModel()` 로 지금
-  ///       선택지에 맞춘다.
+  ///       방향 · 기종 · 하중 단위 · 해석 종류는 `_known*()` 으로 지금
+  ///       선택지에 맞춘다. 참고사항은 표에 없으므로 빈 칸으로 시작한다
+  ///       (`toMap()` 참고).
   /// 인자: map — `toMap()` 이 만든 표
   /// 반환: 되살린 현장 정보
   factory SiteInfo.fromMap(Map<String, String?> map) {
@@ -113,13 +188,27 @@ class SiteInfo {
       // → 로직 이동: _knownDirection()
       direction: _knownDirection(map['direction']),
       model: _knownModel(map['model']), // → 로직 이동: _knownModel()
+      load: map['load'] ?? '',
+      // → 로직 이동: _knownOption()
+      loadUnit: _knownOption(map['loadUnit'], loadUnitOptions, defaultLoadUnit),
+      // → 로직 이동: _knownOption()
+      analysisType: _knownOption(
+        map['analysisType'],
+        analysisTypeOptions,
+        defaultAnalysisType,
+      ),
+      postalCode: map['postalCode'] ?? '',
     );
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-11 16:58:59 · nada
   /// 함수: SiteInfo.fromResult
   /// 목적: 저장된 측정 결과에서 그 측정의 현장 정보를 되살린다. 결과
   ///       화면의 "테스트 재실행" 이 같은 현장 정보로 다시 재는 데 쓴다.
+  ///       하중 · 우편번호가 없는 예전 결과는 빈 칸으로 되살린다 — 재실행
+  ///       화면이 `validate()` 로 걸러 홈에서 채우게 한다. 참고사항은
+  ///       측정마다 새로 적으므로 되살리지 않는다.
   /// 인자: result — 저장된 측정 결과
   /// 반환: 되살린 현장 정보
   factory SiteInfo.fromResult(MeasurementResult result) {
@@ -132,6 +221,16 @@ class SiteInfo {
       // → 로직 이동: _knownDirection()
       direction: _knownDirection(result.direction),
       model: _knownModel(result.model), // → 로직 이동: _knownModel()
+      load: result.load == null ? '' : loadText(result.load!),
+      // → 로직 이동: _knownOption()
+      loadUnit: _knownOption(result.loadUnit, loadUnitOptions, defaultLoadUnit),
+      // → 로직 이동: _knownOption()
+      analysisType: _knownOption(
+        result.analysisType,
+        analysisTypeOptions,
+        defaultAnalysisType,
+      ),
+      postalCode: result.postalCode ?? '',
     );
   }
 
@@ -156,9 +255,36 @@ class SiteInfo {
   static String _knownModel(String? saved) =>
       modelOptions.contains(saved) ? saved! : defaultModel;
 
+  /// 작성: 2026-10-11 16:58:59 · nada
+  /// 함수: _knownOption
+  /// 목적: 저장돼 있던 값을 선택지로 맞춘다. 선택지에 없으면 기본값으로
+  ///       읽는다 — 그대로 두면 선택 버튼 · 드롭다운이 그릴 항목을 찾지
+  ///       못한다. `_knownModel()` 과 같은 규칙이다.
+  /// 인자: saved — 저장돼 있던 값. 없으면 null
+  ///       options — 지금 선택지
+  ///       fallback — 선택지에 없을 때 쓸 기본값
+  /// 반환: `options` 가운데 하나
+  static String _knownOption(
+    String? saved,
+    List<String> options,
+    String fallback,
+  ) => options.contains(saved) ? saved! : fallback;
+
+  /// 작성: 2026-10-11 16:58:59 · nada
+  /// 함수: loadText
+  /// 목적: 하중 숫자를 화면 입력칸 · 리포트에 쓸 문자열로 바꾼다. 정수면
+  ///       소수점 없이("2000"), 아니면 입력한 자리까지("1.5") 쓴다.
+  /// 인자: load — 하중 숫자
+  /// 반환: 하중 문자열
+  static String loadText(double load) =>
+      load == load.truncateToDouble() ? load.toStringAsFixed(0) : '$load';
+
   /// 작성: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-11 16:58:59 · nada
   /// 함수: toMap
   /// 목적: 기기에 저장할 표로 바꾼다. `SiteInfo.fromMap` 이 되읽는다.
+  ///       참고사항은 넣지 않는다 — 현장마다 달라, 남겨 두면 다음 현장
+  ///       메일에 섞인다(2026-10-10 사용자 결정).
   /// 반환: 항목 이름을 열쇠로 하는 표
   Map<String, String> toMap() => <String, String>{
     'jobNo': jobNo,
@@ -168,6 +294,10 @@ class SiteInfo {
     'topFloor': topFloor,
     'direction': direction,
     'model': model,
+    'load': load,
+    'loadUnit': loadUnit,
+    'analysisType': analysisType,
+    'postalCode': postalCode,
   };
 
   /// 작성: 2026-10-04 13:31:53 · nada
