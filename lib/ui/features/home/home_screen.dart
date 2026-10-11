@@ -14,13 +14,6 @@ import 'package:vibration_checker/adapter/prefs_store.dart';
 /// 목적: 홈 화면 입력칸 배치에만 쓰는 수치. 다른 화면은 쓰지 않아
 ///       `theme.dart` 토큰으로 올리지 않는다.
 class _HomeLayout {
-  /// 우편번호 · 주소 한 줄에서 우편번호 칸이 차지하는 몫. 숫자 5자리가
-  /// 18sp 로 다 보이는 폭이다
-  static const int postalCodeFlex = 2;
-
-  /// 우편번호 · 주소 한 줄에서 주소 칸이 차지하는 몫
-  static const int addressFlex = 5;
-
   /// 추가 참고사항 입력칸이 처음 보이는 줄 수
   static const int notesMinLines = 3;
 
@@ -539,10 +532,12 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 작성: 2026-10-04 16:44:32 · nada
   /// 수정: 2026-10-11 17:28:28 · nada
   /// 함수: _buildAddressField
-  /// 목적: 우편번호와 현장 주소를 한 줄에 받는다. 둘 다 필수이고 리포트
-  ///       머리말 주소 칸에 "주소, 우편번호" 로 찍힌다. 우편번호는 숫자
-  ///       키패드로 `SiteInfo.postalCodeLength` 자리까지만 받는다. 값을
-  ///       고치면 오류 표시를 지운다.
+  /// 목적: 우편번호와 현장 주소를 받는다. 둘 다 필수이고 리포트 머리말
+  ///       주소 칸에 "주소, 우편번호" 로 찍힌다. 우편번호는 주소 위 줄에
+  ///       화면 반 폭으로 둔다 — 주소와 한 줄에 두면 360dp 폭 화면에서
+  ///       라벨과 다섯 자리가 잘린다(2026-10-11 캡처). 숫자 키패드로
+  ///       `SiteInfo.postalCodeLength` 자리까지만 받는다. 값을 고치면 오류
+  ///       표시를 지운다.
   /// 반환: 우편번호 · 주소 입력 영역 위젯
   Widget _buildAddressField() {
     return Container(
@@ -555,7 +550,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             children: [
               Expanded(
-                flex: _HomeLayout.postalCodeFlex,
                 child: SizedBox(
                   height: AppDims.fieldH,
                   child: TextField(
@@ -585,30 +579,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: AppDims.gap2),
-              Expanded(
-                flex: _HomeLayout.addressFlex,
-                child: SizedBox(
-                  height: AppDims.fieldH,
-                  child: TextField(
-                    controller: _addressCtl,
-                    focusNode: _addressFocus,
-                    style: AppText.body,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      hintText: '도로명 주소',
-                      enabledBorder: _addressError != null
-                          ? _errorBorder()
-                          : null,
-                      focusedBorder: _addressError != null
-                          ? _errorBorder()
-                          : null,
-                    ),
-                    onSubmitted: (_) => _bottomFloorFocus.requestFocus(),
-                    onChanged: (_) => _onAddressChanged(),
-                  ),
-                ),
-              ),
+              const Spacer(), // 우편번호 칸을 화면 반 폭으로 둔다
             ],
+          ),
+          const SizedBox(height: AppDims.gap),
+          SizedBox(
+            height: AppDims.fieldH,
+            child: TextField(
+              controller: _addressCtl,
+              focusNode: _addressFocus,
+              style: AppText.body,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                hintText: '도로명 주소',
+                enabledBorder: _addressError != null ? _errorBorder() : null,
+                focusedBorder: _addressError != null ? _errorBorder() : null,
+              ),
+              onSubmitted: (_) => _bottomFloorFocus.requestFocus(),
+              onChanged: (_) => _onAddressChanged(),
+            ),
           ),
           if (_addressError != null) _buildErrorBox(_addressError!),
         ],
