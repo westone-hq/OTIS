@@ -40,13 +40,13 @@
       },
       {
         "key": "engineer_name",
-        "x": 1023,
-        "y": 100,
-        "size": 21,
+        "x": 1026,
+        "y": 103,
+        "size": 29,
         "align": "left",
         "weight": "regular",
         "color": "navy",
-        "_src": "원본 x419-488, y37-45"
+        "_src": "원본 H6N1AP65 1쪽 300dpi: 라벨 아래, 라벨과 같은 왼쪽 끝 (2026-10-12)"
       },
       {
         "key": "datetime",
@@ -114,23 +114,23 @@
       },
       {
         "key": "building_name",
-        "x": 78,
-        "y": 655,
-        "size": 24,
+        "x": 53,
+        "y": 661,
+        "size": 32,
         "align": "left",
         "weight": "regular",
         "color": "text",
-        "_src": "원본 건물명 값, 골드 밴드 위"
+        "_src": "원본 H6N1AP65 1쪽 300dpi: 라벨 아래, 라벨과 같은 왼쪽 끝, 골드 밴드 위 (2026-10-12)"
       },
       {
         "key": "address",
-        "x": 1062,
-        "y": 655,
-        "size": 24,
+        "x": 1057,
+        "y": 643,
+        "size": 28,
         "align": "left",
         "weight": "regular",
         "color": "text",
-        "_src": "원본 x404-669 중 '주소:' 라벨 뒤"
+        "_src": "원본 H6N1AP65 1쪽 300dpi: '주소:' 라벨과 같은 줄, 라벨 바로 뒤 (2026-10-12)"
       }
     ],
     "metrics_table": {
@@ -288,9 +288,9 @@
       },
       {
         "key": "engineer_name",
-        "x": 1023,
-        "y": 100,
-        "size": 21,
+        "x": 1026,
+        "y": 103,
+        "size": 29,
         "align": "left",
         "weight": "regular",
         "color": "navy"

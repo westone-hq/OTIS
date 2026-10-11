@@ -40,16 +40,20 @@ class ReportTextWriter {
       weight == LayoutWeight.bold ? bold : regular;
 
   /// 작성: 2026-09-25 09:30:00 · nada
+  /// 수정: 2026-10-12 02:13:59 · nada
   /// 함수: drawField
   /// 목적: 서식의 한 칸에 글자를 찍는다. 칸이 가진 자리 · 크기 · 굵기 ·
   ///       색을 그대로 따른다.
   /// 인자: canvas — 그리기 도구
   ///       field — 찍을 칸의 자리와 모양
   ///       text — 찍을 문구. 비어 있으면 아무것도 하지 않는다
+  ///       maxWidthPx — 쓸 수 있는 폭 (픽셀). 넘으면 글자를 줄인다. null
+  ///       이면 재지 않는다
   void drawField(
     PdfGraphics canvas, {
     required LayoutField field,
     required String text,
+    num? maxWidthPx,
   }) {
     // → 로직 이동: ReportTextWriter.drawAt()
     drawAt(
@@ -61,6 +65,7 @@ class ReportTextWriter {
       align: field.align,
       weight: field.weight,
       color: field.color,
+      maxWidthPx: maxWidthPx,
     );
   }
 

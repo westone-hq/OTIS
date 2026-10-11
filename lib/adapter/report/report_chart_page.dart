@@ -134,6 +134,7 @@ class ReportChartPageRenderer {
   }
 
   /// 작성: 2026-09-23 09:40:00 · nada
+  /// 수정: 2026-10-12 02:15:16 · nada
   /// 함수: draw
   /// 목적: 차트 쪽 한 장을 문서에 더한다. 순서대로 그린다.
   ///       1. 서식 이미지를 A4 전면에 깐다
@@ -178,7 +179,13 @@ class ReportChartPageRenderer {
     final header = headerValues(result, plan.pageNumber); // 머리말에 채울 문구
     for (final field in ReportChartPage.fields) {
       // → 로직 이동: ReportTextWriter.drawField()
-      textWriter.drawField(canvas, field: field, text: header[field.key] ?? '');
+      textWriter.drawField(
+        canvas,
+        field: field,
+        text: header[field.key] ?? '',
+        // → 로직 이동: ReportPage1.maxWidthOf()
+        maxWidthPx: ReportPage1.maxWidthOf(field),
+      );
     }
     // → 로직 이동: ReportTextWriter.drawField()
     textWriter.drawField(canvas, field: ReportChartPage.title, text: title);

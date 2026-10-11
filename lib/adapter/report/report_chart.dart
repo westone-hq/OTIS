@@ -553,18 +553,14 @@ class ReportChartRenderer {
   /// 근거: 인용 — 프로토타입 `charts.py` 의 주석 글자 크기와 같다
   static const double markerLabelSize = 5.2;
 
-  /// 작성: 2026-09-26 14:10:00 · nada
-  /// 변수: markerLabelGap
-  /// 목적: 표시점과 그 값 사이의 간격 (포인트).
-  /// 근거: 인용 — 프로토타입 `charts.py` 가 점 위로 3 포인트 띄운다
-  static const double markerLabelGap = 3.0;
-
   /// 작성: 2026-10-11 19:20:58 · nada
-  /// 변수: p2pLabelInset
-  /// 목적: P2P 글자를 축 틀 오른쪽 위 모서리에서 안쪽으로 띄우는 거리
-  ///       (포인트). 글자가 틀선에 붙지 않고 틀 안에 들게 한다.
+  /// 수정: 2026-10-12 02:15:16 · nada
+  /// 변수: cornerLabelInset
+  /// 목적: 차트 값 글자(P2P, 소음 최댓값)를 축 틀 오른쪽 위 모서리에서
+  ///       안쪽으로 띄우는 거리 (포인트). 글자가 틀선에 붙지 않고 틀 안에
+  ///       들게 한다.
   /// 근거: 미정 — 눈금 라벨 간격(`tickLabelGap`)과 비슷하게 잡았다
-  static const double p2pLabelInset = 2.0;
+  static const double cornerLabelInset = 2.0;
 
   /// 격자 점선의 켠 길이와 끈 길이 (포인트)
   static const List<double> gridDashPattern = <double>[1.2, 1.2];
@@ -706,12 +702,14 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-10-11 19:20:58 · nada
+  /// 수정: 2026-10-12 02:17:25 · nada
   /// 함수: _drawPeakToPeak
   /// 목적: 진동 세 축 차트에 P2P 를 만든 두 지점을 표시하고 값을 적는다
   ///       (2026-10-11 사용자 지시, 소음 최댓값처럼 빨간색).
   ///       - 최댓값 · 최솟값이 처음 나온 자리에 빨간 점. 자리는 줄이기 전
   ///         원래 시계열 기준이다(`extremeIndices()`)
-  ///       - 축 틀 오른쪽 위 안쪽에 "P2P 값". 값은 1쪽 표와 같은 지표다
+  ///       - 축 틀 위쪽 모서리 안쪽(최댓값에서 먼 쪽, `_drawCornerLabel()`)에
+  ///         "P2P 값". 값은 1쪽 표와 같은 지표다
   ///         (`ReportChartAxes.ptpOf()`)
   ///       P2P 가 없는 축(진동 축이 아님, 예전 결과)은 바로 돌아간다. 0 으로
   ///       채우지 않는다.
@@ -745,22 +743,60 @@ class ReportChartRenderer {
         ..fillPath();
     }
 
-    final text = p2pLabel(ptp); // → 로직 이동: p2pLabel()
+    // → 로직 이동: _drawCornerLabel()
+    _drawCornerLabel(
+      canvas,
+      frame,
+      p2pLabel(ptp),
+      awayFromX: frame.xOfTime(at.maxIndex / result.sampleRate),
+    );
+  }
+
+  /// 작성: 2026-10-12 02:15:16 · nada
+  /// 수정: 2026-10-12 02:17:25 · nada
+  /// 함수: _drawCornerLabel
+  /// 목적: 차트 값 글자를 축 틀 위쪽 모서리 안쪽에 빨간색으로 적는다. 진동
+  ///       P2P 와 소음 최댓값이 같은 규칙을 쓴다.
+  ///       - 표시점 옆에 적으면 점이 축 끝 가까이 있을 때 글자가 틀 밖으로
+  ///         잘린다. 그래서 틀 안 위쪽 모서리에 둔다
+  ///       - 축 위쪽 띠는 세로 여유(`ChartScale.headroomRatio`) 덕분에
+  ///         최댓값 봉우리 근처만 빼면 비어 있다. 그래서 봉우리와 먼 쪽
+  ///         모서리를 고른다 — 봉우리가 오른쪽 절반이면 왼쪽 위, 아니면
+  ///         오른쪽 위다. 같은 모서리에 두면 오른쪽 끝 봉우리와 겹쳤다
+  ///         (2026-10-12 레퍼런스폰 소음 차트)
+  /// 인자: canvas — 그리기 도구
+  ///       frame — 축 틀과 값 옮기기
+  ///       text — 적을 문구
+  ///       awayFromX — 피할 최댓값 표시점의 가로 자리 (포인트)
+  void _drawCornerLabel(
+    PdfGraphics canvas,
+    _ChartFrame frame,
+    String text, {
+    required double awayFromX,
+  }) {
+    final width = _widthOf(text, markerLabelSize); // 글자 폭 (포인트)
+    final x = awayFromX > frame.centerX
+        ? frame.left + cornerLabelInset
+        : frame.right - cornerLabelInset - width; // 글자 왼쪽 끝
     _drawText(
       canvas,
       text: text,
       size: markerLabelSize,
-      x: frame.right - p2pLabelInset - _widthOf(text, markerLabelSize),
-      centerY: frame.top - p2pLabelInset - markerLabelSize / 2,
+      x: x,
+      centerY: frame.top - cornerLabelInset - markerLabelSize / 2,
       color: ReportColors.chartMarker,
     );
   }
 
   /// 작성: 2026-09-26 14:10:00 · nada
+  /// 수정: 2026-10-12 02:15:16 · nada
   /// 함수: _drawAnnotations
   /// 목적: 원본 리포트가 소음 차트에 붙이는 표시 둘을 그린다.
   ///       - 평균 자리에 가로로 긋는 붉은 점선 한 줄
-  ///       - 최댓값이 나온 자리에 붉은 점과 그 값
+  ///       - 최댓값이 나온 자리에 붉은 점, 그 값은 축 틀 위쪽 모서리에
+  ///         "최대 값" 으로(`_drawCornerLabel()`). 예전에는 점 바로 위에 적어, 최댓값이 축 위끝
+  ///         가까이 있으면 글자가 틀 밖으로 잘려 보이지 않았다. P2P 글자와
+  ///         같은 규칙에 맞춘다(2026-10-12 사용자 지시)
   ///       값은 이 자리에서 다시 세지 않고 1쪽 표가 쓰는 지표에서 꺼낸다.
   ///       같은 값을 두 곳에서 세면 차트와 표가 다른 숫자를 말하게 된다.
   ///       그릴 것이 없는 축은 사양에 지표 이름이 없어 바로 돌아간다.
@@ -824,14 +860,8 @@ class ReportChartRenderer {
         ..setFillColor(reportPdfColor(ReportColors.chartMarker))
         ..drawEllipse(x, y, markerRadius, markerRadius)
         ..fillPath();
-      _drawText(
-        canvas,
-        text: peak!.display,
-        size: markerLabelSize,
-        x: x - _widthOf(peak.display, markerLabelSize) / 2,
-        centerY: y + markerLabelGap + markerLabelSize / 2,
-        color: ReportColors.chartMarker,
-      );
+      // → 로직 이동: _drawCornerLabel()
+      _drawCornerLabel(canvas, frame, '최대 ${peak!.display}', awayFromX: x);
     }
 
     canvas.restoreContext();
