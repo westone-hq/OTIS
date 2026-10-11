@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 /// 작성: 2026-09-17 10:05:00 · nada
-/// 수정: 2026-10-10 11:38:05 · nada
+/// 수정: 2026-10-11 15:34:38 · nada
 /// 클래스: ChartAxisRange
 /// 목적: 세로축 하나의 아래끝 · 위끝과 눈금 간격을 담는다. 리포트
 ///       차트(`report_chart.dart`)와 결과 화면 그래프가 같은 범위를 쓰도록
@@ -15,15 +15,6 @@ class ChartAxisRange {
 
   /// 눈금 사이 간격. 아래끝에서 위끝까지 나머지 없이 나누어떨어져야 한다
   final double tickStep;
-
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 변수: toleranceRatio
-  /// 목적: 데이터가 이 범위 안에 든다고 볼 때 봐주는 여유를, 축 길이에
-  ///       대한 비로 둔 것.
-  /// 근거: 인용 — 파이썬 프로토타입
-  ///       `pdf_report_dev/tune_report/charts.py` 의 `_resolve_ylim()` 이
-  ///       쓰는 값과 같다
-  static const double toleranceRatio = 0.02;
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 함수: ChartAxisRange
@@ -41,24 +32,21 @@ class ChartAxisRange {
   /// 목적: 축 아래끝에서 위끝까지의 길이.
   double get span => max - min;
 
-  /// 작성: 2026-10-10 11:38:05 · nada
-  /// 함수: tolerance
-  /// 목적: 이 범위에서 봐주는 여유 폭. 단위는 `min` 과 같다.
-  double get tolerance => span * toleranceRatio;
-
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-10 11:38:05 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 함수: contains
-  /// 목적: 데이터가 이 범위 안에 들어가는지 본다. 위치와 속도는 가속도를
-  ///       적분(잘게 나눈 값을 더해 나가는 계산)해 만든 값이라, 0 이어야
-  ///       할 자리가 쌓인 오차 때문에 아주 조금 음수로 나온다. 그만한
-  ///       차이로 축을 넓히면 파형이 쓸데없이 납작해 보이므로 여유를 두고
-  ///       견준다.
-  /// 인자: dataMin, dataMax — 그릴 데이터의 최솟값 · 최댓값
-  /// 반환: 여유를 포함해 이 범위 안에 들어가면 true
-  /// 식: min - tolerance <= dataMin 이고 dataMax <= max + tolerance
+  /// 목적: 값이 이 범위 안에 들어가는지 본다. 범위 끝을 조금이라도 넘으면
+  ///       밖으로 본다 — 안으로 봐주면 그 값이 축 틀에 눌려 잘린다.
+  ///       2026-10-10 검증에서 축 길이 2% 를 봐주던 판정
+  ///       (`toleranceRatio`, 지웠다) 때문에 실측 정속 1.005 m/s 가
+  ///       0 ~ 1 m/s 축 위 틀선에 눌렸다. 그 여유는 적분 오차로 0 아래로
+  ///       살짝 내려가는 위치 · 속도 때문에 두었는데, 이제 속도는 크기를
+  ///       그리고 위치는 누적 크기라 0 아래 값이 없다.
+  /// 인자: dataMin, dataMax — 견줄 값의 최솟값 · 최댓값
+  /// 반환: 범위 안에 들어가면 true
+  /// 식: min <= dataMin 이고 dataMax <= max
   bool contains(double dataMin, double dataMax) =>
-      min - tolerance <= dataMin && dataMax <= max + tolerance;
+      min <= dataMin && dataMax <= max;
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 함수: ticks
@@ -75,38 +63,36 @@ class ChartAxisRange {
 }
 
 /// 작성: 2026-10-10 11:38:05 · nada
+/// 수정: 2026-10-11 15:34:38 · nada
 /// 클래스: ChartScaleKind
 /// 목적: 데이터에 맞춰 넓힐 때 축을 어떤 모양으로 넓히는지.
 ///       - `symmetric` — 0 을 가운데 둔다. 위아래로 흔들리는 진동 ·
 ///         가속도 · 저크. 위로 큰 값과 아래로 큰 값을 같은 눈으로 견주게
 ///         한다
-///       - `zeroAnchored` — 0 을 한쪽 끝으로 둔다. 위치 · 속도. 정지가
-///         축 끝에 붙어 있어야 운행이 어디까지 갔는지 읽힌다. 값이 음수
-///         쪽에 있으면 0 이 위끝이 된다. 속도는 부호를 지우지 않아
-///         (`MeasurementAssembler._deriveKinematics()`) 운행 방향 한쪽이
-///         음수로 나온다
-/// 근거: 미확인 — 상승 · 하강 중 어느 쪽 속도가 음수인지는 실측으로
-///       확인하지 않았다. 이 파일은 부호만 보고 방향은 가리지 않는다
+///       - `zeroAnchored` — 0 을 아래끝으로 둔다. 위치 · 속도(크기).
+///         정지가 축 바닥에 붙어 있어야 운행이 어디까지 갔는지 읽힌다
 ///       - `free` — 데이터 최소 · 최대에 맞춘다. 소음. 0 dBA 부터 그리면
 ///         파형이 위쪽 띠에 납작하게 붙는다
 enum ChartScaleKind { symmetric, zeroAnchored, free }
 
 /// 작성: 2026-10-10 11:38:05 · nada
+/// 수정: 2026-10-11 15:34:38 · nada
 /// 클래스: ChartScale
 /// 목적: 차트 하나의 세로축 범위를 데이터에 맞춰 정하는 규칙. 순서대로
 ///       정한다.
 ///       1. 그릴 값이 없으면 최소 범위를 그대로 쓴다. 축 틀과 눈금은
 ///          그려야 해서 범위가 하나는 있어야 한다
-///       2. 값이 최소 범위 안에 들면 최소 범위를 그대로 쓴다. 조용한
-///          운행은 원본 TUNE 리포트와 같은 눈금으로 보인다
-///       3. 넘치면 데이터 양 끝에 여유를 더하고 최소 범위와 합친 뒤, 눈금
-///          간격에 맞춰 바깥으로 반올림한다. 잘리는 값이 없게 하는 것이
-///          목적이다
+///       2. 데이터 양 끝에 여유를 더한다. 값이 축 끝에 닿으면 읽기
+///          어렵다(2026-10-11 사용자 지시 "여유는 늘 둔다")
+///       3. 여유를 더한 범위가 최소 범위 안에 들면 최소 범위를 그대로
+///          쓴다. 조용한 운행은 원본 TUNE 리포트와 같은 눈금으로 보인다
+///       4. 넘치면 최소 범위와 합친 뒤 눈금 간격에 맞춰 바깥으로
+///          반올림한다. 잘리는 값이 없게 하는 것이 목적이다
 ///
 ///       숫자(여유 비 · 눈금 칸 수 · 간격 후보)는 이 클래스 상수에만 둔다.
 class ChartScale {
-  /// 데이터가 이 안에 들면 그대로 쓰고, 넘쳐도 이보다 좁아지지 않는 범위.
-  /// `zeroAnchored` 축은 0 이상 쪽으로 적고, 값이 음수 쪽이면 뒤집어 쓴다
+  /// 여유를 더한 데이터가 이 안에 들면 그대로 쓰고, 넘쳐도 이보다
+  /// 좁아지지 않는 범위
   final ChartAxisRange minimum;
 
   /// 넘칠 때 넓히는 모양
@@ -117,9 +103,11 @@ class ChartScale {
   final bool ignoreZeros;
 
   /// 작성: 2026-10-10 11:38:05 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 변수: headroomRatio
-  /// 목적: 넓힐 때 데이터 양 끝에 하나씩 더하는 여유를, 데이터가 차지하는
-  ///       폭에 대한 비로 둔 것. 양 끝을 합치면 10% 다.
+  /// 목적: 데이터 양 끝에 하나씩 더하는 여유를, 데이터가 차지하는 폭에
+  ///       대한 비로 둔 것. 양 끝을 합치면 10% 다. 최소 범위를 쓸 때도
+  ///       이 여유가 들어가는지 본다.
   /// 근거: 인용 — 2026-10-10 사용자 지시 "축 길이의 10%"
   static const double headroomRatio = 0.05;
 
@@ -159,6 +147,7 @@ class ChartScale {
   });
 
   /// 작성: 2026-10-10 11:38:05 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 함수: rangeFor
   /// 목적: 그릴 값에 맞는 세로축 범위를 정한다. 순서는 클래스 주석과 같다.
   /// 인자: values — 그릴 값 목록. 단위는 그 축의 단위를 따른다
@@ -173,66 +162,41 @@ class ChartScale {
     }
     if (low == null || high == null) return minimum;
 
-    // → 로직 이동: _floorFor()
-    final floor = _floorFor(low, high); // 이 데이터에 쓸 최소 범위
-    if (floor.contains(low, high)) return floor;
-
     // → 로직 이동: _paddedBounds()
-    final padded = _paddedBounds(low, high, floor.tolerance); // 여유를 더한 끝
+    final padded = _paddedBounds(low, high); // 여유를 더한 아래끝 · 위끝
+    // → 로직 이동: ChartAxisRange.contains()
+    if (minimum.contains(padded.low, padded.high)) return minimum;
+
     // → 로직 이동: _niceRange()
     return _niceRange(
-      math.min(padded.low, floor.min),
-      math.max(padded.high, floor.max),
+      math.min(padded.low, minimum.min),
+      math.max(padded.high, minimum.max),
     );
   }
 
   /// 작성: 2026-10-10 11:38:05 · nada
-  /// 함수: _floorFor
-  /// 목적: 이 데이터에 견줄 최소 범위를 고른다. `zeroAnchored` 축에서 값이
-  ///       음수 쪽에 있으면 최소 범위를 0 아래로 뒤집는다 — 음수 쪽으로
-  ///       나오는 방향의 속도가 그렇다. 뒤집지 않으면 0 위쪽 빈 칸이 축
-  ///       절반을 차지한다.
-  /// 인자: low, high — 그릴 값의 최솟값 · 최댓값
-  /// 반환: 견줄 최소 범위
-  ChartAxisRange _floorFor(double low, double high) {
-    if (kind != ChartScaleKind.zeroAnchored || -low <= high) return minimum;
-    return ChartAxisRange(
-      min: -minimum.max,
-      max: -minimum.min,
-      tickStep: minimum.tickStep,
-    );
-  }
-
-  /// 작성: 2026-10-10 11:38:05 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 함수: _paddedBounds
-  /// 목적: 넓힐 축의 양 끝을 모양에 맞춰 잡고 여유를 더한다.
+  /// 목적: 축의 양 끝을 모양에 맞춰 잡고 여유를 더한다.
   ///       - `symmetric` — 큰 쪽 절댓값으로 위아래를 같게 잡는다
-  ///       - `zeroAnchored` — 0 을 한쪽 끝으로 잡는다. 반대쪽으로 여유
-  ///         폭(`tolerance`)보다 작게 넘은 값은 적분 오차로 보고 0 에
-  ///         붙인다. 그 쪽에는 여유를 더하지 않는다
+  ///       - `zeroAnchored` — 아래끝은 0 이다. 0 아래 값이 들어오면(그릴
+  ///         값이 크기라 생기지 않는다) 잘리지 않게 그만큼 내리고 여유를
+  ///         더한다
   ///       - `free` — 데이터 최소 · 최대 그대로 잡는다
   /// 인자: low, high — 그릴 값의 최솟값 · 최댓값
-  ///       tolerance — 최소 범위가 봐주는 여유 폭
   /// 반환: 여유를 더한 아래끝 · 위끝
-  /// 식: pad = (위끝 - 아래끝) x headroomRatio, 0 에 붙인 끝에는 더하지 않는다
-  ({double low, double high}) _paddedBounds(
-    double low,
-    double high,
-    double tolerance,
-  ) {
+  /// 식: pad = (위끝 - 아래끝) x headroomRatio, 0 인 아래끝에는 더하지 않는다
+  ({double low, double high}) _paddedBounds(double low, double high) {
     switch (kind) {
       case ChartScaleKind.symmetric:
         final peak = math.max(low.abs(), high.abs()); // 큰 쪽 절댓값
         final pad = 2 * peak * headroomRatio; // 한쪽 끝에 더할 여유
         return (low: -(peak + pad), high: peak + pad);
       case ChartScaleKind.zeroAnchored:
-        final bottom = low < -tolerance ? low : 0.0; // 0 에 붙인 아래끝
-        final top = high > tolerance ? high : 0.0; // 0 에 붙인 위끝
+        final bottom = math.min(low, 0.0); // 0 이거나 그보다 아래인 아래끝
+        final top = math.max(high, 0.0); // 0 이거나 그보다 위인 위끝
         final pad = (top - bottom) * headroomRatio; // 한쪽 끝에 더할 여유
-        return (
-          low: bottom == 0.0 ? 0.0 : bottom - pad,
-          high: top == 0.0 ? 0.0 : top + pad,
-        );
+        return (low: bottom < 0.0 ? bottom - pad : 0.0, high: top + pad);
       case ChartScaleKind.free:
         final pad = (high - low) * headroomRatio; // 한쪽 끝에 더할 여유
         return (low: low - pad, high: high + pad);

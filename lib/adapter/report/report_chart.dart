@@ -172,10 +172,10 @@ class ReportChartAxes {
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-10 11:48:41 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 변수: speed
-  /// 목적: 속도 차트의 세로축. 0 을 한쪽 끝으로 둔다. 속도는 부호를 지우지
-  ///       않아 운행 방향 한쪽은 음수로 나오고, 그때는 0 이 위끝이 된다.
+  /// 목적: 속도 차트의 세로축. 속도의 크기를 그리므로 0 을 아래끝으로
+  ///       둔다(`seriesOf()` 참고).
   /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 속도 축 첫
   ///       단계와 같다
   static const ChartAxisSpec speed = ChartAxisSpec(
@@ -203,17 +203,18 @@ class ReportChartAxes {
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-10 11:48:41 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 변수: jerk
   /// 목적: 저크(가속도가 얼마나 빠르게 변하는지) 차트의 세로축. 0 을
   ///       가운데 둔다.
   /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 저크 축 첫
   ///       단계와 같다
-  /// 미구현: 저크는 거르지 않은 가속도를 그대로 미분해 만든 값이라 빠르게
-  ///       흔들리는 성분이 남아 있다. 원본 리포트의 저크 곡선은 저역통과
-  ///       필터를 거친 뒤 미분한 것이라 훨씬 매끈하다. 이 차트는 지금
-  ///       모양만 참고할 수 있고, X · Y 진동 축과 함께 필터가 정해질 때
-  ///       같이 정리한다
+  /// 미구현: 저크는 40Hz 저역을 거친 수직 진동(지표 계산 전 신호 처리
+  ///       뒤 `zSeries`)에서 만든 가속도를 그대로 미분한 값이라, 수 Hz
+  ///       이상 흔들림이 그대로 남는다. 원본 리포트의 저크 곡선은 훨씬
+  ///       매끈하다. 이 차트는 지금 모양만 참고할 수 있고, 저크만 더 낮게
+  ///       거르는 처리가 정해질 때 같이 정리한다.
+  ///       미확인: 원본 리포트가 저크를 어떤 차단 주파수로 걸러 그렸는지
   static const ChartAxisSpec jerk = ChartAxisSpec(
     key: 'jerk',
     label: 'jerk (m/s^3)',
@@ -256,9 +257,15 @@ class ReportChartAxes {
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 함수: seriesOf
   /// 목적: 축 사양에 맞는 시계열을 측정 결과에서 꺼낸다. 어떤 축이 어떤
-  ///       시계열을 그리는지 정하는 곳을 한 군데로 둔다.
+  ///       시계열을 그리는지 정하는 곳을 한 군데로 둔다. 리포트 차트와
+  ///       결과 화면 그래프가 함께 쓴다.
+  ///       속도는 크기(절댓값)로 바꿔 꺼낸다 — 최대 속도(`maxSpeed`)와
+  ///       위치(누적 크기)도 크기 기준이고, 운행 방향은 리포트 머리말 운전
+  ///       방향 칸이 말한다. 저장된 `speedSeries` 는 부호 그대로 둔다
+  ///       (2026-10-10 사용자 결정).
   /// 인자: spec — 꺼낼 축의 사양
   ///       result — 시계열을 가진 측정 결과
   /// 반환: 그 축이 그릴 시계열. 아직 채워지지 않았으면 빈 목록
@@ -275,7 +282,7 @@ class ReportChartAxes {
       case 'pos':
         return result.positionSeries;
       case 'vel':
-        return result.speedSeries;
+        return <double>[for (final v in result.speedSeries) v.abs()];
       case 'acc':
         return result.accelSeries;
       case 'jerk':
@@ -305,6 +312,7 @@ class ChartSample {
 }
 
 /// 작성: 2026-09-17 10:05:00 · nada
+/// 수정: 2026-10-11 15:34:38 · nada
 /// 함수: reduceSeries
 /// 목적: 시계열을 가로 칸 수만큼으로 나눠, 칸마다 가장 작은 값과 가장 큰
 ///       값만 남긴다.
@@ -321,26 +329,80 @@ class ChartSample {
 ///       않고 그대로 옮겨 담는다
 List<ChartSample> reduceSeries(List<double> values, {required int columns}) {
   assert(columns > 0, '칸 수는 차트 가로 픽셀 수라 0 이하가 될 수 없다');
-
   if (values.isEmpty) return const <ChartSample>[];
+  // → 로직 이동: _reduceRun()
+  return _reduceRun(values, 0, values.length, columns);
+}
+
+/// 작성: 2026-10-11 15:34:38 · nada
+/// 함수: reduceSeriesSegments
+/// 목적: 시계열을 줄이되, 0 을 미측정으로 보는 시계열(소음)은 0 구간에서
+///       끊어 실측 구간마다 따로 줄인다. 0 구간에 선을 그으면 재지 않은
+///       값을 그린 것이 된다(관통 원칙 1). 한 칸 안에 0 과 실측이 섞이면
+///       실측만으로 최소 · 최대를 낸다. 칸 나누기는 `reduceSeries()` 와
+///       같아, 끊지 않을 때는 그 결과 한 덩어리와 같다.
+/// 인자: values — 줄일 시계열
+///       columns — 나눌 칸 수. 차트 가로 픽셀 수를 넘긴다
+///       skipZeros — 0 을 미측정으로 보고 끊을지
+/// 반환: 이어 그릴 구간 목록. 구간마다 자리 번호가 커지는 차례로 놓인
+///       표본이고, 구간끼리도 차례대로다. 그릴 표본이 없으면 빈 목록
+List<List<ChartSample>> reduceSeriesSegments(
+  List<double> values, {
+  required int columns,
+  required bool skipZeros,
+}) {
+  assert(columns > 0, '칸 수는 차트 가로 픽셀 수라 0 이하가 될 수 없다');
+  final segments = <List<ChartSample>>[]; // 모아 갈 구간
+  var runStart = -1; // 지금 이어지는 실측 구간의 첫 자리, 구간 밖이면 -1
+  for (var index = 0; index <= values.length; index++) {
+    final valid =
+        index < values.length &&
+        !(skipZeros && values[index] == 0.0); // 이 자리를 그릴지
+    if (valid && runStart < 0) runStart = index;
+    if (!valid && runStart >= 0) {
+      // → 로직 이동: _reduceRun()
+      segments.add(_reduceRun(values, runStart, index, columns));
+      runStart = -1;
+    }
+  }
+  return segments;
+}
+
+/// 작성: 2026-10-11 15:34:38 · nada
+/// 함수: _reduceRun
+/// 목적: 시계열의 한 구간 [start, end) 를 줄인다. 칸 경계는 시계열 전체를
+///       `columns` 칸으로 나눈 자리를 그대로 쓰고, 이 구간과 겹치는
+///       칸마다 겹친 부분의 최소 · 최대만 남긴다. 전체 표본이 칸 수의 두
+///       배 이하면 구간을 줄이지 않고 옮겨 담는다.
+/// 인자: values — 시계열 전체
+///       start, end — 줄일 구간의 첫 자리와 끝 다음 자리. start < end
+///       columns — 나눌 칸 수
+/// 반환: 자리 번호가 커지는 차례로 놓인 표본 목록
+List<ChartSample> _reduceRun(
+  List<double> values,
+  int start,
+  int end,
+  int columns,
+) {
+  assert(start < end, '빈 구간을 줄이려 했다: $start ~ $end');
   if (values.length <= columns * 2) {
-    return List<ChartSample>.generate(
-      values.length,
-      (index) => ChartSample(index, values[index]),
-    );
+    return <ChartSample>[
+      for (var index = start; index < end; index++)
+        ChartSample(index, values[index]),
+    ];
   }
 
   final reduced = <ChartSample>[]; // 칸마다 최대 두 점씩 담을 결과
   for (var column = 0; column < columns; column++) {
-    final start = values.length * column ~/ columns; // 이 칸의 첫 자리
-    final end = values.length * (column + 1) ~/ columns; // 다음 칸의 첫 자리
-    // 표본이 칸 수의 두 배를 넘을 때만 여기까지 오므로 빈 칸은 생기지
-    // 않는다. 도달하지 않을 갈래를 두는 대신 확인만 해 둔다
-    assert(start < end, '표본보다 칸이 많아 빈 칸이 생겼다');
+    final columnStart = values.length * column ~/ columns; // 이 칸의 첫 자리
+    final columnEnd = values.length * (column + 1) ~/ columns; // 다음 칸 첫 자리
+    final from = math.max(columnStart, start); // 구간과 겹친 첫 자리
+    final to = math.min(columnEnd, end); // 구간과 겹친 끝 다음 자리
+    if (from >= to) continue;
 
-    var minIndex = start; // 이 칸에서 가장 작은 값의 자리
-    var maxIndex = start; // 이 칸에서 가장 큰 값의 자리
-    for (var index = start + 1; index < end; index++) {
+    var minIndex = from; // 겹친 부분에서 가장 작은 값의 자리
+    var maxIndex = from; // 겹친 부분에서 가장 큰 값의 자리
+    for (var index = from + 1; index < to; index++) {
       if (values[index] < values[minIndex]) minIndex = index;
       if (values[index] > values[maxIndex]) maxIndex = index;
     }
@@ -583,7 +645,14 @@ class ReportChartRenderer {
     _drawValueAxis(canvas, frame, valueTicks, spec.label);
     _drawTimeAxis(canvas, frame, timeTicks);
     if (values.isNotEmpty) {
-      _drawSeries(canvas, frame, values, box.width, result.sampleRate);
+      _drawSeries(
+        canvas,
+        frame,
+        values,
+        box.width,
+        result.sampleRate,
+        skipZeros: spec.scale.ignoreZeros,
+      );
       _drawAnnotations(canvas, frame, spec, values, result);
     }
   }
@@ -879,14 +948,16 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-10 11:48:41 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 함수: _drawSeries
   /// 목적: 파형을 꺾은선으로 얹는다.
-  ///       1. 표본을 가로 픽셀 열 수만큼으로 줄인다
+  ///       1. 표본을 가로 픽셀 열 수만큼으로 줄인다. 0 을 미측정으로 보는
+  ///          축(소음)은 0 구간에서 끊어 실측 구간만 남긴다
   ///       2. 축 틀 밖으로 나가는 부분을 잘라 낸다. 축 범위는 모든 값을
-  ///          담게 고르지만 소음 0(미측정)은 범위에서 빠져 축 아래로
-  ///          나간다. 그 선이 옆 차트 자리까지 뻗지 않게 한다
-  ///       3. 줄인 표본을 차례로 이어 긋는다
+  ///          담게 고르므로 보통은 잘릴 것이 없고, 계산이 어긋났을 때 선이
+  ///          옆 차트 자리까지 뻗지 않게 막는 몫이다
+  ///       3. 구간마다 줄인 표본을 차례로 이어 긋는다. 구간 사이는 잇지
+  ///          않는다
   ///       자르기와 선 모양 설정은 그리기 도구에 그대로 남으므로, 저장한
   ///       상태를 되돌려 다음 차트에 새지 않게 한다.
   /// 인자: canvas — 그리기 도구
@@ -894,16 +965,22 @@ class ReportChartRenderer {
   ///       values — 그릴 시계열
   ///       columnCount — 줄일 때 나눌 칸 수. 축 틀의 가로 픽셀 수다
   ///       sampleRate — 표본 주기 (Hz)
+  ///       skipZeros — 0 을 미측정으로 보고 선을 끊을지
   /// 식: t = index / sampleRate
   void _drawSeries(
     PdfGraphics canvas,
     _ChartFrame frame,
     List<double> values,
     int columnCount,
-    double sampleRate,
-  ) {
-    // → 로직 이동: reduceSeries()
-    final samples = reduceSeries(values, columns: columnCount); // 줄인 표본
+    double sampleRate, {
+    required bool skipZeros,
+  }) {
+    // → 로직 이동: reduceSeriesSegments()
+    final segments = reduceSeriesSegments(
+      values,
+      columns: columnCount,
+      skipZeros: skipZeros,
+    ); // 이어 그릴 구간마다 줄인 표본
 
     canvas
       ..saveContext()
@@ -919,13 +996,15 @@ class ReportChartRenderer {
       ..setLineJoin(PdfLineJoin.miter)
       ..setLineCap(PdfLineCap.butt);
 
-    for (var i = 0; i < samples.length; i++) {
-      final x = frame.xOfTime(samples[i].index / sampleRate); // 표본의 가로 자리
-      final y = frame.yOfValue(samples[i].value); // 표본의 세로 자리
-      if (i == 0) {
-        canvas.moveTo(x, y);
-      } else {
-        canvas.lineTo(x, y);
+    for (final samples in segments) {
+      for (var i = 0; i < samples.length; i++) {
+        final x = frame.xOfTime(samples[i].index / sampleRate); // 가로 자리
+        final y = frame.yOfValue(samples[i].value); // 세로 자리
+        if (i == 0) {
+          canvas.moveTo(x, y);
+        } else {
+          canvas.lineTo(x, y);
+        }
       }
     }
 

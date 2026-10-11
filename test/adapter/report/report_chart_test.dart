@@ -119,9 +119,9 @@ void main() {
       expect(range.max, 10.0);
     });
 
-    test('최소 범위 안의 값은 원본 리포트 범위 그대로 보인다', () {
+    test('여유를 더해도 최소 범위 안인 값은 원본 리포트 범위 그대로 보인다', () {
       final x = ReportChartAxes.x.rangeFor(const <double>[0.1]);
-      final noise = ReportChartAxes.noise.rangeFor(const <double>[41.0, 53.5]);
+      final noise = ReportChartAxes.noise.rangeFor(const <double>[42.0, 52.0]);
 
       expect(<double>[x.min, x.max], const <double>[-4.0, 4.0]);
       expect(<double>[noise.min, noise.max], const <double>[40.0, 54.0]);
@@ -134,23 +134,11 @@ void main() {
       expect(range.max, greaterThanOrEqualTo(999.0));
     });
 
-    test('여유 폭 끝에 걸친 값은 최소 범위 안이다', () {
-      // 여유는 축 길이에 비례한다. 코드와 같은 식으로 끝값을 만들어
-      // 부동소수점 오차 때문에 갈라지지 않게 한다
-      final edge = 10.0 + 10.0 * ChartAxisRange.toleranceRatio; // 여유의 끝
-      final range = ReportChartAxes.position.rangeFor(<double>[0.0, edge]);
+    test('최소 범위 끝에 닿는 값은 여유를 두고 넓어진다', () {
+      // 2026-10-10 검증에서 정속 1.005 m/s 가 0 ~ 1 축 틀에 눌렸다
+      final range = ReportChartAxes.speed.rangeFor(const <double>[0.0, 1.005]);
 
-      expect(range.max, 10.0);
-    });
-
-    test('적분 잔차로 0 아래로 살짝 내려간 위치는 축을 넓히지 않는다', () {
-      final range = ReportChartAxes.position.rangeFor(const <double>[
-        -0.15,
-        9.0,
-      ]);
-
-      expect(range.min, 0.0);
-      expect(range.max, 10.0);
+      expect(range.max, greaterThan(1.005 * (1 + ChartScale.headroomRatio)));
     });
 
     test('실측 최대 속도는 0 ~ 2 m/s 에 담긴다', () {
@@ -163,14 +151,15 @@ void main() {
       expect(range.max, closeTo(2.0, 1e-9));
     });
 
-    test('음수 쪽으로 나온 속도는 0 이 위끝이 된다', () {
-      final range = ReportChartAxes.speed.rangeFor(const <double>[
-        -1.743390961,
-        0.0,
-      ]);
+    test('속도 차트는 부호와 상관없이 크기를 그린다', () {
+      final result = _result().copyWith(
+        speedSeries: const <double>[0.0, -0.5, -1.2, 0.3],
+      ); // 운행 방향 한쪽이 음수로 나온 속도
+      final drawn = ReportChartAxes.seriesOf(ReportChartAxes.speed, result);
 
-      expect(range.min, closeTo(-2.0, 1e-9));
-      expect(range.max, 0.0);
+      expect(drawn, const <double>[0.0, 0.5, 1.2, 0.3]);
+      expect(result.speedSeries[1], -0.5, reason: '저장된 속도는 그대로');
+      expect(ReportChartAxes.speed.rangeFor(drawn).min, 0.0);
     });
 
     test('앱 실측 소음은 0 을 빼고 40 ~ 65 dBA 로 넓어진다', () {
@@ -230,6 +219,69 @@ void main() {
 
       expect(ticks.length, 6);
       expect(ticks.last, 1.0);
+    });
+  });
+
+  group('reduceSeriesSegments — 0 구간 끊기', () {
+    test('끊지 않으면 reduceSeries 와 같은 한 덩어리다', () {
+      final values = _wave(5000, spikeIndex: 1200, spikeValue: 9.0);
+      final whole = reduceSeries(values, columns: 300);
+      final segments = reduceSeriesSegments(
+        values,
+        columns: 300,
+        skipZeros: false,
+      );
+
+      expect(segments, hasLength(1));
+      expect(
+        segments.single.map((s) => s.index).toList(),
+        whole.map((s) => s.index).toList(),
+      );
+    });
+
+    test('0 구간에서 선을 끊고 0 은 그리지 않는다', () {
+      final values = <double>[
+        ...List<double>.filled(1000, 0.0), // 마이크 창이 차기 전
+        ...List<double>.filled(2000, 50.0),
+        ...List<double>.filled(500, 0.0), // 중간에 끊긴 구간
+        ...List<double>.filled(1500, 60.0),
+      ]; // 0 과 실측이 섞인 소음
+      final segments = reduceSeriesSegments(
+        values,
+        columns: 300,
+        skipZeros: true,
+      );
+
+      expect(segments, hasLength(2));
+      for (final segment in segments) {
+        expect(segment.map((s) => s.value), everyElement(isNot(0.0)));
+      }
+      expect(segments.first.first.index, 1000);
+      expect(segments.last.first.index, 3500);
+      // 값이 고른 칸은 칸 첫 자리 하나만 남으므로, 마지막 표본은 마지막
+      // 칸(한 칸 = 16 표본) 안에 있으면 된다
+      expect(
+        segments.last.last.index,
+        greaterThanOrEqualTo(values.length - values.length ~/ 300 - 1),
+      );
+    });
+
+    test('한 칸에 0 과 실측이 섞이면 실측만으로 최소 · 최대를 낸다', () {
+      // 5000 표본을 10칸으로 나누면 한 칸이 500 표본이다. 둘째 칸
+      // (500 ~ 999) 앞 절반이 0 이고 뒤 절반이 실측이다
+      final values = <double>[
+        ...List<double>.filled(750, 0.0),
+        for (var i = 0; i < 4250; i++) 40.0 + (i % 7),
+      ];
+      final segments = reduceSeriesSegments(
+        values,
+        columns: 10,
+        skipZeros: true,
+      );
+
+      expect(segments, hasLength(1));
+      final first = segments.single.take(2).map((s) => s.value); // 둘째 칸
+      expect(first, everyElement(greaterThanOrEqualTo(40.0)));
     });
   });
 

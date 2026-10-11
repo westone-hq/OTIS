@@ -295,6 +295,7 @@ class MeasurementAssembler {
   static const double _mgToMetersPerSecondSquared = 9.80665e-3;
 
   /// 작성: 2026-09-15 14:32:07 · nada
+  /// 수정: 2026-10-11 15:34:38 · nada
   /// 함수: _deriveKinematics
   /// 목적: 수직 진동 시계열에서 가속도 · 속도 · 누적 이동량 · 저크와
   ///       최대 속도 · 운행 거리를 만든다. 순서대로 한다.
@@ -322,12 +323,13 @@ class MeasurementAssembler {
   ///     speed(i) = (누적합 accel(0..i)) x dt - 두 끝을 잇는 직선
   ///     position(i) = (누적합 |speed(0..i)|) x dt
   ///     jerk(i) = (accel(i+1) - accel(i-1)) / (2 x dt)
-  /// 미구현: 저크를 원본 가속도에서 바로 미분한다. 저역통과(낮은 주파수만
-  ///       통과시키고 빠른 흔들림을 걸러내는 처리)를 거치지 않아 고주파
-  ///       잡음이 그대로 남은 곡선이 나온다. 원본 리포트의 저크 곡선은
-  ///       저역통과 뒤 미분한 매끈한 선이다. 진동 필터가 확정될 때
-  ///       저역통과 후 미분으로 바꾼다. 그때까지 저크 차트는 형태만
-  ///       참고한다.
+  /// 미구현: 저크를 가속도에서 바로 미분한다. 받는 `zSeries` 는 지표 계산
+  ///       전 신호 처리(`SignalConditioner`)에서 40Hz 저역(낮은 주파수만
+  ///       통과시키고 빠른 흔들림을 걸러내는 처리)을 거친 값이라, 미분하면
+  ///       수 Hz 이상 흔들림이 그대로 남은 곡선이 나온다. 원본 리포트의
+  ///       저크 곡선은 훨씬 매끈하다. 저크만 더 낮게 거르는 처리가 정해질
+  ///       때 바꾼다. 그때까지 저크 차트는 형태만 참고한다.
+  ///       미확인: 원본 리포트가 저크를 어떤 차단 주파수로 걸렀는지
   static _Kinematics _deriveKinematics(
     List<double> zSeries,
     double sampleRate,

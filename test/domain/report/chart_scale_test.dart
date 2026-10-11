@@ -82,29 +82,40 @@ void main() {
       _expectRange(_vibrationX.rangeFor(const <double>[]), -4, 4, 2);
     });
 
-    test('최소 범위 안의 값은 원본 리포트 눈금 그대로 보인다', () {
+    test('여유를 더해도 최소 범위 안인 값은 원본 리포트 눈금 그대로 보인다', () {
+      // ±3.0 에 여유 0.3 을 더해도 ±4 안이다
       _expectRange(
-        _vibrationX.rangeFor(const <double>[-3.9, 0.2, 3.9]),
+        _vibrationX.rangeFor(const <double>[-3.0, 0.2, 3.0]),
         -4,
         4,
         2,
       );
-      _expectRange(_noise.rangeFor(const <double>[41.0, 53.5]), 40, 54, 2);
+      // 42 ~ 52 에 여유 0.5 를 더해도 40 ~ 54 안이다
+      _expectRange(_noise.rangeFor(const <double>[42.0, 52.0]), 40, 54, 2);
+    });
+
+    test('값이 최소 범위 안이어도 여유가 넘치면 넓힌다', () {
+      // 2026-10-11 지시 "값이 그래프 끝에 닿지 않게 여유를 늘 둔다".
+      // 3.9 에 여유 0.39 를 더하면 4.29 라 ±4 를 넘는다
+      final range = _vibrationX.rangeFor(const <double>[-3.9, 3.9]);
+      _expectRange(range, -6, 6, 2);
+      expect(range.max, greaterThan(3.9 * (1 + 2 * ChartScale.headroomRatio)));
+    });
+
+    test('최소 범위 끝과 같은 값도 넓힌다', () {
+      // 예전에는 축 길이 2% 를 봐줘 1.005 m/s 가 0 ~ 1 축 틀에 눌렸다
+      final range = _speed.rangeFor(const <double>[0.0, 1.005]);
+      expect(range.max, greaterThan(1.005));
     });
 
     test('소음의 0 은 미측정이라 범위에 넣지 않는다', () {
       _expectRange(
-        _noise.rangeFor(const <double>[0.0, 0.0, 41.0, 53.5]),
+        _noise.rangeFor(const <double>[0.0, 0.0, 42.0, 52.0]),
         40,
         54,
         2,
       );
       _expectRange(_noise.rangeFor(const <double>[0.0, 0.0]), 40, 54, 2);
-    });
-
-    test('적분 오차로 0 아래로 살짝 내려간 위치는 축을 넓히지 않는다', () {
-      // 최소 범위 0~10 의 여유 폭은 0.2
-      _expectRange(_position.rangeFor(const <double>[-0.003, 9.79]), 0, 10, 2);
     });
   });
 
@@ -126,13 +137,13 @@ void main() {
       _expectRange(range, 40, 65, 5);
     });
 
-    test('양수 쪽 속도 0 ~ 1.74 m/s 는 0 ~ 2, 눈금 0.5 가 된다', () {
-      final range = _speed.rangeFor(const <double>[-0.004, 1.74]);
+    test('속도 크기 0 ~ 1.74 m/s 는 0 ~ 2, 눈금 0.5 가 된다', () {
+      final range = _speed.rangeFor(const <double>[0.0, 1.74]);
       _expectRange(range, 0, 2, 0.5);
     });
 
     test('운행 거리 57.09 m 는 0 ~ 60, 눈금 10 이 된다', () {
-      final range = _position.rangeFor(const <double>[-0.003, 57.09]);
+      final range = _position.rangeFor(const <double>[0.0, 57.09]);
       _expectRange(range, 0, 60, 10);
     });
 
@@ -153,14 +164,15 @@ void main() {
       expect(range.ticks(), contains(closeTo(0.0, 1e-9)));
     });
 
-    test('음수 쪽 속도는 0 이 위끝이 된다', () {
-      final range = _speed.rangeFor(const <double>[-1.74, 0.004]);
-      _expectRange(range, -2, 0, 0.5);
+    test('0 아래끝 축은 값이 0 이상이면 아래끝이 0 이다', () {
+      final range = _position.rangeFor(const <double>[0.0, 25.0]);
+      expect(range.min, 0.0);
     });
 
-    test('음수 쪽 속도라도 최소 범위 안이면 뒤집은 최소 범위를 쓴다', () {
-      final range = _speed.rangeFor(const <double>[-0.6, 0.0]);
-      _expectRange(range, -1, 0, 0.2);
+    test('0 아래끝 축에 0 아래 값이 오면 잘리지 않게 아래끝을 내린다', () {
+      final range = _position.rangeFor(const <double>[-0.5, 5.0]);
+      expect(range.min, lessThan(-0.5));
+      _expectWellFormed(range);
     });
 
     test('자유 축은 0 을 품지 않는다', () {
