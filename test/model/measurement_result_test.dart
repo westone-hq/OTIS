@@ -48,6 +48,7 @@ void main() {
       analysisType: '사이클 저크(가속도증가율) 테스트',
       postalCode: '10575',
       notes: '도어 쪽 소음 큼\n다음 점검 때 재측정',
+      engineerName: '홍길동',
     ); // 저장할 결과
     final restored = MeasurementResult.fromJson(
       jsonEncode(original.toMap()),
@@ -58,6 +59,7 @@ void main() {
     expect(restored.analysisType, '사이클 저크(가속도증가율) 테스트');
     expect(restored.postalCode, '10575');
     expect(restored.notes, '도어 쪽 소음 큼\n다음 점검 때 재측정');
+    expect(restored.engineerName, '홍길동');
   });
 
   test('현장 정보 새 항목이 없는 예전 JSON 은 모두 null 로 읽는다', () {
@@ -66,7 +68,8 @@ void main() {
       ..remove('loadUnit')
       ..remove('analysisType')
       ..remove('postalCode')
-      ..remove('notes'); // 이 필드들이 생기기 전 형태로 되돌린 표
+      ..remove('notes')
+      ..remove('engineerName'); // 이 필드들이 생기기 전 형태로 되돌린 표
 
     final restored = MeasurementResult.fromJson(jsonEncode(legacy)); // 되읽음
 
@@ -75,6 +78,7 @@ void main() {
     expect(restored.analysisType, isNull);
     expect(restored.postalCode, isNull);
     expect(restored.notes, isNull);
+    expect(restored.engineerName, isNull);
   });
 
   test('신호 처리 방식이 JSON 쓰기 · 읽기 왕복에서 그대로 남는다', () {

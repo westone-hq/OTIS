@@ -9,10 +9,10 @@ import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
-/// 수정: 2026-10-04 16:44:32 · nada
+/// 수정: 2026-10-11 19:11:50 · nada
 /// 클래스: SettingsScreen
-/// 목적: 설정 화면. 결과 수신 이메일 목록 관리(추가 · 삭제)와 앱 버전
-///       확인을 한 화면에서 처리한다. 어르신도 쓰기 편하도록 버튼 높이를 64dp 이상으로
+/// 목적: 설정 화면. 엔지니어 이름, 결과 수신 이메일 목록 관리(추가 ·
+///       삭제)와 앱 버전 확인을 한 화면에서 처리한다. 어르신도 쓰기 편하도록 버튼 높이를 64dp 이상으로
 ///       두고, 오류는 테두리 색 · 아이콘 · 문구 3중으로 겹쳐 보여준다.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,11 +22,14 @@ class SettingsScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
-/// 수정: 2026-10-04 16:44:32 · nada
+/// 수정: 2026-10-11 19:11:50 · nada
 /// 클래스: _SettingsScreenState
-/// 목적: 설정 화면의 상태를 관리한다. 수신 이메일 목록을 불러오고, 바꿀
-///       때마다 통째로 저장한다.
+/// 목적: 설정 화면의 상태를 관리한다. 엔지니어 이름과 수신 이메일 목록을
+///       불러오고, 바꿀 때마다 저장한다.
 class _SettingsScreenState extends State<SettingsScreen> {
+  /// 엔지니어 이름 입력창 컨트롤러. 입력할 때마다 기기에 저장한다
+  final _engineerCtl = TextEditingController();
+
   /// `TextEditingController`(입력창에 지금 적힌 글자를 코드에서 읽고
   /// 쓸 수 있게 연결해 주는 객체). 이메일 입력창에 연결해 두면,
   /// 사용자가 입력한 값을 `_emailCtl.text`로 읽거나 저장된 값을
@@ -50,14 +53,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _version;
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: initState
   /// 목적: 이 화면이 나타날 때 한 번, 입력 컨트롤러를 만들고 저장된
-  ///       이메일 목록과 앱 버전을 불러와 화면에 채운다.
+  ///       엔지니어 이름 · 이메일 목록과 앱 버전을 불러와 화면에 채운다.
   @override
   void initState() {
     super.initState();
     _emailCtl = TextEditingController();
+    _loadEngineerName(); // → 로직 이동: _loadEngineerName()
     _loadEmails(); // → 로직 이동: _loadEmails()
     _loadVersion(); // → 로직 이동: _loadVersion()
   }
@@ -81,6 +85,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _version = version);
   }
 
+  /// 작성: 2026-10-11 19:11:50 · nada
+  /// 함수: _loadEngineerName
+  /// 목적: 저장된 엔지니어 이름을 불러와 입력창을 채운다.
+  Future<void> _loadEngineerName() async {
+    // → 로직 이동: PrefsStore.loadEngineerName()
+    final saved = await PrefsStore.instance.loadEngineerName(); // 저장된 이름
+    if (!mounted || saved == null) return;
+    _engineerCtl.text = saved;
+  }
+
   /// 작성: 2026-08-19 10:57:06 · 박건준
   /// 수정: 2026-10-04 16:44:32 · nada
   /// 함수: _loadEmails
@@ -93,10 +107,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: dispose
   /// 목적: 화면이 사라질 때 입력 컨트롤러를 해제해 메모리 누수를 막는다.
   @override
   void dispose() {
+    _engineerCtl.dispose();
     _emailCtl.dispose();
     super.dispose();
   }
@@ -216,17 +232,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: build
-  /// 목적: 설정 화면을 그린다. 수신 이메일 목록 → 추가 입력창 → 앱 버전
-  ///       순으로 세로로 배치한다.
+  /// 목적: 설정 화면을 그린다. 엔지니어 이름 → 수신 이메일 목록 → 추가
+  ///       입력창 → 앱 버전 순으로 세로로 배치한다. 엔지니어 이름은
+  ///       선택이고, 측정을 저장할 때의 이름이 그 측정 리포트의 엔지니어
+  ///       칸에 찍힌다.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
       body: AppScrollBody(
         children: [
-          // 1. 결과 수신 이메일 목록
+          // 1. 엔지니어 이름
+          Text('엔지니어 이름 (선택)', style: AppText.bodyBold),
+          const SizedBox(height: AppDims.gap),
+          TextField(
+            controller: _engineerCtl,
+            style: AppText.body,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(
+              hintText: '이름',
+              prefixIcon: Icon(Icons.person_outline, color: AppColors.textSub),
+            ),
+            // → 로직 이동: PrefsStore.saveEngineerName()
+            onChanged: (name) => PrefsStore.instance.saveEngineerName(name),
+          ),
+          const SizedBox(height: AppDims.gap),
+          Text('리포트 엔지니어 칸에 찍힙니다', style: AppText.caption),
+          const SizedBox(height: AppDims.gap3),
+
+          // 2. 결과 수신 이메일 목록
           Text('결과 수신 이메일', style: AppText.bodyBold),
           const SizedBox(height: AppDims.gap),
           if (_emails.isEmpty) Text('등록된 이메일이 없습니다', style: AppText.caption),
@@ -236,7 +272,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
           const SizedBox(height: AppDims.gap),
 
-          // 2. 새 이메일 추가
+          // 3. 새 이메일 추가
           TextField(
             controller: _emailCtl,
             keyboardType: TextInputType.emailAddress,
@@ -258,7 +294,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: AppDims.gap3),
 
-          // 3. 앱 버전
+          // 4. 앱 버전
           _buildListTile(title: '앱 버전', trailingText: _version ?? ''),
         ],
       ),

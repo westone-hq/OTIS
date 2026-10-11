@@ -3,8 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/adapter/measurement_recorder.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
@@ -105,6 +107,8 @@ void main() {
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('otis_recorder_test');
     PathProviderPlatform.instance = _TempPathProvider(temp.path);
+    // 저장할 때 설정의 엔지니어 이름을 읽는다. 기본은 비어 있는 설정
+    SharedPreferences.setMockInitialValues({});
   });
 
   tearDown(() async {
@@ -296,6 +300,38 @@ void main() {
         '${dir.path}/${MeasurementRepository.metaFileName}',
       ).readAsString();
     }
+
+    test('저장할 때 설정의 엔지니어 이름을 싣고, 나중에 설정을 바꿔도 그대로다', () async {
+      await PrefsStore.instance.saveEngineerName('  홍길동 ');
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(count: 1024),
+        site: _site,
+        nativeRecordPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+      expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
+
+      await PrefsStore.instance.saveEngineerName('김철수');
+      final saved = await MeasurementRepository.instance.load(
+        '20260114-110359',
+      ); // 설정을 바꾼 뒤 다시 읽은 측정 결과
+      expect(saved?.engineerName, '홍길동');
+    });
+
+    test('설정에 엔지니어 이름이 없으면 결과의 이름은 null 이다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(count: 1024),
+        site: _site,
+        nativeRecordPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+      expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
+
+      final saved = await MeasurementRepository.instance.load(
+        '20260114-110359',
+      ); // 저장한 측정 결과
+      expect(saved?.engineerName, isNull);
+    });
 
     test('저장한 결과의 표본 속도는 100Hz 이고 집계 파일에 처리 내역을 남긴다', () async {
       // 이벤트 1024개 × 3.906ms ≈ 4초 — 앞뒤 0.5초를 버려도 기준선 1초가 남는다

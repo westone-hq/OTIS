@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-11 16:58:59 · nada
+/// 수정: 2026-10-11 19:11:50 · nada
 /// 클래스: MeasurementResult
 /// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
 ///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
@@ -52,6 +52,10 @@ class MeasurementResult {
   /// 추가 참고사항. 메일 본문에만 쓰고 리포트에는 찍지 않는다. 비워
   /// 두었거나 예전 측정이면 null
   final String? notes;
+
+  /// 측정을 저장할 때 설정에 있던 엔지니어 이름. 나중에 설정을 바꿔도
+  /// 이 값은 바뀌지 않는다. 설정이 비어 있었거나 예전 측정이면 null
+  final String? engineerName;
 
   /// 측정 일시
   final DateTime dateTime;
@@ -123,7 +127,7 @@ class MeasurementResult {
   final String? signalConditioning;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-11 16:58:59 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -139,6 +143,7 @@ class MeasurementResult {
   ///       analysisType — 해석 종류. 예전 측정이면 null
   ///       postalCode — 우편번호 (숫자 5자리). 예전 측정이면 null
   ///       notes — 추가 참고사항. 비웠거나 예전 측정이면 null
+  ///       engineerName — 저장 시점 엔지니어 이름. 없으면 null
   ///       dateTime — 측정 일시
   ///       xPtp, yPtp, zPtp — 축별 진동 P2P (mg). 계산하지 않은 예전
   ///       측정이면 null
@@ -165,6 +170,7 @@ class MeasurementResult {
     this.analysisType,
     this.postalCode,
     this.notes,
+    this.engineerName,
     required this.dateTime,
     this.xPtp,
     this.yPtp,
@@ -188,7 +194,7 @@ class MeasurementResult {
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-11 16:58:59 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -209,6 +215,7 @@ class MeasurementResult {
     String? analysisType,
     String? postalCode,
     String? notes,
+    String? engineerName,
     DateTime? dateTime,
     double? xPtp,
     double? yPtp,
@@ -244,6 +251,7 @@ class MeasurementResult {
       analysisType: analysisType ?? this.analysisType,
       postalCode: postalCode ?? this.postalCode,
       notes: notes ?? this.notes,
+      engineerName: engineerName ?? this.engineerName,
       dateTime: dateTime ?? this.dateTime,
       xPtp: xPtp ?? this.xPtp,
       yPtp: yPtp ?? this.yPtp,
@@ -268,7 +276,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-11 16:58:59 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -289,6 +297,7 @@ class MeasurementResult {
       'analysisType': analysisType,
       'postalCode': postalCode,
       'notes': notes,
+      'engineerName': engineerName,
       'dateTime': dateTime.toIso8601String(),
       'xPtp': xPtp,
       'yPtp': yPtp,
@@ -313,7 +322,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-11 16:58:59 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -323,8 +332,8 @@ class MeasurementResult {
   ///       기종도 같다. 없으면 빈 문자열로 대신하지 않고 null 로 둔다.
   ///       신호 처리 방식도 같다. 이 필드가 생기기 전의 파일이면 null 로
   ///       남겨 처리 전 측정임을 드러낸다.
-  ///       하중 · 하중 단위 · 해석 종류 · 우편번호 · 참고사항도 같다.
-  ///       2026-10-11 이전 파일에는 없어 null 로 읽는다.
+  ///       하중 · 하중 단위 · 해석 종류 · 우편번호 · 참고사항 · 엔지니어
+  ///       이름도 같다. 2026-10-11 이전 파일에는 없어 null 로 읽는다.
   /// 인자: map — 저장돼 있던 Map 데이터
   /// 반환: 복원된 측정 결과
   factory MeasurementResult.fromMap(Map<String, dynamic> map) {
@@ -347,6 +356,7 @@ class MeasurementResult {
       analysisType: map['analysisType'] as String?,
       postalCode: map['postalCode'] as String?,
       notes: map['notes'] as String?,
+      engineerName: map['engineerName'] as String?,
       dateTime: map['dateTime'] != null
           ? DateTime.tryParse(map['dateTime'].toString()) ?? DateTime.now()
           : DateTime.now(),

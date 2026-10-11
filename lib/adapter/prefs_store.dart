@@ -85,6 +85,40 @@ class PrefsStore {
     await prefs.setStringList(_lastRecipientsKey, recipients);
   }
 
+  /// 작성: 2026-10-11 19:11:50 · nada
+  /// 변수: _engineerNameKey
+  /// 목적: 엔지니어 이름의 저장 키. 한 기기를 보통 한 사람이 써서 기기
+  ///       단위로 하나만 둔다.
+  /// 근거: 인용 — 2026-10-11 사용자 결정
+  static const String _engineerNameKey = 'engineerName';
+
+  /// 작성: 2026-10-11 19:11:50 · nada
+  /// 함수: loadEngineerName
+  /// 목적: 설정에 저장한 엔지니어 이름을 읽는다. 측정을 저장할 때
+  ///       (`MeasurementRecorder.record()`) 그 시점 이름을 결과에 싣고,
+  ///       설정 화면이 입력칸을 채우는 데 쓴다.
+  /// 반환: 엔지니어 이름. 저장한 적이 없거나 비어 있으면 null
+  Future<String?> loadEngineerName() async {
+    final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
+    final name = prefs.getString(_engineerNameKey)?.trim(); // 저장된 이름
+    return name == null || name.isEmpty ? null : name;
+  }
+
+  /// 작성: 2026-10-11 19:11:50 · nada
+  /// 함수: saveEngineerName
+  /// 목적: 엔지니어 이름을 저장한다. 비우면 지운다 — 빈 문자열을 이름으로
+  ///       남기지 않는다.
+  /// 인자: name — 저장할 이름. 앞뒤 공백은 지운다
+  Future<void> saveEngineerName(String name) async {
+    final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
+    final trimmed = name.trim(); // 앞뒤 공백을 지운 이름
+    if (trimmed.isEmpty) {
+      await prefs.remove(_engineerNameKey);
+    } else {
+      await prefs.setString(_engineerNameKey, trimmed);
+    }
+  }
+
   /// 작성: 2026-10-04 14:30:00 · nada
   /// 변수: _lastSiteKey
   /// 목적: 마지막 현장 정보의 저장 키. 값은 항목 표를 JSON 문자열로 바꿔
