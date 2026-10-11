@@ -132,7 +132,7 @@ void main() {
       _expectRange(range, -75, 75, 25);
     });
 
-    test('소음 44.8 ~ 63.0 dBA 는 최소 범위 아래끝을 지키고 40 ~ 65 가 된다', () {
+    test('소음 44.8 ~ 63.0 dBA 는 40 ~ 65, 눈금 5 가 된다', () {
       final range = _noise.rangeFor(const <double>[0.0, 44.8, 63.0]);
       _expectRange(range, 40, 65, 5);
     });
@@ -142,9 +142,10 @@ void main() {
       _expectRange(range, 0, 2, 0.5);
     });
 
-    test('운행 거리 57.09 m 는 0 ~ 60, 눈금 10 이 된다', () {
+    test('운행 거리 57.09 m 는 여유 10% 를 더해 0 ~ 80, 눈금 20 이 된다', () {
+      // 57.09 + 5.71 = 62.8 이라 10 간격으로는 7칸이 되어 20 간격을 쓴다
       final range = _position.rangeFor(const <double>[0.0, 57.09]);
-      _expectRange(range, 0, 60, 10);
+      _expectRange(range, 0, 80, 20);
     });
 
     test('모든 값이 범위 안에 들고 양 끝에 여유가 남는다', () {
@@ -175,6 +176,25 @@ void main() {
       _expectWellFormed(range);
     });
 
+    test('시끄러운 현장(70 ~ 90 dBA)은 40 dBA 까지 끌려 내려가지 않는다', () {
+      final range = _noise.rangeFor(const <double>[70.0, 82.5, 90.0]);
+
+      expect(range.min, greaterThan(40.0));
+      expect(range.min, lessThanOrEqualTo(70.0));
+      expect(range.max, greaterThanOrEqualTo(90.0));
+      expect(range.span, greaterThanOrEqualTo(14.0));
+      _expectWellFormed(range);
+    });
+
+    test('넘치되 폭이 좁은 소음도 최소 범위 폭(14 dB)은 지킨다', () {
+      // 60 ~ 62 는 40 ~ 54 를 넘지만 폭이 2 dB 뿐이다
+      final range = _noise.rangeFor(const <double>[60.0, 62.0]);
+
+      expect(range.span, greaterThanOrEqualTo(14.0));
+      expect(range.min, lessThanOrEqualTo(60.0));
+      expect(range.max, greaterThanOrEqualTo(62.0));
+    });
+
     test('자유 축은 0 을 품지 않는다', () {
       final range = _noise.rangeFor(const <double>[72.0, 88.0]);
       expect(range.min, greaterThan(0.0));
@@ -200,6 +220,19 @@ void main() {
         _expectWellFormed(_noise.rangeFor(<double>[45.0, 54.0 + peak]));
         _expectWellFormed(_position.rangeFor(<double>[0.0, 10.0 + peak]));
       }
+    });
+  });
+
+  group('extremeIndices', () {
+    test('최댓값 · 최솟값이 처음 나온 자리를 찾는다', () {
+      final at = extremeIndices(const <double>[1.0, 5.0, -3.0, 5.0, -3.0]);
+
+      expect(at!.maxIndex, 1);
+      expect(at.minIndex, 2);
+    });
+
+    test('빈 시계열은 null 이다', () {
+      expect(extremeIndices(const <double>[]), isNull);
     });
   });
 }

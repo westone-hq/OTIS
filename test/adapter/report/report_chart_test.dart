@@ -10,6 +10,8 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
+import 'pdf_probe.dart';
+
 /// 작성: 2026-09-17 10:05:00 · nada
 /// 변수: _outputPath
 /// 목적: 그려 본 차트 쪽을 남겨 둘 자리. 축 눈금과 라벨이 겹치지 않는지는
@@ -553,6 +555,81 @@ void main() {
       final bytes = await document.save(); // 만든 PDF
 
       expect(bytes.length, greaterThan(1000));
+    });
+  });
+
+  group('진동 P2P 표시', () {
+    test('P2P 는 진동 세 축에서만 1쪽 표와 같은 지표를 꺼낸다', () {
+      final result = _result().copyWith(xPtp: 14.2, yPtp: 10.6, zPtp: 108.4);
+
+      expect(ReportChartAxes.ptpOf(ReportChartAxes.x, result), 14.2);
+      expect(ReportChartAxes.ptpOf(ReportChartAxes.y, result), 10.6);
+      expect(ReportChartAxes.ptpOf(ReportChartAxes.z, result), 108.4);
+      for (final spec in <ChartAxisSpec>[
+        ReportChartAxes.noise,
+        ReportChartAxes.position,
+        ReportChartAxes.speed,
+        ReportChartAxes.accel,
+        ReportChartAxes.jerk,
+      ]) {
+        expect(ReportChartAxes.ptpOf(spec, result), isNull, reason: spec.key);
+      }
+    });
+
+    test('적는 숫자는 1쪽 표와 같은 규칙으로 다듬는다', () {
+      final result = _result().copyWith(xPtp: 14.2125, zPtp: 108.3677);
+      final metrics = ReportMetrics.from(result); // 1쪽 표 지표
+
+      expect(ReportChartRenderer.p2pLabel(14.2125), 'P2P 14.2mg');
+      expect(ReportChartRenderer.p2pLabel(108.3677), 'P2P 108mg');
+      expect(
+        metrics.vertMax.display,
+        ReportChartRenderer.p2pLabel(108.3677).substring(4),
+      );
+    });
+
+    test('P2P 가 있으면 빨간 표시점과 글자가 붙고, 없으면 붙지 않는다', () async {
+      Future<String> drawX(MeasurementResult result) async {
+        final document = PdfDocument(); // 만들어 낼 PDF 문서
+        final fontBytes = await rootBundle.load(
+          ReportLayout.regularFontAsset,
+        ); // 글꼴 원본
+        final renderer = ReportChartRenderer(
+          font: PdfTtfFont(document, fontBytes),
+        ); // 차트를 그릴 렌더러
+        final page = PdfPage(
+          document,
+          pageFormat: PdfPageFormat(
+            ReportLayout.pageWidthPt,
+            ReportLayout.pageHeightPt,
+          ),
+        ); // 차트를 얹을 쪽
+        renderer.draw(
+          page.getGraphics(),
+          spec: ReportChartAxes.x,
+          box: ReportChartPage.slots.first,
+          result: result,
+        );
+        final bytes = await document.save(); // 만든 PDF
+        return pdfChartStreams(bytes).join();
+      }
+
+      final withPtp = await drawX(_result().copyWith(xPtp: 15.0)); // 새 결과
+      final legacy = await drawX(_result()); // P2P 를 계산하지 않은 예전 결과
+
+      expect(withPtp, contains(markerColorOperand));
+      expect(legacy, isNot(contains(markerColorOperand)));
+    });
+
+    test('표시점 자리는 줄이기 전 원래 시계열의 최댓값 · 최솟값 자리다', () {
+      final values = _wave(_rideSampleCount, spikeIndex: 4321, spikeValue: 9.0);
+      values[777] = -9.5; // 줄이면 다른 칸 값과 섞일 수 있는 골
+      final at = extremeIndices(values)!; // 표시점 자리
+
+      expect(at.maxIndex, 4321);
+      expect(at.minIndex, 777);
+      final reduced = reduceSeries(values, columns: 300); // 그리는 표본
+      expect(reduced.map((s) => s.index), containsAll(<int>[4321, 777]));
     });
   });
 }

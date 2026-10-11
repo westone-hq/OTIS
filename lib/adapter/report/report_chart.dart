@@ -9,6 +9,7 @@ import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
+import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-17 10:05:00 · nada
@@ -290,6 +291,26 @@ class ReportChartAxes {
     }
     throw ArgumentError.value(spec.key, 'spec.key', '모르는 축 이름이다');
   }
+
+  /// 작성: 2026-10-11 19:20:58 · nada
+  /// 함수: ptpOf
+  /// 목적: 진동 세 축 차트에 적을 P2P 를 측정 결과에서 꺼낸다. 차트에서
+  ///       다시 세지 않고 1쪽 표가 쓰는 같은 지표(`xPtp` · `yPtp` · `zPtp`)를
+  ///       쓴다 — 두 곳에서 세면 차트와 표가 다른 숫자를 말하게 된다.
+  /// 인자: spec — 축 사양
+  ///       result — 지표를 가진 측정 결과
+  /// 반환: P2P (mg). 진동 축이 아니거나 계산하지 않은 예전 결과면 null
+  static double? ptpOf(ChartAxisSpec spec, MeasurementResult result) {
+    switch (spec.key) {
+      case 'x':
+        return result.xPtp;
+      case 'y':
+        return result.yPtp;
+      case 'z':
+        return result.zPtp;
+    }
+    return null;
+  }
 }
 
 /// 작성: 2026-09-17 10:05:00 · nada
@@ -538,6 +559,13 @@ class ReportChartRenderer {
   /// 근거: 인용 — 프로토타입 `charts.py` 가 점 위로 3 포인트 띄운다
   static const double markerLabelGap = 3.0;
 
+  /// 작성: 2026-10-11 19:20:58 · nada
+  /// 변수: p2pLabelInset
+  /// 목적: P2P 글자를 축 틀 오른쪽 위 모서리에서 안쪽으로 띄우는 거리
+  ///       (포인트). 글자가 틀선에 붙지 않고 틀 안에 들게 한다.
+  /// 근거: 미정 — 눈금 라벨 간격(`tickLabelGap`)과 비슷하게 잡았다
+  static const double p2pLabelInset = 2.0;
+
   /// 격자 점선의 켠 길이와 끈 길이 (포인트)
   static const List<double> gridDashPattern = <double>[1.2, 1.2];
 
@@ -602,11 +630,13 @@ class ReportChartRenderer {
   const ReportChartRenderer({required this.font});
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-11 19:20:58 · nada
   /// 함수: draw
   /// 목적: 차트 한 개를 주어진 자리에 그린다. 순서대로 한다.
   ///       1. 그릴 시계열을 꺼내고, 거기에 맞는 세로축 범위를 고른다
   ///       2. 축 틀 · 격자 · 눈금 · 라벨을 그린다
-  ///       3. 시계열이 비어 있지 않으면 파형을 얹는다
+  ///       3. 시계열이 비어 있지 않으면 파형을 얹고, 소음 평균선 ·
+  ///          최댓값과 진동 세 축 P2P 표시를 붙인다
   ///
   ///       시계열이 비어도 축 틀까지는 그린다. 자리를 통째로 비우면 나중에
   ///       그 값이 붙었을 때 서식이 바뀐 것처럼 보인다. 지금은 소음이 그
@@ -654,7 +684,76 @@ class ReportChartRenderer {
         skipZeros: spec.scale.ignoreZeros,
       );
       _drawAnnotations(canvas, frame, spec, values, result);
+      _drawPeakToPeak(canvas, frame, spec, values, result);
     }
+  }
+
+  /// 작성: 2026-10-11 19:20:58 · nada
+  /// 함수: p2pLabel
+  /// 목적: 진동 차트 오른쪽 위에 적을 P2P 문구를 만든다. 숫자 표기는 1쪽
+  ///       표와 같은 규칙(`ReportMetric.display`)을 써 두 곳 숫자가 같게
+  ///       보인다.
+  /// 인자: ptp — P2P (mg)
+  /// 반환: "P2P 14.2mg" 꼴 문구
+  static String p2pLabel(double ptp) {
+    final metric = ReportMetric(
+      key: 'p2p',
+      value: ptp,
+      unit: 'mg',
+      verdict: ReportVerdict.none,
+    ); // 표와 같은 규칙으로 숫자를 다듬을 지표
+    return 'P2P ${metric.display}';
+  }
+
+  /// 작성: 2026-10-11 19:20:58 · nada
+  /// 함수: _drawPeakToPeak
+  /// 목적: 진동 세 축 차트에 P2P 를 만든 두 지점을 표시하고 값을 적는다
+  ///       (2026-10-11 사용자 지시, 소음 최댓값처럼 빨간색).
+  ///       - 최댓값 · 최솟값이 처음 나온 자리에 빨간 점. 자리는 줄이기 전
+  ///         원래 시계열 기준이다(`extremeIndices()`)
+  ///       - 축 틀 오른쪽 위 안쪽에 "P2P 값". 값은 1쪽 표와 같은 지표다
+  ///         (`ReportChartAxes.ptpOf()`)
+  ///       P2P 가 없는 축(진동 축이 아님, 예전 결과)은 바로 돌아간다. 0 으로
+  ///       채우지 않는다.
+  /// 인자: canvas — 그리기 도구
+  ///       frame — 축 틀과 값 옮기기
+  ///       spec — 그리는 축의 사양
+  ///       values — 그린 시계열 (줄이기 전)
+  ///       result — 지표와 표본 주기를 가진 측정 결과
+  void _drawPeakToPeak(
+    PdfGraphics canvas,
+    _ChartFrame frame,
+    ChartAxisSpec spec,
+    List<double> values,
+    MeasurementResult result,
+  ) {
+    // → 로직 이동: ReportChartAxes.ptpOf()
+    final ptp = ReportChartAxes.ptpOf(spec, result); // 적을 P2P, 없으면 null
+    // → 로직 이동: extremeIndices()
+    final at = extremeIndices(values); // 최댓값 · 최솟값 자리, 비면 null
+    if (ptp == null || at == null) return;
+
+    canvas.setFillColor(reportPdfColor(ReportColors.chartMarker));
+    for (final index in <int>[at.maxIndex, at.minIndex]) {
+      canvas
+        ..drawEllipse(
+          frame.xOfTime(index / result.sampleRate),
+          frame.yOfValue(values[index]),
+          markerRadius,
+          markerRadius,
+        )
+        ..fillPath();
+    }
+
+    final text = p2pLabel(ptp); // → 로직 이동: p2pLabel()
+    _drawText(
+      canvas,
+      text: text,
+      size: markerLabelSize,
+      x: frame.right - p2pLabelInset - _widthOf(text, markerLabelSize),
+      centerY: frame.top - p2pLabelInset - markerLabelSize / 2,
+      color: ReportColors.chartMarker,
+    );
   }
 
   /// 작성: 2026-09-26 14:10:00 · nada

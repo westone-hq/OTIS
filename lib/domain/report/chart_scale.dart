@@ -63,7 +63,7 @@ class ChartAxisRange {
 }
 
 /// 작성: 2026-10-10 11:38:05 · nada
-/// 수정: 2026-10-11 15:34:38 · nada
+/// 수정: 2026-10-11 19:20:58 · nada
 /// 클래스: ChartScaleKind
 /// 목적: 데이터에 맞춰 넓힐 때 축을 어떤 모양으로 넓히는지.
 ///       - `symmetric` — 0 을 가운데 둔다. 위아래로 흔들리는 진동 ·
@@ -72,11 +72,13 @@ class ChartAxisRange {
 ///       - `zeroAnchored` — 0 을 아래끝으로 둔다. 위치 · 속도(크기).
 ///         정지가 축 바닥에 붙어 있어야 운행이 어디까지 갔는지 읽힌다
 ///       - `free` — 데이터 최소 · 최대에 맞춘다. 소음. 0 dBA 부터 그리면
-///         파형이 위쪽 띠에 납작하게 붙는다
+///         파형이 위쪽 띠에 납작하게 붙는다. 넓힐 때 최소 범위의 자리가
+///         아니라 폭만 지킨다 — 70 ~ 90 dBA 현장이 40 dBA 까지 끌려 내려가
+///         파형이 위쪽에 납작해지지 않게 한다(2026-10-11 사용자 결정)
 enum ChartScaleKind { symmetric, zeroAnchored, free }
 
 /// 작성: 2026-10-10 11:38:05 · nada
-/// 수정: 2026-10-11 15:34:38 · nada
+/// 수정: 2026-10-11 19:20:58 · nada
 /// 클래스: ChartScale
 /// 목적: 차트 하나의 세로축 범위를 데이터에 맞춰 정하는 규칙. 순서대로
 ///       정한다.
@@ -86,8 +88,10 @@ enum ChartScaleKind { symmetric, zeroAnchored, free }
 ///          어렵다(2026-10-11 사용자 지시 "여유는 늘 둔다")
 ///       3. 여유를 더한 범위가 최소 범위 안에 들면 최소 범위를 그대로
 ///          쓴다. 조용한 운행은 원본 TUNE 리포트와 같은 눈금으로 보인다
-///       4. 넘치면 최소 범위와 합친 뒤 눈금 간격에 맞춰 바깥으로
-///          반올림한다. 잘리는 값이 없게 하는 것이 목적이다
+///       4. 넘치면 넓힌다. `symmetric` · `zeroAnchored` 는 최소 범위와
+///          합치고, `free` 는 데이터만으로 잡되 폭이 최소 범위 폭보다
+///          좁으면 가운데를 지킨 채 그 폭까지 넓힌다. 그 뒤 눈금 간격에
+///          맞춰 바깥으로 반올림한다. 잘리는 값이 없게 하는 것이 목적이다
 ///
 ///       숫자(여유 비 · 눈금 칸 수 · 간격 후보)는 이 클래스 상수에만 둔다.
 class ChartScale {
@@ -103,13 +107,14 @@ class ChartScale {
   final bool ignoreZeros;
 
   /// 작성: 2026-10-10 11:38:05 · nada
-  /// 수정: 2026-10-11 15:34:38 · nada
+  /// 수정: 2026-10-11 19:20:58 · nada
   /// 변수: headroomRatio
   /// 목적: 데이터 양 끝에 하나씩 더하는 여유를, 데이터가 차지하는 폭에
-  ///       대한 비로 둔 것. 양 끝을 합치면 10% 다. 최소 범위를 쓸 때도
+  ///       대한 비로 둔 것. 양 끝을 합치면 20% 다. 최소 범위를 쓸 때도
   ///       이 여유가 들어가는지 본다.
-  /// 근거: 인용 — 2026-10-10 사용자 지시 "축 길이의 10%"
-  static const double headroomRatio = 0.05;
+  /// 근거: 인용 — 2026-10-11 사용자 결정 — 넉넉하게. 처음 5% 에서는 가장
+  ///       좁은 여유가 축 길이의 4.7% 라 선이 틀선에 붙어 보였다
+  static const double headroomRatio = 0.10;
 
   /// 작성: 2026-10-10 11:38:05 · nada
   /// 변수: maxTickCells
@@ -147,7 +152,7 @@ class ChartScale {
   });
 
   /// 작성: 2026-10-10 11:38:05 · nada
-  /// 수정: 2026-10-11 15:34:38 · nada
+  /// 수정: 2026-10-11 19:20:58 · nada
   /// 함수: rangeFor
   /// 목적: 그릴 값에 맞는 세로축 범위를 정한다. 순서는 클래스 주석과 같다.
   /// 인자: values — 그릴 값 목록. 단위는 그 축의 단위를 따른다
@@ -167,6 +172,15 @@ class ChartScale {
     // → 로직 이동: ChartAxisRange.contains()
     if (minimum.contains(padded.low, padded.high)) return minimum;
 
+    if (kind == ChartScaleKind.free) {
+      final center = (padded.low + padded.high) / 2; // 데이터 가운데
+      final half = math.max(
+        (padded.high - padded.low) / 2,
+        minimum.span / 2,
+      ); // 폭의 절반. 최소 범위 폭보다 좁아지지 않는다
+      // → 로직 이동: _niceRange()
+      return _niceRange(center - half, center + half);
+    }
     // → 로직 이동: _niceRange()
     return _niceRange(
       math.min(padded.low, minimum.min),
@@ -244,4 +258,24 @@ class ChartScale {
       magnitude *= 10;
     }
   }
+}
+
+/// 작성: 2026-10-11 19:20:58 · nada
+/// 함수: extremeIndices
+/// 목적: 시계열에서 최댓값과 최솟값이 처음 나온 자리를 찾는다. 차트가 P2P
+///       (최대 − 최소)를 만든 두 지점을 표시하는 데 쓴다. 표시는 줄이기
+///       (`reduceSeries()`) 전 원래 자리 번호로 잡아야 시각이 맞는다. 같은
+///       값이 여러 곳이면 첫 번째다. 리포트 차트와 결과 화면 그래프가 함께
+///       쓰도록 그리기 도구에 기대지 않는 이 파일에 둔다.
+/// 인자: values — 원래 시계열
+/// 반환: 최댓값 자리와 최솟값 자리 (0 부터). 비어 있으면 null
+({int maxIndex, int minIndex})? extremeIndices(List<double> values) {
+  if (values.isEmpty) return null;
+  var maxIndex = 0; // 여기까지 본 가장 큰 값의 자리
+  var minIndex = 0; // 여기까지 본 가장 작은 값의 자리
+  for (var index = 1; index < values.length; index++) {
+    if (values[index] > values[maxIndex]) maxIndex = index;
+    if (values[index] < values[minIndex]) minIndex = index;
+  }
+  return (maxIndex: maxIndex, minIndex: minIndex);
 }
