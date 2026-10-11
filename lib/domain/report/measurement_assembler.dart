@@ -80,6 +80,7 @@ class MeasurementAssembleResult {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -96,6 +97,14 @@ class MeasurementAssembler {
   ///       - `site.model`(기종)도 함께 옮긴다. 비어 있으면 null 로 둔다.
   ///         이걸 실어 두면 리포트가 측정 결과 하나만 받으면 되고
   ///         현장 정보를 따로 들고 다니지 않아도 된다
+  ///       - 하중 · 하중 단위 · 해석 종류 · 우편번호 · 참고사항도 옮긴다.
+  ///         앞뒤 공백을 지우고, 비어 있으면 null 로 둔다(재지 않은 값을
+  ///         빈 문자열로 채우지 않는다). 하중은 홈 화면 검사와 같은
+  ///         기준(`SiteInfo.parseLoad()`)으로 숫자로 바꾼다. 비어 있지
+  ///         않은데 바꿀 수 없으면 층수처럼 사유를 올린다. 하중이 없으면
+  ///         단위도 뜻이 없어 null 로 둔다
+  ///       - 엔지니어 이름은 현장 정보가 아니라 기기 설정이라 따로 받는다.
+  ///         비어 있으면 null
   ///       - 소음 시계열을 격자에서 그대로 옮기고, 0 이 아닌 표본의
   ///         최대를 `noiseMax` 에 담는다. 쓸 표본이 하나도 없으면 null 로
   ///         둔다. 자세한 까닭은 클래스 주석의 소음 계약을 본다
@@ -105,6 +114,7 @@ class MeasurementAssembler {
   ///       measuredAt — 측정 시각. `grid.t0Ns` 는 단조시계(기기가 켜진
   ///       뒤 흐른 시간만 세는 시계) 값이라 벽시계 시각으로 쓸 수 없어
   ///       따로 받는다
+  ///       engineerName — 저장 시점 설정의 엔지니어 이름. 없으면 null
   /// 반환: 변환된 측정 결과, 또는 변환하지 못한 사유
   /// 식: sampleRate = 1,000,000,000 / gridIntervalNs
   static MeasurementAssembleResult assemble({
@@ -112,6 +122,7 @@ class MeasurementAssembler {
     required SiteInfo site,
     required String id,
     required DateTime measuredAt,
+    String? engineerName,
   }) {
     if (grid.failureReason != null) {
       return MeasurementAssembleResult.failure(grid.failureReason!);
@@ -135,6 +146,18 @@ class MeasurementAssembler {
         '최하층 "${site.bottomFloor}", 최상층 "${site.topFloor}"',
       );
     }
+
+    final hasLoad = site.load.trim().isNotEmpty; // 하중을 입력했는지
+    // → 로직 이동: SiteInfo.parseLoad()
+    final load = SiteInfo.parseLoad(site.load); // 하중 숫자, 못 바꾸면 null
+    if (hasLoad && load == null) {
+      return MeasurementAssembleResult.failure(
+        '하중을 0 보다 큰 숫자로 바꿀 수 없다: "${site.load}"',
+      );
+    }
+    final postalCode = site.postalCode.trim(); // 우편번호. 비었으면 null 로 둔다
+    final notes = site.notes.trim(); // 참고사항. 비었으면 null 로 둔다
+    final engineer = engineerName?.trim() ?? ''; // 엔지니어 이름, 없으면 빈 칸
 
     final xSeries = <double>[]; // X축 진동 시계열 (mg)
     final ySeries = <double>[]; // Y축 진동 시계열 (mg)
@@ -166,6 +189,12 @@ class MeasurementAssembler {
         topFloor: topFloor,
         direction: site.direction,
         model: model.isEmpty ? null : model,
+        load: load,
+        loadUnit: load == null ? null : site.loadUnit,
+        analysisType: site.analysisType,
+        postalCode: postalCode.isEmpty ? null : postalCode,
+        notes: notes.isEmpty ? null : notes,
+        engineerName: engineer.isEmpty ? null : engineer,
         dateTime: measuredAt,
         xSeries: xSeries,
         ySeries: ySeries,

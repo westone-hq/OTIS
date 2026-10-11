@@ -72,10 +72,12 @@ class _RecordingEmailSender extends FlutterEmailSenderPlatform {
 }
 
 /// 작성: 2026-10-10 13:54:43 · nada
+/// 수정: 2026-10-11 19:17:58 · nada
 /// 함수: _result
 /// 목적: 메일로 보낼 측정 결과를 꾸민다.
+/// 인자: notes — 추가 참고사항. 없으면 null
 /// 반환: 측정 결과
-MeasurementResult _result() {
+MeasurementResult _result({String? notes}) {
   return MeasurementResult(
     id: _jobId,
     jobNo: 'J-1',
@@ -83,6 +85,7 @@ MeasurementResult _result() {
     bottomFloor: 1,
     topFloor: 8,
     direction: '상승',
+    notes: notes,
     dateTime: DateTime(2026, 1, 14, 11, 3, 59),
     xSeries: const <double>[],
     ySeries: const <double>[],
@@ -102,9 +105,10 @@ MeasurementResult _result() {
 ///       안드로이드 원본(`native_raw.txt`)은 늘 놓는다 — 붙지 않는지 봐야
 ///       한다.
 /// 인자: withRaw — `raw.txt` 를 놓을지
-Future<void> _saveJob({required bool withRaw}) async {
+///       notes — 결과에 실을 추가 참고사항. 없으면 null
+Future<void> _saveJob({required bool withRaw, String? notes}) async {
   final repo = MeasurementRepository.instance; // 시험할 저장소
-  final dir = await repo.save(_result()); // 이 측정의 폴더
+  final dir = await repo.save(_result(notes: notes)); // 이 측정의 폴더
   await File(
     '${dir.path}/${MeasurementRepository.reportFileName}',
   ).writeAsString('%PDF-1.4');
@@ -278,6 +282,39 @@ void main() {
     );
     expect(email.body, contains('※ 첨부 2개'));
     expect(email.body, isNot(contains('누락')));
+  });
+
+  testWidgets('참고사항이 있으면 첨부 목록 앞에 머리줄과 함께 넣는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(
+      () => _saveJob(withRaw: true, notes: '도어 쪽 소음 큼\n다음 점검 때 재측정'),
+    );
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(
+      email.body,
+      startsWith(
+        'OTIS 승강기 진동 측정 리포트입니다.\n\n[참고사항]\n'
+        '도어 쪽 소음 큼\n다음 점검 때 재측정\n\n- TUNE_',
+      ),
+    );
+  });
+
+  testWidgets('참고사항이 없으면 그 덩어리를 통째로 뺀다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(() => _saveJob(withRaw: true));
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(email.body, isNot(contains('[참고사항]')));
+    expect(email.body, startsWith('OTIS 승강기 진동 측정 리포트입니다.\n- TUNE_'));
   });
 
   testWidgets('로우 데이터만 고르면 그것 하나만 붙인다', (tester) async {

@@ -206,34 +206,50 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-11 19:09:59 · nada
   /// 함수: _rerun
   /// 목적: 이 결과와 같은 현장 정보로 곧바로 다시 측정한다. 순서대로
   ///       진행한다.
-  ///       1. 운전 방향을 다시 고르게 한다. 상승 측정 다음은 보통 하강이라
+  ///       1. 되살린 현장 정보가 지금 필수 항목을 다 갖췄는지
+  ///          `SiteInfo.validate()` 로 본다. 하중 · 우편번호를 받기 전의
+  ///          예전 결과는 걸린다. 그때는 홈에서 채우라고 안내만 하고
+  ///          멈춘다 — 그대로 재면 측정이 끝난 뒤 저장 검사에서 거절돼
+  ///          운행 한 번이 버려진다
+  ///       2. 운전 방향을 다시 고르게 한다. 상승 측정 다음은 보통 하강이라
   ///          그대로 두면 리포트의 방향이 틀린다
-  ///       2. 시작 화면을 거치지 않으므로 여기서 마이크 권한을 받는다
-  ///       3. 이 화면을 측정 화면으로 바꾼다. 재측정이 끝난 뒤 뒤로 가면
+  ///       3. 시작 화면을 거치지 않으므로 여기서 마이크 권한을 받는다
+  ///       4. 이 화면을 측정 화면으로 바꾼다. 재측정이 끝난 뒤 뒤로 가면
   ///          이 화면을 연 곳으로 돌아간다
   ///       어느 단계에서든 취소하면 이 화면에 머문다. 진행하는 동안에는
-  ///       버튼을 막는다.
+  ///       버튼을 막는다. 참고사항은 측정마다 새로 적으므로 넘기지 않는다
+  ///       (`SiteInfo.fromResult()`).
   Future<void> _rerun() async {
     final result = _result; // 다시 잴 측정 결과
     if (result == null || _rerunning) return;
     setState(() => _rerunning = true);
     try {
+      // → 로직 이동: SiteInfo.fromResult()
+      final site = SiteInfo.fromResult(result); // 지난 측정의 현장 정보
+      // → 로직 이동: SiteInfo.validate()
+      if (site.validate().isNotEmpty) {
+        // → 로직 이동: showAppConfirmDialog()
+        await showAppConfirmDialog(
+          context,
+          title: '현장 정보 확인',
+          message:
+              '이 측정에는 지금 필요한 현장 정보(주소 · 우편번호 · 하중 등) 중 '
+              '빠진 항목이 있습니다.\n홈에서 빠진 항목을 입력한 뒤 측정하세요.',
+          confirmLabel: '확인',
+          barrierDismissible: true,
+        );
+        return;
+      }
       // → 로직 이동: _askDirection()
       final direction = await _askDirection(result.direction); // 고른 방향
       if (direction == null || !mounted) return;
-      // → 로직 이동: SiteInfo.fromResult()
-      final site = SiteInfo.fromResult(result); // 지난 측정의 현장 정보
-      MeasurementSession.instance.currentSite = SiteInfo(
-        jobNo: site.jobNo,
-        siteName: site.siteName,
-        address: site.address,
-        bottomFloor: site.bottomFloor,
-        topFloor: site.topFloor,
+      // → 로직 이동: SiteInfo.copyWith()
+      MeasurementSession.instance.currentSite = site.copyWith(
         direction: direction,
-        model: site.model,
       );
       // → 로직 이동: ensureMicPermission()
       final proceed = await ensureMicPermission(

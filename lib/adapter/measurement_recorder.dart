@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
@@ -238,6 +239,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
+  /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -256,7 +258,8 @@ class MeasurementRecorder {
   ///          하고 결과를 집계 파일에 덧붙인다(`_condition()`). 실패하면
   ///          멈추되 측정값 파일은 지우지 않는다
   ///       6. 처리한 격자를 측정 결과 모델로 바꾸고, 처리 방식
-  ///          (`SignalConditioner.methodLabel`)을 실어 저장소에 저장한다
+  ///          (`SignalConditioner.methodLabel`)을 실어 저장소에 저장한다.
+  ///          설정의 엔지니어 이름도 이 시점 값을 함께 싣는다
   ///       7. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
   ///          기다리게 되고, 그 자리에서 실패하면 보내지 못한다. 실패해도
   ///          측정은 이미 저장됐으므로 멈추지 않는다 — 나중에
@@ -333,12 +336,18 @@ class MeasurementRecorder {
         );
       }
 
+      // 엔지니어 이름은 저장하는 이 시점 값을 결과에 싣는다. 나중에 설정을
+      // 바꿔도 이미 낸 리포트의 이름이 바뀌지 않게 한다
+      // → 로직 이동: PrefsStore.loadEngineerName()
+      final engineerName = await PrefsStore.instance
+          .loadEngineerName(); // 설정의 엔지니어 이름, 없으면 null
       // → 로직 이동: MeasurementAssembler.assemble()
       final assembled = MeasurementAssembler.assemble(
         grid: conditionedGrid,
         site: site,
         id: id,
         measuredAt: measuredAt,
+        engineerName: engineerName,
       ); // 측정 결과 모델로 바꾼 결과. 실패했으면 사유만 들어 있다
       if (!assembled.isSuccess) {
         return RecordOutcome.failure(

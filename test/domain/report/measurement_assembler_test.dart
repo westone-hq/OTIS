@@ -308,6 +308,120 @@ void main() {
       expect(model.model, isNull);
     });
 
+    test('현장 정보 새 항목을 공백을 지워 옮기고 하중은 숫자로 바꾼다', () {
+      final model = MeasurementAssembler.assemble(
+        grid: _grid(_threeRows),
+        site: const SiteInfo(
+          jobNo: 'T-1001',
+          siteName: '서울 본사',
+          address: ' 서울시 중구 ',
+          bottomFloor: '1',
+          topFloor: '8',
+          direction: '하부 → 상부',
+          model: 'Gen2',
+          load: ' 1350.5 ',
+          loadUnit: 'lb',
+          analysisType: '문 열림 사이클',
+          postalCode: ' 04524 ',
+          notes: '  도어 쪽 소음 큼  ',
+        ),
+        id: 'id',
+        measuredAt: measuredAt,
+      ).result!; // 변환된 측정 결과
+
+      expect(model.address, '서울시 중구');
+      expect(model.load, 1350.5);
+      expect(model.loadUnit, 'lb');
+      expect(model.analysisType, '문 열림 사이클');
+      expect(model.postalCode, '04524');
+      expect(model.notes, '도어 쪽 소음 큼');
+    });
+
+    test('비어 있는 하중 · 우편번호 · 참고사항은 빈 문자열이 아니라 null 이다', () {
+      final model = MeasurementAssembler.assemble(
+        grid: _grid(_threeRows),
+        site: const SiteInfo(
+          jobNo: 'T-1001',
+          siteName: '서울 본사',
+          bottomFloor: '1',
+          topFloor: '8',
+          direction: '하부 → 상부',
+          model: 'Gen2',
+          load: '  ',
+          postalCode: '',
+          notes: '   ',
+        ),
+        id: 'id',
+        measuredAt: measuredAt,
+      ).result!; // 변환된 측정 결과
+
+      expect(model.load, isNull);
+      expect(model.loadUnit, isNull, reason: '하중이 없으면 단위도 뜻이 없다');
+      expect(model.postalCode, isNull);
+      expect(model.notes, isNull);
+      expect(model.analysisType, SiteInfo.defaultAnalysisType);
+    });
+
+    test('하중 판정이 홈 화면 검사와 저장 변환에서 어긋나지 않는다', () {
+      // 홈은 통과했는데 측정 뒤 저장이 거절되는 일이 없어야 한다. 두 곳이
+      // `SiteInfo.parseLoad()` 하나를 쓰는지 같은 입력으로 본다
+      for (final load in <String>[
+        'abc',
+        '0',
+        '-5',
+        'Infinity',
+        'NaN',
+        ' 2000 ',
+        '1.5',
+      ]) {
+        final site = SiteInfo(
+          jobNo: 'T-1001',
+          siteName: '서울 본사',
+          address: '서울시',
+          bottomFloor: '1',
+          topFloor: '8',
+          direction: '하부 → 상부',
+          model: 'Gen2',
+          load: load,
+          postalCode: '04524',
+        ); // 하중만 바꾼 현장 정보
+        final passes = site.validate().isEmpty; // 홈 화면 검사 통과 여부
+        final assembled = MeasurementAssembler.assemble(
+          grid: _grid(_threeRows),
+          site: site,
+          id: 'id',
+          measuredAt: measuredAt,
+        ); // 저장 변환 결과
+
+        expect(assembled.isSuccess, passes, reason: '"$load"');
+        if (passes) {
+          expect(assembled.result!.load, SiteInfo.parseLoad(load));
+        }
+      }
+    });
+
+    test('하중을 0 보다 큰 숫자로 바꿀 수 없으면 사유를 올린다', () {
+      for (final load in <String>['abc', '0', '-5', 'Infinity', 'NaN']) {
+        final result = MeasurementAssembler.assemble(
+          grid: _grid(_threeRows),
+          site: SiteInfo(
+            jobNo: 'T-1001',
+            siteName: '서울 본사',
+            bottomFloor: '1',
+            topFloor: '8',
+            direction: '하부 → 상부',
+            model: 'Gen2',
+            load: load,
+          ),
+          id: 'id',
+          measuredAt: measuredAt,
+        ); // 변환 결과
+
+        expect(result.isSuccess, isFalse, reason: load);
+        expect(result.failureReason, contains('하중'), reason: load);
+      }
+    });
+
     test('환산 실패는 삼키지 않고 사유를 그대로 올린다', () {
       final result = MeasurementAssembler.assemble(
         grid: GridResampleResult.failure(

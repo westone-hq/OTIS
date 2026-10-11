@@ -34,11 +34,53 @@ MeasurementResult _result({String? signalConditioning}) {
 }
 
 /// 작성: 2026-10-07 02:22:28 · nada
+/// 수정: 2026-10-11 16:58:59 · nada
 /// 함수: main
-/// 목적: 측정 결과의 신호 처리 방식(`signalConditioning`)이 JSON 저장 ·
+/// 목적: 측정 결과의 신호 처리 방식(`signalConditioning`)과 현장 정보 새
+///       항목(하중 · 단위 · 해석 종류 · 우편번호 · 참고사항)이 JSON 저장 ·
 ///       복원을 거쳐 그대로 남는지, 그 필드가 없던 예전 파일은 null 로
 ///       읽히는지 시험한다.
 void main() {
+  test('현장 정보 새 항목이 JSON 쓰기 · 읽기 왕복에서 그대로 남는다', () {
+    final original = _result().copyWith(
+      load: 2000.0,
+      loadUnit: 'kg',
+      analysisType: '사이클 저크(가속도증가율) 테스트',
+      postalCode: '10575',
+      notes: '도어 쪽 소음 큼\n다음 점검 때 재측정',
+      engineerName: '홍길동',
+    ); // 저장할 결과
+    final restored = MeasurementResult.fromJson(
+      jsonEncode(original.toMap()),
+    ); // 되읽은 결과
+
+    expect(restored.load, 2000.0);
+    expect(restored.loadUnit, 'kg');
+    expect(restored.analysisType, '사이클 저크(가속도증가율) 테스트');
+    expect(restored.postalCode, '10575');
+    expect(restored.notes, '도어 쪽 소음 큼\n다음 점검 때 재측정');
+    expect(restored.engineerName, '홍길동');
+  });
+
+  test('현장 정보 새 항목이 없는 예전 JSON 은 모두 null 로 읽는다', () {
+    final legacy = _result().toMap()
+      ..remove('load')
+      ..remove('loadUnit')
+      ..remove('analysisType')
+      ..remove('postalCode')
+      ..remove('notes')
+      ..remove('engineerName'); // 이 필드들이 생기기 전 형태로 되돌린 표
+
+    final restored = MeasurementResult.fromJson(jsonEncode(legacy)); // 되읽음
+
+    expect(restored.load, isNull);
+    expect(restored.loadUnit, isNull);
+    expect(restored.analysisType, isNull);
+    expect(restored.postalCode, isNull);
+    expect(restored.notes, isNull);
+    expect(restored.engineerName, isNull);
+  });
+
   test('신호 처리 방식이 JSON 쓰기 · 읽기 왕복에서 그대로 남는다', () {
     final original = _result(
       signalConditioning: 'baseline+lp40bw4zp+rs100',
