@@ -50,17 +50,22 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-07 03:21:55 · nada
+/// 수정: 2026-10-10 13:54:43 · nada
 /// 클래스: _SendEmailSheetState
 /// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신 이메일
 ///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
 ///       발송을 실행한다. 보낸 주소는 기억해 다음에 미리 골라 둔다.
-///       보낼 수 있는 항목은 PDF 리포트 하나다. 센서 원본 값(`raw.txt`,
-///       `native_raw.txt`)은 기기에만 남기고 메일로 보내지 않는다
-///       (2026-10-07 결정).
+///       보낼 수 있는 항목은 PDF 리포트와 로우 데이터(`raw.txt`, 256Hz
+///       격자에 맞춘 필터 · 기준선 보정 전 값) 둘이다. 안드로이드 센서
+///       원본 이벤트 기록(`native_raw.txt`)은 기기 측정 폴더에만 남기고
+///       보내지 않는다 (2026-10-08 결정. 2026-10-07 에는 두 원본 파일을
+///       모두 보내지 않기로 했었다).
 class _SendEmailSheetState extends State<SendEmailSheet> {
   /// PDF 리포트를 보낼 항목에 포함할지 여부
   bool _sendPdf = true;
+
+  /// 로우 데이터(`raw.txt`)를 보낼 항목에 포함할지 여부
+  bool _sendRaw = true;
 
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
   /// 버튼을 비활성화해 중복 실행을 막는다
@@ -116,7 +121,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       _emails.where(_selected.contains).toList(growable: false);
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-10 13:54:43 · nada
   /// 함수: _send
   /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 하나도
   ///       등록되지 않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
@@ -162,7 +167,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       showSuccessSnackBar(context, '메일 작성창이 호출되었습니다 (첨부 구성 완료)');
     } catch (e) {
       if (!mounted) return;
-      final message = '메일에 넣을 자료를 준비하지 못했습니다.\n$e'; // 화면에 보여줄 실패 안내 문구
+      final message = // 화면에 보여줄 실패 안내 문구
+          '메일에 넣을 자료를 준비하지 못했습니다.\n$e';
       showErrorSnackBar(context, message);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -170,7 +176,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-07 03:21:55 · nada
+  /// 수정: 2026-10-10 13:54:43 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -180,6 +186,11 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       경로를 짜 맞추면 저장 배치가 바뀔 때 여기가 조용히 어긋난다.
   ///       첨부는 제번 · 측정 ID 가 들어간 이름의 사본으로 붙인다 — 받는
   ///       쪽에서 여러 현장 메일을 구분하게 하려는 것이다.
+  ///       - PDF 리포트 — 없으면 그 자리에서 만든다
+  ///       - 로우 데이터(`raw.txt`) — 나중에 다시 만들 수 없어, 없으면
+  ///         (이 파일을 쓰기 전 측정, 저장 도중 실패) 누락으로 밝힌다
+  ///       안드로이드 원본(`native_raw.txt`)은 찾지도 붙이지도 않는다
+  ///       (2026-10-08 결정).
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
@@ -215,6 +226,29 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
         missing.add(
           '누락: ${MeasurementRepository.reportFileName} — 리포트를 만들지 '
           '못했습니다',
+        );
+      }
+    }
+
+    if (_sendRaw) {
+      // → 로직 이동: MeasurementRepository.rawFile()
+      final rawFile = await repo.rawFile(jobId); // 그 측정의 raw.txt, 없으면 null
+      if (rawFile != null) {
+        final name = MeasurementRepository.mailAttachmentName(
+          result,
+          'RAW',
+          'txt',
+        ); // 메일에 붙일 이름
+        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
+        final copy = await repo.mailAttachmentCopy(rawFile, name); // 사본
+        attachments.add(copy.path);
+        attachmentDescriptions.add(
+          '- $name: 256Hz 원시값(EVIMP1, 필터 · 기준선 보정 없음)',
+        );
+      } else {
+        missing.add(
+          '누락: ${MeasurementRepository.rawFileName} — 이 측정에는 로우 '
+          '데이터 파일이 없습니다',
         );
       }
     }
@@ -282,12 +316,14 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-10 13:54:43 · nada
   /// 함수: build
   /// 목적: 이메일 발송 시트를 그린다. 위에서부터 순서대로 놓는다.
   ///       1. 제목과 닫기 버튼
   ///       2. 받는 사람 — 등록된 이메일마다 체크 한 줄. 여러 개 고를 수
   ///          있다. "관리"를 누르면 설정 화면으로 간다
-  ///       3. 보낼 항목 체크 목록 (PDF 리포트)
+  ///       3. 보낼 항목 체크 목록 (PDF 리포트, 로우 데이터). 안드로이드
+  ///          원본은 보낼 항목이 아니라 목록에 없다 (2026-10-08 결정)
   ///       4. 고를 것이 빠졌을 때의 안내와 "보내기" 버튼
   ///       2 · 3 은 함께 스크롤되고 4 는 아래에 고정한다. 시트 아래쪽
   ///       시스템 영역은 `showAppSheet()` 가 비켜 준다.
@@ -295,7 +331,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
-    final noItem = !_sendPdf; // 보낼 항목을 고르지 않았는지
+    final noItem = !_sendPdf && !_sendRaw; // 보낼 항목을 하나도 안 골랐는지
     final noRecipient = _selected.isEmpty; // 받을 주소를 고르지 않았는지
     final warning = _emails.isEmpty
         ? null
@@ -379,6 +415,12 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       value: _sendPdf,
                       onChanged: (val) =>
                           setState(() => _sendPdf = val ?? false),
+                    ),
+                    _buildCheckboxItem(
+                      title: '로우 데이터 (raw.txt)',
+                      value: _sendRaw,
+                      onChanged: (val) =>
+                          setState(() => _sendRaw = val ?? false),
                     ),
                   ],
                 ),

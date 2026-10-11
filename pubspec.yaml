@@ -26,6 +26,10 @@ dev_dependencies:
   # 저장소 시험에서 기준 폴더를 임시 폴더로 바꿔 끼우는 데만 쓴다.
   # 제품 코드는 path_provider 만 쓰고 이 패키지를 직접 부르지 않는다
   path_provider_platform_interface: ^2.1.3
+  # 메일 시트 시험에서 메일 앱 작성창 자리를 가짜로 바꿔 끼워, 넘어가는
+  # 첨부 · 본문을 받아 보는 데만 쓴다. 제품 코드는 flutter_email_sender 만
+  # 쓰고 이 패키지를 직접 부르지 않는다
+  flutter_email_sender_platform_interface: ^1.0.0
 
 flutter:
   uses-material-design: true
