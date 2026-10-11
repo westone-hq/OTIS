@@ -176,7 +176,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-10 13:54:43 · nada
+  /// 수정: 2026-10-11 19:17:58 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -191,6 +191,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///         (이 파일을 쓰기 전 측정, 저장 도중 실패) 누락으로 밝힌다
   ///       안드로이드 원본(`native_raw.txt`)은 찾지도 붙이지도 않는다
   ///       (2026-10-08 결정).
+  ///       홈에서 적은 추가 참고사항이 있으면 첨부 목록 앞에 "[참고사항]"
+  ///       머리줄과 함께 적은 그대로 넣는다. 없으면 그 덩어리를 통째로
+  ///       뺀다. 참고사항은 리포트에 칸이 없어 메일 본문으로만 전한다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
@@ -257,8 +260,10 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       'yyyy-MM-dd HH:mm',
     ).format(result.dateTime); // 메일 제목에 쓸 날짜 문구
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
+    final notes = result.notes; // 추가 참고사항, 없으면 null
     final bodyLines = <String>[
       'OTIS 승강기 진동 측정 리포트입니다.',
+      if (notes != null) ...['', '[참고사항]', notes, ''],
       ...attachmentDescriptions,
       '',
       '※ 첨부 ${attachments.length}개',
