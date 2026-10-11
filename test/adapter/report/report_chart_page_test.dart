@@ -253,4 +253,23 @@ void main() {
       await expectLater(renderReportChartPages(result: result), completes);
     });
   });
+
+  group('ReportChartPageRenderer.headerValues', () {
+    test('엔지니어 칸은 1쪽과 같은 이름이고 없으면 자리 표시 문구다', () {
+      final named = _result().copyWith(engineerName: '홍길동'); // 이름 있는 결과
+
+      expect(
+        ReportChartPageRenderer.headerValues(named, 2)['engineer_name'],
+        '홍길동',
+      );
+      expect(
+        ReportChartPageRenderer.headerValues(_result(), 3)['engineer_name'],
+        ReportPage1.placeholder,
+      );
+      expect(
+        ReportChartPageRenderer.headerValues(_result(), 3)['page_number'],
+        '3',
+      );
+    });
+  });
 }
