@@ -322,13 +322,21 @@ class ReportPage1 {
     color: ReportColors.navy,
   );
 
-  /// 엔지니어명. 측정을 저장할 때 설정에 있던 이름이다. 없으면
-  /// `placeholder`
+  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 변수: engineerName
+  /// 목적: 엔지니어명. 측정을 저장할 때 설정에 있던 이름이다. 없으면
+  ///       `placeholder`. "엔지니어:" 라벨 바로 아래, 라벨과 같은 왼쪽
+  ///       끝에서 시작한다.
+  /// 근거: 측정 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
+  ///       현장 리포트) 1쪽 머리말을 300dpi 로 잘라 잰 값. 이름 글자 왼쪽 끝 x 1026, 세로 가운데 y 103,
+  ///       라틴 대문자 높이로 셈한 글자 크기 약 29. 예전 값(1023, 100,
+  ///       21)은 원본보다 글자가 작았다
   static const LayoutField engineerName = LayoutField(
     key: 'engineer_name',
-    x: 1023,
-    y: 100,
-    size: 21,
+    x: 1026,
+    y: 103,
+    size: 29,
     align: LayoutAlign.left,
     weight: LayoutWeight.regular,
     color: ReportColors.navy,
@@ -429,29 +437,41 @@ class ReportPage1 {
     color: ReportColors.white,
   );
 
-  /// 건물명 (현장명)
+  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 변수: buildingName
+  /// 목적: 건물명 (현장명). "건물명:" 라벨 바로 아래, 라벨과 같은 왼쪽
+  ///       끝에서 시작한다.
+  /// 근거: 측정 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
+  ///       현장 리포트) 1쪽 머리말을 300dpi 로 잘라 잰 값. 글자 왼쪽 끝 x 53, 세로 가운데 y 661, 한글 높이로
+  ///       셈한 글자 크기 약 32. 예전 값(78, 655, 24)은 라벨보다 오른쪽으로
+  ///       들어가고 작았다
   static const LayoutField buildingName = LayoutField(
     key: 'building_name',
-    x: 78,
-    y: 655,
-    size: 24,
+    x: 53,
+    y: 661,
+    size: 32,
     align: LayoutAlign.left,
     weight: LayoutWeight.regular,
     color: ReportColors.text,
   );
 
   /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 수정: 2026-10-12 02:13:59 · nada
   /// 변수: address
   /// 목적: 주소. "주소, 우편번호" 다. 둘 다 없는 예전 결과는
-  ///       `placeholder`.
+  ///       `placeholder`. "주소:" 라벨과 같은 줄, 라벨 바로 뒤에서
+  ///       시작한다.
   /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
-  ///       현장 리포트) 1쪽 머리말 "…, 경기도, 10575"
+  ///       현장 리포트) 1쪽 머리말 "…, 경기도, 10575".
+  ///       측정 — 같은 쪽을 300dpi 로 잘라 잰 자리: 글자 왼쪽 끝 x 1057,
+  ///       세로 가운데 y 643(라벨과 같은 줄), 글자 크기 약 28. 예전 값
+  ///       (1062, 655, 24)은 라벨보다 아래로 처졌다
   static const LayoutField address = LayoutField(
     key: 'address',
-    x: 1062,
-    y: 655,
-    size: 24,
+    x: 1057,
+    y: 643,
+    size: 28,
     align: LayoutAlign.left,
     weight: LayoutWeight.regular,
     color: ReportColors.text,
@@ -472,27 +492,51 @@ class ReportPage1 {
   /// 근거: 인용 — `datetime` 칸의 x 와 같다
   static const int headerRightLimitX = 2192;
 
+  /// 작성: 2026-10-12 02:13:59 · nada
+  /// 변수: engineerRightLimitX
+  /// 목적: 엔지니어명이 넘지 않을 오른쪽 끝의 가로 좌표 (픽셀). 같은 금색
+  ///       띠 오른쪽의 측정 일시 문구와 겹치지 않게 그 앞에서 멈춘다.
+  /// 근거: 측정 — 원본 리포트 1쪽에서 측정 일시 문구가 x 약 1832 에서
+  ///       시작한다. 그 앞으로 여백을 둔다
+  static const int engineerRightLimitX = 1800;
+
+  /// 작성: 2026-10-12 02:13:59 · nada
+  /// 변수: buildingNameRightLimitX
+  /// 목적: 건물명이 넘지 않을 오른쪽 끝의 가로 좌표 (픽셀). 금색 띠의 사선
+  ///       줄무늬가 시작하기 전에 멈춘다.
+  /// 근거: 측정 — 원본 리포트 1쪽 건물명 줄 높이에서 사선 줄무늬가 x 약
+  ///       709 에서 시작한다
+  static const int buildingNameRightLimitX = 700;
+
   /// 작성: 2026-10-11 19:15:25 · nada
-  /// 변수: fitToRightKeys
-  /// 목적: 문구가 길어 `headerRightLimitX` 를 넘을 수 있는 칸. 넘칠 때만
-  ///       한 줄을 지키며 글자를 줄인다. 긴 주소 · 해석 종류 · 기종이
-  ///       들어오는 칸이다.
-  /// 근거: 측정 — 주소 칸은 x 1062, 24 픽셀이라 한글 약 47자를 넘으면
+  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 변수: fitRightLimitX
+  /// 목적: 문구가 길어 서식 오른쪽 끝이나 이웃 문구에 닿을 수 있는 칸과 그
+  ///       칸의 오른쪽 한계 (픽셀). 넘칠 때만 한 줄을 지키며 글자를 줄인다.
+  ///       긴 주소 · 해석 종류 · 기종 · 엔지니어명 · 건물명이 들어오는
+  ///       칸이다.
+  /// 근거: 측정 — 주소 칸은 x 1057, 28 픽셀이라 한글 약 40자를 넘으면
   ///       오른쪽 여백에 닿는다
-  static const Set<String> fitToRightKeys = <String>{
-    'product',
-    'load',
-    'test_type',
-    'address',
+  static const Map<String, int> fitRightLimitX = <String, int>{
+    'product': headerRightLimitX,
+    'load': headerRightLimitX,
+    'test_type': headerRightLimitX,
+    'address': headerRightLimitX,
+    'engineer_name': engineerRightLimitX,
+    'building_name': buildingNameRightLimitX,
   };
 
   /// 작성: 2026-10-11 19:15:25 · nada
+  /// 수정: 2026-10-12 02:13:59 · nada
   /// 함수: maxWidthOf
-  /// 목적: 칸 하나가 쓸 수 있는 가장 큰 폭을 정한다.
+  /// 목적: 칸 하나가 쓸 수 있는 가장 큰 폭을 정한다. 차트 쪽 머리말도 같은
+  ///       이름 · 같은 자리의 칸(엔지니어명)이라 함께 쓴다.
   /// 인자: field — 머리말 칸
   /// 반환: 쓸 수 있는 폭 (픽셀). 폭을 재지 않는 칸이면 null
-  static int? maxWidthOf(LayoutField field) =>
-      fitToRightKeys.contains(field.key) ? headerRightLimitX - field.x : null;
+  static int? maxWidthOf(LayoutField field) {
+    final limit = fitRightLimitX[field.key]; // 그 칸의 오른쪽 한계, 없으면 null
+    return limit == null ? null : limit - field.x;
+  }
 
   /// 작성: 2026-09-15 19:43:50 · nada
   /// 변수: fields
@@ -722,16 +766,9 @@ class ReportChartPage {
     color: ReportColors.navy,
   );
 
-  /// 엔지니어명. 1쪽과 같은 자리다
-  static const LayoutField engineerName = LayoutField(
-    key: 'engineer_name',
-    x: 1023,
-    y: 100,
-    size: 21,
-    align: LayoutAlign.left,
-    weight: LayoutWeight.regular,
-    color: ReportColors.navy,
-  );
+  /// 엔지니어명. 1쪽과 같은 칸을 그대로 쓴다 — 자리를 두 곳에 적으면 한쪽만
+  /// 고쳐져 어긋난다
+  static const LayoutField engineerName = ReportPage1.engineerName;
 
   /// 측정 일시. 1쪽과 같은 자리다
   static const LayoutField datetime = LayoutField(

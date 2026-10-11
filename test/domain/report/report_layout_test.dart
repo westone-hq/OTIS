@@ -12,10 +12,13 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 const _layoutJsonPath = 'docs/report_layout.json';
 
 /// 작성: 2026-09-15 19:43:50 · nada
+/// 수정: 2026-10-12 02:15:16 · nada
 /// 변수: _layoutJsonMd5
 /// 목적: 옮길 때 본 정본 기록의 md5. 정본이 바뀌면 이 값이 달라져,
 ///       사본을 함께 고쳐야 한다는 사실이 시험 실패로 드러난다.
-const _layoutJsonMd5 = '38cde4c2b9730fa8ae66e84b902b175c';
+///       2026-10-12 엔지니어 · 건물명 · 주소 칸 자리와 크기를 원본에 맞춰
+///       고치며 정본과 `report_layout.dart` 를 함께 바꾸고 값을 갱신했다.
+const _layoutJsonMd5 = '25b9bc095804083b0541498d4cda16ae';
 
 /// 작성: 2026-09-15 19:43:50 · nada
 /// 함수: _layout
