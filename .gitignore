@@ -57,3 +57,8 @@ pdf_report_dev/out/
 pdf_report_dev/*.pdf
 pdf_report_dev/**/__pycache__/
 pdf_report_dev/**/*.pyc
+
+# Noise analysis output and Kotlin build cache
+tool/__pycache__/
+noise_diagnostics/
+android/.kotlin/

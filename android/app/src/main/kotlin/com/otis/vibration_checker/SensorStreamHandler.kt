@@ -303,7 +303,7 @@ class SensorStreamHandler(
             "zMg" to zMg,
             "dtUs" to dtUs,
             // 마이크 스레드가 채워 둔 최신 dBA. 권한 없거나 미시작이면 0.0
-            "noiseDba" to noiseCaptureHandler.latestDba,
+            "noiseDba" to noiseCaptureHandler.sampleForSensor(tsNs),
         )
 
         var readyBatch: List<Map<String, Any>>? = null // 이번에 내보낼 배치
