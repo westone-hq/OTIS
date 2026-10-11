@@ -7,6 +7,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import kotlin.math.log10
 import kotlin.math.sqrt
@@ -91,10 +92,25 @@ class NoiseCaptureHandler(private val context: Context) {
     /** 마이크 녹음기. `start()` 가 만들고 `stop()` 이 풀어 비운다. 없으면 null */
     private var audioRecord: AudioRecord? = null
 
+    /** 이번 녹음의 PCM과 계산·센서 저장 시각 기록기. */
+    @Volatile
+    private var diagnostics: NoiseDiagnostics? = null
+
+    /** 값과 계산 시각을 한 번에 읽기 위한 불변 스냅샷. */
+    @Volatile
+    private var noiseSnapshot = NoiseSnapshot(0.0, 0L, 0L)
+
     /**
-     * 녹음 스레드가 계속 돌지 여부. `stop()` 이 false 로 바꿔 멈춘다. 다른
-     * 스레드가 바꾼 값을 녹음 스레드가 바로 보도록 @Volatile 로 둔다
+     * 함수: sampleForSensor
+     * 목적: 센서에 붙인 값과 계산 순번·시각을 함께 기록한다.
+     * 인자: sensorNs — 센서 표본의 부팅 이후 시각(ns)
+     * 반환: 이번 센서 행에 붙일 소음값
      */
+    fun sampleForSensor(sensorNs: Long): Double {
+        val sample = noiseSnapshot
+        diagnostics?.sensor(sensorNs, sample)
+        return sample.value
+    }
     @Volatile
     private var isRecording = false
 
@@ -179,6 +195,10 @@ class NoiseCaptureHandler(private val context: Context) {
                 return
             }
 
+            diagnostics = NoiseDiagnostics.open(
+                context, SAMPLE_RATE, windowSamples, hopSamples,
+                micDbfsToDbaOffset + calibrationOffsetDba,
+            )
             isRecording = true
             audioRecord?.startRecording()
 
@@ -193,59 +213,69 @@ class NoiseCaptureHandler(private val context: Context) {
                 var lastLogTimeMs = // 마지막으로 진단 기록을 남긴 시각(밀리초)
                     System.currentTimeMillis()
 
-                while (isRecording) {
-                    val read = // 이번에 실제로 읽은 표본 수
-                        audioRecord?.read(hopBuffer, 0, hopSamples) ?: 0
-                    if (read <= 0) {
-                        try {
-                            Thread.sleep(5)
-                        } catch (_: InterruptedException) {
-                            break
+                var frames = 0L
+                try {
+                    while (isRecording) {
+                        val read = audioRecord?.read(hopBuffer, 0, hopSamples) ?: 0
+                        if (read <= 0) {
+                            try {
+                                Thread.sleep(5)
+                            } catch (_: InterruptedException) {
+                                break
+                            }
+                            continue
                         }
-                        continue
-                    }
 
-                    for (i in 0 until read) {
-                        val norm = hopBuffer[i] / 32768.0 // -1~1 로 맞춘 표본
-                        val sq = norm * norm // 표본 제곱값
-                        if (filled >= windowSamples) {
-                            sumSquares -= ringSquares[ringPos]
-                        } else {
-                            filled++
+                        val readNs = SystemClock.elapsedRealtimeNanos()
+                        diagnostics?.pcm(hopBuffer, read)
+                        frames += read
+                        for (i in 0 until read) {
+                            val norm = hopBuffer[i] / 32768.0
+                            val sq = norm * norm
+                            if (filled >= windowSamples) {
+                                sumSquares -= ringSquares[ringPos]
+                            } else {
+                                filled++
+                            }
+                            ringSquares[ringPos] = sq
+                            sumSquares += sq
+                            ringPos = (ringPos + 1) % windowSamples
                         }
-                        ringSquares[ringPos] = sq
-                        sumSquares += sq
-                        ringPos = (ringPos + 1) % windowSamples
-                    }
 
-                    if (filled < windowSamples) {
-                        // 덜 찬 창의 RMS는 값이 아니라 경사다. 미측정 표시인
-                        // 0.0을 내보내고 다음 홉을 기다린다
-                        latestDba = 0.0
-                        continue
-                    }
+                        if (filled < windowSamples) {
+                            diagnostics?.calculation(audioRecord!!, frames, read, readNs, null, null)
+                            // 덜 찬 창의 RMS는 값이 아니라 경사다. 미측정 표시인
+                            // 0.0을 내보내고 다음 홉을 기다린다
+                            latestDba = 0.0
+                            continue
+                        }
 
-                    val rms = sqrt(sumSquares / windowSamples) // 창의 RMS
-                    val clampedRms = // 무음에서 로그가 -무한대가 되지 않게 막은 RMS
-                        maxOf(rms, 1e-5)
-                    val dbfs = 20.0 * log10(clampedRms) // 마이크 신호 크기
-                    val dba = // 소음 크기. 0~130 으로 자른다
-                        (dbfs + micDbfsToDbaOffset + calibrationOffsetDba)
+                        val rms = sqrt(sumSquares / windowSamples)
+                        val clampedRms = maxOf(rms, 1e-5)
+                        val dbfs = 20.0 * log10(clampedRms)
+                        val dba = (dbfs + micDbfsToDbaOffset + calibrationOffsetDba)
                             .coerceIn(0.0, 130.0)
-                    // OTIS 장비 기록(EVIMP1, 회사 EVA 진동측정 장비가 쓰는 데이터
-                    // 형식)처럼 소수 셋째 자리까지 남긴다
-                    latestDba = (dba * 1000.0).roundToInt() / 1000.0
+                        // 참고 EVIMP1 처럼 소수 셋째 자리까지 남긴다
+                        latestDba = (dba * 1000.0).roundToInt() / 1000.0
 
-                    val nowMs = System.currentTimeMillis() // 지금 시각(밀리초)
-                    if (nowMs - lastLogTimeMs >= 1000L) {
-                        Log.i(
-                            TAG,
-                            "[Device: ${android.os.Build.MODEL}] Audio 1s Stats -> " +
-                                "dBFS: ${"%.1f".format(dbfs)}, dBA: $latestDba, " +
-                                "Offset: $micDbfsToDbaOffset",
+                        val calculatedNs = SystemClock.elapsedRealtimeNanos()
+                        noiseSnapshot = NoiseSnapshot(latestDba, calculatedNs, frames)
+                        diagnostics?.calculation(
+                            audioRecord!!, frames, read, readNs, dbfs, noiseSnapshot,
                         )
-                        lastLogTimeMs = nowMs
+                        val nowMs = System.currentTimeMillis()
+                        if (nowMs - lastLogTimeMs >= 1000L) {
+                            Log.i(
+                                TAG,
+                                "[Device: ${android.os.Build.MODEL}] Audio 1s Stats -> " +
+                                    "dBFS: ${"%.1f".format(dbfs)}, dBA: $latestDba, " +
+                                    "Offset: $micDbfsToDbaOffset",
+                            )
+                            lastLogTimeMs = nowMs
+                        }
                     }
+                } finally {
+                    diagnostics?.closeAudio()
                 }
             }.apply {
                 name = "OTIS_NoiseCaptureThread"
@@ -253,9 +283,11 @@ class NoiseCaptureHandler(private val context: Context) {
             }
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException starting AudioRecord", e)
+            stop()
             latestDba = 0.0
         } catch (e: Exception) {
             Log.e(TAG, "Exception starting AudioRecord", e)
+            stop()
             latestDba = 0.0
         }
     }
@@ -271,29 +303,23 @@ class NoiseCaptureHandler(private val context: Context) {
      */
     fun stop() {
         isRecording = false
-        val record = audioRecord // 멈추고 반납할 녹음기, 없으면 null
+        val record = audioRecord
         try {
             if (record?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
-                record.stop()
+                record.stop() // 먼저 read를 풀고 기록 스레드를 기다린다.
             }
+            captureThread?.join()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping AudioRecord", e)
+            Log.e(TAG, "Error stopping noise capture", e)
         }
-        try {
-            captureThread?.interrupt()
-            captureThread?.join(300)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error joining thread", e)
-        }
+        if (captureThread == null) diagnostics?.closeAudio()
         captureThread = null
-
-        try {
-            record?.release()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error releasing AudioRecord", e)
-        }
+        record?.release()
         audioRecord = null
+        diagnostics?.close()
+        diagnostics = null
         latestDba = 0.0
+        noiseSnapshot = NoiseSnapshot(0.0, 0L, 0L)
     }
 }
 
