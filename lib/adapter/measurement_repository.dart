@@ -384,4 +384,30 @@ class MeasurementRepository {
     await dir.create(recursive: true);
     return source.copy('${dir.path}/$name');
   }
+
+  /// Returns files from the newest native MIC diagnostic folder.
+  Future<List<File>> latestNoiseDiagnosticFiles() async {
+    final root =
+        await getExternalStorageDirectory() ??
+        await getApplicationDocumentsDirectory();
+    final parent = Directory('${root.path}/noise_diagnostics');
+    if (!await parent.exists()) return const <File>[];
+
+    final dirs = <Directory>[];
+    await for (final entry in parent.list()) {
+      if (entry is Directory) dirs.add(entry);
+    }
+    if (dirs.isEmpty) return const <File>[];
+
+    dirs.sort(
+      (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+    );
+
+    final files = <File>[];
+    await for (final entry in dirs.first.list()) {
+      if (entry is File) files.add(entry);
+    }
+    files.sort((a, b) => a.path.compareTo(b.path));
+    return files;
+  }
 }

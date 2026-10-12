@@ -9,6 +9,7 @@ import android.media.MediaRecorder
 import android.util.Log
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import kotlin.math.exp
 import kotlin.math.log10
 import kotlin.math.sqrt
 
@@ -68,6 +69,9 @@ class NoiseCaptureHandler(private val context: Context) {
          *       줄여 보는 실험값이다 (`docs/noise_otis_offset_notes.md`)
          */
         private const val WINDOW_SEC = 0.03125
+
+        /** IEC sound-level meter "Fast" time weighting, in seconds. */
+        private const val FAST_TIME_WEIGHT_SEC = 0.125
 
         /**
          * 작성: 2026-09-21 17:37:25 · 박희정
@@ -213,6 +217,7 @@ class NoiseCaptureHandler(private val context: Context) {
                 var lastLogTimeMs = // 마지막으로 진단 기록을 남긴 시각(밀리초)
                     System.currentTimeMillis()
 
+                var fastWeightedMeanSquare: Double? = null
                 var frames = 0L
                 try {
                     while (isRecording) {
@@ -250,7 +255,17 @@ class NoiseCaptureHandler(private val context: Context) {
                             continue
                         }
 
-                        val rms = sqrt(sumSquares / windowSamples)
+                        val meanSquare = sumSquares / windowSamples
+                        val alpha = exp(
+                            -(read.toDouble() / SAMPLE_RATE) / FAST_TIME_WEIGHT_SEC,
+                        )
+                        val weightedMeanSquare =
+                            fastWeightedMeanSquare?.let { previous ->
+                                alpha * previous + (1.0 - alpha) * meanSquare
+                            } ?: meanSquare
+                        fastWeightedMeanSquare = weightedMeanSquare
+
+                        val rms = sqrt(weightedMeanSquare)
                         val clampedRms = maxOf(rms, 1e-5)
                         val dbfs = 20.0 * log10(clampedRms)
                         val dba = (dbfs + micDbfsToDbaOffset + calibrationOffsetDba)
