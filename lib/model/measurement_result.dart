@@ -37,8 +37,9 @@ class MeasurementResult {
   /// 않는다. null 이면 하중을 받기 전의 예전 측정이다
   final double? load;
 
-  /// 하중 단위 (`SiteInfo.loadUnitOptions` 가운데 하나, 예: "kg"). null 이면
-  /// `load` 와 같은 이유
+  /// 하중 단위. 새 결과는 늘 `SiteInfo.loadUnit`("kg")이다. 단위를 고를 수
+  /// 있던 빌드(2026-10-11 ~ 10-13)로 저장한 결과는 "lb" 일 수 있다. null
+  /// 이면 `load` 와 같은 이유
   final String? loadUnit;
 
   /// 해석 종류 (`SiteInfo.analysisTypeOptions` 가운데 하나, 예: "층간 시험").

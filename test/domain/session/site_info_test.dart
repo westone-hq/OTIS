@@ -3,6 +3,7 @@ import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-10-11 16:58:59 · nada
+/// 수정: 2026-10-13 13:17:56 · nada
 /// 함수: _site
 /// 목적: 새 항목까지 모두 채운 현장 정보를 만든다.
 /// 반환: 시험용 현장 정보
@@ -15,7 +16,6 @@ SiteInfo _site() => const SiteInfo(
   direction: SiteInfo.directionDown,
   model: '유압',
   load: '4400',
-  loadUnit: 'lb',
   analysisType: '브레이크 기능',
   postalCode: '04524',
   notes: '참고',
@@ -84,19 +84,18 @@ MeasurementResult _result({
 }
 
 /// 작성: 2026-10-11 16:58:59 · nada
-/// 수정: 2026-10-11 17:28:28 · nada
+/// 수정: 2026-10-13 13:17:56 · nada
 /// 함수: main
-/// 목적: 현장 정보의 새 항목(하중 · 단위 · 해석 종류 · 우편번호 · 참고사항)
-///       을 시험한다. 기기 저장 표 왕복, 선택지 밖 값의 기본값 처리, 저장된
-///       결과에서 되살리기, 필수 검사, 하중 문자열 만들기, 선택지 목록을
-///       본다.
+/// 목적: 현장 정보의 새 항목(하중 · 해석 종류 · 우편번호 · 참고사항)을
+///       시험한다. 기기 저장 표 왕복, 선택지 밖 값의 기본값 처리, kg 고정
+///       뒤 예전 lb 저장 표 · 결과 읽기, 저장된 결과에서 되살리기, 필수
+///       검사, 하중 문자열 만들기, 선택지 목록을 본다.
 void main() {
   group('SiteInfo 저장 표', () {
     test('toMap → fromMap 왕복에서 새 항목이 그대로 남는다', () {
       final restored = SiteInfo.fromMap(_site().toMap()); // 되읽은 현장 정보
 
       expect(restored.load, '4400');
-      expect(restored.loadUnit, 'lb');
       expect(restored.analysisType, '브레이크 기능');
       expect(restored.postalCode, '04524');
       expect(restored.address, '서울시 중구 세종대로 110');
@@ -109,13 +108,27 @@ void main() {
       expect(SiteInfo.fromMap(map).notes, '');
     });
 
-    test('선택지에 없는 하중 단위 · 해석 종류는 기본값으로 읽는다', () {
+    test('하중 단위는 저장 표에 넣지 않는다 (kg 고정)', () {
+      expect(_site().toMap().containsKey('loadUnit'), isFalse);
+    });
+
+    test('예전 저장 표에 loadUnit: lb 가 남아 있어도 오류 없이 읽는다', () {
       final restored = SiteInfo.fromMap(<String, String?>{
-        'loadUnit': 'ton',
+        'jobNo': 'J-1',
+        'load': '4400',
+        'loadUnit': 'lb',
+      });
+
+      expect(restored.jobNo, 'J-1');
+      expect(restored.load, '4400');
+      expect(restored.toMap().containsKey('loadUnit'), isFalse);
+    });
+
+    test('선택지에 없는 해석 종류는 기본값으로 읽는다', () {
+      final restored = SiteInfo.fromMap(<String, String?>{
         'analysisType': '없어진 종류',
       });
 
-      expect(restored.loadUnit, SiteInfo.defaultLoadUnit);
       expect(restored.analysisType, SiteInfo.defaultAnalysisType);
     });
 
@@ -127,7 +140,6 @@ void main() {
 
       expect(restored.load, '');
       expect(restored.postalCode, '');
-      expect(restored.loadUnit, 'kg');
       expect(restored.analysisType, '층간 시험');
     });
   });
@@ -145,7 +157,6 @@ void main() {
       );
 
       expect(site.load, '2000');
-      expect(site.loadUnit, 'kg');
       expect(site.analysisType, '일반');
       expect(site.postalCode, '10575');
       expect(site.notes, '');
@@ -156,8 +167,16 @@ void main() {
 
       expect(site.load, '');
       expect(site.postalCode, '');
-      expect(site.loadUnit, SiteInfo.defaultLoadUnit);
       expect(site.analysisType, SiteInfo.defaultAnalysisType);
+    });
+
+    test('lb 로 저장한 예전 결과는 하중을 빈 칸으로 되살려 검사에 걸린다', () {
+      final site = SiteInfo.fromResult(
+        _result(load: 4400.0, loadUnit: 'lb', postalCode: '10575'),
+      );
+
+      expect(site.load, '', reason: 'lb 숫자를 kg 로 다시 재면 안 된다');
+      expect(site.validate(), contains(SiteFieldError.loadMissing));
     });
   });
 
@@ -167,7 +186,6 @@ void main() {
 
       expect(changed.direction, SiteInfo.directionUp);
       expect(changed.load, '4400');
-      expect(changed.loadUnit, 'lb');
       expect(changed.analysisType, '브레이크 기능');
       expect(changed.postalCode, '04524');
       expect(changed.notes, '참고');
@@ -229,11 +247,9 @@ void main() {
       expect(SiteInfo.loadText(1350.25), '1350.25');
     });
 
-    test('하중 단위마다 리포트 표기가 짝지어져 있다', () {
-      for (final unit in SiteInfo.loadUnitOptions) {
-        expect(SiteInfo.loadUnitReportLabels[unit], isNotNull, reason: unit);
-      }
-      expect(SiteInfo.loadUnitReportLabels['kg'], '킬로그램');
+    test('하중 단위는 kg 이고 리포트 표기가 짝지어져 있다', () {
+      expect(SiteInfo.loadUnit, 'kg');
+      expect(SiteInfo.loadUnitReportLabels[SiteInfo.loadUnit], '킬로그램');
       expect(SiteInfo.loadUnitReportLabels['lb'], '파운드');
     });
 
@@ -249,7 +265,6 @@ void main() {
         SiteInfo.analysisTypeOptions,
         contains(SiteInfo.defaultAnalysisType),
       );
-      expect(SiteInfo.loadUnitOptions, contains(SiteInfo.defaultLoadUnit));
     });
   });
 }

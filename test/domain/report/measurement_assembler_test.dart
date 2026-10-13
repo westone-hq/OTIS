@@ -320,7 +320,6 @@ void main() {
           direction: '하부 → 상부',
           model: 'Gen2',
           load: ' 1350.5 ',
-          loadUnit: 'lb',
           analysisType: '문 열림 사이클',
           postalCode: ' 04524 ',
           notes: '  도어 쪽 소음 큼  ',
@@ -331,7 +330,7 @@ void main() {
 
       expect(model.address, '서울시 중구');
       expect(model.load, 1350.5);
-      expect(model.loadUnit, 'lb');
+      expect(model.loadUnit, 'kg', reason: '하중 단위는 kg 고정이다');
       expect(model.analysisType, '문 열림 사이클');
       expect(model.postalCode, '04524');
       expect(model.notes, '도어 쪽 소음 큼');

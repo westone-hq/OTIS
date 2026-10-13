@@ -120,9 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 기종. `SiteInfo.modelOptions` 가운데 하나
   String _model = SiteInfo.defaultModel;
 
-  /// 하중 단위. `SiteInfo.loadUnitOptions` 가운데 하나
-  String _loadUnit = SiteInfo.defaultLoadUnit;
-
   /// 해석 종류. `SiteInfo.analysisTypeOptions` 가운데 하나
   String _analysisType = SiteInfo.defaultAnalysisType;
 
@@ -155,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-11 17:28:28 · nada
+  /// 수정: 2026-10-13 13:17:56 · nada
   /// 함수: _loadSavedInputs
   /// 목적: `PrefsStore`(기기에 값을 저장·불러오는 저장소 클래스)에 저장된
   ///       마지막 현장 정보를 불러와 입력 필드를 채운다.
@@ -182,13 +179,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadCtl.text = site.load;
       _direction = site.direction;
       _model = site.model;
-      _loadUnit = site.loadUnit;
       _analysisType = site.analysisType;
     });
   }
 
   /// 작성: 2026-10-04 16:44:32 · nada
-  /// 수정: 2026-10-11 17:28:28 · nada
+  /// 수정: 2026-10-13 13:17:56 · nada
   /// 함수: _currentSite
   /// 목적: 지금 입력창 · 선택지에 있는 값을 앞뒤 공백을 지워 현장 정보로
   ///       묶는다.
@@ -203,7 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
       direction: _direction,
       model: _model,
       load: _loadCtl.text.trim(),
-      loadUnit: _loadUnit,
       analysisType: _analysisType,
       postalCode: _postalCodeCtl.text.trim(),
       notes: _notesCtl.text.trim(),
@@ -706,9 +701,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-10-11 17:28:28 · nada
+  /// 수정: 2026-10-13 13:17:56 · nada
   /// 함수: _segmentStyle
-  /// 목적: 고르는 버튼 묶음(운전 방향, 하중 단위)이 함께 쓰는 모양.
-  ///       터치 영역 56dp 를 지킨다.
+  /// 목적: 운전 방향 버튼 묶음의 모양. 터치 영역 56dp 를 지킨다.
   /// 반환: 버튼 묶음 스타일
   ButtonStyle _segmentStyle() {
     return SegmentedButton.styleFrom(
@@ -829,10 +824,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-10-11 17:28:28 · nada
+  /// 수정: 2026-10-13 13:17:56 · nada
   /// 함수: _buildLoadField
-  /// 목적: 하중 입력칸과 단위(kg / lb) 고르는 버튼을 한 줄에 만든다. 하중은
-  ///       소수점이 있는 숫자 키패드로 받고, 숫자인지는 측정 시작 때
-  ///       `SiteInfo.validate()` 가 본다. 값을 고치면 오류 표시를 지운다.
+  /// 목적: 하중 입력칸과 단위 글자(`SiteInfo.loadUnit`, kg)를 한 줄에
+  ///       만든다. 단위는 고를 수 없다(2026-10-13 kg 고정). 입력칸 안
+  ///       꼬리 글자(suffixText)는 빈 칸일 때 숨으므로 칸 밖 같은 줄에
+  ///       둔다. 하중은 소수점이 있는 숫자 키패드로 받고, 숫자인지는 측정
+  ///       시작 때 `SiteInfo.validate()` 가 본다. 값을 고치면 오류 표시를
+  ///       지운다.
   /// 반환: 하중 입력 영역 위젯
   Widget _buildLoadField() {
     return Container(
@@ -873,27 +872,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: AppDims.gap2),
-              SegmentedButton<String>(
-                segments: [
-                  for (final unit in SiteInfo.loadUnitOptions)
-                    ButtonSegment<String>(
-                      value: unit,
-                      label: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppDims.gap2,
-                        ),
-                        child: Text(unit),
-                      ),
-                    ),
-                ],
-                selected: {_loadUnit},
-                showSelectedIcon: false,
-                onSelectionChanged: (val) {
-                  setState(() => _loadUnit = val.first);
-                  _saveDraft(); // → 로직 이동: _saveDraft()
-                },
-                style: _segmentStyle(), // → 로직 이동: _segmentStyle()
-              ),
+              Text(SiteInfo.loadUnit, style: AppText.bodyBold),
             ],
           ),
           if (_loadError != null) _buildErrorBox(_loadError!),

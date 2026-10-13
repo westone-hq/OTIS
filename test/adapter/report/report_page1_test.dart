@@ -64,7 +64,7 @@ MeasurementResult _siteResult({
 }
 
 /// 작성: 2026-09-16 09:12:40 · nada
-/// 수정: 2026-10-11 19:15:25 · nada
+/// 수정: 2026-10-13 13:17:56 · nada
 /// 함수: main
 /// 목적: 1쪽 렌더링을 시험한다. 자리가 맞는지는 `ReportLayout` 과 대조하는
 ///       `report_layout_test.dart` 가 맡으므로, 여기서는 PDF 가 실제로
@@ -103,7 +103,7 @@ void main() {
   });
 
   group('ReportPage1Renderer.headerValues — 머리말 문구', () {
-    test('하중은 입력 숫자와 단위 표기를 이어 쓴다', () {
+    test('하중은 입력 숫자와 단위 표기를 이어 쓰고, 예전 lb 결과는 파운드다', () {
       expect(
         ReportPage1Renderer.headerValues(_siteResult())['load'],
         '2000 킬로그램',

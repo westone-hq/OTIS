@@ -80,7 +80,7 @@ class MeasurementAssembleResult {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-13 13:17:56 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -101,8 +101,9 @@ class MeasurementAssembler {
   ///         앞뒤 공백을 지우고, 비어 있으면 null 로 둔다(재지 않은 값을
   ///         빈 문자열로 채우지 않는다). 하중은 홈 화면 검사와 같은
   ///         기준(`SiteInfo.parseLoad()`)으로 숫자로 바꾼다. 비어 있지
-  ///         않은데 바꿀 수 없으면 층수처럼 사유를 올린다. 하중이 없으면
-  ///         단위도 뜻이 없어 null 로 둔다
+  ///         않은데 바꿀 수 없으면 층수처럼 사유를 올린다. 단위는 늘
+  ///         `SiteInfo.loadUnit`(kg)이고, 하중이 없으면 단위도 뜻이 없어
+  ///         null 로 둔다
   ///       - 엔지니어 이름은 현장 정보가 아니라 기기 설정이라 따로 받는다.
   ///         비어 있으면 null
   ///       - 소음 시계열을 격자에서 그대로 옮기고, 0 이 아닌 표본의
@@ -190,7 +191,7 @@ class MeasurementAssembler {
         direction: site.direction,
         model: model.isEmpty ? null : model,
         load: load,
-        loadUnit: load == null ? null : site.loadUnit,
+        loadUnit: load == null ? null : SiteInfo.loadUnit,
         analysisType: site.analysisType,
         postalCode: postalCode.isEmpty ? null : postalCode,
         notes: notes.isEmpty ? null : notes,

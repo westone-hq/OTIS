@@ -66,13 +66,14 @@ Future<void> _fillRequired(WidgetTester tester) async {
 }
 
 /// 작성: 2026-10-04 14:35:59 · nada
-/// 수정: 2026-10-11 17:28:28 · nada
+/// 수정: 2026-10-13 13:17:56 · nada
 /// 함수: main
 /// 목적: 홈 화면을 시험한다.
 ///       - 지난번 현장 정보로 입력창 · 선택지를 미리 채우는지, 선택지에
 ///         없는 저장값은 버리는지, 입력하는 즉시 저장하는지
-///       - 새 입력칸(우편번호 · 하중 · 단위 · 해석 종류 · 참고사항)이
-///         보이는지
+///       - 새 입력칸(우편번호 · 하중 · 해석 종류 · 참고사항)이 보이는지
+///       - 하중 단위가 고르는 버튼 없이 고정 글자 kg 로 보이는지, 단위를
+///         고를 수 있던 빌드가 남긴 저장값(lb)을 오류 없이 읽는지
 ///       - 필수 항목이 빠지면 측정을 시작하지 않고 안내하는지, 참고사항만
 ///         비었을 때는 시작하는지, 참고사항은 저장하지 않는지
 void main() {
@@ -104,13 +105,28 @@ void main() {
     expect(find.text('줄-로우프, 2:1'), findsOneWidget);
     expect(find.text('브레이크 기능'), findsOneWidget);
     expect(find.text('Gen2'), findsNothing);
-    final segments = tester
-        .widgetList<SegmentedButton<String>>(
-          find.byType(SegmentedButton<String>),
-        )
-        .toList(); // 운전 방향 · 하중 단위 선택 버튼, 화면 차례대로
-    expect(segments[0].selected, {'하강'});
-    expect(segments[1].selected, {'lb'});
+    final segment = tester.widget<SegmentedButton<String>>(
+      find.byType(SegmentedButton<String>),
+    ); // 운전 방향 선택 버튼
+    expect(segment.selected, {'하강'});
+  });
+
+  testWidgets('하중 단위는 고르는 버튼 없이 kg 고정 글자로 보인다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'lastSite': jsonEncode({'load': '4400', 'loadUnit': 'lb'}),
+    }); // 단위를 고를 수 있던 빌드가 남긴 저장값
+
+    await _pumpHome(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('4400'), findsOneWidget);
+    expect(find.text('kg'), findsOneWidget);
+    expect(find.text('lb'), findsNothing);
+    expect(
+      find.byType(SegmentedButton<String>),
+      findsOneWidget,
+      reason: '남은 버튼 묶음은 운전 방향 하나다',
+    );
   });
 
   testWidgets('선택지에 없는 저장값은 버리고 기본값을 둔다', (tester) async {
@@ -118,7 +134,6 @@ void main() {
       'lastSite': jsonEncode({
         'direction': '하부 → 상부',
         'model': '없는 기종',
-        'loadUnit': 'ton',
         'analysisType': '없어진 종류',
       }),
     });
@@ -128,13 +143,10 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Gen2'), findsOneWidget);
     expect(find.text('층간 시험'), findsOneWidget);
-    final segments = tester
-        .widgetList<SegmentedButton<String>>(
-          find.byType(SegmentedButton<String>),
-        )
-        .toList(); // 운전 방향 · 하중 단위 선택 버튼, 화면 차례대로
-    expect(segments[0].selected, {'상승'});
-    expect(segments[1].selected, {'kg'});
+    final segment = tester.widget<SegmentedButton<String>>(
+      find.byType(SegmentedButton<String>),
+    ); // 운전 방향 선택 버튼
+    expect(segment.selected, {'상승'});
   });
 
   testWidgets('입력하면 측정을 시작하지 않아도 바로 저장된다', (tester) async {
@@ -168,7 +180,6 @@ void main() {
       '우편번호',
       '하중',
       'kg',
-      'lb',
       '분석 내용',
       '해석 종류',
       '추가 참고사항 (선택)',
@@ -230,7 +241,6 @@ void main() {
     final site = MeasurementSession.instance.currentSite!; // 실린 현장 정보
     expect(site.postalCode, '10575');
     expect(site.load, '2000');
-    expect(site.loadUnit, 'kg');
     expect(site.analysisType, '층간 시험');
     expect(site.notes, '');
   });
