@@ -57,14 +57,20 @@ class UpdatePrompt {
   /// 함수: checkManually
   /// 목적: 설정 화면에서 누른 확인. "나중에" 기록을 보지 않고 확인해,
   ///       새 버전이 있으면 안내하고 없으면 "최신 버전입니다", 확인하지
-  ///       못했으면 그 사실을 알린다.
+  ///       못했으면 그 갈래(인터넷 · 서버 · 형식)에 맞춰 알린다.
   /// 인자: context — 설정 화면의 위치 정보
   Future<void> checkManually(BuildContext context) async {
     // → 로직 이동: UpdateChecker.check()
     final check = await _checker.check(manual: true);
     if (!context.mounted) return;
-    if (check.failure != null) {
-      showErrorSnackBar(context, '업데이트를 확인하지 못했습니다. 인터넷 연결을 확인하세요.');
+    final failure = check.failure; // 확인하지 못한 갈래, 확인했으면 null
+    if (failure != null) {
+      final message = switch (failure) {
+        UpdateCheckFailure.network => '업데이트를 확인하지 못했습니다. 인터넷 연결을 확인하세요.',
+        UpdateCheckFailure.server => '업데이트 서버에서 버전 정보를 찾지 못했습니다.',
+        UpdateCheckFailure.invalid => '업데이트 정보를 읽지 못했습니다.',
+      }; // 갈래마다 다른 안내
+      showErrorSnackBar(context, message);
       return;
     }
     if (check.decision == UpdateDecision.none) {

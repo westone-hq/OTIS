@@ -131,10 +131,13 @@ class UpdateInstaller(
      * 작성: 2026-10-13 14:18:51 · nada
      * 함수: register
      * 목적: 두 통로를 Flutter 엔진에 연결한다. `MainActivity` 가 엔진을
-     *       만들 때 한 번 부른다.
+     *       만들 때 한 번 부른다. 지난 업데이트 때 받아 둔 APK(약 55MB)를
+     *       여기서 지운다 — 설치가 끝나면 앱이 바로 바뀌어 지울 틈이 없고,
+     *       앱이 막 켜진 이때는 받는 중인 파일이 없다.
      * 인자: messenger — Flutter 엔진의 메시지 통로
      */
     fun register(messenger: BinaryMessenger) {
+        File(activity.cacheDir, UPDATE_DIR).deleteRecursively()
         EventChannel(messenger, PROGRESS_CHANNEL).setStreamHandler(this)
         MethodChannel(messenger, METHOD_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {

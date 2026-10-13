@@ -52,7 +52,8 @@ Future<http.Response> _ok(http.Request request) async =>
 /// 함수: main
 /// 목적: `UpdateChecker` 를 시험한다. 성공 · 시간 초과 · 404 · 깨진 JSON
 ///       에서 앞의 셋이 앱을 막지 않는 `none` 인지, 판정이 맞는지, "나중에"
-///       하루 한 번 규칙과 수동 확인 · 필수 업데이트의 예외를 본다.
+///       하루 한 번 규칙과 수동 확인 · 필수 업데이트 · 시계 되돌림의
+///       예외, 빌드 번호를 못 읽을 때를 본다.
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -72,18 +73,36 @@ void main() {
   });
 
   test(
-    '시간 초과 · 404 · 연결 실패 · 깨진 JSON 은 none 과 사유',
+    '시간 초과 · 404 · 연결 실패 · 깨진 JSON 은 none 과 갈래별 사유',
     () async {
-      final responders = <String, Future<http.Response> Function(http.Request)>{
-        '시간 초과': (_) => Completer<http.Response>().future,
-        '404': (_) async => http.Response('Not Found', 404),
-        '연결 실패': (_) async => throw http.ClientException('offline'),
-        '깨진 JSON': (_) async => http.Response('{"latest":', 200),
-      }; // 상황 → 가짜 응답
-      for (final entry in responders.entries) {
-        final result = await _checker(entry.value, build: 1).check(); // 결과
+      final cases =
+          <
+            String,
+            (Future<http.Response> Function(http.Request), UpdateCheckFailure)
+          >{
+            '시간 초과': (
+              (_) => Completer<http.Response>().future,
+              UpdateCheckFailure.network,
+            ),
+            '404': (
+              (_) async => http.Response('Not Found', 404),
+              UpdateCheckFailure.server,
+            ),
+            '연결 실패': (
+              (_) async => throw http.ClientException('offline'),
+              UpdateCheckFailure.network,
+            ),
+            '깨진 JSON': (
+              (_) async => http.Response('{"latest":', 200),
+              UpdateCheckFailure.invalid,
+            ),
+          }; // 상황 → (가짜 응답, 기대 갈래)
+      for (final entry in cases.entries) {
+        final (respond, kind) = entry.value; // 가짜 응답과 기대 갈래
+        final result = await _checker(respond, build: 1).check(); // 결과
         expect(result.decision, UpdateDecision.none, reason: entry.key);
-        expect(result.failure, isNotNull, reason: entry.key);
+        expect(result.failure, kind, reason: entry.key);
+        expect(result.failureDetail, isNotNull, reason: entry.key);
       }
     },
     timeout: const Timeout(Duration(seconds: 30)),
@@ -125,6 +144,26 @@ void main() {
     }); // 한 시간 전 latest 12 일 때 "나중에" 를 누른 기록
     final checker = _checker(_ok, build: 12); // 서버 latest 는 13
 
+    expect((await checker.check()).decision, UpdateDecision.optional);
+  });
+
+  test('설치된 빌드 번호를 읽지 못하면 필수 창 대신 none 과 사유', () async {
+    final checker = UpdateChecker(
+      client: MockClient(_ok),
+      currentBuild: () async => null,
+    ); // 빌드 번호를 못 읽는 확인기
+
+    final result = await checker.check(); // 확인 결과
+    expect(result.decision, UpdateDecision.none);
+    expect(result.failure, UpdateCheckFailure.invalid);
+  });
+
+  test('기기 시계를 "나중에" 이전으로 되돌리면 창을 다시 띄운다', () async {
+    var now = DateTime(2026, 10, 13, 9); // 가짜 지금 시각
+    final checker = _checker(_ok, now: () => now); // 빌드 12
+    await checker.snooze((await checker.check()).info!);
+
+    now = DateTime(2026, 10, 12, 9); // 하루 뒤로 되돌림
     expect((await checker.check()).decision, UpdateDecision.optional);
   });
 

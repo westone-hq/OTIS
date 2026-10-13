@@ -153,7 +153,7 @@ Future<BuildContext> _pumpHost(WidgetTester tester) async {
 ///       - 필수 창: "나중에" 가 없고 뒤로가기로 닫히지 않는지, 설치가
 ///         취소되면 다시 뜨는지
 ///       - 설치 허용이 꺼져 있으면 설정 안내를 띄우는지
-///       - 설정 화면 "업데이트 확인" 의 최신 · 확인 못 함 문구
+///       - 설정 화면 "업데이트 확인" 의 최신 · 인터넷 · 서버 문구
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -321,6 +321,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('업데이트를 확인하지 못했습니다. 인터넷 연결을 확인하세요.'), findsOneWidget);
+    });
+
+    testWidgets('서버에 버전 정보가 없으면(404) 인터넷이 아니라 서버 문제로 알린다', (tester) async {
+      final prompt = UpdatePrompt(
+        checker: _checker(respond: (_) async => http.Response('', 404)),
+        installer: _FakeInstaller(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: SettingsScreen(updatePrompt: prompt)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('업데이트 확인'));
+      await tester.tap(find.text('업데이트 확인'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('업데이트 서버에서 버전 정보를 찾지 못했습니다.'), findsOneWidget);
     });
 
     testWidgets('새 버전이 있으면 업데이트 창을 띄운다', (tester) async {
