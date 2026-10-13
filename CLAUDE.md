@@ -22,10 +22,11 @@ flutter test                                      # 전부 통과 유지
 | `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`), 지표 계산 전 신호 처리 (`SignalConditioner`). 수집 · 처리 수치는 `CaptureConfig` |
 | `lib/domain/report/` | 리포트 좌표·임계값·지표 계산. 숫자는 여기에만 둔다 |
 | `lib/domain/session/` | 화면 사이에 넘기는 이번 측정 상태 (`MeasurementSession`) |
-| `lib/adapter/` | 플랫폼 경계 — 센서 채널, 파일·저장소, PDF 렌더링, 환경설정. 측정 한 번의 수집 절차는 `capture_session.dart`, 저장 절차는 `measurement_recorder.dart` |
+| `lib/domain/update/` | 앱 안 업데이트 — version.json 읽기(`UpdateInfo`) · 판정(`UpdateDecision`) · 배포 주소와 시간 값(`UpdateConfig`) |
+| `lib/adapter/` | 플랫폼 경계 — 센서 채널, 파일·저장소, PDF 렌더링, 환경설정. 측정 한 번의 수집 절차는 `capture_session.dart`, 저장 절차는 `measurement_recorder.dart`. 업데이트 확인은 `update_checker.dart`, 내려받기 · 설치 통로는 `update_installer.dart` |
 | `lib/ui/core/` | 라우터, 디자인 토큰(`theme.dart`), 공용 위젯(`widgets/`) |
-| `lib/ui/features/` | 화면별 폴더 (home · measure · history · result · settings · shared) |
-| `android/app/src/main/kotlin/` | `MainActivity` · `SensorStreamHandler` · `NoiseCaptureHandler` |
+| `lib/ui/features/` | 화면별 폴더 (home · measure · history · result · settings · shared · update) |
+| `android/app/src/main/kotlin/` | `MainActivity` · `SensorStreamHandler` · `NoiseCaptureHandler` · `UpdateInstaller`(APK 내려받기 · SHA-256 확인 · `PackageInstaller` 설치) |
 | `pdf_report_dev/` | 리포트 좌표를 확정할 때 쓴 파이썬 프로토타입 (앱 빌드와 무관) |
 | `docs/comment_rules.md` | 주석 규칙. **코드 작업 전 매번 다시 읽는다** |
 | `docs/report_layout.json` | 리포트 좌표 정본. `report_layout_test` 가 Dart 상수와 대조한다 |
@@ -42,8 +43,16 @@ flutter test                                      # 전부 통과 유지
   ─[마이크 권한 확인]─▶ 측정(카운트다운 → 수집, 볼륨키로 종료)
   ─▶ 결과(/result/:id: 지표 · 결과 비교 · 메일 · 테스트 재실행)
 홈 ─▶ 저장 결과 목록(history) ─▶ 결과
-홈 ─▶ 설정(엔지니어 이름 · 수신 이메일 목록 · 앱 버전)
+홈 ─▶ 설정(엔지니어 이름 · 수신 이메일 목록 · 앱 버전 · 업데이트 확인)
 ```
+
+- 앱 안 업데이트(2026-10-13, 절차는 `docs/release.md`): 홈이 앱 실행마다
+  한 번, 설정이 "업데이트 확인" 으로 배포 저장소(GitHub Releases)의
+  version.json 을 3초 안에 받아 본다. 못 받으면 조용히 넘어간다 —
+  인터넷이 없는 기계실에서도 측정은 막지 않는다. 선택 업데이트는 "나중에"
+  를 누르면 같은 번호를 하루 동안 다시 묻지 않고, 필수(빌드 < minimum)는
+  닫을 수 없다. 측정 · 결과 화면에서는 확인 · 설치하지 않는다. 설치는
+  `PackageInstaller` 세션이고 FileProvider 를 쓰지 않는다.
 
 - 홈 현장 정보(2026-10-08 · 10-11): 제번 · 현장명 · 우편번호(숫자 5자리) ·
   주소 · 최하층 / 최상층 · 운전 방향 · 기종 · 하중(kg 고정, 2026-10-13 —

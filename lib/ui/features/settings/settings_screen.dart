@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 
+import '../update/update_prompt.dart';
+
 import '../../core/theme.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -9,13 +11,21 @@ import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
-/// 수정: 2026-10-11 19:11:50 · nada
+/// 수정: 2026-10-13 14:18:51 · nada
 /// 클래스: SettingsScreen
 /// 목적: 설정 화면. 엔지니어 이름, 결과 수신 이메일 목록 관리(추가 ·
-///       삭제)와 앱 버전 확인을 한 화면에서 처리한다. 어르신도 쓰기 편하도록 버튼 높이를 64dp 이상으로
+///       삭제)와 앱 버전 확인 · 업데이트 확인을 한 화면에서 처리한다. 어르신도 쓰기 편하도록 버튼 높이를 64dp 이상으로
 ///       두고, 오류는 테두리 색 · 아이콘 · 문구 3중으로 겹쳐 보여준다.
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 함수: SettingsScreen
+  /// 목적: 설정 화면을 만든다.
+  /// 인자: updatePrompt — "업데이트 확인" 이 쓸 업데이트 안내 흐름. 안
+  ///       주면 실제 서버 · 안드로이드 설치 통로로 만든다
+  const SettingsScreen({super.key, this.updatePrompt});
+
+  /// "업데이트 확인" 이 쓸 업데이트 안내 흐름. null 이면 기본 흐름
+  final UpdatePrompt? updatePrompt;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -52,6 +62,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// null
   String? _version;
 
+  /// "업데이트 확인" 을 누른 뒤 결과를 기다리는 중인지. 그동안 버튼을
+  /// 꺼 두 번 누르지 않게 한다
+  bool _checkingUpdate = false;
+
   /// 작성: 2026-08-19 10:57:06 · 박건준
   /// 수정: 2026-10-11 19:11:50 · nada
   /// 함수: initState
@@ -83,6 +97,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (!mounted) return;
     setState(() => _version = version);
+  }
+
+  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 함수: _checkUpdate
+  /// 목적: "업데이트 확인" 을 눌렀을 때 서버에 새 버전이 있는지 확인한다.
+  ///       결과 문구 · 창은 `UpdatePrompt.checkManually()` 가 고른다.
+  Future<void> _checkUpdate() async {
+    setState(() => _checkingUpdate = true);
+    final prompt = widget.updatePrompt ?? UpdatePrompt(); // 업데이트 안내 흐름
+    // → 로직 이동: UpdatePrompt.checkManually()
+    await prompt.checkManually(context);
+    if (mounted) setState(() => _checkingUpdate = false);
   }
 
   /// 작성: 2026-10-11 19:11:50 · nada
@@ -232,10 +258,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-13 14:18:51 · nada
   /// 함수: build
   /// 목적: 설정 화면을 그린다. 엔지니어 이름 → 수신 이메일 목록 → 추가
-  ///       입력창 → 앱 버전 순으로 세로로 배치한다. 엔지니어 이름은
+  ///       입력창 → 앱 버전 · 업데이트 확인 순으로 세로로 배치한다. 엔지니어 이름은
   ///       선택이고, 측정을 저장할 때의 이름이 그 측정 리포트의 엔지니어
   ///       칸에 찍힌다.
   @override
@@ -296,6 +322,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           // 4. 앱 버전
           _buildListTile(title: '앱 버전', trailingText: _version ?? ''),
+          const SizedBox(height: AppDims.gap),
+          OutlinedButton(
+            // 확인하는 동안은 꺼 둔다
+            onPressed: _checkingUpdate ? null : _checkUpdate,
+            child: Text(_checkingUpdate ? '확인 중…' : '업데이트 확인'),
+          ),
         ],
       ),
     );

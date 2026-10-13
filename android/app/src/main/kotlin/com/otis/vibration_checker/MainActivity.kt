@@ -2,6 +2,7 @@ package com.otis.vibration_checker
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.hardware.Sensor
@@ -16,7 +17,7 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * 작성: 2026-08-17 15:43:39 · 박건준
- * 수정: 2026-09-23 14:17:47 · 박희정
+ * 수정: 2026-10-13 14:18:51 · nada
  * 클래스: MainActivity
  * 목적: 안드로이드(네이티브, Flutter 쪽에서 부르는 안드로이드 코틀린
  *       코드) 진입점. Flutter와 채널로 연결된다.
@@ -24,6 +25,8 @@ import io.flutter.plugin.common.MethodChannel
  *         마이크 권한 · 측정 시작 · 종료 명령을 받아 처리한다
  *       - `EventChannel`(계속 흘려보내는 통로)은 `SensorStreamHandler`
  *         에게 맡겨 센서 원본 데이터를 Flutter로 흘려보낸다
+ *       - 앱 안 업데이트(내려받기 · 설치)는 `UpdateInstaller` 가 따로
+ *         통로를 열어 맡는다
  */
 class MainActivity : FlutterActivity() {
     /**
@@ -71,6 +74,9 @@ class MainActivity : FlutterActivity() {
     /** 가속도 · 중력 센서 원본 캡처 담당. 시작 · 종료 요청을 그대로 넘긴다 */
     private lateinit var sensorStreamHandler: SensorStreamHandler
 
+    /** 앱 안 업데이트의 내려받기 · 설치 담당. 엔진이 뜰 때 만든다 */
+    private lateinit var updateInstaller: UpdateInstaller
+
     /** 측정 중 볼륨키를 "측정 종료" 입력으로 쓸지 여부. 측정 화면에서만 true로 켠다 */
     private var volumeKeyCaptureEnabled = false
 
@@ -89,11 +95,13 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-09-23 14:17:47 · 박희정
+     * 수정: 2026-10-13 14:18:51 · nada
      * 함수: configureFlutterEngine
      * 목적: Flutter 엔진이 뜰 때 소음·센서·소음테스트 핸들러를 만들고,
      *       MethodChannel·EventChannel을 등록해 Flutter와 안드로이드를
-     *       연결한다.
+     *       연결한다. 업데이트 담당(`UpdateInstaller`)도 만들어 자기 통로를
+     *       등록하게 한다. 측정 중인지는 볼륨키 가로채기가 켜져 있는지로
+     *       알려 준다 — 측정 화면에서만 켜진다.
      * 인자: flutterEngine — Flutter 쪽에서 넘겨주는 엔진 인스턴스
      */
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -105,6 +113,10 @@ class MainActivity : FlutterActivity() {
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, STREAM_CHANNEL)
             // → 로직 이동: SensorStreamHandler.onListen()
             .setStreamHandler(sensorStreamHandler)
+
+        updateInstaller = UpdateInstaller(this) { volumeKeyCaptureEnabled }
+        // → 로직 이동: UpdateInstaller.register()
+        updateInstaller.register(flutterEngine.dartExecutor.binaryMessenger)
 
 
         methodChannel =
@@ -346,11 +358,31 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
+     * 작성: 2026-10-13 14:18:51 · nada
+     * 함수: onActivityResult
+     * 목적: 다른 화면에서 돌아온 결과를 받는다. 앱 설치 허용 설정 화면에서
+     *       돌아온 것이면 `UpdateInstaller` 가 다시 확인해 Flutter 에
+     *       알린다.
+     * 인자: requestCode — 어느 화면을 열었던 요청인지 가르는 값
+     *       resultCode — 그 화면의 결과 코드. 설정 화면은 주지 않는다
+     *       data — 돌려받은 자료. 쓰지 않는다
+     */
+    @Deprecated("startActivityForResult 계약을 그대로 쓴다")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (::updateInstaller.isInitialized) {
+            // → 로직 이동: UpdateInstaller.onActivityResult()
+            updateInstaller.onActivityResult(requestCode)
+        }
+    }
+
+    /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-09-23 14:17:47 · 박희정
+     * 수정: 2026-10-13 14:18:51 · nada
      * 함수: onDestroy
-     * 목적: 액티비티가 완전히 종료될 때 센서·소음·소음테스트 핸들러를
-     *       정리해, 자원을 계속 붙들고 있지 않게 한다.
+     * 목적: 액티비티가 완전히 종료될 때 센서·소음·소음테스트 핸들러와
+     *       업데이트 담당을 정리해, 자원을 계속 붙들고 있지 않게 한다.
      */
     override fun onDestroy() {
         super.onDestroy()
@@ -360,6 +392,10 @@ class MainActivity : FlutterActivity() {
         }
         if (::noiseCaptureHandler.isInitialized) {
             noiseCaptureHandler.stop()
+        }
+        if (::updateInstaller.isInitialized) {
+            // → 로직 이동: UpdateInstaller.dispose()
+            updateInstaller.dispose()
         }
     }
 }
