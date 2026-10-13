@@ -1,7 +1,10 @@
-# OTIS 승강기 진동·소음 측정 앱 (vibration_checker)
+# OTIS V-Check — 승강기 진동·소음 측정 앱 (vibration_checker)
 
 일반 안드로이드 폰으로 승강기 진동(3축)·소음을 측정하고 OTIS TUNE 규격 PDF
-리포트를 만들어 메일로 보내는 Flutter 앱. Android 우선, iOS 는 나중.
+리포트를 만들어 메일로 보내는 Flutter 앱. 앱 이름(홈 화면 아이콘 아래 ·
+`MaterialApp` title)은 "OTIS V-Check"(2026-10-13). 패키지 이름
+`com.otis.vibration_checker` 는 바꾸지 않는다 — 바꾸면 다른 앱으로 취급돼
+업데이트가 이어지지 않는다. Android 우선, iOS 는 나중.
 
 ## 명령
 
@@ -29,6 +32,8 @@ flutter test                                      # 전부 통과 유지
 | `docs/reference/sample_evimp.pdf` | 원본 TUNE 리포트. 코드 주석의 `근거:` 가 가리킨다 |
 | `docs/reference/H6N1AP65.pdf` | 원본 TUNE 리포트(실제 현장). 머리말 표기(하중 · 제품 · 주소)의 근거. **H6N1AP65.pdf 는 저장소 밖 보관**(`.gitignore`) — 실제 엔지니어명 · 현장명이 들어 있다. 시험 픽스처로 쓰지 않는다 |
 | `docs/noise_otis_offset_notes.md` | 소음 dBA 오프셋 · OTIS 차이 · 남은 과제 |
+| `docs/release.md` | 릴리스 서명 키 보관 · `android/key.properties` · 서명 확인(인증서 지문). 키가 없으면 릴리스 빌드가 멈춘다 |
+| `assets/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
 
 ## 화면 흐름
 

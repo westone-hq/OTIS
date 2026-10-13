@@ -5,6 +5,7 @@ import 'package:vibration_checker/adapter/sensor_channel.dart';
 import '../../core/widgets/app_dialog.dart';
 
 /// 작성: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-13 14:15:29 · nada
 /// 함수: ensureMicPermission
 /// 목적: 측정 화면으로 넘어가기 전에 마이크 권한을 받는다. 측정 중에는
 ///       휴대폰을 뒤집어 놓으므로 그때 권한 창이 뜨면 누를 수 없다. 한 번
@@ -27,7 +28,7 @@ Future<bool> ensureMicPermission(
     title: '마이크 권한 없음',
     message:
         '마이크 권한이 없어 소음은 측정하지 않고 진동만 측정합니다.\n'
-        '권한 창이 다시 뜨지 않으면 휴대폰 설정 > 앱 > OTIS 진동 측정 > '
+        '권한 창이 다시 뜨지 않으면 휴대폰 설정 > 앱 > OTIS V-Check > '
         '권한에서 마이크를 허용해 주세요.',
     confirmLabel: '진동만 측정',
     cancelLabel: '취소',

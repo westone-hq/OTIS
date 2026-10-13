@@ -24,12 +24,15 @@ class VibrationCheckerApp extends StatelessWidget {
   const VibrationCheckerApp({super.key});
 
   /// 작성: 2026-08-17 11:15:41 · 박건준
+  /// 수정: 2026-10-13 14:15:29 · nada
   /// 함수: build
   /// 목적: 앱의 최상위 설정을 구성한다. 화면 전환 자체는 `appRouter`
   ///       (앱 라우터. GoRouter 패키지로 만든 것으로, URL 경로 하나하나를
   ///       화면 하나에 대응시켜 전환을 관리해준다)가 맡고, 이 함수는
   ///       앱 전역 설정만 채운다.
-  ///       - `title` — 앱 제목 (기기 최근 실행 목록 등에 노출)
+  ///       - `title` — 앱 제목 (기기 최근 실행 목록 등에 노출). 홈 화면
+  ///         아이콘 아래 이름(`AndroidManifest.xml` 의 `android:label`)과
+  ///         같은 "OTIS V-Check" 로 맞춘다
   ///       - `color` — 앱 기본 배경색 (`AppColors.bg`)
   ///       - `theme` — 앱 전역 테마 (`buildAppTheme()`)
   ///       - `routerConfig` — 화면 라우팅 설정 (`appRouter`)
@@ -44,7 +47,7 @@ class VibrationCheckerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'OTIS 진동 측정',
+      title: 'OTIS V-Check',
       color: AppColors.bg,
       theme: buildAppTheme(),
       routerConfig: appRouter, // → 로직 이동: appRouter
