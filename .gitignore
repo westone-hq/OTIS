@@ -66,3 +66,7 @@ docs/reference/H6N1AP65.pdf
 tool/__pycache__/
 noise_diagnostics/
 android/.kotlin/
+
+# 릴리스 서명 키 설정 · 키 파일. 저장소 밖에 보관한다 (2026-10-13)
+android/key.properties
+*.jks
