@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 작성: 2026-08-19 10:35:27 · 박건준
-/// 수정: 2026-10-04 16:44:32 · nada
+/// 수정: 2026-10-13 14:18:51 · nada
 /// 클래스: PrefsStore
-/// 목적: 앱 설정(수신 이메일 목록, 지난번 수신자, 마지막 현장 정보)을
-///       기기에 저장하고 불러오는 역할을 한다.
+/// 목적: 앱 설정(수신 이메일 목록, 지난번 수신자, 엔지니어 이름, 마지막
+///       현장 정보, 업데이트 "나중에" 기록)을 기기에 저장하고 불러오는
+///       역할을 한다.
 class PrefsStore {
   /// 작성: 2026-07-05 08:15:28 · 박건준
   /// 변수: instance
@@ -117,6 +118,43 @@ class PrefsStore {
     } else {
       await prefs.setString(_engineerNameKey, trimmed);
     }
+  }
+
+  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 변수: _updateSnoozeLatestKey
+  /// 목적: 선택 업데이트 창에서 "나중에" 를 누른 최신 빌드 번호의 저장 키.
+  static const String _updateSnoozeLatestKey = 'updateSnoozeLatest';
+
+  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 변수: _updateSnoozeAtKey
+  /// 목적: "나중에" 를 누른 시각(1970-01-01 UTC 부터 밀리초)의 저장 키.
+  static const String _updateSnoozeAtKey = 'updateSnoozeAtMs';
+
+  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 함수: loadUpdateSnooze
+  /// 목적: 선택 업데이트 창에서 마지막으로 "나중에" 를 누른 기록을 읽는다.
+  ///       `UpdateChecker.check()` 가 같은 번호 창을 하루에 한 번만 띄우는
+  ///       데 쓴다.
+  /// 반환: (최신 빌드 번호, 누른 시각). 누른 적이 없거나 둘 중 하나가
+  ///       없으면 null
+  Future<(int, DateTime)?> loadUpdateSnooze() async {
+    final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
+    final latest = prefs.getInt(_updateSnoozeLatestKey); // 미룬 최신 번호
+    final atMs = prefs.getInt(_updateSnoozeAtKey); // 미룬 시각 (밀리초)
+    if (latest == null || atMs == null) return null;
+    return (latest, DateTime.fromMillisecondsSinceEpoch(atMs));
+  }
+
+  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 함수: saveUpdateSnooze
+  /// 목적: 선택 업데이트 창에서 "나중에" 를 누른 기록을 남긴다. 이전
+  ///       기록은 덮어쓴다.
+  /// 인자: latest — 그 창이 안내한 최신 빌드 번호
+  ///       at — 누른 시각
+  Future<void> saveUpdateSnooze(int latest, DateTime at) async {
+    final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
+    await prefs.setInt(_updateSnoozeLatestKey, latest);
+    await prefs.setInt(_updateSnoozeAtKey, at.millisecondsSinceEpoch);
   }
 
   /// 작성: 2026-10-04 14:30:00 · nada
