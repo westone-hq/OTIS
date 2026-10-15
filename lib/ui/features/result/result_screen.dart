@@ -308,6 +308,17 @@ class _ResultScreenState extends State<ResultScreen> {
   String _format(double? value, int decimals) =>
       value == null ? '—' : value.toStringAsFixed(decimals);
 
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: _formatLimit
+  /// 목적: 적색 기준을 화면에 쓸 문구로 바꾼다. 정수면 소수점을 떼고("30"),
+  ///       아니면 그대로("25.5") 적는다. 소수 0 자리로 반올림하면 25.5 가
+  ///       "26" 으로 보여 실제 기준과 달라진다(2026-10-15 캡처 점검).
+  /// 인자: limit — 적색 기준
+  /// 반환: 기준 문구
+  String _formatLimit(double limit) => limit == limit.roundToDouble()
+      ? limit.toStringAsFixed(0)
+      : limit.toString();
+
   /// 작성: 2026-10-04 18:15:24 · nada
   /// 함수: _isRed
   /// 목적: 지표 값이 적색 기준을 넘었는지 본다.
@@ -385,6 +396,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: _buildMetricRow
   /// 목적: 지표 한 줄을 만든다. 왼쪽에 이름 · 단위와 적색 기준, 오른쪽에
   ///       값을 둔다. 기준을 넘은 값은 붉은 글자와 경고 아이콘으로 표시해
@@ -414,7 +426,8 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
                 if (limit != null)
                   Text(
-                    '${_format(limit, 0)}${metric.unit} 초과 시 적색',
+                    // → 로직 이동: _formatLimit()
+                    '${_formatLimit(limit)}${metric.unit} 초과 시 적색',
                     style: AppText.caption,
                   ),
               ],

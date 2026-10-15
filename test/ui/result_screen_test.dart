@@ -141,6 +141,12 @@ void main() {
       findsNWidgets(2),
       reason: 'X(25.5 초과) · Z(30 초과)만 경고다',
     );
+    expect(
+      find.text('25.5mg 초과 시 적색'),
+      findsNWidgets(2),
+      reason: '기준을 반올림해 26 으로 보이지 않는다',
+    );
+    expect(find.text('30mg 초과 시 적색'), findsOneWidget);
     expect(find.text('테스트 재실행'), findsOneWidget);
   });
 
