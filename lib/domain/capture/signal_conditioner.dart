@@ -40,17 +40,21 @@ class SosSection {
 }
 
 /// 작성: 2026-10-07 01:44:43 · nada
-/// 클래스: ButterworthLowpass
-/// 목적: 버터워스 저역 필터(통과 대역이 평평한 저역 필터)를 설계하고, 앞으로
-///       한 번 · 뒤로 한 번 걸러 위상 지연이 없게 한다(양방향, 영위상).
+/// 수정: 2026-10-15 16:50:04 · nada
+/// 클래스: Butterworth
+/// 목적: 버터워스 필터(통과 대역이 평평한 필터)를 설계하고, 앞으로 한 번 ·
+///       뒤로 한 번 걸러 위상 지연이 없게 한다(양방향, 영위상). 저역은
+///       지표 전 신호 처리(`SignalConditioner`)가, 고역은 수직 진동
+///       가중(`RideWeighting.vertical()`)이 쓴다.
 ///       한 방향으로만 거르면 신호가 늦어지고 봉우리 모양이 비틀어져
 ///       최대 P2P 가 달라진다.
 ///       결과는 SciPy 1.18.1 의 `butter(..., output='sos')` ·
 ///       `sosfiltfilt()` 와 같아야 한다. 기대값 픽스처
 ///       (`test/fixtures/conditioning_*`)를 SciPy 로 만들었기 때문이다.
-abstract final class ButterworthLowpass {
+abstract final class Butterworth {
   /// 작성: 2026-10-07 01:44:43 · nada
-  /// 함수: design
+  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 함수: lowpass
   /// 목적: 디지털 버터워스 저역 필터를 2차 구간 목록으로 설계한다. 필터
   ///       모양은 극점(응답이 끝없이 커지는 복소수 점)과 영점(응답이 0 이
   ///       되는 복소수 점)의 자리로 정한다.
@@ -80,7 +84,7 @@ abstract final class ButterworthLowpass {
   ///     구간: b = [1, 2, 1], a = [1, -2 Re z, |z|²]
   /// 근거: 표준 — SciPy 1.18.1 `iirfilter()` · `buttap()` · `lp2lp_zpk()`
   ///       · `bilinear_zpk()` · `zpk2sos()` 소스
-  static List<SosSection> design({
+  static List<SosSection> lowpass({
     required int order,
     required double cutoffHz,
     required double sampleRateHz,
@@ -129,6 +133,54 @@ abstract final class ButterworthLowpass {
           b2: i == 0 ? gain : 1.0,
           a1: -2 * pairs[i].re,
           a2: pairs[i].re * pairs[i].re + pairs[i].im * pairs[i].im,
+        ),
+    ];
+  }
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: highpass
+  /// 목적: 디지털 버터워스 고역 필터를 2차 구간 목록으로 설계한다. 같은 차수
+  ///       · 차단 주파수의 저역 필터(`lowpass()`)와 디지털 극점이 같고 영점과
+  ///       이득만 다르다. 원형 극점이 단위원 위에 있어 고역 변환(p → wo / p)
+  ///       이 극점 집합을 그대로 두기 때문이다. 그래서 저역 설계를 받아
+  ///       분자만 바꾼다.
+  ///       - 영점은 모두 +1(직류에서 응답 0)이라 분자는 [1, -2, 1]
+  ///       - 전체 이득은 저역 이득에 (fs2 / wo)^N 을 곱한 값이고 첫 구간에
+  ///         싣는다
+  /// 인자: order — 필터 차수. 짝수
+  ///       cutoffHz — 차단 주파수 (Hz). 0 보다 크고 표본 속도의 절반보다
+  ///       작다
+  ///       sampleRateHz — 거를 신호의 표본 속도 (Hz)
+  /// 반환: 앞에서부터 차례로 걸 2차 구간 목록 (order / 2 개). 인자가 틀리면
+  ///       `lowpass()` 와 같은 `ArgumentError`
+  /// 식: k_hp = k_lp x (fs2 / wo)^N,  wo = fs2 x tan(π x cutoffHz / fs)
+  ///     구간: b = [1, -2, 1], a = 저역과 같음
+  /// 근거: 표준 — SciPy 1.18.1 `lp2hp_zpk()` · `bilinear_zpk()` 소스.
+  ///       `butter(N, Wn, btype='high', output='sos')` 와 같은 값을 낸다
+  static List<SosSection> highpass({
+    required int order,
+    required double cutoffHz,
+    required double sampleRateHz,
+  }) {
+    // → 로직 이동: lowpass()
+    final low = lowpass(
+      order: order,
+      cutoffHz: cutoffHz,
+      sampleRateHz: sampleRateHz,
+    ); // 같은 극점을 가진 저역 설계 (인자 검사도 여기서 한다)
+    const fs2 = 4.0; // `lowpass()` 와 같은 정규화된 2 x fs
+    final warped = // 미리 당겨 둔 아날로그 차단 각주파수
+        fs2 * math.tan(math.pi * cutoffHz / sampleRateHz);
+    final gain = // 첫 구간에 실을 전체 이득
+        low.first.b0 * math.pow(fs2 / warped, order).toDouble();
+    return [
+      for (var i = 0; i < low.length; i++)
+        SosSection(
+          b0: i == 0 ? gain : 1.0,
+          b1: i == 0 ? -2 * gain : -2.0,
+          b2: i == 0 ? gain : 1.0,
+          a1: low[i].a1,
+          a2: low[i].a2,
         ),
     ];
   }
@@ -610,7 +662,7 @@ class SignalConditioner {
   ///          표준편차를 구하고 평균을 뺀다 (`_baseline()`,
   ///          `_baselineStd()`)
   ///       4. X · Y · Z 마다 저역 필터를 양방향으로 걸고
-  ///          (`ButterworthLowpass.filtfilt()`), `conditionedRateHz` 로
+  ///          (`Butterworth.filtfilt()`), `conditionedRateHz` 로
   ///          재표본한다(`PolyphaseResampler.apply()`)
   ///       5. 소음 열은 거르지 않고 새 격자 시각에 선형 보간한다
   ///          (`_resampleNoise()`)
@@ -678,14 +730,14 @@ class SignalConditioner {
         ConditioningFailure.gridTooShort,
       );
     }
-    // → 로직 이동: ButterworthLowpass.design()
-    final sections = ButterworthLowpass.design(
+    // → 로직 이동: Butterworth.lowpass()
+    final sections = Butterworth.lowpass(
       order: config.lowpassOrder,
       cutoffHz: config.lowpassCutoffHz.toDouble(),
       sampleRateHz: config.targetSampleRateHz.toDouble(),
     ); // 저역 필터 2차 구간
-    // → 로직 이동: ButterworthLowpass.padLength()
-    final padRows = ButterworthLowpass.padLength(sections); // 덧붙임 길이
+    // → 로직 이동: Butterworth.padLength()
+    final padRows = Butterworth.padLength(sections); // 덧붙임 길이
     if (n <= padRows) {
       // 기준선 구간이 덧붙임 길이보다 짧게 설정됐을 때만 온다
       return fail(
@@ -715,8 +767,8 @@ class SignalConditioner {
     // 한 축에서 기준선을 빼고 거른 뒤 재표본한다
     List<double> process(List<double> column, double baseline) {
       final shifted = [for (final v in column) v - baseline]; // 뺀 값 (mg)
-      // → 로직 이동: ButterworthLowpass.filtfilt()
-      final filtered = ButterworthLowpass.filtfilt(sections, shifted); // 거름
+      // → 로직 이동: Butterworth.filtfilt()
+      final filtered = Butterworth.filtfilt(sections, shifted); // 거름
       // → 로직 이동: PolyphaseResampler.apply()
       return resampler.apply(filtered);
     }

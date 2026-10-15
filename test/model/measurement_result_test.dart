@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-10-07 02:22:28 · nada
@@ -106,5 +107,54 @@ void main() {
 
     expect(restored.signalConditioning, isNull);
     expect(restored.sampleRate, 256.0);
+  });
+
+  test('운행 구간과 그 실패 사유가 JSON 왕복에서 그대로 남는다', () {
+    const window = TravelWindow(
+      startIndex: 625,
+      endIndex: 3955,
+      startSec: 6.25,
+      endSec: 39.55,
+      startM: 0.503,
+      endM: 56.593,
+    ); // 운행 구간
+    final withWindow = MeasurementResult.fromJson(
+      jsonEncode(_result().copyWith(travelWindow: window).toMap()),
+    ); // 구간이 있는 결과
+    expect(withWindow.travelWindow!.startIndex, 625);
+    expect(withWindow.travelWindow!.endSec, 39.55);
+    expect(withWindow.travelWindowFailure, isNull);
+
+    final failed = MeasurementResult.fromJson(
+      jsonEncode(
+        _result().copyWith(travelWindowFailure: '운행 거리가 1.0m 이하다').toMap(),
+      ),
+    ); // 구간을 못 정한 결과
+    expect(failed.travelWindow, isNull);
+    expect(failed.travelWindowFailure, '운행 거리가 1.0m 이하다');
+
+    final legacy = _result().toMap()
+      ..remove('travelWindow')
+      ..remove('travelWindowFailure'); // 2026-10-15 이전 형태
+    final old = MeasurementResult.fromJson(jsonEncode(legacy)); // 예전 결과
+    expect(old.travelWindow, isNull);
+    expect(old.travelWindowFailure, isNull);
+  });
+
+  test('측정 일시가 없거나 깨졌으면 지금 시각으로 채우지 않고 실패한다', () {
+    final missing = _result().toMap()..remove('dateTime'); // 일시 없음
+    final broken = _result().toMap()..['dateTime'] = '어제쯤'; // 일시 깨짐
+    expect(
+      () => MeasurementResult.fromJson(jsonEncode(missing)),
+      throwsFormatException,
+    );
+    expect(
+      () => MeasurementResult.fromJson(jsonEncode(broken)),
+      throwsFormatException,
+    );
+    final normal = MeasurementResult.fromJson(
+      jsonEncode(_result().toMap()),
+    ); // 정상 결과
+    expect(normal.dateTime, _result().dateTime);
   });
 }

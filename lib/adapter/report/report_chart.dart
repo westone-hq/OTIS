@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart' show Matrix4;
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
+import 'package:vibration_checker/domain/report/half_cycle.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
@@ -116,10 +117,11 @@ class ReportChartAxes {
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-10 11:48:41 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 변수: z
-  /// 목적: 수직 진동 차트의 세로축. 0 을 가운데 둔다. 운행 가감속이 섞여
-  ///       최소 범위를 자주 넘는다.
+  /// 목적: 수직 진동 차트의 세로축. 0 을 가운데 둔다. 2026-10-15 부터는
+  ///       가중(1Hz 고역 + Wk)으로 가감속이 빠진 시계열을 그려 대개 최소
+  ///       범위 안이다. 그 전 예전 결과는 가감속이 섞여 범위를 넓힌다.
   /// 근거: 인용 — 최소 범위는 원본 리포트 `docs/reference/sample_evimp.pdf`
   ///       의 수직 진동 차트 범위 ±20 mg, 눈금 10 mg 이다
   static const ChartAxisSpec z = ChartAxisSpec(
@@ -310,6 +312,63 @@ class ReportChartAxes {
         return result.zPtp;
     }
     return null;
+  }
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: peakToPeakPair
+  /// 목적: 최대 P2P 를 만든 두 지점을 찾는다. 운행 구간이 있으면 그 구간
+  ///       안 최대 반주기 P2P(`HalfCycle.maximum()`)의 이웃 봉우리 · 골이고,
+  ///       없으면(예전 결과) 시계열 전체의 최댓값 · 최솟값(`extremeIndices()`)
+  ///       이다. 둘 중 값이 큰 쪽이 `high` 다.
+  /// 인자: values — 그린 시계열 (줄이기 전)
+  ///       result — 운행 구간을 가진 측정 결과
+  /// 반환: (높은 쪽, 낮은 쪽) 첨자. 못 찾으면 null
+  static ({int high, int low})? peakToPeakPair(
+    List<double> values,
+    MeasurementResult result,
+  ) {
+    final window = result.travelWindow; // 운행 구간, 예전 결과면 null
+    if (window == null) {
+      // → 로직 이동: extremeIndices()
+      final at = extremeIndices(values); // 최댓값 · 최솟값 자리, 비면 null
+      return at == null ? null : (high: at.maxIndex, low: at.minIndex);
+    }
+    if (window.startIndex >= values.length) return null;
+    // → 로직 이동: HalfCycle.maximum()
+    final best = HalfCycle.maximum(
+      values,
+      start: window.startIndex,
+      end: math.min(window.endIndex, values.length - 1),
+    ); // 최대 반주기 P2P, 못 만들면 null
+    if (best == null) return null;
+    final first = best.firstIndex; // 앞 반주기 봉우리 자리
+    final second = best.secondIndex; // 뒤 반주기 봉우리 자리
+    return values[first] >= values[second]
+        ? (high: first, low: second)
+        : (high: second, low: first);
+  }
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: indexInTravel
+  /// 목적: 값이 처음 나온 자리를 운행 구간 안에서 찾는다. 구간이 없는 예전
+  ///       결과는 시계열 전체에서 찾는다. 구간 밖에 같은 값이 먼저 있어도
+  ///       지표를 낸 구간 안 자리를 고르기 위해서다.
+  /// 인자: values — 그린 시계열
+  ///       target — 찾을 값
+  ///       result — 운행 구간을 가진 측정 결과
+  /// 반환: 첨자. 못 찾으면 -1
+  static int indexInTravel(
+    List<double> values,
+    double target,
+    MeasurementResult result,
+  ) {
+    final window = result.travelWindow; // 운행 구간, 예전 결과면 null
+    if (window == null) return values.indexOf(target);
+    final end = math.min(window.endIndex, values.length - 1); // 구간 끝
+    for (var i = window.startIndex; i <= end; i++) {
+      if (values[i] == target) return i;
+    }
+    return -1;
   }
 }
 
@@ -740,25 +799,27 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-10-11 19:20:58 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: _drawPeakToPeak
-  /// 목적: 진동 세 축 차트에 P2P 를 만든 두 지점을 표시하고 값을 적는다.
-  ///       - 최댓값 · 최솟값이 처음 나온 자리에 굵은 빨간 점
-  ///         (`_drawMarker()`). 자리는 줄이기 전 원래 시계열 기준이다
-  ///         (`extremeIndices()`)
-  ///       - 최댓값 점 옆(오른쪽, 자리가 없으면 왼쪽)에 "P2P 값" 을 흰
+  /// 목적: 진동 세 축 차트에 최대 P2P 를 만든 두 지점을 표시하고 값을 적는다.
+  ///       - 두 지점(`ReportChartAxes.peakToPeakPair()`)에 굵은 빨간 점
+  ///         (`_drawMarker()`).
+  ///         운행 구간이 있는 결과는 지표와 같은 정의 — 최대 반주기 P2P 를
+  ///         만든 이웃 봉우리 · 골 — 이고, 그 전 예전 결과는 시계열 전체의
+  ///         최댓값 · 최솟값이다(그때 지표 정의)
+  ///       - 높은 쪽 점 옆(오른쪽, 자리가 없으면 왼쪽)에 "P2P 값" 을 흰
   ///         상자에 굵게 적는다(`_drawSideLabel()`). 값은 1쪽 표와 같은
   ///         지표다(`ReportChartAxes.ptpOf()`)
-  ///       P2P 가 없는 축(진동 축이 아님, 예전 결과)은 바로 돌아간다. 0 으로
-  ///       채우지 않는다.
+  ///       P2P 가 없는 축(진동 축이 아님, 구간을 못 정한 결과, 예전 결과)은
+  ///       바로 돌아간다. 0 으로 채우지 않는다.
   /// 인자: canvas — 그리기 도구
   ///       frame — 축 틀과 값 옮기기
   ///       spec — 그리는 축의 사양
   ///       values — 그린 시계열 (줄이기 전)
   ///       result — 지표와 표본 주기를 가진 측정 결과
   /// 근거: 인용 — 2026-10-15 사용자 지시 "굵은 점으로 표시하고 그 선
-  ///       왼쪽이든 오른쪽이든 가능한 부분에 값 표시". 예전에는 작은 점과
-  ///       축 틀 위쪽 모서리 글자였다
+  ///       왼쪽이든 오른쪽이든 가능한 부분에 값 표시", 2026-10-15 점검 지시
+  ///       "빨간 점 두 개는 최대 반주기 P2P 를 만든 이웃 봉우리 · 골 쌍"
   void _drawPeakToPeak(
     PdfGraphics canvas,
     _ChartFrame frame,
@@ -768,11 +829,14 @@ class ReportChartRenderer {
   ) {
     // → 로직 이동: ReportChartAxes.ptpOf()
     final ptp = ReportChartAxes.ptpOf(spec, result); // 적을 P2P, 없으면 null
-    // → 로직 이동: extremeIndices()
-    final at = extremeIndices(values); // 최댓값 · 최솟값 자리, 비면 null
+    // → 로직 이동: ReportChartAxes.peakToPeakPair()
+    final at = ReportChartAxes.peakToPeakPair(
+      values,
+      result,
+    ); // 두 지점, 못 찾으면 null
     if (ptp == null || at == null) return;
 
-    for (final index in <int>[at.minIndex, at.maxIndex]) {
+    for (final index in <int>[at.low, at.high]) {
       // → 로직 이동: _drawMarker()
       _drawMarker(
         canvas,
@@ -786,8 +850,8 @@ class ReportChartRenderer {
       canvas,
       frame,
       p2pLabel(ptp),
-      anchorX: frame.xOfTime(at.maxIndex / result.sampleRate),
-      anchorY: frame.yOfValue(values[at.maxIndex]),
+      anchorX: frame.xOfTime(at.high / result.sampleRate),
+      anchorY: frame.yOfValue(values[at.high]),
     );
   }
 
@@ -864,13 +928,15 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-26 14:10:00 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: _drawAnnotations
   /// 목적: 원본 리포트가 소음 차트에 붙이는 표시 둘을 그린다.
   ///       - 평균 자리에 가로로 긋는 붉은 점선 한 줄
   ///       - 최댓값이 나온 자리에 굵은 빨간 점(`_drawMarker()`), 그 옆에
   ///         "최대 값"(`_drawSideLabel()`). P2P 표시와 같은 규칙이다
-  ///         (2026-10-15 사용자 지시)
+  ///         (2026-10-15 사용자 지시). 최댓값은 운행 구간 안에서 낸 값이라
+  ///         자리도 그 구간 안에서 찾는다
+  ///         (`ReportChartAxes.indexInTravel()`)
   ///       값은 이 자리에서 다시 세지 않고 1쪽 표가 쓰는 지표에서 꺼낸다.
   ///       같은 값을 두 곳에서 세면 차트와 표가 다른 숫자를 말하게 된다.
   ///       그릴 것이 없는 축은 사양에 지표 이름이 없어 바로 돌아간다.
@@ -926,7 +992,12 @@ class ReportChartRenderer {
     // 점을 찍지 않는다 — 엉뚱한 자리에 찍고 다른 값을 적느니 비운다
     final at = peakValue == null
         ? -1
-        : values.indexOf(peakValue); // 최댓값이 나온 자리, 못 찾으면 -1
+        // → 로직 이동: ReportChartAxes.indexInTravel()
+        : ReportChartAxes.indexInTravel(
+            values,
+            peakValue,
+            result,
+          ); // 최댓값 자리, 없으면 -1
     if (peakValue != null && at >= 0) {
       final x = frame.xOfTime(at / result.sampleRate); // 표시점의 가로 자리
       final y = frame.yOfValue(peakValue); // 표시점의 세로 자리

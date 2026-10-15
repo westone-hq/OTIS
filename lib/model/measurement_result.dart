@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
+import 'package:vibration_checker/domain/report/travel_window.dart';
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-11 19:11:50 · nada
+/// 수정: 2026-10-15 16:50:04 · nada
 /// 클래스: MeasurementResult
 /// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
 ///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
@@ -61,21 +62,24 @@ class MeasurementResult {
   /// 측정 일시
   final DateTime dateTime;
 
-  /// X축 진동 P2P (mg). 지표 계산 전 신호 처리(`signalConditioning`)를 한
-  /// 시계열 전체의 최대 − 최소다. 그 필드가 null 인 예전 측정은 처리 전
-  /// 256Hz 원시 시계열에서 낸 값이다. null 이면 계산하지 않은 예전 측정이다
+  /// X축 진동 최대 P2P (mg). 운행 구간(`travelWindow`) 안에서 가중
+  /// (`RideWeighting`)한 시계열의 반주기 P2P 가운데 가장 큰 값이다.
+  /// 가중 · 운행 구간이 들어가기 전(2026-10-15 전) 결과는 시계열 전체의
+  /// 최대 − 최소이고, 신호 처리(`signalConditioning`)가 null 인 더 예전
+  /// 결과는 처리 전 256Hz 원시 시계열의 값이다. null 이면 계산하지 않았거나
+  /// 운행 구간을 정하지 못한 측정이다
   final double? xPtp;
 
-  /// Y축 진동 P2P (mg). 정의와 null 의 뜻은 `xPtp` 와 같다
+  /// Y축 진동 최대 P2P (mg). 정의와 null 의 뜻은 `xPtp` 와 같다
   final double? yPtp;
 
-  /// Z축 진동 P2P (mg). 정의와 null 의 뜻은 `xPtp` 와 같다. 엘리베이터
-  /// 가감속이 그대로 섞여 있다
+  /// Z축 진동 최대 P2P (mg). 정의와 null 의 뜻은 `xPtp` 와 같다. 가중
+  /// 전 예전 결과에는 엘리베이터 가감속이 섞여 있다
   final double? zPtp;
 
-  /// X축 진동 A95 (mg). 반주기 P2P 값들의 95백분위로, `xPtp` 와 같은
-  /// 시계열 전체에서 낸다. null 이면 계산하지 않은 예전 측정이거나 반주기가
-  /// 두 개도 안 되는 측정이다
+  /// X축 진동 A95 (mg). `xPtp` 와 같은 반주기 P2P 값들의 95백분위다.
+  /// null 이면 계산하지 않은 예전 측정이거나, 반주기가 두 개도 안 되거나,
+  /// 운행 구간을 정하지 못한 측정이다
   final double? xA95;
 
   /// Y축 진동 A95 (mg). 정의와 null 의 뜻은 `xA95` 와 같다
@@ -84,8 +88,9 @@ class MeasurementResult {
   /// Z축 진동 A95 (mg). 정의와 null 의 뜻은 `xA95` 와 같다
   final double? zA95;
 
-  /// 소음 최대값 (dBA). null 이면 잴 수 있는 표본이 없었다 — 마이크
-  /// 권한이 없거나 소음이 0 으로만 들어온 측정이다
+  /// 소음 최대값 (dBA). 운행 구간(`travelWindow`) 안에서 0(미측정)을 뺀
+  /// 최대다. 운행 구간이 들어가기 전 결과는 측정 전체의 최대다. null 이면
+  /// 잴 수 있는 표본이 없었거나(마이크 권한 없음) 운행 구간을 정하지 못했다
   final double? noiseMax;
 
   /// 운행 거리 (m). 방향과 무관한 누적 이동량이다. null 이면 수직
@@ -95,13 +100,15 @@ class MeasurementResult {
   /// 최대 속도 (m/s). 속도 절댓값의 최대. null 이면 `distance` 와 같은 이유
   final double? maxSpeed;
 
-  /// X축 진동 시계열 (mg)
+  /// X축 진동 시계열 (mg). 지표를 낸 그 시계열이다 — 2026-10-15 부터는
+  /// Wd 가중 뒤 값이고, 그 전 결과는 가중 전 값이다
   final List<double> xSeries;
 
-  /// Y축 진동 시계열 (mg)
+  /// Y축 진동 시계열 (mg). `xSeries` 와 같다
   final List<double> ySeries;
 
-  /// Z축 진동 시계열 (mg)
+  /// Z축 진동 시계열 (mg). 2026-10-15 부터는 1Hz 고역 + Wk 가중 뒤
+  /// 값이라 가감속 경사가 없다. 가감속은 `accelSeries` 에 있다
   final List<double> zSeries;
 
   /// 소음 시계열 (dBA)
@@ -122,13 +129,23 @@ class MeasurementResult {
   /// 실측 샘플레이트 (Hz)
   final double sampleRate;
 
-  /// 지표 계산 전 신호 처리 방식 (`SignalConditioner.methodLabel`, 예:
-  /// `baseline+lp40bw4zp+rs100`). null 이면 이 처리가 들어가기 전의 예전
-  /// 측정이라 지표가 처리 전 원시 시계열에서 나왔다. 화면에는 보이지 않는다
+  /// 지표 계산 전 신호 처리 방식 (`SignalConditioner.methodLabel` 뒤에
+  /// `RideWeighting.methodLabel`, 예:
+  /// `baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)`). null 이면 이 처리가
+  /// 들어가기 전의 예전 측정이라 지표가 처리 전 원시 시계열에서 나왔다.
+  /// 화면에는 보이지 않는다
   final String? signalConditioning;
 
+  /// 진동 · 소음 지표를 낸 운행 구간. 정하지 못했으면(`travelWindowFailure`)
+  /// 이나 운행 구간이 들어가기 전(2026-10-15 전) 예전 결과면 null
+  final TravelWindow? travelWindow;
+
+  /// 운행 구간을 정하지 못한 사유. 그때 진동 · 소음 지표는 null 이다.
+  /// 구간을 정했거나 예전 결과면 null
+  final String? travelWindowFailure;
+
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -157,6 +174,8 @@ class MeasurementResult {
   ///       sampleRate — 실측 샘플레이트 (Hz), 기본 256.0
   ///       signalConditioning — 지표 계산 전 신호 처리 방식. 처리 전
   ///       예전 측정이면 null
+  ///       travelWindow — 지표를 낸 운행 구간. 없으면 null
+  ///       travelWindowFailure — 운행 구간을 정하지 못한 사유. 없으면 null
   const MeasurementResult({
     required this.id,
     required this.jobNo,
@@ -192,10 +211,12 @@ class MeasurementResult {
     required this.jerkSeries,
     this.sampleRate = 256.0,
     this.signalConditioning,
+    this.travelWindow,
+    this.travelWindowFailure,
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -237,6 +258,8 @@ class MeasurementResult {
     List<double>? jerkSeries,
     double? sampleRate,
     String? signalConditioning,
+    TravelWindow? travelWindow,
+    String? travelWindowFailure,
   }) {
     return MeasurementResult(
       id: id ?? this.id,
@@ -273,11 +296,13 @@ class MeasurementResult {
       jerkSeries: jerkSeries ?? this.jerkSeries,
       sampleRate: sampleRate ?? this.sampleRate,
       signalConditioning: signalConditioning ?? this.signalConditioning,
+      travelWindow: travelWindow ?? this.travelWindow,
+      travelWindowFailure: travelWindowFailure ?? this.travelWindowFailure,
     );
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -311,6 +336,8 @@ class MeasurementResult {
       'maxSpeed': maxSpeed,
       'sampleRate': sampleRate,
       'signalConditioning': signalConditioning,
+      'travelWindow': travelWindow?.toMap(),
+      'travelWindowFailure': travelWindowFailure,
       'xSeries': xSeries,
       'ySeries': ySeries,
       'zSeries': zSeries,
@@ -323,7 +350,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -335,8 +362,13 @@ class MeasurementResult {
   ///       남겨 처리 전 측정임을 드러낸다.
   ///       하중 · 하중 단위 · 해석 종류 · 우편번호 · 참고사항 · 엔지니어
   ///       이름도 같다. 2026-10-11 이전 파일에는 없어 null 로 읽는다.
+  ///       운행 구간 · 그 실패 사유도 같다. 2026-10-15 이전 파일에는 없다.
+  ///       측정 일시는 채우지 않는다 — 없거나 읽을 수 없으면 "지금" 으로
+  ///       대신하지 않고 실패를 올린다. 대신 넣으면 예전 결과가 방금 잰
+  ///       것처럼 보이고 목록 차례도 틀어진다(관통 원칙 1 · 4).
   /// 인자: map — 저장돼 있던 Map 데이터
-  /// 반환: 복원된 측정 결과
+  /// 반환: 복원된 측정 결과. 측정 일시가 없거나 읽을 수 없으면
+  ///       `FormatException`
   factory MeasurementResult.fromMap(Map<String, dynamic> map) {
     List<double> toDoubleList(dynamic list) {
       if (list == null) return [];
@@ -358,9 +390,8 @@ class MeasurementResult {
       postalCode: map['postalCode'] as String?,
       notes: map['notes'] as String?,
       engineerName: map['engineerName'] as String?,
-      dateTime: map['dateTime'] != null
-          ? DateTime.tryParse(map['dateTime'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      // → 로직 이동: _dateTimeOf()
+      dateTime: _dateTimeOf(map['dateTime']),
       xPtp: (map['xPtp'] as num?)?.toDouble(),
       yPtp: (map['yPtp'] as num?)?.toDouble(),
       zPtp: (map['zPtp'] as num?)?.toDouble(),
@@ -372,6 +403,11 @@ class MeasurementResult {
       maxSpeed: (map['maxSpeed'] as num?)?.toDouble(),
       sampleRate: (map['sampleRate'] as num?)?.toDouble() ?? 256.0,
       signalConditioning: map['signalConditioning'] as String?,
+      travelWindow: map['travelWindow'] is Map<String, dynamic>
+          // → 로직 이동: TravelWindow.fromMap()
+          ? TravelWindow.fromMap(map['travelWindow'] as Map<String, dynamic>)
+          : null,
+      travelWindowFailure: map['travelWindowFailure'] as String?,
       xSeries: toDoubleList(map['xSeries']),
       ySeries: toDoubleList(map['ySeries']),
       zSeries: toDoubleList(map['zSeries']),
@@ -381,6 +417,20 @@ class MeasurementResult {
       accelSeries: toDoubleList(map['accelSeries']),
       jerkSeries: toDoubleList(map['jerkSeries']),
     );
+  }
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: _dateTimeOf
+  /// 목적: 저장된 측정 일시를 읽는다.
+  /// 인자: raw — 저장된 값 (ISO 8601 문자열). 없으면 null
+  /// 반환: 측정 일시. 없거나 읽을 수 없으면 `FormatException`
+  static DateTime _dateTimeOf(Object? raw) {
+    if (raw == null) throw const FormatException('측정 일시(dateTime)가 없다');
+    final parsed = DateTime.tryParse(raw.toString()); // 읽은 일시, 못 읽으면 null
+    if (parsed == null) {
+      throw FormatException('측정 일시(dateTime)를 읽을 수 없다', raw.toString());
+    }
+    return parsed;
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준

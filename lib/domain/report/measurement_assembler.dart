@@ -1,4 +1,7 @@
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/ride_weighting.dart';
+import 'package:vibration_checker/domain/report/half_cycle.dart';
+import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 
@@ -39,10 +42,11 @@ class MeasurementAssembleResult {
 }
 
 /// 작성: 2026-09-15 13:08:37 · nada
+/// 수정: 2026-10-15 16:50:04 · nada
 /// 클래스: MeasurementAssembler
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과와 현장
-///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 시계열은 그대로
-///       옮기고, 아래 지표만 새로 계산한다.
+///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 진동 시계열은
+///       가중해 싣고(소음은 그대로), 아래 지표를 새로 계산한다.
 ///
 ///       수직 진동에서 가속도 · 속도 · 누적 이동량 · 저크를 만들고,
 ///       최대 속도와 운행 거리를 거기서 뽑는다.
@@ -51,11 +55,19 @@ class MeasurementAssembleResult {
 ///       100Hz 격자다 — 기준선 0 맞춤, 40Hz 저역(4차 버터워스, 양방향),
 ///       256Hz → 100Hz 재표본. 수치는 `CaptureConfig` 에 있다. 오티스폰
 ///       (OTIS iOS 앱)과 같은 주파수 범위에서 지표를 견주려는 것이다
-///       (2026-10-07 결정). 이 클래스 자신은 필터를 걸지 않는다.
-///
-///       진동 P2P(X/Y/Z)는 그 시계열 전체의 최대 − 최소로, 진동 A95 는 같은
-///       시계열의 반주기 P2P 95백분위로 낸다. Z 에는 엘리베이터 가감속이
-///       그대로 섞여 있어 리포트의 적색 기준과 견주면 늘 넘는다
+///       (2026-10-07 결정).
+///       진동 지표는 원본 리포트(ISO 18738 방식)와 같은 길로 낸다
+///       (2026-10-15, 2026-10-07 "전체 구간 · 최대 − 최소" 결정을 바꿈).
+///       1. 운동(속도 · 위치 · 가속도 · 저크)과 최대 속도 · 운행 거리는
+///          가중 전 수직 진동 전체에서 낸다
+///       2. 진동에 주파수 가중(`RideWeighting`)을 건다 — 수평 Wd, 수직
+///          1Hz 고역 + Wk. 가감속이 빠져 Z 가 늘 적색을 넘던 문제가 없다
+///       3. 위치에서 운행 구간(`TravelWindow`, 출발 · 정지 0.5 m 제외)을
+///          정한다
+///       4. 구간 안 가중 시계열의 반주기 P2P(`HalfCycle`)에서 최대 P2P 와
+///          A95 를, 구간 안 소음에서 최대를 낸다
+///       운행 구간을 정하지 못하면(운행 1 m 이하 등) 진동 · 소음 지표를
+///       비우고 사유(`travelWindowFailure`)를 남긴다
 ///
 ///       소음 두 값의 계약
 ///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
@@ -64,9 +76,10 @@ class MeasurementAssembleResult {
 ///         창보다 짧은 소리는 평탄해지는데, 이는 Slow 특성을 쓰기로 한
 ///         결과이지 격자가 잃은 것이 아니다.
 ///         - `noiseSeries` 는 격자에 정렬된 값 그대로이고 차트가 쓴다
-///         - `noiseMax` 는 그 시계열의 최대다
+///         - `noiseMax` 는 그 시계열의 운행 구간 안 최대다
 ///         - 소음 평균은 모든 표본이 있어야 나오므로 시계열에서 낸다.
-///           `ReportMetrics` 가 그 몫을 맡는다
+///           `ReportMetrics` 가 같은 운행 구간(`travelWindow`)으로 그
+///           몫을 맡는다
 ///
 ///       소음 0 은 값이 아니라 미측정 표시다. 수집 계층은 마이크 권한이
 ///       없거나 첫 창이 아직 차지 않았을 때 0 을 내보낸다. 실내 소음이
@@ -80,7 +93,7 @@ class MeasurementAssembleResult {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-13 13:17:56 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -92,8 +105,15 @@ class MeasurementAssembler {
   ///         있지만, 이 함수만 보고도 잘못된 값이 들어오지 않는다고
   ///         말할 수 있어야 해서 여기서 다시 본다
   ///       - 진동 시계열 세 개와 샘플레이트, 현장 정보를 채운다
-  ///       - 수직 진동(`zSeries`)에서 파생 물리량 네 개와 최대 속도 ·
-  ///         운행 거리를 만든다. `_deriveKinematics()` 참고
+  ///       - 가중 전 수직 진동에서 파생 물리량 네 개와 최대 속도 · 운행
+  ///         거리를 만든다. `_deriveKinematics()` 참고
+  ///       - 진동 세 축에 가중을 걸어(`RideWeighting`) 그 값을 시계열로
+  ///         싣는다. 가중을 걸 수 없는 격자(`RideWeighting.canApply()`,
+  ///         아주 짧거나 성김)는 가중 없이 싣고 지표는 비운 채 사유를
+  ///         남긴다
+  ///       - 운행 구간(`TravelWindow.of()`)을 정해 그 안에서 진동 최대
+  ///         P2P · A95(`HalfCycle`)와 소음 최대를 낸다. 못 정하면 그 일곱
+  ///         지표를 null 로 두고 사유를 싣는다
   ///       - `site.model`(기종)도 함께 옮긴다. 비어 있으면 null 로 둔다.
   ///         이걸 실어 두면 리포트가 측정 결과 하나만 받으면 되고
   ///         현장 정보를 따로 들고 다니지 않아도 된다
@@ -106,8 +126,8 @@ class MeasurementAssembler {
   ///         null 로 둔다
   ///       - 엔지니어 이름은 현장 정보가 아니라 기기 설정이라 따로 받는다.
   ///         비어 있으면 null
-  ///       - 소음 시계열을 격자에서 그대로 옮기고, 0 이 아닌 표본의
-  ///         최대를 `noiseMax` 에 담는다. 쓸 표본이 하나도 없으면 null 로
+  ///       - 소음 시계열을 격자에서 그대로 옮기고, 운행 구간 안 0 이 아닌
+  ///         표본의 최대를 `noiseMax` 에 담는다. 쓸 표본이 하나도 없으면 null 로
   ///         둔다. 자세한 까닭은 클래스 주석의 소음 계약을 본다
   /// 인자: grid — 격자 환산 결과
   ///       site — 홈 화면에서 입력받은 현장 정보
@@ -173,12 +193,53 @@ class MeasurementAssembler {
 
     final sampleRate = 1000000000 / grid.gridIntervalNs; // 실측 샘플레이트 (Hz)
     final model = site.model.trim(); // 기종. 비어 있으면 아래에서 null 로 둔다
-    // → 로직 이동: _peakIgnoringZeros()
-    final resolvedNoiseMax = _peakIgnoringZeros(
-      noiseSeries,
-    ); // 소음 최대 (dBA). 쓸 표본이 없으면 null
     // → 로직 이동: _deriveKinematics()
     final motion = _deriveKinematics(zSeries, sampleRate); // 파생 물리량 묶음
+
+    // → 로직 이동: RideWeighting.canApply()
+    final canWeight = // 가중을 걸 만큼 격자가 길고 촘촘한지
+    RideWeighting.canApply(
+      xSeries.length,
+      sampleRate,
+    );
+    final xWeighted = canWeight
+        // → 로직 이동: RideWeighting.horizontal()
+        ? RideWeighting.horizontal(xSeries, sampleRate)
+        : xSeries; // 지표 · 차트에 쓸 X (mg)
+    final yWeighted = canWeight
+        // → 로직 이동: RideWeighting.horizontal()
+        ? RideWeighting.horizontal(ySeries, sampleRate)
+        : ySeries; // 지표 · 차트에 쓸 Y (mg)
+    final zWeighted = canWeight
+        // → 로직 이동: RideWeighting.vertical()
+        ? RideWeighting.vertical(zSeries, sampleRate)
+        : zSeries; // 지표 · 차트에 쓸 Z (mg)
+
+    // 가중하지 못한 시계열로 지표를 내지 않는다 — 기준이 원본 리포트의
+    // 가중 지표 기준이라 견줄 수 없다
+    final travel = canWeight
+        // → 로직 이동: TravelWindow.of()
+        ? TravelWindow.of(motion.position, sampleRate)
+        : TravelWindowResult.failure(
+            '가중을 걸 수 없는 격자다: ${xSeries.length}행, '
+            '${sampleRate.toStringAsFixed(1)}Hz',
+          ); // 운행 구간
+    final window = travel.window; // 정한 구간, 못 정했으면 null
+    final start = window?.startIndex ?? 0; // 구간 첫 첨자
+    final end = window?.endIndex ?? 0; // 구간 끝 첨자 (포함)
+    // → 로직 이동: HalfCycle.maximum()
+    double? maxOf(List<double> series) => window == null
+        ? null
+        : HalfCycle.maximum(series, start: start, end: end)?.value;
+    // → 로직 이동: HalfCycle.a95()
+    double? a95Of(List<double> series) =>
+        window == null ? null : HalfCycle.a95(series, start: start, end: end);
+    final resolvedNoiseMax = window == null
+        ? null
+        // → 로직 이동: _peakIgnoringZeros()
+        : _peakIgnoringZeros(
+            noiseSeries.sublist(start, end + 1),
+          ); // 구간 소음 최대 (dBA). 쓸 표본이 없으면 null
 
     return MeasurementAssembleResult.success(
       MeasurementResult(
@@ -197,94 +258,28 @@ class MeasurementAssembler {
         notes: notes.isEmpty ? null : notes,
         engineerName: engineer.isEmpty ? null : engineer,
         dateTime: measuredAt,
-        xSeries: xSeries,
-        ySeries: ySeries,
-        zSeries: zSeries,
+        xSeries: xWeighted,
+        ySeries: yWeighted,
+        zSeries: zWeighted,
         noiseSeries: noiseSeries,
         noiseMax: resolvedNoiseMax,
         positionSeries: motion.position,
         speedSeries: motion.speed,
         accelSeries: motion.accel,
         jerkSeries: motion.jerk,
-        // → 로직 이동: _peakToPeak()
-        xPtp: _peakToPeak(xSeries),
-        yPtp: _peakToPeak(ySeries),
-        zPtp: _peakToPeak(zSeries),
-        // → 로직 이동: _a95()
-        xA95: _a95(xSeries),
-        yA95: _a95(ySeries),
-        zA95: _a95(zSeries),
+        xPtp: maxOf(xWeighted),
+        yPtp: maxOf(yWeighted),
+        zPtp: maxOf(zWeighted),
+        xA95: a95Of(xWeighted),
+        yA95: a95Of(yWeighted),
+        zA95: a95Of(zWeighted),
         maxSpeed: motion.maxSpeed,
         distance: motion.distance,
         sampleRate: sampleRate,
+        travelWindow: window,
+        travelWindowFailure: travel.failureReason,
       ),
     );
-  }
-
-  /// 작성: 2026-10-04 16:03:06 · nada
-  /// 함수: _peakToPeak
-  /// 목적: 진동 시계열 한 축의 P2P 를 낸다. 이 함수는 필터를 걸지 않는다 —
-  ///       받는 시계열이 이미 신호 처리(`SignalConditioner`)를 거친 값이다.
-  /// 인자: series — 한 축의 진동 시계열 (mg)
-  /// 반환: 최댓값 − 최솟값 (mg). 표본이 없으면 null
-  /// 식: P2P = max(series) − min(series)
-  /// 근거: 미정 — EVA 가 따르는 ISO 18738 은 주파수 가중을 거친 신호에서
-  ///       0 을 지나는 사이 이웃 봉우리 · 골을 더해 세고, 출발 · 정지 0.5m
-  ///       구간을 뺀다. 그 가중의 세부 값이 확인되지 않아, 가중 대신
-  ///       오티스폰에 맞춘 신호 처리를 거친 시계열의 전체 구간으로 낸다
-  ///       (2026-10-07 결정)
-  static double? _peakToPeak(List<double> series) {
-    if (series.isEmpty) return null;
-    var low = series.first; // 여기까지 본 최솟값 (mg)
-    var high = series.first; // 여기까지 본 최댓값 (mg)
-    for (final value in series) {
-      if (value < low) low = value;
-      if (value > high) high = value;
-    }
-    return high - low;
-  }
-
-  /// 작성: 2026-10-04 18:36:31 · nada
-  /// 함수: _a95
-  /// 목적: 진동 시계열 한 축의 A95 를 낸다. 이 함수는 필터를 걸지 않는다
-  ///       (`_peakToPeak()` 과 같은 입력). 신호가 0 을 지날
-  ///       때마다 반주기로 끊고, 반주기마다 가장 큰 크기(봉우리 또는 골)를
-  ///       잡는다. 이웃한 두 반주기의 크기를 더한 것이 반주기 P2P 이고,
-  ///       그 값들의 95백분위가 A95 다. 정확히 0 인 표본은 어느 쪽 부호도
-  ///       아니라 반주기를 끊지 않는다.
-  /// 인자: series — 한 축의 진동 시계열 (mg)
-  /// 반환: A95 (mg). 반주기가 두 개보다 적어 P2P 를 하나도 못 만들면 null
-  /// 식: P2P_i = |봉우리_i| + |봉우리_i+1|
-  ///     A95 = 오름차순 정렬한 P2P 의 ceil(0.95 × n) 번째 값
-  /// 근거: 인용 — ISO 18738 의 P2P(0 을 한 번 지나는 사이 부호가 반대인 두
-  ///       봉우리 크기의 합)와 A95(그 값들의 95%가 이하가 되는 값) 정의.
-  ///       표준은 주파수 가중을 거친 신호와 출발 · 정지 0.5m 를 뺀 구간을
-  ///       쓰지만, 가중 대신 오티스폰에 맞춘 신호 처리를 거친 신호 전체로
-  ///       낸다 (2026-10-07 결정). 백분위 산정법(최근접 순위)은 표준에서
-  ///       확인하지 못했다
-  /// 미확인: 표준이 쓰는 백분위 보간 방식
-  static double? _a95(List<double> series) {
-    final peaks = <double>[]; // 반주기마다의 가장 큰 크기 (mg)
-    var current = 0.0; // 지금 반주기에서 본 가장 큰 크기 (mg)
-    var sign = 0; // 지금 반주기의 부호. 아직 0 아닌 값을 못 봤으면 0
-    for (final value in series) {
-      final s = value > 0 ? 1 : (value < 0 ? -1 : 0); // 이 표본의 부호
-      if (s == 0) continue;
-      if (sign != 0 && s != sign) {
-        peaks.add(current);
-        current = 0.0;
-      }
-      sign = s;
-      if (value.abs() > current) current = value.abs();
-    }
-    if (sign != 0) peaks.add(current);
-    if (peaks.length < 2) return null;
-
-    final p2p = <double>[
-      for (var i = 0; i + 1 < peaks.length; i++) peaks[i] + peaks[i + 1],
-    ]..sort(); // 반주기 P2P, 작은 것부터
-    final rank = (0.95 * p2p.length).ceil(); // 95백분위의 순위 (1부터)
-    return p2p[rank - 1];
   }
 
   /// 작성: 2026-09-15 21:38:58 · nada

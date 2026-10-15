@@ -7,6 +7,7 @@ import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
@@ -240,7 +241,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -258,9 +259,11 @@ class MeasurementRecorder {
   ///       5. 지표 계산 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)를
   ///          하고 결과를 집계 파일에 덧붙인다(`_condition()`). 실패하면
   ///          멈추되 측정값 파일은 지우지 않는다
-  ///       6. 처리한 격자를 측정 결과 모델로 바꾸고, 처리 방식
-  ///          (`SignalConditioner.methodLabel`)을 실어 저장소에 저장한다.
-  ///          설정의 엔지니어 이름도 이 시점 값을 함께 싣는다
+  ///       6. 처리한 격자를 측정 결과 모델로 바꾸고(가중 · 운행 구간 ·
+  ///          지표, `MeasurementAssembler`), 가중 · 운행 구간을 집계 파일에
+  ///          덧붙인 뒤 처리 방식(`SignalConditioner.methodLabel` +
+  ///          `RideWeighting.methodLabel`)을 실어 저장소에 저장한다. 설정의
+  ///          엔지니어 이름도 이 시점 값을 함께 싣는다
   ///       7. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
   ///          기다리게 되고, 그 자리에서 실패하면 보내지 못한다. 실패해도
   ///          측정은 이미 저장됐으므로 멈추지 않는다 — 나중에
@@ -358,9 +361,18 @@ class MeasurementRecorder {
           assembled.failureReason,
         );
       }
+      // → 로직 이동: _appendMeta()
+      await _appendMeta(
+        metaPath,
+        // → 로직 이동: VibrationFileWriter.encodeTravelMeta()
+        VibrationFileWriter.encodeTravelMeta(assembled.result!),
+      );
       // → 로직 이동: MeasurementRepository.save()
       await repo.save(
-        assembled.result!.copyWith(signalConditioning: conditioner.methodLabel),
+        assembled.result!.copyWith(
+          signalConditioning:
+              '${conditioner.methodLabel}+${RideWeighting.methodLabel}',
+        ),
       );
 
       String? reportPath; // 미리 만든 리포트 경로, 못 만들었으면 null

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -102,7 +103,7 @@ Widget _app() {
 /// 작성: 2026-10-04 18:38:14 · nada
 /// 함수: main
 /// 목적: 저장 결과 목록이 최근 것부터 보이고, 누르면 결과 화면이 열리고,
-///       삭제되는지 시험한다.
+///       삭제되는지, 읽지 못한 결과가 그 한 건만 따로 보이는지 시험한다.
 void main() {
   late Directory temp; // 이번 시험이 쓸 임시 폴더
 
@@ -130,6 +131,31 @@ void main() {
     expect(newer.dy, lessThan(older.dy));
     expect(find.text('초과'), findsNWidgets(2), reason: 'Z 32mg 은 30mg 초과');
     expect(find.textContaining('Z 32.0mg 초과'), findsNWidgets(2));
+  });
+
+  testWidgets('측정 일시가 깨진 결과는 그 한 건만 "읽을 수 없는 결과" 로 보인다', (tester) async {
+    await tester.runAsync(() async {
+      final dir = Directory(
+        '${temp.path}/captures/20260113-090000',
+      ); // 일시를 망가뜨릴 폴더
+      final file = File(
+        '${dir.path}/${MeasurementRepository.resultFileName}',
+      ); // 그 정본
+      final map = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      map.remove('dateTime');
+      await file.writeAsString(jsonEncode(map));
+      await File(
+        '${dir.path}/${MeasurementRepository.summaryFileName}',
+      ).delete();
+    });
+
+    await tester.pumpWidget(_app());
+    await _settle(tester);
+
+    expect(find.text('J-NEW · 현장'), findsOneWidget, reason: '나머지는 정상');
+    expect(find.text('J-OLD · 현장'), findsNothing);
+    expect(find.text('읽을 수 없는 결과'), findsOneWidget);
+    expect(find.textContaining('20260113-090000'), findsOneWidget);
   });
 
   testWidgets('한 줄을 누르면 그 측정의 결과 화면이 열린다', (tester) async {

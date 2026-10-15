@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -5,9 +6,16 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
+import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
+import 'package:vibration_checker/domain/report/half_cycle.dart';
+import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
+import 'package:vibration_checker/domain/report/travel_window.dart';
+import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 import 'pdf_probe.dart';
@@ -630,6 +638,116 @@ void main() {
       expect(at.minIndex, 777);
       final reduced = reduceSeries(values, columns: 300); // 그리는 표본
       expect(reduced.map((s) => s.index), containsAll(<int>[4321, 777]));
+    });
+  });
+
+  group('운행 구간 · 반주기 표시점 (2026-10-15)', () {
+    const window = TravelWindow(
+      startIndex: 100,
+      endIndex: 199,
+      startSec: 1.0,
+      endSec: 1.99,
+      startM: 0.5,
+      endM: 9.5,
+    ); // 시험용 운행 구간
+
+    test('표시점은 구간 안 최대 반주기 P2P 의 이웃 봉우리 · 골이다', () {
+      final values = List<double>.filled(300, 0.0); // 진동 (mg)
+      values[20] = 50.0; // 구간 밖 큰 봉우리 — 고르면 안 된다
+      values[21] = -50.0;
+      for (var i = 100; i < 200; i++) {
+        values[i] = i.isEven ? 1.0 : -1.0;
+      }
+      values[150] = 6.0; // 구간 안 가장 큰 쌍: 6 + 1
+      final result = _result().copyWith(
+        sampleRate: 100,
+        travelWindow: window,
+      ); // 구간이 있는 결과
+      final pair = ReportChartAxes.peakToPeakPair(values, result)!; // 두 지점
+
+      expect(pair.high, 150);
+      expect((pair.low - 150).abs(), 1, reason: '이웃한 골');
+      final best = HalfCycle.maximum(values, start: 100, end: 199)!;
+      expect(values[pair.high] + values[pair.low].abs(), best.value);
+    });
+
+    test('구간이 없는 예전 결과는 전체 최댓값 · 최솟값 자리다', () {
+      final values = _wave(_rideSampleCount, spikeIndex: 4321, spikeValue: 9.0);
+      values[777] = -9.5; // 가장 깊은 골
+      final pair = ReportChartAxes.peakToPeakPair(values, _result())!;
+
+      expect(pair.high, 4321);
+      expect(pair.low, 777);
+    });
+
+    test('소음 최댓값 자리는 구간 안에서 찾는다', () {
+      final values = List<double>.filled(300, 45.0); // 소음 (dBA)
+      values[30] = 52.0; // 구간 밖 같은 값
+      values[160] = 52.0; // 구간 안
+      final windowed = _result().copyWith(travelWindow: window);
+
+      expect(ReportChartAxes.indexInTravel(values, 52.0, windowed), 160);
+      expect(ReportChartAxes.indexInTravel(values, 52.0, _result()), 30);
+      expect(ReportChartAxes.indexInTravel(values, 99.0, windowed), -1);
+    });
+
+    test('가중 · 구간을 거친 기준 데이터도 8개 차트 모두 축 밖 표본이 없다', () {
+      final lines = const LineSplitter()
+          .convert(File('test/fixtures/ride_reference.txt').readAsStringSync())
+          .where((line) => line.trim().isNotEmpty)
+          .toList(); // 파일 줄
+      final rows = <GridSample>[
+        for (final line in lines.sublist(2))
+          () {
+            final f = line.trim().split(RegExp(r'\s+')); // 열 값
+            return GridSample(
+              xMg: double.parse(f[0]),
+              yMg: double.parse(f[1]),
+              zMg: double.parse(f[2]),
+              noiseDba: double.parse(f[3]),
+            );
+          }(),
+      ]; // 기준 데이터 격자 행
+      final grid = GridResampleResult(
+        samples: rows,
+        t0Ns: 0,
+        gridIntervalNs: 3906250,
+        rawUsedCount: rows.length,
+        gravityUsedCount: rows.length,
+        droppedZeroCount: 0,
+        droppedBackwardCount: 0,
+        droppedLinearCount: 0,
+        headTrimmedRows: 0,
+        tailTrimmedRows: 0,
+        rawMaxSpanNs: 0,
+        gravityMaxSpanNs: 0,
+        degenerateSpanCount: 0,
+      ); // 256Hz 격자
+      final result = MeasurementAssembler.assemble(
+        grid: const SignalConditioner(
+          config: CaptureConfig(),
+        ).condition(grid).grid,
+        site: const SiteInfo(
+          jobNo: 'J',
+          siteName: 'S',
+          bottomFloor: '1',
+          topFloor: '8',
+          direction: SiteInfo.directionUp,
+          model: SiteInfo.defaultModel,
+        ),
+        id: 'id',
+        measuredAt: DateTime(2026, 1, 14),
+      ).result!; // 앱과 같은 길로 만든 결과
+
+      for (final spec in ReportChartAxes.all) {
+        final values = ReportChartAxes.seriesOf(spec, result); // 그릴 값
+        final range = spec.rangeFor(values); // 고른 세로축
+        final outside = values
+            .where((v) => !spec.scale.ignoreZeros || v != 0)
+            .where((v) => !range.contains(v, v))
+            .length; // 축 밖 표본 수
+        expect(outside, 0, reason: spec.key);
+      }
     });
   });
 }
