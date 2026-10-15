@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-08-18 23:43:06 · 박건준
 /// 클래스: VibrationFileWriter
@@ -266,6 +268,46 @@ class VibrationFileWriter {
   /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 한 줄
   static String encodeConditioningFailure(String reason) =>
       '${lineEnding}conditioningFailureReason: $reason$lineEnding';
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: encodeTravelMeta
+  /// 목적: 주파수 가중과 운행 구간을 집계 파일 끝에 덧붙일 문자열로 만든다.
+  ///       지표는 가중한 시계열의 운행 구간 안에서 내므로, 리포트 값이
+  ///       어느 구간에서 나왔는지 집계 파일만 보고 알 수 있어야 한다.
+  ///       - 가중 방식 한 줄 — 수치는 실제로 쓴 상수에서 옮긴다
+  ///       - 운행 구간 시작 · 끝 (초, m). 정하지 못했으면 그 사유 한 줄
+  /// 인자: result — 지표를 낸 측정 결과
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
+  static String encodeTravelMeta(MeasurementResult result) {
+    final buffer = StringBuffer(lineEnding); // 앞 집계와 빈 줄로 나눈다
+    // 한 줄을 쓰고 줄바꿈 문자를 붙인다
+    void line(String text) => buffer
+      ..write(text)
+      ..write(lineEnding);
+    String fixed(double value) => // 소수 셋째 자리까지 적은 값
+        value.toStringAsFixed(decimalDigits);
+
+    line(
+      'weighting: x/y Wd, z highpass '
+      '${CaptureConfig.rideVerticalHighpassHz}Hz (butterworth '
+      '${CaptureConfig.rideVerticalHighpassOrder}, zero-phase) + Wk '
+      '(ISO 8041) [${RideWeighting.methodLabel}]',
+    );
+    final window = result.travelWindow; // 운행 구간, 못 정했으면 null
+    if (window == null) {
+      line('travelWindowFailureReason: ${result.travelWindowFailure}');
+    } else {
+      line('travelWindowStartSec: ${fixed(window.startSec)}');
+      line('travelWindowEndSec: ${fixed(window.endSec)}');
+      line('travelWindowStartM: ${fixed(window.startM)}');
+      line('travelWindowEndM: ${fixed(window.endM)}');
+    }
+    line(
+      '# 진동 · 소음 지표는 위 가중 뒤 시계열의 운행 구간(출발 · 정지 '
+      '${CaptureConfig.travelEdgeExclusionM}m 제외) 안에서 낸다.',
+    );
+    return buffer.toString();
+  }
 
   /// 작성: 2026-10-07 02:10:57 · nada
   /// 함수: appendMeta

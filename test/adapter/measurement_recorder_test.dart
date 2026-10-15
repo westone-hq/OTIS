@@ -333,7 +333,7 @@ void main() {
       expect(saved?.engineerName, isNull);
     });
 
-    test('저장한 결과의 표본 속도는 100Hz 이고 집계 파일에 처리 내역을 남긴다', () async {
+    test('저장한 결과의 표본 속도는 100Hz 이고 집계 파일에 처리 · 가중 · 구간 내역을 남긴다', () async {
       // 이벤트 1024개 × 3.906ms ≈ 4초 — 앞뒤 0.5초를 버려도 기준선 1초가 남는다
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(count: 1024),
@@ -347,7 +347,10 @@ void main() {
         '20260114-110359',
       ); // 저장한 측정 결과
       expect(saved?.sampleRate, 100.0);
-      expect(saved?.signalConditioning, 'baseline+lp40bw4zp+rs100');
+      expect(
+        saved?.signalConditioning,
+        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)',
+      );
 
       final meta = await metaText(); // 집계 파일 내용
       expect(meta, contains('gridRateHz: 256'), reason: '처리 전 격자 집계');
@@ -370,6 +373,17 @@ void main() {
       }
       expect(meta, contains('conditionedRateHz: 100'));
       expect(meta, contains('conditionedRowCount: ${saved!.xSeries.length}'));
+      expect(
+        meta,
+        contains('weighting: x/y Wd, z highpass 1.0Hz (butterworth 2'),
+        reason: '가중 내역',
+      );
+      // 시험 이벤트는 승강기가 움직이지 않아 운행 구간을 정하지 못한다.
+      // 그 사유가 집계와 결과에 남고 진동 지표는 비어 있어야 한다
+      expect(meta, contains('travelWindowFailureReason: '));
+      expect(saved.travelWindow, isNull);
+      expect(saved.travelWindowFailure, isNotNull);
+      expect(saved.zPtp, isNull);
     });
 
     test('처리 설정이 잘못되면 컨디셔닝 실패로 돌려주고 값 파일은 남긴다', () async {

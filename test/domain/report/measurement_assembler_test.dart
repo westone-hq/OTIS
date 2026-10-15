@@ -2,9 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/report_metrics.dart';
+import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-15 19:14:22 · nada
 /// 변수: _fixturePath
@@ -143,13 +148,68 @@ const _threeRows = <GridSample>[
   GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
 ];
 
+/// 작성: 2026-10-15 16:50:04 · nada
+/// 함수: _rideWithNoise
+/// 목적: 사다리꼴 운행(`_trapezoid()`)에 소음을 얹은 격자 행을 만든다.
+///       운행 구간(출발 · 정지 0.5 m 제외)이 생기는 입력이라 구간 안 ·
+///       밖 소음을 나눠 볼 수 있다. 256Hz 에서 0.5 m 는 출발 뒤 약 1.12초
+///       (286행)다.
+/// 인자: noise — 행 첨자마다 소음 (dBA)
+/// 반환: 격자 행 8,942개
+List<GridSample> _rideWithNoise(double Function(int index) noise) {
+  final ride = _trapezoid(); // 소음 없는 운행
+  return <GridSample>[
+    for (var i = 0; i < ride.length; i++)
+      GridSample(
+        xMg: ride[i].xMg,
+        yMg: ride[i].yMg,
+        zMg: ride[i].zMg,
+        noiseDba: noise(i),
+      ),
+  ];
+}
+
+/// 작성: 2026-10-15 16:50:04 · nada
+/// 함수: _conditionedReference
+/// 목적: 기준 데이터(ride_reference)를 앱과 같은 길 — 신호 처리
+///       (`SignalConditioner`) 뒤 조립 — 으로 측정 결과로 만든다.
+/// 반환: 조립한 측정 결과
+MeasurementResult _conditionedReference() {
+  final conditioned = const SignalConditioner(
+    config: CaptureConfig(),
+  ).condition(_grid(_fixtureRows())); // 100Hz 로 처리한 격자
+  return MeasurementAssembler.assemble(
+    grid: conditioned.grid,
+    site: _site,
+    id: 'id',
+    measuredAt: DateTime(2026, 1, 14, 11, 3, 59),
+  ).result!;
+}
+
+/// 작성: 2026-10-15 16:50:04 · nada
+/// 함수: _expectedReference
+/// 목적: 같은 기준 데이터를 SciPy 로 재계산한 기대값을 읽는다
+///       (`pdf_report_dev/gen_conditioning_fixtures.py --weighting`).
+/// 반환: 항목 이름을 열쇠로 하는 기대값 표
+Map<String, dynamic> _expectedReference() =>
+    (jsonDecode(
+              File(
+                'test/fixtures/weighting_expected_metrics.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, dynamic>)['ride_reference']
+        as Map<String, dynamic>;
+
 /// 작성: 2026-09-15 13:08:37 · nada
+/// 수정: 2026-10-15 16:50:04 · nada
 /// 함수: main
 /// 목적: 캡처 결과를 측정 결과 모델로 바꾸는 변환을 시험한다.
 ///       - 진동 시계열과 샘플레이트가 제대로 옮겨지는지
 ///       - 아직 재지 않은 소음이 0 이 아니라 비어 있는 채로 남는지
-///       - 진동 P2P 가 필터 없이 원시 최대 − 최소로, A95 가 반주기 P2P
-///         95백분위로 나오는지
+///       - 진동 · 소음 지표가 가중한 시계열의 운행 구간 안에서 나오는지,
+///         구간을 못 정하면 비우고 사유를 남기는지
+///       - 기준 데이터(원본 리포트를 만든 측정)에서 SciPy 재계산 값과
+///         같고, 원본 리포트 목표값과 허용 오차 안이며 신호등이 같은지
 ///       - 기종이 버려지지 않고 실리는지, 비었으면 null 인지
 ///       - 환산 실패와 행 부족을 삼키지 않고 그대로 올리는지
 ///       - 실측 기준 데이터에서 파생 물리량이 프로토타입과 같은 값을
@@ -206,42 +266,33 @@ void main() {
       expect(model.noiseMax, isNull, reason: '0 뿐이면 잰 것이 없다');
     });
 
-    test('진동 A95 는 반주기 P2P 의 95백분위다', () {
-      // X: 반주기 크기 1 · 2 · 3 · 1 → P2P 3 · 5 · 4 → 정렬 3 4 5, 순위
-      // ceil(0.95 × 3) = 3 → 5. 정확히 0 인 표본은 반주기를 끊지 않는다
+    test('운행 구간을 못 정한 짧은 격자는 진동 · 소음 지표를 비우고 사유를 남긴다', () {
+      // 반주기 P2P · A95 의 정의 자체는 half_cycle_test 가 본다. 여기서는
+      // 움직이지 않은 측정에서 0 이나 지어낸 값을 싣지 않는지 본다
       final model = MeasurementAssembler.assemble(
         grid: _grid(const [
-          GridSample(xMg: 1.0, yMg: 0.0, zMg: 0.0),
-          GridSample(xMg: -2.0, yMg: 0.0, zMg: 0.0),
-          GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
-          GridSample(xMg: -1.0, yMg: 0.0, zMg: 0.0),
-          GridSample(xMg: 3.0, yMg: 0.0, zMg: 0.0),
-          GridSample(xMg: -1.0, yMg: 0.0, zMg: 0.0),
+          GridSample(xMg: 1.0, yMg: 4.0, zMg: 0.5, noiseDba: 45.0),
+          GridSample(xMg: -2.0, yMg: -2.0, zMg: 0.5, noiseDba: 48.0),
+          GridSample(xMg: 3.0, yMg: 1.0, zMg: 0.5, noiseDba: 46.0),
         ]),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.xA95, 5.0);
-      expect(model.yA95, isNull, reason: '0 뿐이면 반주기가 없다');
-    });
-
-    test('진동 P2P 는 필터 없이 축마다 최대 − 최소다', () {
-      final model = MeasurementAssembler.assemble(
-        grid: _grid(const [
-          GridSample(xMg: -1.0, yMg: 4.0, zMg: 0.5),
-          GridSample(xMg: 3.0, yMg: -2.0, zMg: 0.5),
-          GridSample(xMg: 0.0, yMg: 1.0, zMg: 0.5),
-        ]),
-        site: _site,
-        id: 'id',
-        measuredAt: measuredAt,
-      ).result!; // 변환된 측정 결과
-
-      expect(model.xPtp, 4.0);
-      expect(model.yPtp, 6.0);
-      expect(model.zPtp, 0.0, reason: '흔들림이 없으면 0 이 실제로 잰 값이다');
+      for (final value in [
+        model.xPtp,
+        model.yPtp,
+        model.zPtp,
+        model.xA95,
+        model.yA95,
+        model.zA95,
+        model.noiseMax,
+      ]) {
+        expect(value, isNull);
+      }
+      expect(model.travelWindow, isNull);
+      expect(model.travelWindowFailure, isNotNull);
     });
 
     test('소음 말고 시계열 일곱 개가 채워진다', () {
@@ -473,20 +524,21 @@ void main() {
       expect(model.noiseMax, isNull);
     });
 
-    test('격자가 실어 온 소음을 그대로 옮기고 최대를 채운다', () {
+    test('격자가 실어 온 소음을 그대로 옮기고 최대는 운행 구간 안에서 센다', () {
+      // 출발 직후(100행, 0.5 m 전)의 70 dBA 는 구간 밖이라 최대에 들지 않는다
       final model = MeasurementAssembler.assemble(
-        grid: _grid(const <GridSample>[
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 44.0),
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 48.0),
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 46.0),
-        ]),
+        grid: _grid(
+          _rideWithNoise((i) => i == 100 ? 70.0 : (i == 4000 ? 52.0 : 44.0)),
+        ),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.noiseSeries, const <double>[44.0, 48.0, 46.0]);
-      expect(model.noiseMax, closeTo(48.0, 1e-9));
+      expect(model.noiseSeries.length, 8942);
+      expect(model.noiseSeries[100], 70.0, reason: '시계열은 자르지 않는다');
+      expect(model.travelWindow!.startIndex, greaterThan(100));
+      expect(model.noiseMax, closeTo(52.0, 1e-9));
     });
 
     test('마이크가 꺼진 측정을 "소음 정상" 으로 찍지 않는다', () {
@@ -508,21 +560,16 @@ void main() {
       expect(model.noiseExceeded, isNull, reason: 'false 면 정상으로 읽힌다');
     });
 
-    test('앞쪽 0 구간은 빼고 최대를 센다', () {
-      // 첫 창이 찰 때까지 수집 계층이 0 을 내보낸다. 시계열은 그대로 두고
-      // 최대만 0 아닌 표본에서 센다
+    test('0 인 표본은 빼고 최대를 센다', () {
+      // 마이크 첫 창이 찰 때까지 수집 계층이 0 을 내보낸다. 구간 안에 0 이
+      // 섞여도 최대는 0 아닌 표본에서 센다
       final model = MeasurementAssembler.assemble(
-        grid: _grid(const <GridSample>[
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 41.5),
-        ]),
+        grid: _grid(_rideWithNoise((i) => i < 2000 ? 0.0 : 41.5)),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.noiseSeries.length, 3, reason: '시계열은 자르지 않는다');
       expect(model.noiseMax, closeTo(41.5, 1e-9));
     });
 
@@ -617,50 +664,71 @@ void main() {
         expect(model.speedSeries.last, closeTo(0.0, 1e-9));
       });
 
-      test('레퍼런스폰 원시 데이터의 진동 P2P 를 필터 없이 낸다', () {
-        // 기준값은 파일의 X Y Z 열에서 바로 구한 최대 − 최소다. 기기끼리
-        // 원시 값을 견줄 때 이 값이 출발점이다
-        final model = MeasurementAssembler.assemble(
-          grid: _grid(_fixtureRows()),
-          site: _site,
-          id: 'id',
-          measuredAt: measuredAt,
-        ).result!; // 변환된 측정 결과
+      test('앱과 같은 길로 낸 지표가 SciPy 재계산 값과 같다', () {
+        final model = _conditionedReference(); // 앱과 같은 길로 만든 결과
+        final expected = _expectedReference(); // SciPy 기대값
 
-        expect(model.xPtp!, closeTo(20.232, 1e-9));
-        expect(model.yPtp!, closeTo(48.331, 1e-9));
-        expect(model.zPtp!, closeTo(126.586, 1e-9));
+        expect(model.sampleRate, 100.0);
+        expect(model.travelWindow!.startIndex, expected['startIndex']);
+        expect(model.travelWindow!.endIndex, expected['endIndex']);
+        for (final entry in <String, double?>{
+          'xPtp': model.xPtp,
+          'yPtp': model.yPtp,
+          'zPtp': model.zPtp,
+          'xA95': model.xA95,
+          'yA95': model.yA95,
+          'zA95': model.zA95,
+          'noiseMax': model.noiseMax,
+          'maxSpeed': model.maxSpeed,
+          'distance': model.distance,
+        }.entries) {
+          expect(
+            entry.value,
+            closeTo((expected[entry.key] as num).toDouble(), 1e-6),
+            reason: entry.key,
+          );
+        }
+        expect(
+          ReportMetrics.from(model).noiseAvg.value,
+          closeTo((expected['noiseAvg'] as num).toDouble(), 1e-6),
+        );
       });
 
-      test('레퍼런스폰 원시 데이터의 진동 A95 를 필터 없이 낸다', () {
-        // 기준값은 같은 정의(반주기 P2P 95백분위, 최근접 순위)를 파이썬으로
-        // 파일 X Y Z 열에 그대로 돌려 얻었다
-        final model = MeasurementAssembler.assemble(
-          grid: _grid(_fixtureRows()),
-          site: _site,
-          id: 'id',
-          measuredAt: measuredAt,
-        ).result!; // 변환된 측정 결과
-
-        expect(model.xA95!, closeTo(10.397, 1e-9));
-        expect(model.yA95!, closeTo(12.362, 1e-9));
-        expect(model.zA95!, closeTo(4.948, 1e-9));
+      test('원본 리포트 목표값과 허용 오차 안이다', () {
+        // 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관) 1쪽 값. 이 기록이
+        // 그 리포트를 만든 측정이다. 진동 ±15%, 소음 ±1.5 dBA, 속도 · 거리
+        // ±1% (2026-10-15 점검 지시)
+        final metrics = ReportMetrics.from(_conditionedReference()); // 앱 리포트 지표
+        const vibration = <String, double>{
+          'vert_avg': 3.6,
+          'vert_max': 6.1,
+          'horiz_avg': 4.8,
+          'horiz_max': 11.3,
+        }; // 원본 진동 (milli-G)
+        for (final entry in vibration.entries) {
+          final value = metrics.byKey(entry.key)!.value!; // 앱 값
+          expect(
+            (value - entry.value).abs() / entry.value,
+            lessThanOrEqualTo(0.15),
+            reason: '${entry.key}: 앱 $value / 원본 ${entry.value}',
+          );
+        }
+        expect(metrics.noiseAvg.value!, closeTo(45.5, 1.5));
+        expect(metrics.noiseMax.value!, closeTo(48.7, 1.5));
+        expect(metrics.maxSpeed.value!, closeTo(1.75, 1.75 * 0.01));
+        expect(metrics.travelDistance.value!, closeTo(57.3, 57.3 * 0.01));
       });
 
-      test('실측 소음이 원본 리포트에 인쇄된 값과 같다', () {
-        // 원본 TUNE 리포트 1쪽은 평균 45.8dBA · 최대 65.6dBA 로 적고
-        // 있다. 이 파일의 소음 열에서 그대로 나오는 값이라 소수점까지
-        // 고정한다. 흔들리면 소음이 격자를 타고 오는 경로가 바뀐 것이다
-        final model = MeasurementAssembler.assemble(
-          grid: _grid(_fixtureRows()),
-          site: _site,
-          id: 'id',
-          measuredAt: measuredAt,
-        ).result!; // 변환된 측정 결과
+      test('신호등이 원본 리포트와 같다 (초록 6, 원 없음 2)', () {
+        final verdicts = ReportMetrics.from(
+          _conditionedReference(),
+        ).rows.map((metric) => metric.verdict).toList(); // 행마다 신호등
 
-        expect(model.noiseSeries.length, 11388);
-        expect(model.noiseMax!, closeTo(65.600000, 1e-6));
-        expect(model.noiseExceeded, isFalse, reason: '65.6 은 적색 기준 75 아래다');
+        expect(verdicts, <ReportVerdict>[
+          ...List<ReportVerdict>.filled(6, ReportVerdict.green),
+          ReportVerdict.none,
+          ReportVerdict.none,
+        ]);
       });
 
       test('원본 리포트 값과 1% 이내로 맞는다', () {

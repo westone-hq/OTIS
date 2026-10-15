@@ -94,9 +94,10 @@ class CaptureConfig {
   final int lowpassCutoffHz;
 
   /// 작성: 2026-10-07 01:44:43 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 변수: lowpassOrder
   /// 목적: 저역 필터의 차수다. 짝수여야 한다 — 홀수면 1차 구간이 생기는데
-  ///       설계 함수(`ButterworthLowpass.design()`)가 다루지 않고
+  ///       설계 함수(`Butterworth.lowpass()`)가 다루지 않고
   ///       `ArgumentError` 를 던진다.
   /// 근거: 미정 — 일반 관행. 비교 측정을 더 모아 조정할 수 있다
   final int lowpassOrder;
@@ -148,6 +149,41 @@ class CaptureConfig {
   /// 변수: defaultNormalIntervalMaxUs
   /// 목적: normalIntervalMaxUs 기본값이다.
   static const int defaultNormalIntervalMaxUs = 7900;
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 변수: rideVerticalHighpassHz
+  /// 목적: 수직(Z) 진동 지표 전에 거는 고역 필터의 차단 주파수 (Hz). 승강기
+  ///       가감속(1Hz 아래의 느린 흐름)을 빼 진동만 남긴다. 그 뒤에 ISO 8041
+  ///       Wk 가중을 건다(`RideWeighting.vertical()`).
+  /// 근거: 측정 — 2026-10-15 원본 리포트를 만든 측정 기록(ride_reference)
+  ///       으로 견준 결과(원본 수직 최대 6.1 / A95 3.6 milli-G).
+  ///       1Hz 고역만 6.97 / 4.23, Wk 만 9.06 / 3.74, 1Hz 고역 + Wk 5.53 /
+  ///       3.71. 둘 다 ±15% 안에 드는 것은 마지막 하나였다.
+  ///       미확인: 원본(레퍼런스폰 앱)이 실제로 쓴 수직 처리
+  static const double rideVerticalHighpassHz = 1.0;
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 변수: rideVerticalHighpassOrder
+  /// 목적: `rideVerticalHighpassHz` 고역 필터의 차수. 버터워스이고 양방향
+  ///       (영위상)으로 걸어 실제 기울기는 두 배가 된다.
+  /// 근거: 인용 — 2026-10-15 점검 지시 "1 Hz 2차 버터워스 고역, 양방향"
+  static const int rideVerticalHighpassOrder = 2;
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 변수: travelEdgeExclusionM
+  /// 목적: 진동 · 소음 지표를 낼 운행 구간에서 출발 뒤 · 도착 전 빼는 거리
+  ///       (m). 출발 · 정지 순간의 가감속 충격을 지표에서 뺀다.
+  /// 근거: 표준 — ISO 18738-1 승강기 승차감 평가 구간(출발 · 정지 0.5 m
+  ///       제외). 2026-10-15 점검 지시
+  static const double travelEdgeExclusionM = 0.5;
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 변수: minimumTravelM
+  /// 목적: 운행 구간을 정할 수 있는 가장 짧은 운행 거리 (m). 이 이하면 양
+  ///       끝 `travelEdgeExclusionM` 를 빼고 남는 구간이 없거나 너무
+  ///       짧아, 지표를 내지 않고 사유를 남긴다.
+  /// 근거: 인용 — 2026-10-15 점검 지시 "운행 거리가 1 m 이하이면 실패"
+  static const double minimumTravelM = 1.0;
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: idealIntervalNs

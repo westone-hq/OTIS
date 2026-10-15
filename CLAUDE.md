@@ -19,8 +19,8 @@ flutter test                                      # 전부 통과 유지
 | 경로 | 역할 |
 |---|---|
 | `lib/model/` | 순수 자료형 (`MeasurementResult`) |
-| `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`), 지표 계산 전 신호 처리 (`SignalConditioner`). 수집 · 처리 수치는 `CaptureConfig` |
-| `lib/domain/report/` | 리포트 좌표·임계값·지표 계산. 숫자는 여기에만 둔다 |
+| `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`), 지표 계산 전 신호 처리 (`SignalConditioner`), ISO 8041 주파수 가중 (`RideWeighting`). 수집 · 처리 수치는 `CaptureConfig` |
+| `lib/domain/report/` | 리포트 좌표·임계값·지표 계산. 운행 구간(`TravelWindow`) · 반주기 P2P(`HalfCycle`)도 여기. 숫자는 여기에만 둔다 |
 | `lib/domain/session/` | 화면 사이에 넘기는 이번 측정 상태 (`MeasurementSession`) |
 | `lib/domain/time/` | 사람이 읽는 시각을 한국 시간(UTC+9)으로 맞추는 `KoreaTime` |
 | `lib/adapter/` | 플랫폼 경계 — 센서 채널, 파일·저장소, PDF 렌더링, 환경설정. 측정 한 번의 수집 절차는 `capture_session.dart`, 저장 절차는 `measurement_recorder.dart` |
@@ -77,6 +77,12 @@ flutter test                                      # 전부 통과 유지
   기준을 넘으면 빨강, 값이 없으면 회색이고 최대 속도 · 운행 거리는 원이
   없다. 분석 자료 표의 "Machine으로 부터 진동" · "Belts" 는 서식 글자를
   덮고 "권상기 머신으로 부터 진동" · "로우프" 로 찍는다.
+- 저장 결과 목록은 결과 파일을 읽지 못한 측정(측정 일시가 없거나 깨짐 등)을
+  그 한 건만 "읽을 수 없는 결과" 로 보여 주고 지울 수 있게 한다
+  (`MeasurementRepository.listEntries()`, 2026-10-15). 측정 일시를 "지금"
+  으로 채워 읽지 않는다(`MeasurementResult.fromMap` 은 `FormatException`).
+- 리포트 값 칸 소수 자리: 최대 속도 둘째 자리(1.74m/s), 나머지 첫째 자리,
+  100 이상은 정수(`ReportMetric._decimalsByUnit`).
 - 사람이 읽는 시각(리포트 머리말 · 측정 ID · 저장 결과 목록 · 결과 화면 ·
   메일 제목)은 기기 시간대와 상관없이 한국 시간이다(`KoreaTime.of()`,
   2026-10-15). 저장 값(`dateTime`)은 그대로 둔다.
@@ -120,6 +126,10 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
         3. 256Hz → 100Hz 재표본   25/64 다상 FIR, 카이저 창 β 5.0
         소음 열은 거르지 않고 100Hz 시각에 선형 보간한다
       ─▶ MeasurementAssembler.assemble()   지표 · 리포트 · result.json
+            4. 운동 · 최대 속도 · 운행 거리   가중 전 Z 전체에서 (`_deriveKinematics`)
+            5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
+            6. 운행 구간 (TravelWindow)      출발 · 정지 0.5 m 제외, 운행 1 m 이하면 실패
+            7. 반주기 P2P (HalfCycle)        구간 안 최대 P2P · A95, 구간 안 소음 최대 · 평균
 ```
 
 - **설정 상수**: `CaptureConfig` 의 `conditionedRateHz`(100) ·
@@ -135,10 +145,22 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - **meta.txt**: 기존 집계 뒤에 `conditioning` · `baselineX/Y/Zmg` ·
   `baselineStdX/Y/Zmg`(기준선 구간 모표준편차, 판정에 안 씀) ·
   `conditionedRateHz` · `conditionedRowCount` 줄을 덧붙인다. 실패면
-  `conditioningFailureReason` 한 줄만.
+  `conditioningFailureReason` 한 줄만. 그 뒤에 `weighting` 과
+  `travelWindowStart/EndSec` · `travelWindowStart/EndM`(구간을 못 정하면
+  `travelWindowFailureReason`) 줄을 덧붙인다.
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
-  (`baseline+lp40bw4zp+rs100`, `SignalConditioner.methodLabel`). 이 처리 전
-  예전 결과는 null 이고 지표가 원시 256Hz 기준이다. 화면에는 보이지 않는다.
+  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)`,
+  `SignalConditioner.methodLabel` + `RideWeighting.methodLabel`) 과
+  `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`. `+iso18738` 이
+  없는 2026-10-15 전 결과는 가중 없이 전체 구간에서 낸 지표이고(그대로 읽고
+  차트 점도 그때 정의로 찍는다), `signalConditioning` 이 null 인 더 예전
+  결과는 원시 256Hz 기준이다. 시계열 `x/y/zSeries` 는 지표를 낸 그 값(가중
+  뒤)이라 차트도 같은 값을 그린다. 화면에는 보이지 않는다.
+- **가중 · 구간 상수**: `CaptureConfig.rideVerticalHighpassHz`(1.0) ·
+  `rideVerticalHighpassOrder`(2) · `travelEdgeExclusionM`(0.5) ·
+  `minimumTravelM`(1.0). ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,
+  Wk 12.5 Hz/0.63 · 2.37 → 3.35 Hz/0.91)는 `ride_weighting.dart` 에 있다.
+  가중 필터는 한 방향(인과), 1 Hz 고역만 양방향이다.
 - **정본과 픽스처**: 처리 결과는 SciPy 1.18.1 과 같아야 한다
   (`test/domain/capture/signal_conditioner_test.dart`). 픽스처는
   `test/fixtures/` 에 있고 `pdf_report_dev/gen_conditioning_fixtures.py` 가
@@ -154,6 +176,14 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     그 `filtfilt` 출력, `input` 을 바로 재표본한 `resample_25_64`, 계수 `sos`.
     값을 소수 12자리로 반올림해 저장하므로, 다시 만들거나 반올림한 `input`
     으로 다시 계산하면 1e-12 대 차이가 날 수 있다(시험 기준 1e-9)
+  - `weighting_unit_cases.json` · `weighting_expected_metrics.json`
+    (2026-10-15) — 가중 계수 · 출력과, ride_reference · 개발폰 기록을 앱과
+    같은 길로 계산한 구간 · 지표. `--weighting` 모드로 만들고 위 세 파일은
+    건드리지 않는다(`python pdf_report_dev/gen_conditioning_fixtures.py
+    --weighting test/fixtures/ride_reference.txt
+    test/fixtures/conditioning_input_dev_256hz.txt test/fixtures`).
+    `ride_weighting_test` · `measurement_assembler_test` 가 1e-9 · 1e-6 으로
+    대조한다
 
   ```python
   x = x - x[:256].mean()                                  # 축마다 첫 1초 평균
@@ -203,16 +233,25 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 
 ## 알려진 미해결
 
-- 2026-10-07 결정으로 진동 지표 · 리포트는 기준선 0 맞춤 + 40Hz 저역(4차
-  버터워스, 양방향) + 100Hz 재표본 후 값으로 낸다(2026-10-04 "진동 필터를
-  넣지 않는다" 결정을 바꿈, 처리는 위 "진동 신호 처리"). 근거는 오티스폰 ·
-  개발폰 동시 측정 6쌍이다 — 개발폰 Z 가 정지 상태에서 −2 ~ −4mg 에 떠 있고,
-  오티스폰(100Hz)이 담지 못하는 50Hz 위 성분이 개발폰 최대 P2P 를 키웠다.
-  `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다. 정속 구간 감지는 여전히
-  넣지 않는다. 최대 P2P 는 처리 후 시계열의 최대 − 최소, 평균(A95)은 같은
-  시계열에서 반주기 P2P 의 95백분위(최근접 순위)로 낸다. Z 에는 운행 가감속이
-  섞여 적색 기준을 늘 넘는다. EVA 가 따르는 ISO 18738 방식(ISO 8041 가중,
-  출발 · 정지 0.5m 제외 구간)은 조사만 해 두었다.
+- 진동 지표 결정 이력
+  - 2026-10-07: 기준선 0 맞춤 + 40Hz 저역(4차 버터워스, 양방향) + 100Hz
+    재표본 후 값으로 낸다(2026-10-04 "진동 필터를 넣지 않는다" 결정을 바꿈).
+    근거는 오티스폰 · 개발폰 동시 측정 6쌍 — 개발폰 Z 가 정지 상태에서
+    −2 ~ −4mg 에 떠 있고, 오티스폰(100Hz)이 담지 못하는 50Hz 위 성분이 개발폰
+    최대 P2P 를 키웠다
+  - 2026-10-15: 원본 리포트(ISO 18738 방식)와 같은 길로 바꾼다 — 가중
+    (X·Y Wd, Z 1Hz 고역 + Wk), 운행 구간(출발 · 정지 0.5 m 제외), 최대
+    P2P = 반주기 P2P 의 최댓값(예전 "전체 최대 − 최소" 를 버림). 2026-10-07
+    "전체 구간 · 가중 없음" 결정을 바꾼다. 원본 리포트를 만든 기록
+    (ride_reference)에서 원본 대비 수직 5.53/3.71(원본 6.1/3.6) · 수평
+    11.07/5.01(11.3/4.8) · 소음 45.3/48.7(45.5/48.7), 신호등 8행 모두 원본과
+    같다. 예전 방식은 수직 127 · 수평 48.3 으로 정상 승강기가 늘 빨강이었다
+  - 수직 처리는 ride_reference 비교로 골랐다(1Hz 고역만 6.97/4.23 — A95 가
+    ±15% 밖, Wk 만 9.06/3.74 — 최대가 밖, 고역 + Wk 5.53/3.71). 원본
+    (레퍼런스폰 앱)이 실제로 쓴 수직 처리는 미확인이다. 비교 기록이 한 건뿐이다
+  - `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다. 정속 구간 감지는 넣지
+    않는다(운행 구간은 거리로만 정한다). A95 백분위는 최근접 순위다(표준의
+    보간 방식 미확인)
 - 리포트 차트 세로축(2026-10-10 · 10-11, `lib/domain/report/chart_scale.dart`):
   원본 리포트 범위(X ±4 · Y ±10 · Z ±20 · 소음 40~54 · 위치 0~10 · 속도
   0~1 · 가속도 ±0.6 · 저크 ±0.5)를 최소 범위로 두고, 데이터 양 끝에 10% 씩

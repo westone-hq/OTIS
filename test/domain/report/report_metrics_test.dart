@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
+import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-15 21:14:33 · nada
@@ -100,7 +101,7 @@ void main() {
 
       expect(metrics.maxSpeed.value, closeTo(1.743390961, 1e-9));
       expect(metrics.travelDistance.value, closeTo(57.093948064, 1e-9));
-      expect(metrics.maxSpeed.display, '1.7m/s');
+      expect(metrics.maxSpeed.display, '1.74m/s', reason: '속도는 둘째 자리');
       expect(metrics.travelDistance.display, '57.1m');
     });
 
@@ -448,6 +449,47 @@ void main() {
       expect(metrics.horizAvg.redLimit, ReportThresholds.horizA95RedMg);
       expect(metrics.horizMax.yellowLimit, ReportThresholds.horizPtpYellowMg);
       expect(metrics.horizMax.redLimit, ReportThresholds.xPtpRedMg);
+    });
+  });
+
+  group('소음 평균의 범위 (2026-10-15 운행 구간)', () {
+    final noise = <double>[
+      ...List<double>.filled(10, 80.0), // 출발 전 문 소음 — 구간 밖
+      ...List<double>.filled(10, 45.0), // 운행 중
+      ...List<double>.filled(10, 80.0), // 도착 뒤 — 구간 밖
+    ]; // 소음 시계열 (dBA)
+    const window = TravelWindow(
+      startIndex: 10,
+      endIndex: 19,
+      startSec: 0.1,
+      endSec: 0.19,
+      startM: 0.5,
+      endM: 9.5,
+    ); // 운행 구간
+
+    test('운행 구간이 있으면 그 안에서만 평균을 낸다', () {
+      final metrics = ReportMetrics.from(
+        _result(noiseSeries: noise).copyWith(travelWindow: window),
+      ); // 산출된 지표
+      expect(metrics.noiseAvg.value, closeTo(45.0, 1e-9));
+    });
+
+    test('구간을 정하지 못한 결과는 평균도 비운다', () {
+      final metrics = ReportMetrics.from(
+        _result(
+          noiseSeries: noise,
+        ).copyWith(travelWindowFailure: '운행 거리가 1.0m 이하다'),
+      ); // 산출된 지표
+      expect(metrics.noiseAvg.value, isNull);
+      expect(metrics.noiseAvg.verdict, ReportVerdict.unknown);
+    });
+
+    test('구간이 들어가기 전 예전 결과는 예전처럼 전체에서 낸다', () {
+      final metrics = ReportMetrics.from(_result(noiseSeries: noise)); // 산출된 지표
+      expect(
+        metrics.noiseAvg.value,
+        closeTo((80.0 * 20 + 45.0 * 10) / 30, 1e-9),
+      );
     });
   });
 }

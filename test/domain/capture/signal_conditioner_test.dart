@@ -39,7 +39,7 @@ List<double> _doubles(Object? values) => [
 /// 반환: 2차 구간 목록
 List<SosSection> _defaultSections() {
   const config = CaptureConfig(); // 기본 설정
-  return ButterworthLowpass.design(
+  return Butterworth.lowpass(
     order: config.lowpassOrder,
     cutoffHz: config.lowpassCutoffHz.toDouble(),
     sampleRateHz: config.targetSampleRateHz.toDouble(),
@@ -169,10 +169,7 @@ void main() {
     final cases = _unitCases(); // 단위 시험 픽스처
     final input = _doubles(cases['input']); // 300표본 입력
     final expected = _doubles(cases['filtfilt']); // SciPy 출력
-    final actual = ButterworthLowpass.filtfilt(
-      _defaultSections(),
-      input,
-    ); // 거른 신호
+    final actual = Butterworth.filtfilt(_defaultSections(), input); // 거른 신호
     expect(actual, hasLength(expected.length));
     for (var i = 0; i < actual.length; i++) {
       expect(actual[i], closeTo(expected[i], 1e-9), reason: '표본 $i');
@@ -181,8 +178,7 @@ void main() {
 
   test('홀수 차수는 릴리스 빌드에서도 ArgumentError 로 막는다', () {
     expect(
-      () =>
-          ButterworthLowpass.design(order: 3, cutoffHz: 40, sampleRateHz: 256),
+      () => Butterworth.lowpass(order: 3, cutoffHz: 40, sampleRateHz: 256),
       throwsArgumentError,
     );
   });
@@ -217,11 +213,8 @@ void main() {
   test('차단 주파수가 0 이하이거나 표본 속도의 절반 이상이면 ArgumentError', () {
     for (final cutoff in [0.0, -1.0, 128.0, 200.0]) {
       expect(
-        () => ButterworthLowpass.design(
-          order: 4,
-          cutoffHz: cutoff,
-          sampleRateHz: 256,
-        ),
+        () =>
+            Butterworth.lowpass(order: 4, cutoffHz: cutoff, sampleRateHz: 256),
         throwsArgumentError,
         reason: '차단 $cutoff Hz',
       );
@@ -296,7 +289,19 @@ void main() {
     );
   });
 
-  test('실측 입력을 처리해 조립한 지표가 오티스폰 비교 기준값과 맞는다', () {
+  test('실측 입력을 처리 · 가중해 조립한 지표가 SciPy 재계산 값과 맞는다', () {
+    // 기대값은 gen_conditioning_fixtures.py --weighting 이 같은 입력을 앱과
+    // 같은 길(신호 처리 → 운동 → 가중 → 운행 구간 → 반주기 P2P)로 계산한
+    // 값이다. 2026-10-07 오티스폰 비교 때의 값(전체 구간 최대 − 최소)은
+    // 2026-10-15 정의를 바꾸며 버렸다
+    final expected =
+        (jsonDecode(
+                  File(
+                    'test/fixtures/weighting_expected_metrics.json',
+                  ).readAsStringSync(),
+                )
+                as Map<String, dynamic>)['dev_20261006']
+            as Map<String, dynamic>; // SciPy 기대값
     final conditioned = const SignalConditioner(
       config: CaptureConfig(),
     ).condition(_fixtureGrid()); // 처리 결과
@@ -316,12 +321,24 @@ void main() {
     expect(assembled.isSuccess, isTrue, reason: assembled.failureReason);
     final r = assembled.result!; // 측정 결과
     expect(r.sampleRate, 100.0);
-    expect(r.xPtp, closeTo(14.2125, 1e-3));
-    expect(r.yPtp, closeTo(10.6430, 1e-3));
-    expect(r.zPtp, closeTo(108.3677, 1e-3));
-    expect(r.xA95, closeTo(4.1739, 1e-3));
-    expect(r.yA95, closeTo(5.4624, 1e-3));
-    expect(r.zA95, closeTo(6.2209, 1e-3));
+    expect(r.travelWindow!.startIndex, expected['startIndex']);
+    expect(r.travelWindow!.endIndex, expected['endIndex']);
+    for (final entry in <String, double?>{
+      'xPtp': r.xPtp,
+      'yPtp': r.yPtp,
+      'zPtp': r.zPtp,
+      'xA95': r.xA95,
+      'yA95': r.yA95,
+      'zA95': r.zA95,
+      'maxSpeed': r.maxSpeed,
+      'distance': r.distance,
+    }.entries) {
+      expect(
+        entry.value,
+        closeTo((expected[entry.key] as num).toDouble(), 1e-6),
+        reason: entry.key,
+      );
+    }
   });
 
   test('기준선 구간 256행보다 짧은 격자는 사유를 담아 실패한다', () {

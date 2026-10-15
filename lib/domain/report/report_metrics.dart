@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
@@ -65,20 +67,38 @@ class ReportMetric {
     this.redLimit,
   });
 
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 변수: _decimalsByUnit
+  /// 목적: 단위마다 값 칸에 남길 소수 자리 수. 여기 없는 단위는
+  ///       `_defaultDecimals` 자리다. 값이 100 이상이면 단위와 상관없이
+  ///       소수점을 뗀다.
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제 현장
+  ///       리포트) 1쪽 "1.75m/s"(둘째 자리) · "57.3m" · "45.5dBA" ·
+  ///       "6.1milli-G"(첫째 자리). 2026-10-15 점검 지시
+  static const Map<String, int> _decimalsByUnit = <String, int>{'m/s': 2};
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 변수: _defaultDecimals
+  /// 목적: `_decimalsByUnit` 에 없는 단위의 소수 자리 수.
+  static const int _defaultDecimals = 1;
+
   /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: display
   /// 목적: 표의 값 칸에 그대로 찍을 문자열을 만든다. 값이 100 이상이면
-  ///       소수점을 떼고, 그보다 작으면 한 자리만 남긴다. 꼬리표가 있으면
-  ///       뒤에 붙인다. 수평 행에 X · Y 내역을 덧붙이지 않는다(2026-10-15
-  ///       사용자 지시) — 원본 리포트도 큰 쪽 값 하나만 적는다.
+  ///       소수점을 떼고, 그보다 작으면 단위별 자리(`_decimalsByUnit`,
+  ///       최대 속도 둘째 자리 · 나머지 첫째 자리)만 남긴다. 꼬리표가
+  ///       있으면 뒤에 붙인다. 수평 행에 X · Y 내역을 덧붙이지 않는다
+  ///       (2026-10-15 사용자 지시) — 원본 리포트도 큰 쪽 값 하나만 적는다.
   /// 반환: 값 칸 문자열. 값이 없으면 `—`
   String get display {
     final amount = value; // 지역으로 옮겨야 null 검사가 이어진다
     if (amount == null) return '—';
+    final decimals = // 이 단위의 소수 자리 수
+        _decimalsByUnit[unit] ?? _defaultDecimals;
     final digits = amount.abs() >= 100
         ? amount.toStringAsFixed(0)
-        : amount.toStringAsFixed(1); // 자릿수를 맞춘 숫자 부분
+        : amount.toStringAsFixed(decimals); // 자릿수를 맞춘 숫자 부분
     return suffix.isEmpty ? '$digits$unit' : '$digits$unit $suffix';
   }
 
@@ -208,16 +228,22 @@ class ReportMetrics {
   }
 
   /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: from
   /// 목적: 측정 결과 하나에서 표 여덟 행을 만든다. 값을 낼 수 있는 항목만
-  ///       채우고 나머지는 비운 채로 둔다.
+  ///       채우고 나머지는 비운 채로 둔다. 소음 평균은 진동 · 소음 최대와
+  ///       같은 운행 구간(`MeasurementResult.travelWindow`)에서 낸다.
+  ///       구간을 정하지 못한 결과는 비우고, 구간이 들어가기 전 예전 결과는
+  ///       예전처럼 측정 전체에서 낸다.
   /// 인자: result — 변환이 끝난 측정 결과
   /// 반환: 채울 수 있는 만큼 채운 지표 여덟 개
   static ReportMetrics from(MeasurementResult result) {
-    // → 로직 이동: _withoutWarmupZeros()
-    final noise = _withoutWarmupZeros(result.noiseSeries); // 쓸 수 있는 소음 표본
-    final noiseAverage = _average(noise); // 소음 평균 (dBA). 표본이 없으면 null
+    // → 로직 이동: _noiseInTravel()
+    final noiseRange = _noiseInTravel(result); // 평균 낼 소음, 못 내면 null
+    final noiseAverage = noiseRange == null
+        ? null
+        // → 로직 이동: _withoutWarmupZeros()
+        : _average(_withoutWarmupZeros(noiseRange)); // 소음 평균 (dBA)
     final noisePeak = result.noiseMax; // 소음 최대 (dBA). 시계열에서 다시 세지 않는다
 
     // 수평 최대 행의 적색 칸은 하나뿐이다. X 와 Y 기준이 갈라지면 그 칸으로
@@ -337,6 +363,28 @@ class ReportMetrics {
         verdict: ReportVerdict.none,
       ),
     );
+  }
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: _noiseInTravel
+  /// 목적: 소음 평균을 낼 표본 범위를 고른다.
+  ///       - 운행 구간이 있으면 그 구간
+  ///       - 구간을 정하지 못한 결과(`travelWindowFailure`)면 null — 진동 ·
+  ///         소음 최대가 비어 있는데 평균만 다른 범위로 내지 않는다
+  ///       - 둘 다 없는 예전 결과면 측정 전체
+  /// 인자: result — 측정 결과
+  /// 반환: 소음 표본 목록 (dBA). 낼 수 없으면 null
+  static List<double>? _noiseInTravel(MeasurementResult result) {
+    final window = result.travelWindow; // 운행 구간, 없으면 null
+    if (window != null) {
+      final noise = result.noiseSeries; // 소음 시계열 (dBA)
+      // 마이크 권한이 없던 결과는 소음이 비어 있을 수 있어 길이 안으로 자른다
+      final from = math.min(window.startIndex, noise.length); // 구간 시작
+      final to = math.min(window.endIndex + 1, noise.length); // 구간 끝 (제외)
+      return noise.sublist(from, to);
+    }
+    if (result.travelWindowFailure != null) return null;
+    return result.noiseSeries;
   }
 
   /// 작성: 2026-09-15 21:14:33 · nada
