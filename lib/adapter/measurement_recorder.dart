@@ -241,7 +241,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-15 22:22:45 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -268,6 +268,10 @@ class MeasurementRecorder {
   ///          기다리게 되고, 그 자리에서 실패하면 보내지 못한다. 실패해도
   ///          측정은 이미 저장됐으므로 멈추지 않는다 — 나중에
   ///          `ensureReportPdf()` 가 다시 만든다
+  ///       8. 측정 결과가 `MeasurementRepository.maxStoredMeasurements`
+  ///          개를 넘으면 오래된 것부터 지운다(`pruneOldest()`). 실패해도
+  ///          이번 측정은 이미 저장됐으므로 멈추지 않는다 — 다음 측정
+  ///          때 다시 정리한다
   /// 인자: resampler — 수집한 이벤트가 쌓인 환산기
   ///       site — 이번 측정의 현장 정보. 없으면 null
   ///       nativeRecordPath — 안드로이드가 저장한 원본 경로, 없으면 null
@@ -381,6 +385,14 @@ class MeasurementRecorder {
         reportPath = (await repo.ensureReportPdf(id))?.path;
       } catch (e, st) {
         debugPrint('리포트 PDF 생성 실패: $e\n$st');
+      }
+
+      try {
+        // → 로직 이동: MeasurementRepository.pruneOldest()
+        final pruned = await repo.pruneOldest(keepId: id); // 지운 측정 ID
+        if (pruned.isNotEmpty) debugPrint('오래된 측정 정리: $pruned');
+      } catch (e, st) {
+        debugPrint('오래된 측정 정리 실패: $e\n$st');
       }
 
       return RecordOutcome.success(

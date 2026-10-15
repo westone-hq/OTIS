@@ -63,6 +63,13 @@ class UnreadableMeasurement {
 ///         측정을 목록에서 조용히 빠뜨리면 있는 기록을 없는 것처럼
 ///         보여 주게 된다.
 class MeasurementRepository {
+  /// 작성: 2026-10-15 22:22:45 · nada
+  /// 변수: maxStoredMeasurements
+  /// 목적: 기기에 남겨 두는 측정 결과 수. 새 측정을 저장한 뒤 이보다
+  ///       많으면 오래된 것부터 지운다(`pruneOldest()`).
+  /// 근거: 인용 — 2026-10-15 사용자 지시 "30개 쌓이면 지우는걸로"
+  static const int maxStoredMeasurements = 30;
+
   /// 작성: 2026-09-26 09:30:00 · nada
   /// 변수: resultFileName
   /// 목적: 측정 결과 전부를 담는 파일 이름.
@@ -339,6 +346,47 @@ class MeasurementRepository {
     return MeasurementResult.fromMap(
       jsonDecode(await file.readAsString()) as Map<String, dynamic>,
     );
+  }
+
+  /// 작성: 2026-10-15 22:22:45 · nada
+  /// 함수: pruneOldest
+  /// 목적: 측정 결과가 `maxStoredMeasurements` 개를 넘으면 오래된 것부터
+  ///       폴더째 지운다. 폴더 이름(측정 ID, `yyyyMMdd-HHmmss` 한국 시간)을
+  ///       최근 것부터 훑어 결과 파일이 있는 폴더를 센다. 다 찬 뒤에
+  ///       나오는 폴더는 결과가 있든 없든(저장하다 멈춘 측정) 지운다.
+  ///       다 차기 전에 나온 결과 없는 폴더는 세지 않고 남긴다.
+  ///       방금 저장한 측정(`keepId`)은 기기 시계가 거꾸로 가 이름이 더
+  ///       오래돼 보여도 지우지 않는다.
+  /// 인자: keepId — 방금 저장해 지우면 안 되는 측정 ID
+  /// 반환: 지운 측정 ID (오래된 것이 뒤)
+  Future<List<String>> pruneOldest({required String keepId}) async {
+    // → 로직 이동: getBaseDirectory()
+    final base = await getBaseDirectory(); // 산출물 기준 폴더
+    final dirs = <Directory>[]; // 측정 폴더들
+    await for (final entry in base.list()) {
+      if (entry is Directory) dirs.add(entry);
+    }
+    String nameOf(Directory dir) =>
+        dir.uri.pathSegments.lastWhere((segment) => segment.isNotEmpty);
+    dirs.sort((a, b) => nameOf(b).compareTo(nameOf(a)));
+
+    // 방금 저장한 측정은 자리를 먼저 차지한다
+    var kept = dirs.any((dir) => nameOf(dir) == keepId) ? 1 : 0; // 남긴 결과 수
+    final deleted = <String>[]; // 지운 측정 ID
+    for (final dir in dirs) {
+      final id = nameOf(dir); // 이 폴더의 측정 ID
+      if (id == keepId) continue;
+      final hasResult = await File(
+        '${dir.path}/$resultFileName',
+      ).exists(); // 결과 파일이 있는지
+      if (kept < maxStoredMeasurements) {
+        if (hasResult) kept++;
+        continue;
+      }
+      await dir.delete(recursive: true);
+      deleted.add(id);
+    }
+    return deleted;
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
