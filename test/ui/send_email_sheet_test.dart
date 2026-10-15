@@ -122,6 +122,21 @@ Future<void> _saveJob({required bool withRaw, String? notes}) async {
   }
 }
 
+/// 작성: 2026-10-14 13:19:55 · 박건준
+/// 함수: _saveNoiseDiagnostics
+/// 목적: 소음 진단 폴더 하나를 만들고 PCM · CSV · 메타데이터 산출물을
+///       채운다.
+/// 인자: temp — 이번 시험의 외장 저장소 기준 폴더
+Future<void> _saveNoiseDiagnostics(Directory temp) async {
+  final dir = Directory(
+    '${temp.path}/noise_diagnostics/20260114-110300_1',
+  ); // 이번 시험이 쓸 진단 폴더
+  await dir.create(recursive: true);
+  await File('${dir.path}/audio.pcm').writeAsBytes(<int>[1, 2, 3]);
+  await File('${dir.path}/calculations.csv').writeAsString('a,b\n1,2\n');
+  await File('${dir.path}/metadata.json').writeAsString('{}');
+}
+
 /// 작성: 2026-10-04 16:44:32 · nada
 /// 함수: _openSheet
 /// 목적: 아래쪽 시스템 영역이 있는 화면에서 메일 시트를 띄운다.
@@ -204,10 +219,11 @@ bool _checked(WidgetTester tester, String email) {
 ///       - 받는 사람: 지난번 보낸 주소만 미리 고르는지, 여러 개를 고를 수
 ///         있는지
 ///       - 보낼 항목: PDF 리포트와 로우 데이터 두 줄이고 기본으로 체크돼
-///         있는지, 둘 다 해제하면 보내기를 막는지
-///       - 첨부: 고른 항목만 제번 · 측정 ID 이름으로 붙는지, `raw.txt` 가
-///         없으면 본문에 누락을 밝히는지, 안드로이드 원본은 어떤 경우에도
-///         붙지 않는지
+///         있는지, 소음 진단 두 줄(데시벨 산출물 · 마이크 원본)은 기본으로
+///         체크돼 있지 않은지, 전부 해제하면 보내기를 막는지
+///       - 첨부: 고른 항목만 제번 · 측정 ID 이름으로 붙는지, `raw.txt` ·
+///         소음 진단 폴더가 없으면 본문에 누락을 밝히는지, 안드로이드
+///         원본은 어떤 경우에도 붙지 않는지
 ///       - 보내기 버튼이 아래쪽 시스템 영역에 가리지 않는지
 void main() {
   late Directory temp; // 이번 시험이 쓸 임시 폴더
@@ -261,6 +277,17 @@ void main() {
     expect(_checked(tester, 'PDF 리포트'), isTrue);
     expect(_checked(tester, '로우 데이터 (raw.txt)'), isTrue);
     expect(find.textContaining('native'), findsNothing);
+  });
+
+  testWidgets('데시벨 산출물과 마이크 원본은 기본으로 체크돼 있지 않다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+
+    await _openSheet(tester);
+
+    expect(_checked(tester, '데시벨 산출물'), isFalse);
+    expect(_checked(tester, '마이크 원본 (audio.pcm)'), isFalse);
   });
 
   testWidgets('PDF 와 로우 데이터를 제번 · 측정 ID 이름으로 함께 붙인다', (tester) async {
@@ -330,6 +357,65 @@ void main() {
 
     expect(_names(email), <String>['RAW_J-1_$_jobId.txt']);
     expect(email.body, contains('※ 첨부 1개'));
+  });
+
+  testWidgets('데시벨 산출물만 고르면 PCM 을 뺀 산출물만 붙는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(() => _saveJob(withRaw: true));
+    await tester.runAsync(() => _saveNoiseDiagnostics(temp));
+
+    await _openSheet(tester);
+    await tester.tap(find.text('PDF 리포트'));
+    await tester.tap(find.text('로우 데이터 (raw.txt)'));
+    await tester.ensureVisible(find.text('데시벨 산출물'));
+    await tester.tap(find.text('데시벨 산출물'));
+    await tester.pumpAndSettle();
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(_names(email), <String>[
+      'DB_J-1_${_jobId}_calculations.csv',
+      'DB_J-1_${_jobId}_metadata.json',
+    ]);
+    expect(email.body, contains('데시벨 산출물'));
+    expect(email.body, isNot(contains('마이크 원본 PCM')));
+  });
+
+  testWidgets('마이크 원본만 고르면 PCM 하나만 붙는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(() => _saveJob(withRaw: true));
+    await tester.runAsync(() => _saveNoiseDiagnostics(temp));
+
+    await _openSheet(tester);
+    await tester.tap(find.text('PDF 리포트'));
+    await tester.tap(find.text('로우 데이터 (raw.txt)'));
+    await tester.ensureVisible(find.text('마이크 원본 (audio.pcm)'));
+    await tester.tap(find.text('마이크 원본 (audio.pcm)'));
+    await tester.pumpAndSettle();
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(_names(email), <String>['DB_J-1_${_jobId}_audio.pcm']);
+    expect(email.body, contains('마이크 원본 PCM'));
+  });
+
+  testWidgets('소음 진단 폴더가 없으면 본문에 누락을 밝힌다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(() => _saveJob(withRaw: true));
+
+    await _openSheet(tester);
+    await tester.tap(find.text('PDF 리포트'));
+    await tester.tap(find.text('로우 데이터 (raw.txt)'));
+    await tester.ensureVisible(find.text('데시벨 산출물'));
+    await tester.tap(find.text('데시벨 산출물'));
+    await tester.pumpAndSettle();
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(email.body, contains('누락: 데시벨 산출물(noise_diagnostics)'));
   });
 
   testWidgets('raw.txt 가 없는 측정은 본문에 누락을 밝힌다', (tester) async {
