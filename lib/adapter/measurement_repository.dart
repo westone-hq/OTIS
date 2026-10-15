@@ -385,25 +385,30 @@ class MeasurementRepository {
     return source.copy('${dir.path}/$name');
   }
 
-  /// Returns files from the newest native MIC diagnostic folder.
+  /// 작성: 2026-10-12 17:20:16 · 박희정
+  /// 수정: 2026-10-14 13:19:55 · 박건준
+  /// 함수: latestNoiseDiagnosticFiles
+  /// 목적: 가장 최근 네이티브 소음 진단 폴더(`noise_diagnostics/`)에 담긴
+  ///       파일 목록을 돌려준다.
+  /// 반환: 그 폴더의 파일들. 폴더 자체가 없으면 빈 목록
   Future<List<File>> latestNoiseDiagnosticFiles() async {
     final root =
         await getExternalStorageDirectory() ??
-        await getApplicationDocumentsDirectory();
-    final parent = Directory('${root.path}/noise_diagnostics');
+        await getApplicationDocumentsDirectory(); // 외장 저장소, 없으면 앱 문서 폴더
+    final parent = Directory(
+      '${root.path}/noise_diagnostics',
+    ); // 소음 진단 폴더들의 부모 폴더
     if (!await parent.exists()) return const <File>[];
 
-    final dirs = <Directory>[];
+    final dirs = <Directory>[]; // 측정마다 하나씩 쌓인 진단 폴더
     await for (final entry in parent.list()) {
       if (entry is Directory) dirs.add(entry);
     }
     if (dirs.isEmpty) return const <File>[];
 
-    dirs.sort(
-      (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
-    );
+    dirs.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
 
-    final files = <File>[];
+    final files = <File>[]; // 가장 최근 진단 폴더에 담긴 파일들
     await for (final entry in dirs.first.list()) {
       if (entry is File) files.add(entry);
     }

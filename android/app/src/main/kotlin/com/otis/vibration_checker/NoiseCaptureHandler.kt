@@ -70,7 +70,15 @@ class NoiseCaptureHandler(private val context: Context) {
          */
         private const val WINDOW_SEC = 0.03125
 
-        /** IEC sound-level meter "Fast" time weighting, in seconds. */
+        /**
+         * 작성: 2026-10-12 17:20:16 · 박희정
+         * 수정: 2026-10-14 13:19:55 · 박건준
+         * 변수: FAST_TIME_WEIGHT_SEC
+         * 목적: 소음 RMS에 적용하는 지수평활의 시간 상수(초). 홉마다 새로
+         *       들어오는 평균 제곱값을 이 상수로 평활해, 소음계의 "Fast"
+         *       응답과 비슷한 반응 속도를 낸다.
+         * 근거: 표준 — IEC 61672-1 의 "Fast" 시간가중 시정수(0.125초)
+         */
         private const val FAST_TIME_WEIGHT_SEC = 0.125
 
         /**
@@ -105,16 +113,9 @@ class NoiseCaptureHandler(private val context: Context) {
     private var noiseSnapshot = NoiseSnapshot(0.0, 0L, 0L)
 
     /**
-     * 함수: sampleForSensor
-     * 목적: 센서에 붙인 값과 계산 순번·시각을 함께 기록한다.
-     * 인자: sensorNs — 센서 표본의 부팅 이후 시각(ns)
-     * 반환: 이번 센서 행에 붙일 소음값
+     * 녹음 스레드가 계속 돌지 여부. `stop()` 이 false 로 바꿔 멈춘다. 다른
+     * 스레드가 바꾼 값을 녹음 스레드가 바로 보도록 @Volatile 로 둔다
      */
-    fun sampleForSensor(sensorNs: Long): Double {
-        val sample = noiseSnapshot
-        diagnostics?.sensor(sensorNs, sample)
-        return sample.value
-    }
     @Volatile
     private var isRecording = false
 
@@ -122,8 +123,22 @@ class NoiseCaptureHandler(private val context: Context) {
     private var captureThread: Thread? = null
 
     /**
+     * 작성: 2026-10-11 20:51:47 · 박희정
+     * 수정: 2026-10-14 13:19:55 · 박건준
+     * 함수: sampleForSensor
+     * 목적: 센서에 붙인 값과 계산 순번·시각을 함께 기록한다.
+     * 인자: sensorNs — 센서 표본의 부팅 이후 시각(나노초)
+     * 반환: 이번 센서 행에 붙일 소음값
+     */
+    fun sampleForSensor(sensorNs: Long): Double {
+        val sample = noiseSnapshot
+        diagnostics?.sensor(sensorNs, sample)
+        return sample.value
+    }
+
+    /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-04 13:50:15 · nada
+     * 수정: 2026-10-14 13:19:55 · 박건준
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다.
      *       권한이 없거나 AudioRecord 초기화에 실패하면 예외 없이 0.0으로 둔다.
@@ -144,8 +159,13 @@ class NoiseCaptureHandler(private val context: Context) {
      *       micDbfsToDbaOffset — dBFS→dBA 기본 오프셋. 기본은
      *       `DEFAULT_MIC_DBFS_TO_DBA_OFFSET`
      * 식:   windowSamples = SAMPLE_RATE × WINDOW_SEC  (창에 담는 표본 수)
-     *       rms  = sqrt(창 안 표본 제곱의 합 / windowSamples)
-     *              창이 가득 찬 뒤에만 센다. 덜 찼으면 0.0을 내보낸다
+     *       meanSquare = 창 안 표본 제곱의 합 / windowSamples
+     *                    창이 가득 찬 뒤에만 센다. 덜 찼으면 0.0을 내보낸다
+     *       alpha = exp(-(이번 홉 표본 수 / SAMPLE_RATE) / FAST_TIME_WEIGHT_SEC)
+     *       weightedMeanSquare = alpha × 이전 weightedMeanSquare
+     *                            + (1 - alpha) × meanSquare
+     *                            첫 창은 평활 없이 meanSquare 그대로 쓴다
+     *       rms  = sqrt(weightedMeanSquare)
      *       dBFS = 20 × log10(rms)
      *       dBA  = dBFS + micDbfsToDbaOffset + calibrationOffsetDba
      *              (0~130으로 자름)
@@ -217,11 +237,13 @@ class NoiseCaptureHandler(private val context: Context) {
                 var lastLogTimeMs = // 마지막으로 진단 기록을 남긴 시각(밀리초)
                     System.currentTimeMillis()
 
-                var fastWeightedMeanSquare: Double? = null
-                var frames = 0L
+                var fastWeightedMeanSquare: Double? = // Fast 평활 상태. 첫 창은 null
+                    null
+                var frames = 0L // 측정 시작부터 지금까지 읽은 총 표본 수(누적)
                 try {
                     while (isRecording) {
-                        val read = audioRecord?.read(hopBuffer, 0, hopSamples) ?: 0
+                        val read = // 이번에 실제로 읽은 표본 수
+                            audioRecord?.read(hopBuffer, 0, hopSamples) ?: 0
                         if (read <= 0) {
                             try {
                                 Thread.sleep(5)
@@ -231,12 +253,13 @@ class NoiseCaptureHandler(private val context: Context) {
                             continue
                         }
 
-                        val readNs = SystemClock.elapsedRealtimeNanos()
+                        val readNs = // 이번 홉을 읽은 시각(나노초)
+                            SystemClock.elapsedRealtimeNanos()
                         diagnostics?.pcm(hopBuffer, read)
                         frames += read
                         for (i in 0 until read) {
-                            val norm = hopBuffer[i] / 32768.0
-                            val sq = norm * norm
+                            val norm = hopBuffer[i] / 32768.0 // -1~1 로 맞춘 표본
+                            val sq = norm * norm // 표본 제곱값
                             if (filled >= windowSamples) {
                                 sumSquares -= ringSquares[ringPos]
                             } else {
@@ -255,30 +278,33 @@ class NoiseCaptureHandler(private val context: Context) {
                             continue
                         }
 
-                        val meanSquare = sumSquares / windowSamples
-                        val alpha = exp(
-                            -(read.toDouble() / SAMPLE_RATE) / FAST_TIME_WEIGHT_SEC,
-                        )
-                        val weightedMeanSquare =
+                        val meanSquare = // 창의 평균 제곱값(Fast 평활 전)
+                            sumSquares / windowSamples
+                        val alpha = // 이번 홉 길이에 맞춘 지수평활 감쇠율(0~1)
+                            exp(-(read.toDouble() / SAMPLE_RATE) / FAST_TIME_WEIGHT_SEC)
+                        val weightedMeanSquare = // Fast 시간가중을 적용한 평균 제곱값
                             fastWeightedMeanSquare?.let { previous ->
                                 alpha * previous + (1.0 - alpha) * meanSquare
                             } ?: meanSquare
                         fastWeightedMeanSquare = weightedMeanSquare
 
-                        val rms = sqrt(weightedMeanSquare)
-                        val clampedRms = maxOf(rms, 1e-5)
-                        val dbfs = 20.0 * log10(clampedRms)
-                        val dba = (dbfs + micDbfsToDbaOffset + calibrationOffsetDba)
-                            .coerceIn(0.0, 130.0)
+                        val rms = sqrt(weightedMeanSquare) // 평활된 창의 RMS
+                        val clampedRms = // 무음에서 로그가 -무한대가 되지 않게 막은 RMS
+                            maxOf(rms, 1e-5)
+                        val dbfs = 20.0 * log10(clampedRms) // 마이크 신호 크기
+                        val dba = // 소음 크기. 0~130 으로 자른다
+                            (dbfs + micDbfsToDbaOffset + calibrationOffsetDba)
+                                .coerceIn(0.0, 130.0)
                         // 참고 EVIMP1 처럼 소수 셋째 자리까지 남긴다
                         latestDba = (dba * 1000.0).roundToInt() / 1000.0
 
-                        val calculatedNs = SystemClock.elapsedRealtimeNanos()
+                        val calculatedNs = // 이번 창을 계산한 시각(나노초)
+                            SystemClock.elapsedRealtimeNanos()
                         noiseSnapshot = NoiseSnapshot(latestDba, calculatedNs, frames)
                         diagnostics?.calculation(
                             audioRecord!!, frames, read, readNs, dbfs, noiseSnapshot,
                         )
-                        val nowMs = System.currentTimeMillis()
+                        val nowMs = System.currentTimeMillis() // 지금 시각(밀리초)
                         if (nowMs - lastLogTimeMs >= 1000L) {
                             Log.i(
                                 TAG,
@@ -309,7 +335,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-05 10:03:35 · nada
+     * 수정: 2026-10-14 13:19:55 · 박건준
      * 함수: stop
      * 목적: 소음 측정을 멈추고 마이크 자원을 반납한다. latestDba도 0.0으로 돌린다.
      *       순서를 지킨다. 녹음을 먼저 멈춰 녹음 스레드의 읽기를 풀고, 그
@@ -318,7 +344,7 @@ class NoiseCaptureHandler(private val context: Context) {
      */
     fun stop() {
         isRecording = false
-        val record = audioRecord
+        val record = audioRecord // 멈추고 반납할 녹음기, 없으면 null
         try {
             if (record?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
                 record.stop() // 먼저 read를 풀고 기록 스레드를 기다린다.

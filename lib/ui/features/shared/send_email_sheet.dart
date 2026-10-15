@@ -67,10 +67,12 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 로우 데이터(`raw.txt`)를 보낼 항목에 포함할지 여부
   bool _sendRaw = true;
 
-  /// MIC dB calculation diagnostics except the large PCM recording.
+  /// 마이크 dB 계산 진단 산출물(큰 PCM 녹음 제외)을 보낼 항목에 포함할지
+  /// 여부
   bool _sendNoiseDiagnostics = false;
 
-  /// Raw MIC PCM recording. This can be large, so keep it opt-in.
+  /// 마이크 원본 PCM 녹음을 보낼 항목에 포함할지 여부. 용량이 커서 기본은
+  /// 선택 안 함
   bool _sendNoisePcm = false;
 
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
@@ -263,25 +265,28 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     }
 
     if (_sendNoiseDiagnostics || _sendNoisePcm) {
-      final files = await repo.latestNoiseDiagnosticFiles();
+      final files = await repo.latestNoiseDiagnosticFiles(); // 소음 진단 산출물 목록
       if (files.isEmpty) {
         missing.add('누락: 데시벨 산출물(noise_diagnostics)');
       } else {
         for (final file in files) {
-          final originalName = file.uri.pathSegments.last;
-          final isPcm = originalName.toLowerCase() == 'audio.pcm';
+          final originalName = // 진단 폴더 안 원래 파일명
+              file.uri.pathSegments.last;
+          final isPcm = // 마이크 원본 PCM 파일인지
+              originalName.toLowerCase() == 'audio.pcm';
           if (isPcm && !_sendNoisePcm) continue;
           if (!isPcm && !_sendNoiseDiagnostics) continue;
 
           final original = file.uri.pathSegments.last.replaceAll(
             RegExp(r'[^0-9A-Za-z._-]+'),
             '_',
-          );
+          ); // 메일 첨부 이름에 못 쓰는 문자를 치환한 원래 파일명
           final name = 'DB_${result.jobNo}_${result.id}_$original'.replaceAll(
             RegExp(r'[^0-9A-Za-z._-]+'),
             '_',
-          );
-          final copy = await repo.mailAttachmentCopy(file, name);
+          ); // 메일에 붙일 이름
+          // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
+          final copy = await repo.mailAttachmentCopy(file, name); // 사본
           attachments.add(copy.path);
           attachmentDescriptions.add(
             '- $name: ${isPcm ? '마이크 원본 PCM' : '데시벨 산출물'}',
