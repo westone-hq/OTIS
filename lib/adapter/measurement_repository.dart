@@ -7,6 +7,25 @@ import 'package:path_provider/path_provider.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
+/// 작성: 2026-10-15 16:50:04 · nada
+/// 클래스: UnreadableMeasurement
+/// 목적: 결과 파일은 있는데 읽지 못한 측정 한 건. 저장 결과 목록이 이 건만
+///       "읽을 수 없는 결과" 로 보여 주고 나머지는 그대로 보여 준다 — 한
+///       건이 깨졌다고 목록에서 조용히 사라지면 지울 수도 없다.
+class UnreadableMeasurement {
+  /// 측정 ID (폴더 이름)
+  final String id;
+
+  /// 읽지 못한 사유 (예외 문구). 기록 · 진단용이다
+  final String reason;
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: UnreadableMeasurement
+  /// 목적: 값을 담는다.
+  /// 인자: id, reason — 위 필드
+  const UnreadableMeasurement(this.id, this.reason);
+}
+
 /// 작성: 2026-08-18 23:29:46 · 박건준
 /// 수정: 2026-10-05 10:03:35 · nada
 /// 클래스: MeasurementRepository
@@ -192,8 +211,18 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-26 09:30:00 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: list
+  /// 목적: 기기에 저장되어 있는 읽을 수 있는 측정 결과 목록을 불러온다.
+  ///       결과 화면의 비교 대상 고르기가 쓴다. 읽지 못한 건까지 보여야 하는
+  ///       목록 화면은 `listEntries()` 를 쓴다.
+  /// 반환: 저장된 측정 결과 목록. 최근 것부터
+  Future<List<MeasurementResult>> list() async =>
+      // → 로직 이동: listEntries()
+      (await listEntries()).results;
+
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: listEntries
   /// 목적: 기기에 저장되어 있는 모든 과거 측정 결과 목록을 불러온다.
   ///       요약 파일만 읽으므로 시계열은 비어 있다 — 목록 화면이 쓰는
   ///       날짜와 판정은 요약에 다 들어 있다. 최근 측정이 앞에 온다.
@@ -201,39 +230,62 @@ class MeasurementRepository {
   ///       1. 요약 파일이 멀쩡하면 그것을 읽는다
   ///       2. 없거나 깨졌으면 정본에서 다시 읽고, 요약을 고쳐 쓴다.
   ///          다음부터는 1 로 끝난다
-  ///       3. 정본마저 못 읽으면 그 폴더만 건너뛰고 기록을 남긴다. 한 건이
-  ///          깨졌다고 목록 전체를 못 보게 되면 나머지 측정까지 손을 못
-  ///          대게 된다
-  /// 반환: 저장된 측정 결과 목록. 최근 것부터
-  Future<List<MeasurementResult>> list() async {
+  ///       3. 정본마저 못 읽으면(측정 일시가 깨진 결과 등) 그 폴더를 읽지
+  ///          못한 건으로 따로 모으고 기록을 남긴다. 한 건이 깨졌다고 목록
+  ///          전체를 못 보게 되면 나머지 측정까지 손을 못 대게 된다
+  ///       결과 파일이 아예 없는 폴더(신호 처리 전에 멈춘 측정)는 결과가
+  ///       아니라 건너뛴다.
+  /// 반환: (읽은 결과 — 최근 것부터, 읽지 못한 건 — ID 차례)
+  Future<
+    ({List<MeasurementResult> results, List<UnreadableMeasurement> unreadable})
+  >
+  listEntries() async {
     // → 로직 이동: getBaseDirectory()
     final base = await getBaseDirectory(); // 산출물 기준 폴더
     final items = <MeasurementResult>[]; // 모아 갈 측정 결과
+    final broken = <UnreadableMeasurement>[]; // 읽지 못한 건
 
     await for (final entry in base.list()) {
       if (entry is! Directory) continue;
       // → 로직 이동: _readListEntry()
-      final item = await _readListEntry(entry); // 이 폴더의 측정 결과, 못 읽으면 null
+      final read = await _readListEntry(entry); // 이 폴더를 읽은 결과
+      final item = read.result; // 읽은 측정 결과, 없으면 null
+      final reason = read.unreadableReason; // 읽지 못한 사유, 없으면 null
       if (item != null) items.add(item);
+      if (reason != null) {
+        broken.add(
+          UnreadableMeasurement(
+            entry.uri.pathSegments.lastWhere((segment) => segment.isNotEmpty),
+            reason,
+          ),
+        );
+      }
     }
 
     items.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-    return items;
+    broken.sort((a, b) => a.id.compareTo(b.id));
+    return (results: items, unreadable: broken);
   }
 
   /// 작성: 2026-09-26 14:10:00 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: _readListEntry
   /// 목적: 폴더 하나에서 목록에 올릴 측정 결과를 읽는다. 요약 캐시를 먼저
   ///       보고, 없거나 깨졌으면 정본에서 다시 만든다.
   /// 인자: dir — 측정 한 건의 폴더
-  /// 반환: 읽어 낸 측정 결과. 정본까지 못 읽으면 null
-  Future<MeasurementResult?> _readListEntry(Directory dir) async {
+  /// 반환: (읽어 낸 측정 결과, 읽지 못한 사유). 정본이 없으면 둘 다 null,
+  ///       정본을 못 읽으면 결과는 null 이고 사유가 있다
+  Future<({MeasurementResult? result, String? unreadableReason})>
+  _readListEntry(Directory dir) async {
     final summary = File('${dir.path}/$summaryFileName'); // 이 폴더의 요약 캐시
     if (await summary.exists()) {
       try {
-        // → 로직 이동: MeasurementResult.fromMap()
-        return MeasurementResult.fromMap(
-          jsonDecode(await summary.readAsString()) as Map<String, dynamic>,
+        return (
+          // → 로직 이동: MeasurementResult.fromMap()
+          result: MeasurementResult.fromMap(
+            jsonDecode(await summary.readAsString()) as Map<String, dynamic>,
+          ),
+          unreadableReason: null,
         );
       } catch (error) {
         developer.log(
@@ -245,7 +297,7 @@ class MeasurementRepository {
     }
 
     final result = File('${dir.path}/$resultFileName'); // 이 폴더의 정본
-    if (!await result.exists()) return null;
+    if (!await result.exists()) return (result: null, unreadableReason: null);
     try {
       final map =
           jsonDecode(await result.readAsString())
@@ -255,15 +307,18 @@ class MeasurementRepository {
       // → 로직 이동: _writeSummary()
       final summary = await _writeSummary(dir, map); // 시계열을 덜어낸 항목 표
       // → 로직 이동: MeasurementResult.fromMap()
-      return MeasurementResult.fromMap(summary);
+      return (
+        result: MeasurementResult.fromMap(summary),
+        unreadableReason: null,
+      );
     } catch (error, stack) {
       developer.log(
-        '측정을 읽지 못해 목록에서 건너뛴다: ${result.path}',
+        '측정을 읽지 못해 읽을 수 없는 결과로 둔다: ${result.path}',
         name: 'MeasurementRepository',
         error: error,
         stackTrace: stack,
       );
-      return null;
+      return (result: null, unreadableReason: '$error');
     }
   }
 

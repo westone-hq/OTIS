@@ -224,6 +224,33 @@ void main() {
 
       expect(items.length, 1);
       expect(items.single.id, '20260114-110359');
+      // 목록 화면이 쓰는 쪽은 깨진 폴더를 "읽을 수 없는 결과" 로 따로 준다
+      final entries = await repo.listEntries(); // 읽은 것 · 못 읽은 것
+      expect(entries.results.single.id, '20260114-110359');
+      expect(entries.unreadable.single.id, '망가진측정');
+    });
+
+    test('측정 일시가 깨진 결과는 읽을 수 없는 결과로 따로 나온다', () async {
+      await repo.save(_result('20260114-110359', DateTime(2026, 1, 14)));
+      await repo.save(_result('20260210-090000', DateTime(2026, 2, 10)));
+      final dir = Directory(
+        '${temp.path}/captures/20260210-090000',
+      ); // 일시를 망가뜨릴 폴더
+      final file = File(
+        '${dir.path}/${MeasurementRepository.resultFileName}',
+      ); // 그 정본
+      final map = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      map['dateTime'] = '날짜 아님';
+      await file.writeAsString(jsonEncode(map));
+      await File(
+        '${dir.path}/${MeasurementRepository.summaryFileName}',
+      ).delete();
+
+      final entries = await repo.listEntries(); // 읽은 것 · 못 읽은 것
+
+      expect(entries.results.map((r) => r.id), ['20260114-110359']);
+      expect(entries.unreadable.single.id, '20260210-090000');
+      expect(entries.unreadable.single.reason, contains('dateTime'));
     });
   });
 

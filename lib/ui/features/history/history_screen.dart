@@ -43,13 +43,18 @@ class HistoryScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-04 18:38:14 · nada
+/// 수정: 2026-10-15 16:50:04 · nada
 /// 클래스: _HistoryScreenState
 /// 목적: 저장된 측정 결과 목록을 읽어 오고, 결과 화면으로 넘기고, 한 건씩
-///       지우는 상태를 관리한다.
+///       지우는 상태를 관리한다. 읽지 못한 결과는 목록 끝에 "읽을 수 없는
+///       결과" 로 따로 보여 지울 수 있게 한다.
 class _HistoryScreenState extends State<HistoryScreen> {
   /// 화면에 보여줄 측정 결과 목록. `_loadItems()` 가 채운다. 최근 것부터
   List<MeasurementResult> _items = <MeasurementResult>[];
+
+  /// 결과 파일을 읽지 못한 측정 목록. `_loadItems()` 가 채운다. 읽은
+  /// 목록 뒤에 보여 준다
+  List<UnreadableMeasurement> _unreadable = <UnreadableMeasurement>[];
 
   /// 목록을 읽는 중인지. 처음에는 true, `_loadItems()` 가 끝나면 false
   bool _loading = true;
@@ -67,22 +72,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: _loadItems
-  /// 목적: 저장소에서 측정 결과 목록을 불러와 화면 상태에 채운다.
-  ///       조회에 실패하면 빈 목록으로 두고 실패 상태를 표시한다.
+  /// 목적: 저장소에서 측정 결과 목록(읽지 못한 건 포함)을 불러와 화면
+  ///       상태에 채운다. 조회 자체가 실패하면 빈 목록으로 두고 실패 상태를
+  ///       표시한다.
   Future<void> _loadItems() async {
     List<MeasurementResult> list = <MeasurementResult>[]; // 읽은 목록
+    List<UnreadableMeasurement> broken = <UnreadableMeasurement>[]; // 못 읽음
     var failed = false; // 읽기가 실패했는지
     try {
-      // → 로직 이동: MeasurementRepository.list()
-      list = await MeasurementRepository.instance.list();
+      // → 로직 이동: MeasurementRepository.listEntries()
+      final entries = await MeasurementRepository.instance.listEntries();
+      list = entries.results;
+      broken = entries.unreadable;
     } catch (_) {
       failed = true;
     }
     if (!mounted) return;
     setState(() {
       _items = list;
+      _unreadable = broken;
       _loadFailed = failed;
       _loading = false;
     });
@@ -99,18 +109,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: _confirmDelete
   /// 목적: 측정 결과 한 건을 지운다. 되돌릴 수 없어 먼저 확인을 받는다.
-  ///       이미 지워진 기록이면 그렇다고 알리고 목록을 새로 읽는다.
-  /// 인자: item — 지울 측정 결과
-  Future<void> _confirmDelete(MeasurementResult item) async {
+  ///       이미 지워진 기록이면 그렇다고 알리고 목록을 새로 읽는다. 읽지
+  ///       못한 결과도 ID 로 같은 방식으로 지운다.
+  /// 인자: id — 지울 측정 ID
+  ///       label — 확인 창에 보여 줄 그 측정의 이름 (제번 · 일시 등)
+  Future<void> _confirmDelete(String id, String label) async {
     // → 로직 이동: showAppConfirmDialog()
     final confirmed = await showAppConfirmDialog(
       context,
       title: '측정 결과 삭제',
       message:
-          '${item.jobNo} (${_formatDate(item.dateTime)}) 결과를 삭제할까요?\n'
+          '$label 결과를 삭제할까요?\n'
           '이 작업은 되돌릴 수 없습니다.',
       confirmLabel: '삭제',
       cancelLabel: '취소',
@@ -122,7 +134,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     bool removed; // 실제로 지웠으면 true
     try {
       // → 로직 이동: MeasurementRepository.delete()
-      removed = await MeasurementRepository.instance.delete(item.id);
+      removed = await MeasurementRepository.instance.delete(id);
     } catch (_) {
       if (mounted) showErrorSnackBar(context, '측정 기록을 삭제하지 못했습니다.');
       return;
@@ -133,7 +145,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
       await _loadItems(); // → 로직 이동: _loadItems()
       return;
     }
-    setState(() => _items.removeWhere((i) => i.id == item.id));
+    setState(() {
+      _items.removeWhere((i) => i.id == id);
+      _unreadable.removeWhere((i) => i.id == id);
+    });
     showSuccessSnackBar(context, '측정 결과가 삭제되었습니다');
   }
 
@@ -270,7 +285,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: _buildListItem
   /// 목적: 측정 결과 한 줄을 만든다. 왼쪽부터 상태, 제번 · 현장명과
   ///       측정 일시 · 요약, 삭제 버튼, 넘어가기 표시를 둔다. 줄 어디를
@@ -318,8 +333,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               icon: Icons.delete_outline,
               label: '측정 결과 삭제',
               color: AppColors.red,
-              onPressed: () =>
-                  _confirmDelete(item), // → 로직 이동: _confirmDelete()
+              // → 로직 이동: _confirmDelete()
+              onPressed: () => _confirmDelete(
+                item.id,
+                '${item.jobNo} (${_formatDate(item.dateTime)})',
+              ),
             ),
             const Icon(
               Icons.chevron_right,
@@ -332,8 +350,59 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 함수: _buildUnreadableItem
+  /// 목적: 결과 파일을 읽지 못한 측정 한 줄을 만든다. 누를 수 없고(열 결과가
+  ///       없다) 지우기만 할 수 있다. 측정 ID 가 측정 시각이라 언제 측정인지
+  ///       알 수 있다.
+  /// 인자: item — 읽지 못한 측정
+  /// 반환: 한 줄 위젯
+  Widget _buildUnreadableItem(UnreadableMeasurement item) {
+    return AppCard(
+      minHeight: AppDims.choiceCardH,
+      padding: const EdgeInsets.only(
+        left: AppDims.gap2,
+        top: AppDims.gap,
+        bottom: AppDims.gap,
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: AppColors.red,
+            size: AppDims.iconL,
+          ),
+          const SizedBox(width: AppDims.gap2),
+          Expanded(
+            child: Column(
+              // 제목 · 측정 ID
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('읽을 수 없는 결과', style: AppText.bodyBold),
+                const SizedBox(height: AppDims.gapHalf),
+                Text(
+                  '측정 ID ${item.id} · 결과 파일이 손상되었습니다',
+                  style: AppText.caption,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          AppDialogIconButton(
+            icon: Icons.delete_outline,
+            label: '측정 결과 삭제',
+            color: AppColors.red,
+            // → 로직 이동: _confirmDelete()
+            onPressed: () => _confirmDelete(item.id, '측정 ID ${item.id}'),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-15 16:50:04 · nada
   /// 함수: build
   /// 목적: 목록 화면을 그린다. 읽는 중이면 진행 표시, 비었거나 읽지
   ///       못했으면 안내, 그 밖에는 저장 결과를 한 줄씩 늘어놓는다. 넓은
@@ -346,7 +415,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         // 시스템 영역을 피해서 배치
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : _items.isEmpty
+            : _items.isEmpty && _unreadable.isEmpty
             ? _buildEmptyState() // → 로직 이동: _buildEmptyState()
             : Center(
                 child: ConstrainedBox(
@@ -356,11 +425,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   child: ListView.separated(
                     padding: const EdgeInsets.all(AppDims.screenPad),
-                    itemCount: _items.length,
+                    itemCount: _items.length + _unreadable.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppDims.gap),
-                    // → 로직 이동: _buildListItem()
-                    itemBuilder: (_, index) => _buildListItem(_items[index]),
+                    itemBuilder: (_, index) => index < _items.length
+                        // → 로직 이동: _buildListItem()
+                        ? _buildListItem(_items[index])
+                        // → 로직 이동: _buildUnreadableItem()
+                        : _buildUnreadableItem(
+                            _unreadable[index - _items.length],
+                          ),
                   ),
                 ),
               ),
