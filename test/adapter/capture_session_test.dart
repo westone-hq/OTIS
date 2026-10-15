@@ -62,21 +62,25 @@ class _FakeSensors extends SensorChannelManager {
     volumeKeyOn = enabled;
   }
 
+  /// 수집 중 흘려보낼 이벤트. 비어 있으면 값이 오지 않는다
+  List<NativeEvent> events = const <NativeEvent>[];
+
   /// 작성: 2026-10-05 10:00:11 · nada
+  /// 수정: 2026-10-15 22:32:44 · nada
   /// 함수: nativeEventStream
-  /// 목적: 값이 오지 않는 빈 이벤트 흐름을 준다.
+  /// 목적: `events` 를 차례로 흘려보낸다. 비어 있으면 값이 오지 않는다.
   @override
   Stream<NativeEvent> get nativeEventStream =>
-      const Stream<NativeEvent>.empty();
+      Stream<NativeEvent>.fromIterable(events);
 }
 
 /// 작성: 2026-10-05 10:00:11 · nada
-/// 수정: 2026-10-07 03:30:18 · nada
+/// 수정: 2026-10-15 22:32:44 · nada
 /// 함수: main
 /// 목적: 수집 시작 도중에 정지가 끼어도 정지 뒤에 수집 · 볼륨키 가로채기가
 ///       켜진 채 남지 않는지, 정지를 두 번 불러도 같은 요청을 두 번 보내지
 ///       않는지, 저장하지 않는 중단(`discard()`)만 안드로이드 원본을
-///       지우는지 시험한다.
+///       지우는지, 측정 중 속도를 정한 간격으로 내보내는지 시험한다.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -95,6 +99,49 @@ void main() {
 
     expect(sensors.calls, isNot(contains('start')));
     expect(sensors.volumeKeyOn, isFalse);
+  });
+
+  test('측정 중 속도를 어림해 250ms 마다 한 번씩 내보낸다', () async {
+    final sensors = _FakeSensors(); // 요청을 기록하는 센서 통로
+    // 4ms 간격으로 정지 1.2초 → 100 mg 로 1초 가속. motion Z 는
+    // -(raw - gravity) 라 raw Z 를 -100 으로 준다. 세 축이 모두 0 인 raw 는
+    // 버려지므로 X 에 1 mg 를 둔다
+    NativeEvent raw(int i, double zMg) => NativeEvent(
+      type: NativeEventType.accel,
+      tsUs: i * 4000,
+      xMg: 1,
+      yMg: 0,
+      zMg: zMg,
+      dtUs: 4000,
+    );
+    sensors.events = <NativeEvent>[
+      const NativeEvent(
+        type: NativeEventType.gravity,
+        tsUs: 0,
+        xMg: 0,
+        yMg: 0,
+        zMg: 0,
+        dtUs: 0,
+      ),
+      for (var i = 1; i <= 300; i++) raw(i, 0),
+      for (var i = 301; i <= 550; i++) raw(i, -100),
+    ];
+    final session = CaptureSession(sensorManager: sensors); // 시험할 수집
+    final published = <double?>[]; // 내보낸 속도
+    session.liveSpeedMps.addListener(
+      () => published.add(session.liveSpeedMps.value),
+    );
+    sensors.availableReply.complete(true);
+
+    await session.start(onVolumeKey: () {}, onNoResponse: () {});
+    await Future<void>.delayed(Duration.zero);
+    await session.stop();
+
+    // 2.2초 동안 250ms 마다 한 번 — 첫 이벤트 포함 9번을 넘지 않는다
+    expect(published.length, lessThanOrEqualTo(9));
+    // 마지막으로 내보낸 2.0초는 가속 0.8초 째다. 0.98 m/s² × 0.8초 =
+    // 0.78 m/s 에서 저역 지연(0.25초)만큼 덜 오른다
+    expect(session.liveSpeedMps.value, inInclusiveRange(0.45, 0.78));
   });
 
   test('정상으로 켠 수집은 정지 때 한 번씩만 되돌린다', () async {
