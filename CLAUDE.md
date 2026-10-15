@@ -12,6 +12,8 @@
 flutter analyze                                   # 경고 0 유지
 dart format --output=none --set-exit-if-changed lib test
 flutter test                                      # 전부 통과 유지
+# 화면 · 리포트 캡처(screenshot 태그, 평소 건너뜀). SHOT_DIR 에 PNG · PDF 를 쓴다
+flutter test --tags screenshot --run-skipped test/screenshots
 ```
 
 ## 구조
