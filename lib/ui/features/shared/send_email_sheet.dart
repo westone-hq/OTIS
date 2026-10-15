@@ -51,7 +51,7 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-10 13:54:43 · nada
+/// 수정: 2026-10-15 22:17:34 · nada
 /// 클래스: _SendEmailSheetState
 /// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신 이메일
 ///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
@@ -60,21 +60,15 @@ class SendEmailSheet extends StatefulWidget {
 ///       격자에 맞춘 필터 · 기준선 보정 전 값) 둘이다. 안드로이드 센서
 ///       원본 이벤트 기록(`native_raw.txt`)은 기기 측정 폴더에만 남기고
 ///       보내지 않는다 (2026-10-08 결정. 2026-10-07 에는 두 원본 파일을
-///       모두 보내지 않기로 했었다).
+///       모두 보내지 않기로 했었다). 소음 진단 산출물(데시벨 CSV ·
+///       마이크 원본 PCM)은 기능을 뺐다 — 예전 빌드가 기기에 남긴 진단
+///       폴더가 있어도 찾지 않는다(2026-10-15 결정).
 class _SendEmailSheetState extends State<SendEmailSheet> {
   /// PDF 리포트를 보낼 항목에 포함할지 여부
   bool _sendPdf = true;
 
   /// 로우 데이터(`raw.txt`)를 보낼 항목에 포함할지 여부
   bool _sendRaw = true;
-
-  /// 마이크 dB 계산 진단 산출물(큰 PCM 녹음 제외)을 보낼 항목에 포함할지
-  /// 여부
-  bool _sendNoiseDiagnostics = false;
-
-  /// 마이크 원본 PCM 녹음을 보낼 항목에 포함할지 여부. 용량이 커서 기본은
-  /// 선택 안 함
-  bool _sendNoisePcm = false;
 
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
   /// 버튼을 비활성화해 중복 실행을 막는다
@@ -185,7 +179,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 22:17:34 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -198,8 +192,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       - PDF 리포트 — 없으면 그 자리에서 만든다
   ///       - 로우 데이터(`raw.txt`) — 나중에 다시 만들 수 없어, 없으면
   ///         (이 파일을 쓰기 전 측정, 저장 도중 실패) 누락으로 밝힌다
-  ///       안드로이드 원본(`native_raw.txt`)은 찾지도 붙이지도 않는다
-  ///       (2026-10-08 결정).
+  ///       안드로이드 원본(`native_raw.txt`, 2026-10-08 결정)과 소음 진단
+  ///       산출물(2026-10-15 결정)은 찾지도 붙이지도 않는다.
   ///       홈에서 적은 추가 참고사항이 있으면 첨부 목록 앞에 "[참고사항]"
   ///       머리줄과 함께 적은 그대로 넣는다. 없으면 그 덩어리를 통째로
   ///       뺀다. 참고사항은 리포트에 칸이 없어 메일 본문으로만 전한다.
@@ -262,37 +256,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
           '누락: ${MeasurementRepository.rawFileName} — 이 측정에는 로우 '
           '데이터 파일이 없습니다',
         );
-      }
-    }
-
-    if (_sendNoiseDiagnostics || _sendNoisePcm) {
-      final files = await repo.latestNoiseDiagnosticFiles(); // 소음 진단 산출물 목록
-      if (files.isEmpty) {
-        missing.add('누락: 데시벨 산출물(noise_diagnostics)');
-      } else {
-        for (final file in files) {
-          final originalName = // 진단 폴더 안 원래 파일명
-              file.uri.pathSegments.last;
-          final isPcm = // 마이크 원본 PCM 파일인지
-              originalName.toLowerCase() == 'audio.pcm';
-          if (isPcm && !_sendNoisePcm) continue;
-          if (!isPcm && !_sendNoiseDiagnostics) continue;
-
-          final original = file.uri.pathSegments.last.replaceAll(
-            RegExp(r'[^0-9A-Za-z._-]+'),
-            '_',
-          ); // 메일 첨부 이름에 못 쓰는 문자를 치환한 원래 파일명
-          final name = 'DB_${result.jobNo}_${result.id}_$original'.replaceAll(
-            RegExp(r'[^0-9A-Za-z._-]+'),
-            '_',
-          ); // 메일에 붙일 이름
-          // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
-          final copy = await repo.mailAttachmentCopy(file, name); // 사본
-          attachments.add(copy.path);
-          attachmentDescriptions.add(
-            '- $name: ${isPcm ? '마이크 원본 PCM' : '데시벨 산출물'}',
-          );
-        }
       }
     }
 
@@ -361,14 +324,15 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-10-04 13:37:23 · nada
-  /// 수정: 2026-10-10 13:54:43 · nada
+  /// 수정: 2026-10-15 22:17:34 · nada
   /// 함수: build
   /// 목적: 이메일 발송 시트를 그린다. 위에서부터 순서대로 놓는다.
   ///       1. 제목과 닫기 버튼
   ///       2. 받는 사람 — 등록된 이메일마다 체크 한 줄. 여러 개 고를 수
   ///          있다. "관리"를 누르면 설정 화면으로 간다
   ///       3. 보낼 항목 체크 목록 (PDF 리포트, 로우 데이터). 안드로이드
-  ///          원본은 보낼 항목이 아니라 목록에 없다 (2026-10-08 결정)
+  ///          원본(2026-10-08 결정)과 소음 진단 산출물(2026-10-15 결정)은
+  ///          보낼 항목이 아니라 목록에 없다
   ///       4. 고를 것이 빠졌을 때의 안내와 "보내기" 버튼
   ///       2 · 3 은 함께 스크롤되고 4 는 아래에 고정한다. 시트 아래쪽
   ///       시스템 영역은 `showAppSheet()` 가 비켜 준다.
@@ -376,11 +340,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
-    final noItem =
-        !_sendPdf &&
-        !_sendRaw &&
-        !_sendNoiseDiagnostics &&
-        !_sendNoisePcm; // 보낼 항목을 하나도 안 골랐는지
+    final noItem = !_sendPdf && !_sendRaw; // 보낼 항목을 하나도 안 골랐는지
     final noRecipient = _selected.isEmpty; // 받을 주소를 고르지 않았는지
     final warning = _emails.isEmpty
         ? null
@@ -470,18 +430,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       value: _sendRaw,
                       onChanged: (val) =>
                           setState(() => _sendRaw = val ?? false),
-                    ),
-                    _buildCheckboxItem(
-                      title: '데시벨 산출물',
-                      value: _sendNoiseDiagnostics,
-                      onChanged: (val) =>
-                          setState(() => _sendNoiseDiagnostics = val ?? false),
-                    ),
-                    _buildCheckboxItem(
-                      title: '마이크 원본 (audio.pcm)',
-                      value: _sendNoisePcm,
-                      onChanged: (val) =>
-                          setState(() => _sendNoisePcm = val ?? false),
                     ),
                   ],
                 ),
