@@ -67,6 +67,14 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 로우 데이터(`raw.txt`)를 보낼 항목에 포함할지 여부
   bool _sendRaw = true;
 
+  /// 마이크 dB 계산 진단 산출물(큰 PCM 녹음 제외)을 보낼 항목에 포함할지
+  /// 여부
+  bool _sendNoiseDiagnostics = false;
+
+  /// 마이크 원본 PCM 녹음을 보낼 항목에 포함할지 여부. 용량이 커서 기본은
+  /// 선택 안 함
+  bool _sendNoisePcm = false;
+
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
   /// 버튼을 비활성화해 중복 실행을 막는다
   bool _loading = false;
@@ -256,6 +264,37 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       }
     }
 
+    if (_sendNoiseDiagnostics || _sendNoisePcm) {
+      final files = await repo.latestNoiseDiagnosticFiles(); // 소음 진단 산출물 목록
+      if (files.isEmpty) {
+        missing.add('누락: 데시벨 산출물(noise_diagnostics)');
+      } else {
+        for (final file in files) {
+          final originalName = // 진단 폴더 안 원래 파일명
+              file.uri.pathSegments.last;
+          final isPcm = // 마이크 원본 PCM 파일인지
+              originalName.toLowerCase() == 'audio.pcm';
+          if (isPcm && !_sendNoisePcm) continue;
+          if (!isPcm && !_sendNoiseDiagnostics) continue;
+
+          final original = file.uri.pathSegments.last.replaceAll(
+            RegExp(r'[^0-9A-Za-z._-]+'),
+            '_',
+          ); // 메일 첨부 이름에 못 쓰는 문자를 치환한 원래 파일명
+          final name = 'DB_${result.jobNo}_${result.id}_$original'.replaceAll(
+            RegExp(r'[^0-9A-Za-z._-]+'),
+            '_',
+          ); // 메일에 붙일 이름
+          // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
+          final copy = await repo.mailAttachmentCopy(file, name); // 사본
+          attachments.add(copy.path);
+          attachmentDescriptions.add(
+            '- $name: ${isPcm ? '마이크 원본 PCM' : '데시벨 산출물'}',
+          );
+        }
+      }
+    }
+
     final dateStr = DateFormat(
       'yyyy-MM-dd HH:mm',
     ).format(result.dateTime); // 메일 제목에 쓸 날짜 문구
@@ -336,7 +375,11 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
-    final noItem = !_sendPdf && !_sendRaw; // 보낼 항목을 하나도 안 골랐는지
+    final noItem =
+        !_sendPdf &&
+        !_sendRaw &&
+        !_sendNoiseDiagnostics &&
+        !_sendNoisePcm; // 보낼 항목을 하나도 안 골랐는지
     final noRecipient = _selected.isEmpty; // 받을 주소를 고르지 않았는지
     final warning = _emails.isEmpty
         ? null
@@ -426,6 +469,18 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       value: _sendRaw,
                       onChanged: (val) =>
                           setState(() => _sendRaw = val ?? false),
+                    ),
+                    _buildCheckboxItem(
+                      title: '데시벨 산출물',
+                      value: _sendNoiseDiagnostics,
+                      onChanged: (val) =>
+                          setState(() => _sendNoiseDiagnostics = val ?? false),
+                    ),
+                    _buildCheckboxItem(
+                      title: '마이크 원본 (audio.pcm)',
+                      value: _sendNoisePcm,
+                      onChanged: (val) =>
+                          setState(() => _sendNoisePcm = val ?? false),
                     ),
                   ],
                 ),
