@@ -28,11 +28,13 @@ flutter test                                      # 전부 통과 유지
 | `lib/ui/features/` | 화면별 폴더 (home · measure · history · result · settings · shared · update) |
 | `android/app/src/main/kotlin/` | `MainActivity` · `SensorStreamHandler` · `NoiseCaptureHandler` · `UpdateInstaller`(APK 내려받기 · SHA-256 확인 · `PackageInstaller` 설치) |
 | `pdf_report_dev/` | 리포트 좌표를 확정할 때 쓴 파이썬 프로토타입 (앱 빌드와 무관) |
+| `tool/` | 기기에서 뽑은 소음 진단 PCM 을 오프라인으로 재계산 · A 가중 비교하는 파이썬 도구(`compare_noise_pcm.py`). 앱 빌드와 무관 |
 | `docs/comment_rules.md` | 주석 규칙. **코드 작업 전 매번 다시 읽는다** |
 | `docs/report_layout.json` | 리포트 좌표 정본. `report_layout_test` 가 Dart 상수와 대조한다 |
 | `docs/reference/sample_evimp.pdf` | 원본 TUNE 리포트. 코드 주석의 `근거:` 가 가리킨다 |
 | `docs/reference/H6N1AP65.pdf` | 원본 TUNE 리포트(실제 현장). 머리말 표기(하중 · 제품 · 주소)의 근거. **H6N1AP65.pdf 는 저장소 밖 보관**(`.gitignore`) — 실제 엔지니어명 · 현장명이 들어 있다. 시험 픽스처로 쓰지 않는다 |
 | `docs/noise_otis_offset_notes.md` | 소음 dBA 오프셋 · OTIS 차이 · 남은 과제 |
+| `docs/noise_pcm_diagnostics.md` | 소음 진단 PCM · CSV 산출물의 자리 · 형식, `tool/` 로 재계산하는 법 |
 | `docs/release.md` | 릴리스 서명 키 보관 · `android/key.properties` · 서명 확인(인증서 지문). 키가 없으면 릴리스 빌드가 멈춘다 |
 | `assets/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
 
@@ -80,9 +82,19 @@ flutter test                                      # 전부 통과 유지
 - 마이크 권한은 측정 화면에 들어가기 전에 `ensureMicPermission()` 이 받는다.
   측정 중에는 휴대폰이 뒤집혀 있어 권한 창을 누를 수 없다.
 - 바텀 시트는 `showAppSheet()` 로만 띄운다. 아래쪽 시스템 막대를 비켜 준다.
+- 소음 측정은 시작할 때마다 마이크 원본 PCM과 계산 과정(읽기 · 계산 ·
+  센서에 붙인 시각)을 기기 외장 저장소(`noise_diagnostics/<측정시각>_
+  <부팅시각>/`)에 디버그 플래그 없이 항상 남긴다(`NoiseDiagnostics`,
+  new/dB 기능). 마이크를 계속 열어 두므로 대화가 담길 수 있고, 분석 후
+  수동 정리가 필요하다(`docs/noise_pcm_diagnostics.md`). 2026-10-14 기준
+  이 동작을 유지하기로 했다.
 - 메일은 PDF 리포트와 로우 데이터(`raw.txt`, 256Hz 격자 · 필터 · 기준선
   보정 전)를 고른 만큼 붙인다. 둘 다 기본 체크이고, `raw.txt` 가 없는 측정은
-  본문에 "누락:" 줄로 밝힌다. 추가 참고사항이 있으면 본문 첨부 목록 앞에
+  본문에 "누락:" 줄로 밝힌다. 위 소음 진단 산출물도 "데시벨 산출물"(CSV ·
+  메타데이터)과 "마이크 원본(audio.pcm)"으로 나눠 선택해 붙일 수 있으나
+  둘 다 기본 체크가 아니다 — 마이크 원본은 용량이 크고 대화가 담길 수
+  있어서다. 가장 최근 진단 폴더만 찾으며, 없으면 같은 방식으로 "누락:"
+  줄로 밝힌다. 추가 참고사항이 있으면 본문 첨부 목록 앞에
   "[참고사항]" 머리줄과 함께 넣는다. 안드로이드 원본(`native_raw.txt`)은 기기의
   측정 폴더에만 남기고 보내지 않는다(2026-10-08). 안드로이드 원본은
   측정이 실패해도 그 측정 폴더로 옮기고, 저장하지 않는 중단(뒤로가기 · 앱
@@ -234,4 +246,5 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - 서버 연동은 미구현이다. 로그인은 두지 않는다(수신 이메일은 기기에 목록으로
   둔다).
 - 소음 RMS 창(`WINDOW_SEC`) · 갱신 주기(`HOP_HZ`)는 OTIS 와 맞춰 보는
-  실험값이다 (`NoiseCaptureHandler.kt`).
+  실험값이다 (`NoiseCaptureHandler.kt`). 2026-10-12 부터 IEC 61672-1 "Fast"
+  시정수(`FAST_TIME_WEIGHT_SEC`, 0.125초)로 평균 제곱값을 지수평활해 낸다.
