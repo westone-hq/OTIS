@@ -136,11 +136,15 @@ Future<void> settle(WidgetTester tester, {int rounds = 30}) async {
 }
 
 /// 작성: 2026-10-15 16:50:04 · nada
+/// 수정: 2026-10-15 22:01:43 · nada
 /// 함수: capture
-/// 목적: `shotKey` 경계 안을 PNG 로 찍어 `shotOutputDir()` 에 쓴다.
+/// 목적: `shotKey` 경계 안을 PNG 로 찍어 `shotOutputDir()` 에 쓴다. 찍기
+///       전에 글꼴 이름 없는 글자에 이름을 붙인다(`_nameUnnamedFonts`).
 /// 인자: tester — 위젯 시험 도구
 ///       name — 파일 이름 (확장자 없이)
 Future<void> capture(WidgetTester tester, String name) async {
+  _nameUnnamedFonts(tester);
+  await tester.pump();
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(shotKey),
   ); // 찍을 경계
@@ -151,6 +155,41 @@ Future<void> capture(WidgetTester tester, String name) async {
       '${shotOutputDir().path}/$name.png',
     ).writeAsBytesSync(bytes!.buffer.asUint8List());
   });
+}
+
+/// 작성: 2026-10-15 22:01:43 · nada
+/// 함수: _nameUnnamedFonts
+/// 목적: 글꼴 이름 없이 그려진 글자(운전 방향 버튼 묶음 · 드롭다운 선택
+///       값처럼 위젯이 스타일을 그대로 넘기는 곳)를 캡처용 글꼴(Roboto 로
+///       올린 나눔고딕)로 다시 그린다. 화면 위젯은 건드리지 않고 그려진
+///       글자 묶음만 바꾼다.
+/// 인자: tester — 위젯 시험 도구
+/// 근거: 측정 — 2026-10-15 시험 환경에서 확인. 시험 실행기는 이름 없는
+///       글자를 늘 내장 시험 글꼴로 그려(`--use-test-fonts`, 끌 수 없음)
+///       한글이 네모, 영문이 검은 막대로 나온다. 같은 이름으로 글꼴을
+///       올려도 내장 글꼴이 먼저다. 기기에서는 시스템 글꼴로 나온다
+void _nameUnnamedFonts(WidgetTester tester) {
+  // 글자 묶음 하나를 따라 내려가며 이름 없는 스타일에 이름을 붙인다
+  InlineSpan named(InlineSpan span) {
+    if (span is! TextSpan) return span;
+    final style = span.style; // 이 묶음의 스타일
+    return TextSpan(
+      text: span.text,
+      style: style != null && style.fontFamily == null
+          ? style.copyWith(fontFamily: 'Roboto')
+          : style,
+      children: span.children?.map(named).toList(),
+      recognizer: span.recognizer,
+      semanticsLabel: span.semanticsLabel,
+    );
+  }
+
+  for (final paragraph in tester.renderObjectList<RenderParagraph>(
+    find.byType(RichText),
+  )) {
+    if (paragraph.text.style?.fontFamily != null) continue;
+    paragraph.text = named(paragraph.text);
+  }
 }
 
 /// 작성: 2026-10-15 16:50:04 · nada
