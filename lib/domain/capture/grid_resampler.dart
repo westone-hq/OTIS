@@ -286,8 +286,32 @@ class GridResampler {
     target.add(event);
   }
 
+  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 함수: motionOf
+  /// 목적: 같은 시각의 raw 와 gravity 로 중력을 뺀 세 축 가속도(motion)를
+  ///       만든다. 화면을 아래로 놓은 거치에서는 Y · Z 부호가 OTIS 장비
+  ///       기준과 반대로 나와 두 축은 부호를 뒤집는다. 이 기준은 위쪽 끝을
+  ///       문 기준 오른쪽에 두던 때 정했고, 2026-10-07 개발폰과 오티스폰을
+  ///       함께 위쪽 왼쪽으로 돌렸으므로 그대로 쓴다(`PlacementSheet`
+  ///       참고). 격자(`resample()`)와 측정 중 속도 추정
+  ///       (`LiveSpeedEstimator`)이 같은 부호를 쓰도록 한 곳에 둔다.
+  /// 인자: rawX, rawY, rawZ — 중력이 섞인 가속도 원본 (mg)
+  ///       gravityX, gravityY, gravityZ — 같은 시각의 중력 성분 (mg)
+  /// 반환: 세 축 motion (mg)
+  /// 식: motion_x = raw_x - gravity_x
+  ///     motion_y = -(raw_y - gravity_y)
+  ///     motion_z = -(raw_z - gravity_z)
+  static ({double x, double y, double z}) motionOf({
+    required double rawX,
+    required double rawY,
+    required double rawZ,
+    required double gravityX,
+    required double gravityY,
+    required double gravityZ,
+  }) => (x: rawX - gravityX, y: -(rawY - gravityY), z: -(rawZ - gravityZ));
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
-  /// 수정: 2026-10-07 03:30:18 · nada
+  /// 수정: 2026-10-10 11:54:43 · nada
   /// 함수: resample
   /// 목적: 센서에서 들어오는 raw(가속도 원본) · gravity(중력 성분) 값은
   ///       일정한 시간 간격으로 오지 않는다. 이 함수는 그 값들을 갖고,
@@ -298,18 +322,13 @@ class GridResampler {
   ///       때문이다. raw와 gravity는 `CaptureSession`(capture_session.dart)
   ///       이 센서 값을 받을 때마다 `onEvent()`를 불러 이미 쌓아 둔
   ///       값이다. 표의 각 행 값은 그 시각의 raw 값에서 gravity 값을 뺀
-  ///       것(motion, 중력을 뺀 순수 진동)이다. 화면을 아래로 놓은
-  ///       거치에서는 Y · Z 부호가 OTIS 장비 기준과 반대로 나와 두 축은
-  ///       부호를 뒤집는다. 이 기준은 위쪽 끝을 문 기준 오른쪽에 두던 때
-  ///       정했고, 2026-10-07 개발폰과 오티스폰을 함께 위쪽 왼쪽으로
-  ///       돌렸으므로 그대로 쓴다(`PlacementSheet` 참고). 결과 하나를 만들고
-  ///       나면 다시 부르지 않는다. 누적된 `_raw`, `_gravity`를 쓴다.
+  ///       것(motion, 중력을 뺀 순수 진동)이고, 빼는 식과 축 부호는
+  ///       `motionOf()` 가 정한다. 결과 하나를 만들고 나면 다시 부르지
+  ///       않는다. 누적된 `_raw`, `_gravity`를 쓴다.
   /// 반환: 표 행 목록과 집계값을 담은 결과. 표를 만들 수 없는 조건을
   ///       만나면 표 없이 사유만 담긴 실패 결과를 대신 반환한다
   /// 식: t(n) = (t0Ns + edgeTrimNs) + n x gridIntervalNs
-  ///     motion_x(n) = raw_x(n) - gravity_x(n)
-  ///     motion_y(n) = -(raw_y(n) - gravity_y(n))
-  ///     motion_z(n) = -(raw_z(n) - gravity_z(n))
+  ///     motion(n) = motionOf(raw(n), gravity(n))
   GridResampleResult resample() {
     final intervalNs = config.idealIntervalNs; // 표 한 행 사이의 시간 간격(나노초)
 
@@ -396,14 +415,20 @@ class GridResampler {
           'raw=${rawPoint != null}, gravity=${gravityPoint != null}',
         );
       }
+      // → 로직 이동: motionOf()
+      final motion = motionOf(
+        rawX: rawPoint.x,
+        rawY: rawPoint.y,
+        rawZ: rawPoint.z,
+        gravityX: gravityPoint.x,
+        gravityY: gravityPoint.y,
+        gravityZ: gravityPoint.z,
+      ); // 그 시각의 중력을 뺀 세 축 가속도 (mg)
       samples.add(
         GridSample(
-          xMg: rawPoint.x - gravityPoint.x,
-          // 화면을 아래로 놓은 거치에서는 OTIS 기준과 Y/Z 부호가 반대로
-          // 맞는다. X는 그대로 둔다. 오티스폰과 함께 위쪽을 왼쪽으로 돌려도
-          // 두 기기의 부호 관계는 같다.
-          yMg: -(rawPoint.y - gravityPoint.y),
-          zMg: -(rawPoint.z - gravityPoint.z),
+          xMg: motion.x,
+          yMg: motion.y,
+          zMg: motion.z,
           // 소음도 XYZ 와 같이 앞뒤 raw 실측값 사이를 선형 보간한다
           noiseDba: rawPoint.noiseDba,
         ),
