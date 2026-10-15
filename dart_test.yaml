@@ -1,0 +1,7 @@
+# 시험 태그 설정.
+# screenshot — 화면 · 리포트 캡처 전용(test/screenshots/). 평소 flutter test 에서는
+# 건너뛰고, 캡처할 때만 이렇게 돌린다:
+#   flutter test --tags screenshot --run-skipped test/screenshots
+tags:
+  screenshot:
+    skip: "화면 캡처 전용 — flutter test --tags screenshot --run-skipped 로 돌린다"
