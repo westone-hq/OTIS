@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
+import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-23 09:40:00 · nada
@@ -103,6 +104,7 @@ class ReportChartPageRenderer {
   });
 
   /// 작성: 2026-09-23 09:40:00 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: load
   /// 목적: 글꼴 두 벌과 차트 쪽 서식 이미지를 자산에서 읽어 렌더러를
   ///       만든다. 자산 읽기는 느리고 두 쪽에 한 번이면 되므로 그리기와
@@ -129,7 +131,7 @@ class ReportChartPageRenderer {
         bytes: backgroundBytes.buffer.asUint8List(),
       ),
       textWriter: ReportTextWriter(regular: regular, bold: bold),
-      chartRenderer: ReportChartRenderer(font: regular),
+      chartRenderer: ReportChartRenderer(font: regular, labelFont: bold),
     );
   }
 
@@ -203,10 +205,11 @@ class ReportChartPageRenderer {
   }
 
   /// 작성: 2026-09-23 09:40:00 · nada
-  /// 수정: 2026-10-11 19:24:37 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: headerValues
   /// 목적: 머리말 네 칸에 채울 문구를 만든다.
   ///       - 제번 → 측정 ID, 쪽 번호 → 받은 번호
+  ///       - 측정 일시 → 1쪽과 같은 한국 시간(`KoreaTime.of()`)
   ///       - 엔지니어명 → 1쪽과 같은 저장 시점 이름. 없으면 자리 표시
   ///         문구(`ReportPage1.placeholder`). 서식에 "엔지니어:" 라벨이
   ///         찍혀 있어 비우면 빠뜨린 것처럼 보인다(2026-10-11 사용자 지시
@@ -221,7 +224,7 @@ class ReportChartPageRenderer {
   ) {
     final stamp = DateFormat(
       ReportLayout.datetimePattern,
-    ).format(result.dateTime); // 머리말에 쓸 측정 일시
+    ).format(KoreaTime.of(result.dateTime)); // 머리말 측정 일시 (한국 시간)
     return <String, String>{
       'measurement_id': result.jobNo,
       'engineer_name': result.engineerName ?? ReportPage1.placeholder,

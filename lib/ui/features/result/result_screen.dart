@@ -6,6 +6,7 @@ import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 import '../../core/theme.dart';
@@ -321,6 +322,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _buildHeader
   /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 제번 · 현장명,
   ///       측정 일시, 운전 방향 · 층 · 기종, 주소(있을 때만)를 보여준다.
@@ -329,7 +331,7 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget _buildHeader(MeasurementResult result) {
     final when = DateFormat(
       'yyyy-MM-dd HH:mm',
-    ).format(result.dateTime); // 측정 일시 문구
+    ).format(KoreaTime.of(result.dateTime)); // 측정 일시 문구 (한국 시간)
     final model = result.model; // 기종, 없으면 null
     return AppCard(
       child: Column(
@@ -351,6 +353,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _buildCompareBanner
   /// 목적: 지금 무엇과 비교하는지 알리고 비교를 끌 수 있는 줄을 만든다.
   /// 인자: compare — 비교 대상 결과
@@ -358,7 +361,7 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget _buildCompareBanner(MeasurementResult compare) {
     final when = DateFormat(
       'yyyy-MM-dd HH:mm',
-    ).format(compare.dateTime); // 비교 대상 측정 일시
+    ).format(KoreaTime.of(compare.dateTime)); // 비교 대상 측정 일시
     return AppCard(
       padding: const EdgeInsets.only(left: AppDims.gap2),
       child: Row(
@@ -581,6 +584,7 @@ class _CompareSheet extends StatelessWidget {
   const _CompareSheet({required this.candidates, required this.onPicked});
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: build
   /// 목적: 제목 아래에 저장 결과를 한 줄씩 늘어놓는다. 줄마다 제번 ·
   ///       현장명과 측정 일시를 보여준다.
@@ -605,7 +609,7 @@ class _CompareSheet extends StatelessWidget {
                   final item = candidates[index]; // 이 줄의 저장 결과
                   final when = DateFormat(
                     'yyyy-MM-dd HH:mm',
-                  ).format(item.dateTime); // 측정 일시
+                  ).format(KoreaTime.of(item.dateTime)); // 측정 일시 (한국 시간)
                   return InkWell(
                     onTap: () => onPicked(item),
                     borderRadius: BorderRadius.circular(AppDims.radius),

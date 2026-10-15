@@ -256,6 +256,17 @@
         }
       ],
       "description_size": 28,
+      "category_size": 28,
+      "_relabel_comment": "서식에 박힌 구분 이름 중 바꿔 쓸 행. erase_label 네모(x 는 왼쪽 끝, 행 y 를 세로 가운데로)를 줄무늬 색으로 덮고 col.category 에 새 이름을 찍는다. 2026-10-15 사용자 지시",
+      "erase_label": {
+        "x": 300,
+        "w": 360,
+        "h": 52
+      },
+      "relabel": {
+        "machine": "권상기 머신으로 부터 진동",
+        "belts": "로우프"
+      },
       "stripes": [
         "stripe_odd",
         "stripe_even"

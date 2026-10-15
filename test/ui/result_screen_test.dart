@@ -63,7 +63,7 @@ MeasurementResult _result(
     loadUnit: legacy ? null : 'kg',
     postalCode: legacy ? null : '06236',
     dateTime: measuredAt,
-    xPtp: 12.0,
+    xPtp: 26.0,
     yPtp: 5.0,
     zPtp: zPtp,
     noiseMax: 45.0,
@@ -115,7 +115,7 @@ void main() {
   testWidgets('지표 여섯 줄을 보여주고 기준을 넘은 값에 경고를 붙인다', (tester) async {
     await tester.runAsync(
       () => MeasurementRepository.instance.save(
-        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 20.0),
+        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 31.0),
       ),
     );
 
@@ -134,12 +134,12 @@ void main() {
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    expect(find.text('12.0'), findsOneWidget);
+    expect(find.text('26.0'), findsOneWidget);
     expect(find.text('1.74'), findsOneWidget);
     expect(
       find.byIcon(Icons.error_outline),
       findsNWidgets(2),
-      reason: 'X(10 초과) · Z(15 초과)만 경고다',
+      reason: 'X(25.5 초과) · Z(30 초과)만 경고다',
     );
     expect(find.text('테스트 재실행'), findsOneWidget);
   });

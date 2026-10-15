@@ -89,7 +89,7 @@ class ReportChartAxes {
   ///       측정이다. 이 표본들 때문에 축이 넓어진다
   static const ChartAxisSpec x = ChartAxisSpec(
     key: 'x',
-    label: 'X-Vibration (milli-g)',
+    label: 'X-Vibration (milli-G)',
     scale: ChartScale(
       minimum: ChartAxisRange(min: -4.0, max: 4.0, tickStep: 2.0),
       kind: ChartScaleKind.symmetric,
@@ -108,7 +108,7 @@ class ReportChartAxes {
   ///       범위 그대로 그려진다
   static const ChartAxisSpec y = ChartAxisSpec(
     key: 'y',
-    label: 'Y-Vibration (milli-g)',
+    label: 'Y-Vibration (milli-G)',
     scale: ChartScale(
       minimum: ChartAxisRange(min: -10.0, max: 10.0, tickStep: 5.0),
       kind: ChartScaleKind.symmetric,
@@ -124,7 +124,7 @@ class ReportChartAxes {
   ///       의 수직 진동 차트 범위 ±20 mg, 눈금 10 mg 이다
   static const ChartAxisSpec z = ChartAxisSpec(
     key: 'z',
-    label: 'Vertical Vibration (milli-g)',
+    label: 'Vertical Vibration (milli-G)',
     scale: ChartScale(
       minimum: ChartAxisRange(min: -20.0, max: 20.0, tickStep: 10.0),
       kind: ChartScaleKind.symmetric,
@@ -542,25 +542,56 @@ class ReportChartRenderer {
   static const List<double> guideDashPattern = <double>[2.4, 1.6];
 
   /// 작성: 2026-09-26 14:10:00 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 변수: markerRadius
-  /// 목적: 최댓값 표시점의 반지름 (포인트).
-  /// 근거: 인용 — 파이썬 프로토타입 `charts.py` 가 지름 1.6 포인트로 찍는다
-  static const double markerRadius = 0.8;
+  /// 목적: 표시점(P2P 최댓값 · 최솟값, 소음 최댓값)의 반지름 (포인트).
+  ///       파형 선(0.35)보다 훨씬 굵게 둬 한눈에 보이게 한다.
+  /// 근거: 인용 — 2026-10-15 사용자 지시 "눈에 띄게 굵은 점". 예전 값
+  ///       0.8(프로토타입 `charts.py` 지름 1.6)은 파형에 묻혀 잘 보이지
+  ///       않았다. 미정 — 굵기 자체는 눈으로 골랐다
+  static const double markerRadius = 2.2;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: markerRingWidth
+  /// 목적: 표시점 둘레에 두르는 흰 테 굵기 (포인트). 빨간 점이 파란 파형
+  ///       위에 놓여도 테두리로 갈라져 보이게 한다.
+  /// 근거: 미정 — 눈으로 골랐다
+  static const double markerRingWidth = 0.7;
 
   /// 작성: 2026-09-26 14:10:00 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 변수: markerLabelSize
-  /// 목적: 최댓값 옆에 적는 값의 글자 크기 (포인트).
-  /// 근거: 인용 — 프로토타입 `charts.py` 의 주석 글자 크기와 같다
-  static const double markerLabelSize = 5.2;
+  /// 목적: 표시점 옆에 적는 값의 글자 크기 (포인트). 눈금 라벨(5.0)보다
+  ///       크게 두고 굵은 글꼴(`labelFont`)로 적는다.
+  /// 근거: 인용 — 2026-10-15 사용자 지시 "값도 잘 보여야 해". 예전 값
+  ///       5.2 는 작아 읽기 어려웠다. 미정 — 크기 자체는 눈으로 골랐다
+  static const double markerLabelSize = 7.5;
 
-  /// 작성: 2026-10-11 19:20:58 · nada
-  /// 수정: 2026-10-12 02:15:16 · nada
-  /// 변수: cornerLabelInset
-  /// 목적: 차트 값 글자(P2P, 소음 최댓값)를 축 틀 오른쪽 위 모서리에서
-  ///       안쪽으로 띄우는 거리 (포인트). 글자가 틀선에 붙지 않고 틀 안에
-  ///       들게 한다.
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: labelGap
+  /// 목적: 표시점 가장자리와 값 상자 사이 간격 (포인트).
   /// 근거: 미정 — 눈금 라벨 간격(`tickLabelGap`)과 비슷하게 잡았다
-  static const double cornerLabelInset = 2.0;
+  static const double labelGap = 2.0;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: labelPadding
+  /// 목적: 값 글자와 그 뒤 흰 상자 테두리 사이 여백 (포인트). 상자가
+  ///       파형을 가려 글자가 선과 겹쳐 보이지 않게 한다.
+  /// 근거: 미정 — 눈으로 골랐다
+  static const double labelPadding = 1.2;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: labelBorderWidth
+  /// 목적: 값 상자 테두리(빨강) 굵기 (포인트).
+  /// 근거: 미정 — 축 틀 선(`frameLineWidth`)과 같은 굵기
+  static const double labelBorderWidth = 0.4;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: labelInset
+  /// 목적: 값 상자가 축 틀 선에서 안쪽으로 떨어지는 최소 거리 (포인트).
+  ///       상자가 틀 밖으로 나가 잘리지 않게 한다.
+  /// 근거: 미정 — `labelGap` 보다 조금 작게 잡았다
+  static const double labelInset = 1.5;
 
   /// 격자 점선의 켠 길이와 끈 길이 (포인트)
   static const List<double> gridDashPattern = <double>[1.2, 1.2];
@@ -619,11 +650,17 @@ class ReportChartRenderer {
   /// 눈금 라벨과 축 라벨에 쓰는 글꼴
   final PdfFont font;
 
+  /// 표시점 옆 값(P2P · 소음 최댓값)에 쓰는 글꼴. 굵은 글꼴을 받는다
+  final PdfFont labelFont;
+
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: ReportChartRenderer
   /// 목적: 글자를 찍는 데 쓸 글꼴을 담는 생성자.
   /// 인자: font — 눈금 라벨과 축 라벨에 쓸 글꼴
-  const ReportChartRenderer({required this.font});
+  ///       labelFont — 표시점 옆 값에 쓸 글꼴. 안 주면 `font`
+  const ReportChartRenderer({required this.font, PdfFont? labelFont})
+    : labelFont = labelFont ?? font;
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 수정: 2026-10-11 19:20:58 · nada
@@ -685,32 +722,33 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-10-11 19:20:58 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: p2pLabel
-  /// 목적: 진동 차트 오른쪽 위에 적을 P2P 문구를 만든다. 숫자 표기는 1쪽
-  ///       표와 같은 규칙(`ReportMetric.display`)을 써 두 곳 숫자가 같게
-  ///       보인다.
+  /// 목적: 진동 차트 표시점 옆에 적을 P2P 문구를 만든다. 숫자 표기 · 단위
+  ///       는 1쪽 표와 같은 규칙(`ReportMetric.display`,
+  ///       `ReportMetric.vibrationUnit`)을 써 두 곳이 같게 보인다.
   /// 인자: ptp — P2P (mg)
-  /// 반환: "P2P 14.2mg" 꼴 문구
+  /// 반환: "P2P 14.2milli-G" 꼴 문구
   static String p2pLabel(double ptp) {
     final metric = ReportMetric(
       key: 'p2p',
       value: ptp,
-      unit: 'mg',
+      unit: ReportMetric.vibrationUnit,
       verdict: ReportVerdict.none,
     ); // 표와 같은 규칙으로 숫자를 다듬을 지표
     return 'P2P ${metric.display}';
   }
 
   /// 작성: 2026-10-11 19:20:58 · nada
-  /// 수정: 2026-10-12 02:17:25 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _drawPeakToPeak
-  /// 목적: 진동 세 축 차트에 P2P 를 만든 두 지점을 표시하고 값을 적는다
-  ///       (2026-10-11 사용자 지시, 소음 최댓값처럼 빨간색).
-  ///       - 최댓값 · 최솟값이 처음 나온 자리에 빨간 점. 자리는 줄이기 전
-  ///         원래 시계열 기준이다(`extremeIndices()`)
-  ///       - 축 틀 위쪽 모서리 안쪽(최댓값에서 먼 쪽, `_drawCornerLabel()`)에
-  ///         "P2P 값". 값은 1쪽 표와 같은 지표다
-  ///         (`ReportChartAxes.ptpOf()`)
+  /// 목적: 진동 세 축 차트에 P2P 를 만든 두 지점을 표시하고 값을 적는다.
+  ///       - 최댓값 · 최솟값이 처음 나온 자리에 굵은 빨간 점
+  ///         (`_drawMarker()`). 자리는 줄이기 전 원래 시계열 기준이다
+  ///         (`extremeIndices()`)
+  ///       - 최댓값 점 옆(오른쪽, 자리가 없으면 왼쪽)에 "P2P 값" 을 흰
+  ///         상자에 굵게 적는다(`_drawSideLabel()`). 값은 1쪽 표와 같은
+  ///         지표다(`ReportChartAxes.ptpOf()`)
   ///       P2P 가 없는 축(진동 축이 아님, 예전 결과)은 바로 돌아간다. 0 으로
   ///       채우지 않는다.
   /// 인자: canvas — 그리기 도구
@@ -718,6 +756,9 @@ class ReportChartRenderer {
   ///       spec — 그리는 축의 사양
   ///       values — 그린 시계열 (줄이기 전)
   ///       result — 지표와 표본 주기를 가진 측정 결과
+  /// 근거: 인용 — 2026-10-15 사용자 지시 "굵은 점으로 표시하고 그 선
+  ///       왼쪽이든 오른쪽이든 가능한 부분에 값 표시". 예전에는 작은 점과
+  ///       축 틀 위쪽 모서리 글자였다
   void _drawPeakToPeak(
     PdfGraphics canvas,
     _ChartFrame frame,
@@ -731,72 +772,105 @@ class ReportChartRenderer {
     final at = extremeIndices(values); // 최댓값 · 최솟값 자리, 비면 null
     if (ptp == null || at == null) return;
 
-    canvas.setFillColor(reportPdfColor(ReportColors.chartMarker));
-    for (final index in <int>[at.maxIndex, at.minIndex]) {
-      canvas
-        ..drawEllipse(
-          frame.xOfTime(index / result.sampleRate),
-          frame.yOfValue(values[index]),
-          markerRadius,
-          markerRadius,
-        )
-        ..fillPath();
+    for (final index in <int>[at.minIndex, at.maxIndex]) {
+      // → 로직 이동: _drawMarker()
+      _drawMarker(
+        canvas,
+        frame.xOfTime(index / result.sampleRate),
+        frame.yOfValue(values[index]),
+      );
     }
 
-    // → 로직 이동: _drawCornerLabel()
-    _drawCornerLabel(
+    // → 로직 이동: _drawSideLabel()
+    _drawSideLabel(
       canvas,
       frame,
       p2pLabel(ptp),
-      awayFromX: frame.xOfTime(at.maxIndex / result.sampleRate),
+      anchorX: frame.xOfTime(at.maxIndex / result.sampleRate),
+      anchorY: frame.yOfValue(values[at.maxIndex]),
     );
   }
 
-  /// 작성: 2026-10-12 02:15:16 · nada
-  /// 수정: 2026-10-12 02:17:25 · nada
-  /// 함수: _drawCornerLabel
-  /// 목적: 차트 값 글자를 축 틀 위쪽 모서리 안쪽에 빨간색으로 적는다. 진동
-  ///       P2P 와 소음 최댓값이 같은 규칙을 쓴다.
-  ///       - 표시점 옆에 적으면 점이 축 끝 가까이 있을 때 글자가 틀 밖으로
-  ///         잘린다. 그래서 틀 안 위쪽 모서리에 둔다
-  ///       - 축 위쪽 띠는 세로 여유(`ChartScale.headroomRatio`) 덕분에
-  ///         최댓값 봉우리 근처만 빼면 비어 있다. 그래서 봉우리와 먼 쪽
-  ///         모서리를 고른다 — 봉우리가 오른쪽 절반이면 왼쪽 위, 아니면
-  ///         오른쪽 위다. 같은 모서리에 두면 오른쪽 끝 봉우리와 겹쳤다
-  ///         (2026-10-12 레퍼런스폰 소음 차트)
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 함수: _drawMarker
+  /// 목적: 표시점 하나를 굵은 빨간 원으로 찍는다. 흰 테를 먼저 깔고 그
+  ///       위에 빨간 원을 얹어, 파란 파형 위에서도 점이 갈라져 보이게 한다.
+  /// 인자: canvas — 그리기 도구
+  ///       x, y — 점 중심 (포인트)
+  void _drawMarker(PdfGraphics canvas, double x, double y) {
+    const ring = markerRadius + markerRingWidth; // 흰 테 반지름 (포인트)
+    canvas
+      ..setFillColor(PdfColors.white)
+      ..drawEllipse(x, y, ring, ring)
+      ..fillPath()
+      ..setFillColor(reportPdfColor(ReportColors.chartMarker))
+      ..drawEllipse(x, y, markerRadius, markerRadius)
+      ..fillPath();
+  }
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 함수: _drawSideLabel
+  /// 목적: 표시점 옆에 값을 흰 상자에 빨간 굵은 글자로 적는다.
+  ///       - 가로: 점 오른쪽에 둔다. 상자가 축 틀 오른쪽을 넘으면 점
+  ///         왼쪽에 둔다. 왼쪽도 넘으면(차트가 아주 좁음) 틀 안으로 밀어
+  ///         넣는다
+  ///       - 세로: 점과 같은 높이 가운데에 두되 틀 위 · 아래를 넘으면 틀
+  ///         안으로 밀어 넣는다. 최댓값 점은 축 위 끝 가까이 있기 쉬워,
+  ///         그대로 두면 글자가 틀 밖으로 잘린다
+  ///       - 흰 상자와 빨간 테두리를 깔아 파형 선이 글자와 겹쳐 보이지
+  ///         않게 한다
   /// 인자: canvas — 그리기 도구
   ///       frame — 축 틀과 값 옮기기
   ///       text — 적을 문구
-  ///       awayFromX — 피할 최댓값 표시점의 가로 자리 (포인트)
-  void _drawCornerLabel(
+  ///       anchorX, anchorY — 옆에 붙을 표시점 중심 (포인트)
+  void _drawSideLabel(
     PdfGraphics canvas,
     _ChartFrame frame,
     String text, {
-    required double awayFromX,
+    required double anchorX,
+    required double anchorY,
   }) {
-    final width = _widthOf(text, markerLabelSize); // 글자 폭 (포인트)
-    final x = awayFromX > frame.centerX
-        ? frame.left + cornerLabelInset
-        : frame.right - cornerLabelInset - width; // 글자 왼쪽 끝
+    final textWidth = _widthOf(text, markerLabelSize, labelFont); // 글자 폭
+    final boxWidth = textWidth + labelPadding * 2; // 상자 가로 (포인트)
+    const boxHeight = markerLabelSize + labelPadding * 2; // 상자 세로 (포인트)
+    const reach = markerRadius + markerRingWidth + labelGap; // 점에서 띄움
+    final minLeft = frame.left + labelInset; // 상자 왼쪽 끝 하한
+    final maxLeft = frame.right - labelInset - boxWidth; // 상자 왼쪽 끝 상한
+
+    var left = anchorX + reach; // 상자 왼쪽 끝. 먼저 점 오른쪽에 둔다
+    if (left > maxLeft) left = anchorX - reach - boxWidth;
+    left = left.clamp(minLeft, math.max(minLeft, maxLeft)).toDouble();
+
+    final centerY = anchorY.clamp(
+      frame.bottom + labelInset + boxHeight / 2,
+      frame.top - labelInset - boxHeight / 2,
+    ); // 상자 세로 가운데
+
+    canvas
+      ..setFillColor(PdfColors.white)
+      ..setStrokeColor(reportPdfColor(ReportColors.chartMarker))
+      ..setLineWidth(labelBorderWidth)
+      ..drawRect(left, centerY - boxHeight / 2, boxWidth, boxHeight)
+      ..fillAndStrokePath();
     _drawText(
       canvas,
       text: text,
       size: markerLabelSize,
-      x: x,
-      centerY: frame.top - cornerLabelInset - markerLabelSize / 2,
+      x: left + labelPadding,
+      centerY: centerY,
       color: ReportColors.chartMarker,
+      font: labelFont,
     );
   }
 
   /// 작성: 2026-09-26 14:10:00 · nada
-  /// 수정: 2026-10-12 02:15:16 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _drawAnnotations
   /// 목적: 원본 리포트가 소음 차트에 붙이는 표시 둘을 그린다.
   ///       - 평균 자리에 가로로 긋는 붉은 점선 한 줄
-  ///       - 최댓값이 나온 자리에 붉은 점, 그 값은 축 틀 위쪽 모서리에
-  ///         "최대 값" 으로(`_drawCornerLabel()`). 예전에는 점 바로 위에 적어, 최댓값이 축 위끝
-  ///         가까이 있으면 글자가 틀 밖으로 잘려 보이지 않았다. P2P 글자와
-  ///         같은 규칙에 맞춘다(2026-10-12 사용자 지시)
+  ///       - 최댓값이 나온 자리에 굵은 빨간 점(`_drawMarker()`), 그 옆에
+  ///         "최대 값"(`_drawSideLabel()`). P2P 표시와 같은 규칙이다
+  ///         (2026-10-15 사용자 지시)
   ///       값은 이 자리에서 다시 세지 않고 1쪽 표가 쓰는 지표에서 꺼낸다.
   ///       같은 값을 두 곳에서 세면 차트와 표가 다른 숫자를 말하게 된다.
   ///       그릴 것이 없는 축은 사양에 지표 이름이 없어 바로 돌아간다.
@@ -856,12 +930,17 @@ class ReportChartRenderer {
     if (peakValue != null && at >= 0) {
       final x = frame.xOfTime(at / result.sampleRate); // 표시점의 가로 자리
       final y = frame.yOfValue(peakValue); // 표시점의 세로 자리
-      canvas
-        ..setFillColor(reportPdfColor(ReportColors.chartMarker))
-        ..drawEllipse(x, y, markerRadius, markerRadius)
-        ..fillPath();
-      // → 로직 이동: _drawCornerLabel()
-      _drawCornerLabel(canvas, frame, '최대 ${peak!.display}', awayFromX: x);
+      canvas.restoreContext(); // 점 · 상자는 틀 선에 걸쳐도 잘리지 않게
+      _drawMarker(canvas, x, y); // → 로직 이동: _drawMarker()
+      // → 로직 이동: _drawSideLabel()
+      _drawSideLabel(
+        canvas,
+        frame,
+        '최대 ${peak!.display}',
+        anchorX: x,
+        anchorY: y,
+      );
+      return;
     }
 
     canvas.restoreContext();
@@ -1143,6 +1222,7 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _drawText
   /// 목적: 글자 한 덩이를 찍는다. 세로 자리를 글자가 앉는 선이 아니라
   ///       글자 덩이의 한가운데로 받아, 눈금 자리에 맞춰 놓기 쉽게 한다.
@@ -1152,6 +1232,7 @@ class ReportChartRenderer {
   ///       x — 찍기 시작할 가로 자리 (포인트)
   ///       centerY — 글자 덩이의 세로 한가운데 (포인트)
   ///       color — 글자색 (0xRRGGBB). 안 주면 본문 글자색
+  ///       font — 쓸 글꼴. 안 주면 눈금 · 축 라벨 글꼴(`font`)
   /// 식: baseline = centerY - (top + bottom) / 2 x size
   ///     `top` 과 `bottom` 은 글꼴이 알려 주는 글자 덩이의 아래 · 위 끝이다.
   ///     글자 크기 1 을 기준으로 한 값이라 크기를 곱해 쓴다
@@ -1162,13 +1243,15 @@ class ReportChartRenderer {
     required double x,
     required double centerY,
     int color = ReportColors.text,
+    PdfFont? font,
   }) {
-    final metrics = font.stringMetrics(text); // 이 문구가 차지하는 넓이
+    final face = font ?? this.font; // 이번에 쓸 글꼴
+    final metrics = face.stringMetrics(text); // 이 문구가 차지하는 넓이
     final baseline =
         centerY - (metrics.top + metrics.bottom) / 2 * size; // 글자가 앉는 선
     canvas
       ..setFillColor(reportPdfColor(color))
-      ..drawString(font, size, text, x, baseline);
+      ..drawString(face, size, text, x, baseline);
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -1210,14 +1293,16 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _widthOf
   /// 목적: 문구를 그 크기로 찍었을 때의 너비를 구한다. 가운데 맞춤과 오른쪽
-  ///       맞춤에 쓴다.
+  ///       맞춤, 값 상자 크기에 쓴다.
   /// 인자: text — 잴 문구
   ///       size — 글자 크기 (포인트)
+  ///       face — 잴 글꼴. 안 주면 눈금 · 축 라벨 글꼴(`font`)
   /// 반환: 문구 너비 (포인트)
-  double _widthOf(String text, double size) =>
-      font.stringMetrics(text).advanceWidth * size;
+  double _widthOf(String text, double size, [PdfFont? face]) =>
+      (face ?? font).stringMetrics(text).advanceWidth * size;
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 함수: _formatTick

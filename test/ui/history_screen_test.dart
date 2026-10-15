@@ -53,7 +53,7 @@ MeasurementResult _result(String id, String jobNo, DateTime measuredAt) {
     dateTime: measuredAt,
     xPtp: 5.0,
     yPtp: 5.0,
-    zPtp: 20.0,
+    zPtp: 32.0,
     noiseMax: 45.0,
     xSeries: const <double>[],
     ySeries: const <double>[],
@@ -128,8 +128,8 @@ void main() {
     final newer = tester.getTopLeft(find.text('J-NEW · 현장')); // 최근 줄 위치
     final older = tester.getTopLeft(find.text('J-OLD · 현장')); // 옛 줄 위치
     expect(newer.dy, lessThan(older.dy));
-    expect(find.text('초과'), findsNWidgets(2), reason: 'Z 20mg 은 15mg 초과');
-    expect(find.textContaining('Z 20.0mg 초과'), findsNWidgets(2));
+    expect(find.text('초과'), findsNWidgets(2), reason: 'Z 32mg 은 30mg 초과');
+    expect(find.textContaining('Z 32.0mg 초과'), findsNWidgets(2));
   });
 
   testWidgets('한 줄을 누르면 그 측정의 결과 화면이 열린다', (tester) async {
