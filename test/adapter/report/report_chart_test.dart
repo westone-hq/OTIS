@@ -580,8 +580,8 @@ void main() {
       final result = _result().copyWith(xPtp: 14.2125, zPtp: 108.3677);
       final metrics = ReportMetrics.from(result); // 1쪽 표 지표
 
-      expect(ReportChartRenderer.p2pLabel(14.2125), 'P2P 14.2mg');
-      expect(ReportChartRenderer.p2pLabel(108.3677), 'P2P 108mg');
+      expect(ReportChartRenderer.p2pLabel(14.2125), 'P2P 14.2milli-G');
+      expect(ReportChartRenderer.p2pLabel(108.3677), 'P2P 108milli-G');
       expect(
         metrics.vertMax.display,
         ReportChartRenderer.p2pLabel(108.3677).substring(4),

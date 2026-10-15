@@ -2,6 +2,7 @@ import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-15 21:14:33 · nada
+/// 수정: 2026-10-15 15:53:26 · nada
 /// 클래스: ReportMetric
 /// 목적: Performance Metrics 표의 한 행에 들어갈 지표 하나를 담는다. 값과
 ///       단위뿐 아니라, 그 값을 표에 어떻게 찍을지(`display`)와 신호등을
@@ -12,30 +13,39 @@ import 'package:vibration_checker/model/measurement_result.dart';
 ///       만든다. 그때 `display` 는 `—` 이고 `verdict` 는 미확정이다.
 ///       재지 못한 자리를 0 이나 빈 문자열로 메우지 않는다.
 class ReportMetric {
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: vibrationUnit
+  /// 목적: 리포트가 진동 값(mg) 뒤에 붙이는 단위 표기. 1쪽 표와 차트
+  ///       값 글자가 함께 쓴다. 저장 값 · 앱 화면의 단위는 그대로 mg 다.
+  /// 근거: 인용 — 2026-10-15 사용자 지시 "mg 값 milli-G 로 단위 표기
+  ///       변경". 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제 현장
+  ///       리포트) 1쪽 표기 "3.6milli-G A95"
+  static const String vibrationUnit = 'milli-G';
+
   /// 서식에서 이 행을 부르는 이름. `ReportPage1.metricRows` 의 `key` 와 같다
   final String key;
 
   /// 지표 값. 아직 낼 수 없으면 null
   final double? value;
 
-  /// 값 뒤에 붙는 단위 (`dBA`, `mg`, `m/s`, `m`)
+  /// 값 뒤에 붙는 단위 (`dBA`, `vibrationUnit`, `m/s`, `m`)
   final String unit;
 
   /// 단위 뒤에 한 칸 띄고 붙는 꼬리표. 지금은 평균 진동의 `A95` 뿐이고,
   /// 없으면 빈 문자열
   final String suffix;
 
-  /// 값 뒤 괄호 안에 붙는 내역. 수평 진동 행의 `X 8.2 / Y 12.9` 처럼 한
-  /// 행에 두 축을 함께 보고할 때 쓴다. 없으면 빈 문자열
-  final String detail;
+  /// 황색 칸에 찍는 기준치. 칸을 비우는 행이면 null
+  final double? yellowLimit;
 
-  /// 적색 기준치. 기준이 없는 항목이면 null
+  /// 적색 칸에 찍는 기준치. 칸을 비우는 행이면 null
   final double? redLimit;
 
   /// 신호등 색. `ReportThresholds` 가 정한다
   final ReportVerdict verdict;
 
   /// 작성: 2026-09-15 21:14:33 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: ReportMetric
   /// 목적: 지표 한 행의 값과 표시 정보를 그대로 담는 생성자.
   /// 인자: key — 서식 행 이름
@@ -43,23 +53,25 @@ class ReportMetric {
   ///       unit — 단위
   ///       verdict — 신호등 색
   ///       suffix — 꼬리표. 기본 빈 문자열
-  ///       detail — 괄호 안 내역. 기본 빈 문자열
-  ///       redLimit — 적색 기준치. 기준이 없으면 null
+  ///       yellowLimit, redLimit — 황색 · 적색 칸 기준치. 칸을 비우면
+  ///       null
   const ReportMetric({
     required this.key,
     required this.value,
     required this.unit,
     required this.verdict,
     this.suffix = '',
-    this.detail = '',
+    this.yellowLimit,
     this.redLimit,
   });
 
   /// 작성: 2026-09-15 21:14:33 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: display
   /// 목적: 표의 값 칸에 그대로 찍을 문자열을 만든다. 값이 100 이상이면
-  ///       소수점을 떼고, 그보다 작으면 한 자리만 남긴다. 꼬리표와 내역이
-  ///       있으면 뒤에 붙인다.
+  ///       소수점을 떼고, 그보다 작으면 한 자리만 남긴다. 꼬리표가 있으면
+  ///       뒤에 붙인다. 수평 행에 X · Y 내역을 덧붙이지 않는다(2026-10-15
+  ///       사용자 지시) — 원본 리포트도 큰 쪽 값 하나만 적는다.
   /// 반환: 값 칸 문자열. 값이 없으면 `—`
   String get display {
     final amount = value; // 지역으로 옮겨야 null 검사가 이어진다
@@ -67,19 +79,29 @@ class ReportMetric {
     final digits = amount.abs() >= 100
         ? amount.toStringAsFixed(0)
         : amount.toStringAsFixed(1); // 자릿수를 맞춘 숫자 부분
-    final buffer = StringBuffer('$digits$unit'); // 쌓아 갈 문자열
-    if (suffix.isNotEmpty) buffer.write(' $suffix');
-    if (detail.isNotEmpty) buffer.write('  ($detail)');
-    return buffer.toString();
+    return suffix.isEmpty ? '$digits$unit' : '$digits$unit $suffix';
   }
 
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 함수: yellowDisplay
+  /// 목적: 표의 황색 기준 칸에 찍을 문자열을 만든다.
+  /// 반환: 기준치 문자열. 칸을 비우는 행이면 빈 문자열
+  String get yellowDisplay => _limitText(yellowLimit);
+
   /// 작성: 2026-09-15 21:14:33 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: redDisplay
-  /// 목적: 표의 적색 기준 칸에 찍을 문자열을 만든다. 기준이 없는 행은
-  ///       칸을 비운다.
-  /// 반환: 기준치 문자열. 기준이 없으면 빈 문자열
-  String get redDisplay {
-    final limit = redLimit; // 지역으로 옮겨야 null 검사가 이어진다
+  /// 목적: 표의 적색 기준 칸에 찍을 문자열을 만든다.
+  /// 반환: 기준치 문자열. 칸을 비우는 행이면 빈 문자열
+  String get redDisplay => _limitText(redLimit);
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 함수: _limitText
+  /// 목적: 기준치 하나를 칸에 찍을 문자열로 바꾼다. 정수면 소수점을 떼고
+  ///       ("60"), 아니면 그대로("13.5") 적는다.
+  /// 인자: limit — 기준치. 없으면 null
+  /// 반환: 기준치 문자열. 없으면 빈 문자열
+  static String _limitText(double? limit) {
     if (limit == null) return '';
     return limit == limit.roundToDouble()
         ? limit.toStringAsFixed(0)
@@ -88,6 +110,7 @@ class ReportMetric {
 }
 
 /// 작성: 2026-09-15 21:14:33 · nada
+/// 수정: 2026-10-15 15:53:26 · nada
 /// 클래스: ReportMetrics
 /// 목적: 측정 결과 하나에서 Performance Metrics 표 여덟 행을 만든다.
 ///       임계값은 여기 적지 않고 `ReportThresholds` 에서 가져온다.
@@ -185,6 +208,7 @@ class ReportMetrics {
   }
 
   /// 작성: 2026-09-15 21:14:33 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: from
   /// 목적: 측정 결과 하나에서 표 여덟 행을 만든다. 값을 낼 수 있는 항목만
   ///       채우고 나머지는 비운 채로 둔다.
@@ -196,11 +220,10 @@ class ReportMetrics {
     final noiseAverage = _average(noise); // 소음 평균 (dBA). 표본이 없으면 null
     final noisePeak = result.noiseMax; // 소음 최대 (dBA). 시계열에서 다시 세지 않는다
 
-    // 수평 행은 적색 기준을 칸 하나에만 찍는다. X 와 Y 기준이 갈라지면
-    // 그 칸으로는 둘을 다 보여줄 수 없고, 조용히 X 기준만 나가 틀린 표가
-    // 된다. 방어 분기로 받아내는 대신 가정을 여기 박아 둔다 — 갈라지는
-    // 날 디버그 실행에서 곧바로 터지고, 릴리스 빌드에서는 지워져 비용이
-    // 없다
+    // 수평 최대 행의 적색 칸은 하나뿐이다. X 와 Y 기준이 갈라지면 그 칸으로
+    // 둘을 다 보여줄 수 없고, 조용히 X 기준만 나가 틀린 표가 된다. 방어
+    // 분기로 받아내는 대신 가정을 여기 박아 둔다 — 갈라지는 날 디버그
+    // 실행에서 곧바로 터지고, 릴리스 빌드에서는 지워져 비용이 없다
     assert(
       ReportThresholds.xPtpRedMg == ReportThresholds.yPtpRedMg,
       '수평 행의 적색 기준 칸은 하나뿐이라 X 와 Y 기준이 같아야 한다: '
@@ -211,69 +234,107 @@ class ReportMetrics {
       result.xA95,
       result.yA95,
     ); // 수평 A95 중 큰 값 (mg)
+    const vibration = ReportMetric.vibrationUnit; // 진동 단위 표기
+    const unjudged = ReportThresholds.unjudgedLimit; // 판정 없는 행의 칸 값
 
     return ReportMetrics(
       noiseAvg: ReportMetric(
         key: 'noise_avg',
         value: noiseAverage,
         unit: 'dBA',
-        verdict: ReportThresholds.judge(noiseAverage, null),
+        yellowLimit: ReportThresholds.noiseAvgYellowDba,
+        redLimit: ReportThresholds.noiseAvgRedDba,
+        // → 로직 이동: ReportThresholds.judge()
+        verdict: ReportThresholds.judge(
+          noiseAverage,
+          ReportThresholds.noiseAvgYellowDba,
+          ReportThresholds.noiseAvgRedDba,
+        ),
       ),
       noiseMax: ReportMetric(
         key: 'noise_max',
         value: noisePeak,
         unit: 'dBA',
+        yellowLimit: ReportThresholds.noiseMaxYellowDba,
         redLimit: ReportThresholds.noiseMaxRedDba,
+        // → 로직 이동: ReportThresholds.judge()
         verdict: ReportThresholds.judge(
           noisePeak,
+          ReportThresholds.noiseMaxYellowDba,
           ReportThresholds.noiseMaxRedDba,
         ),
       ),
       vertAvg: ReportMetric(
         key: 'vert_avg',
         value: result.zA95,
-        unit: 'mg',
+        unit: vibration,
         suffix: 'A95',
-        verdict: ReportThresholds.judge(result.zA95, null),
+        yellowLimit: ReportThresholds.zA95YellowMg,
+        redLimit: ReportThresholds.zA95RedMg,
+        // → 로직 이동: ReportThresholds.judge()
+        verdict: ReportThresholds.judge(
+          result.zA95,
+          ReportThresholds.zA95YellowMg,
+          ReportThresholds.zA95RedMg,
+        ),
       ),
       vertMax: ReportMetric(
         key: 'vert_max',
         value: result.zPtp,
-        unit: 'mg',
+        unit: vibration,
+        yellowLimit: ReportThresholds.zPtpYellowMg,
         redLimit: ReportThresholds.zPtpRedMg,
+        // → 로직 이동: ReportThresholds.judge()
         verdict: ReportThresholds.judge(
           result.zPtp,
+          ReportThresholds.zPtpYellowMg,
           ReportThresholds.zPtpRedMg,
         ),
       ),
       horizAvg: ReportMetric(
         key: 'horiz_avg',
         value: horizontalA95,
-        unit: 'mg',
+        unit: vibration,
         suffix: 'A95',
-        detail: _horizontalDetail(result.xA95, result.yA95),
-        verdict: ReportThresholds.judge(horizontalA95, null),
+        yellowLimit: ReportThresholds.horizA95YellowMg,
+        redLimit: ReportThresholds.horizA95RedMg,
+        // → 로직 이동: ReportThresholds.judgeHorizontal()
+        verdict: ReportThresholds.judgeHorizontal(
+          result.xA95,
+          result.yA95,
+          ReportThresholds.horizA95YellowMg,
+          ReportThresholds.horizA95RedMg,
+        ),
       ),
       horizMax: ReportMetric(
         key: 'horiz_max',
         value: horizontal,
-        unit: 'mg',
-        detail: _horizontalDetail(result.xPtp, result.yPtp),
+        unit: vibration,
+        yellowLimit: ReportThresholds.horizPtpYellowMg,
         redLimit: ReportThresholds.xPtpRedMg,
         // → 로직 이동: ReportThresholds.judgeHorizontal()
-        verdict: ReportThresholds.judgeHorizontal(result.xPtp, result.yPtp),
+        verdict: ReportThresholds.judgeHorizontal(
+          result.xPtp,
+          result.yPtp,
+          ReportThresholds.horizPtpYellowMg,
+          ReportThresholds.xPtpRedMg,
+        ),
       ),
       maxSpeed: ReportMetric(
         key: 'max_speed',
         value: result.maxSpeed,
         unit: 'm/s',
-        verdict: ReportThresholds.judge(result.maxSpeed, null),
+        yellowLimit: unjudged,
+        redLimit: unjudged,
+        verdict: ReportVerdict.none,
       ),
       travelDistance: ReportMetric(
         key: 'travel_distance',
         value: result.distance,
         unit: 'm',
-        verdict: ReportThresholds.judge(result.distance, null),
+        yellowLimit: unjudged,
+        redLimit: unjudged,
+        verdict: ReportVerdict.none,
       ),
     );
   }
@@ -328,19 +389,5 @@ class ReportMetrics {
     if (xPtp == null) return yPtp;
     if (yPtp == null) return xPtp;
     return xPtp > yPtp ? xPtp : yPtp;
-  }
-
-  /// 작성: 2026-09-15 21:14:33 · nada
-  /// 함수: _horizontalDetail
-  /// 목적: 수평 진동 행의 값 뒤에 붙일 축별 내역을 만든다. 행에는 큰 쪽
-  ///       값만 싣지만, 요구사항이 X 와 Y 를 각각 보고하도록 정하고 있어
-  ///       어느 축이 얼마였는지를 함께 적는다. 한쪽만 싣고 끝내면 안 된다.
-  /// 인자: xPtp — X축 진동 P2P (mg). 없으면 null
-  ///       yPtp — Y축 진동 P2P (mg). 없으면 null
-  /// 반환: `X 8.2 / Y 12.9` 형태의 문자열. 못 잰 축은 `—` 로 적는다
-  static String _horizontalDetail(double? xPtp, double? yPtp) {
-    final x = xPtp == null ? '—' : xPtp.toStringAsFixed(1); // X축 표기
-    final y = yPtp == null ? '—' : yPtp.toStringAsFixed(1); // Y축 표기
-    return 'X $x / Y $y';
   }
 }

@@ -64,7 +64,7 @@ MeasurementResult _siteResult({
 }
 
 /// 작성: 2026-09-16 09:12:40 · nada
-/// 수정: 2026-10-13 13:17:56 · nada
+/// 수정: 2026-10-15 15:53:26 · nada
 /// 함수: main
 /// 목적: 1쪽 렌더링을 시험한다. 자리가 맞는지는 `ReportLayout` 과 대조하는
 ///       `report_layout_test.dart` 가 맡으므로, 여기서는 PDF 가 실제로
@@ -144,6 +144,31 @@ void main() {
           _siteResult(model: '줄-로우프, 2:1'),
         )['product'],
         '엘리베이터, 줄-로우프 2:1',
+      );
+    });
+
+    test('층 정보는 Start Floor · Stop Floor 로 적는다', () {
+      expect(
+        ReportPage1Renderer.headerValues(_siteResult())['floors'],
+        'Start Floor : ${_siteResult().bottomFloor}, '
+        'Stop Floor : ${_siteResult().topFloor}',
+      );
+    });
+
+    test('측정 일시는 기기 시간대와 상관없이 한국 시간이다', () {
+      final utc = _siteResult().copyWith(
+        dateTime: DateTime.utc(2026, 1, 14, 2, 3, 59),
+      ); // UTC 02:03:59 = 한국 11:03:59
+      expect(
+        ReportPage1Renderer.headerValues(utc)['datetime'],
+        '14/01/2026 11:03:59 AM',
+      );
+      final evening = _siteResult().copyWith(
+        dateTime: DateTime.utc(2026, 1, 14, 15, 30),
+      ); // UTC 15:30 = 한국 다음 날 00:30
+      expect(
+        ReportPage1Renderer.headerValues(evening)['datetime'],
+        '15/01/2026 12:30:00 AM',
       );
     });
 

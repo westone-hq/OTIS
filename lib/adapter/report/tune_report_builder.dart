@@ -44,6 +44,7 @@ class TuneReportBuilder {
   });
 
   /// 작성: 2026-09-26 09:30:00 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: load
   /// 목적: 글꼴 두 벌과 서식 이미지 두 장을 자산에서 한 번에 읽어, 한
   ///       문서를 함께 쓰는 렌더러 둘을 만든다.
@@ -86,7 +87,10 @@ class TuneReportBuilder {
           bytes: chartBytes.buffer.asUint8List(),
         ),
         textWriter: writer,
-        chartRenderer: ReportChartRenderer(font: regular),
+        chartRenderer: ReportChartRenderer(
+          font: regular,
+          labelFont: writer.bold,
+        ),
       ),
     );
   }

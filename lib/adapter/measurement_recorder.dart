@@ -10,6 +10,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/time/korea_time.dart';
 
 /// 작성: 2026-10-04 13:29:41 · nada
 /// 클래스: RecordFailure
@@ -239,7 +240,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -284,7 +285,9 @@ class MeasurementRecorder {
       return const RecordOutcome.failure(RecordFailure.noSamples);
     }
 
-    final id = DateFormat('yyyyMMdd-HHmmss').format(measuredAt); // 측정 ID
+    final id = DateFormat(
+      'yyyyMMdd-HHmmss',
+    ).format(KoreaTime.of(measuredAt)); // 측정 ID (한국 시간)
     final grid = resampler.resample(); // → 로직 이동: GridResampler.resample()
 
     try {

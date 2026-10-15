@@ -136,8 +136,8 @@ void main() {
       expect('[2.4 1.6] 0 d'.allMatches(page2).length, 1, reason: '평균 기준선 한 줄');
       expect(
         '$markerColorOperand RG'.allMatches(page2).length,
-        1,
-        reason: '평균선을 붉게 긋는다',
+        2,
+        reason: '평균선과 최댓값 상자 테두리를 붉게 긋는다',
       );
       expect(
         '$markerColorOperand rg'.allMatches(page2).length,

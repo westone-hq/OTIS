@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 import '../../core/theme.dart';
@@ -137,12 +138,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _formatDate
-  /// 목적: 측정 일시를 목록에 쓸 문구로 바꾼다.
+  /// 목적: 측정 일시를 목록에 쓸 문구로 바꾼다. 기기 시간대와 상관없이
+  ///       한국 시간으로 적는다(`KoreaTime.of()`).
   /// 인자: dt — 측정 일시
-  /// 반환: "yyyy-MM-dd HH:mm" 꼴 문구
-  String _formatDate(DateTime dt) => DateFormat('yyyy-MM-dd HH:mm').format(dt);
+  /// 반환: "yyyy-MM-dd HH:mm" 꼴 문구 (한국 시간)
+  String _formatDate(DateTime dt) =>
+      DateFormat('yyyy-MM-dd HH:mm').format(KoreaTime.of(dt));
 
   /// 작성: 2026-10-04 18:38:14 · nada
   /// 함수: _statusOf

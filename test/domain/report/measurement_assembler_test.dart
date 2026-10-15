@@ -660,7 +660,7 @@ void main() {
 
         expect(model.noiseSeries.length, 11388);
         expect(model.noiseMax!, closeTo(65.600000, 1e-6));
-        expect(model.noiseExceeded, isTrue, reason: '65.6 은 적색 기준 50 을 넘는다');
+        expect(model.noiseExceeded, isFalse, reason: '65.6 은 적색 기준 75 아래다');
       });
 
       test('원본 리포트 값과 1% 이내로 맞는다', () {

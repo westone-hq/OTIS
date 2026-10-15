@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/domain/time/korea_time.dart';
 
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -184,7 +185,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-11 19:17:58 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -297,7 +298,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
     final dateStr = DateFormat(
       'yyyy-MM-dd HH:mm',
-    ).format(result.dateTime); // 메일 제목에 쓸 날짜 문구
+    ).format(KoreaTime.of(result.dateTime)); // 메일 제목 날짜 (한국 시간)
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
     final notes = result.notes; // 추가 참고사항, 없으면 null
     final bodyLines = <String>[

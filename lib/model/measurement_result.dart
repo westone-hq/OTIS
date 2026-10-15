@@ -392,58 +392,49 @@ class MeasurementResult {
       MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-09-15 20:13:49 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: xExceeded
   /// 목적: X축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
   ///       안에서 기준이 적힌 곳을 한 군데로 두기 위해서다.
   /// 반환: 기준치(`ReportThresholds.xPtpRedMg`) 초과 시 true. `xPtp` 가 null 이면
   ///       null — 아직 재지 않은 값을 "정상"으로 보고하지 않기 위해서다
-  /// 근거: 인용 — 요구사항서 `Vibration_Checking_App_Development_20260630.pdf`
-  ///       6쪽 "결과 Report 파일에 포함되어야 하는 정보" 표가 리포트에 실을
-  ///       값과 적색 표시 기준을 정했다. 거기서 X축 진동 p2p 의 적색 기준을
-  ///       정했고, 황색 단계는 두지 않았다. 요구사항서 자체는
-  ///       저장소에 없고, 그 내용은 `pdf_report_dev/README.md` "판정 기준"
-  ///       절이 옮겨 적어 두었다
+  /// 근거: 인용 — `ReportThresholds` 의 적색 기준(2026-10-15 사용자
+  ///       지시, 원본 TUNE 리포트 서식의 적색 값). 리포트 신호등은
+  ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get xExceeded =>
       ReportThresholds.exceeds(xPtp, ReportThresholds.xPtpRedMg);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-09-15 20:13:49 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: yExceeded
   /// 목적: Y축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
   ///       안에서 기준이 적힌 곳을 한 군데로 두기 위해서다.
   /// 반환: 기준치(`ReportThresholds.yPtpRedMg`) 초과 시 true. `yPtp` 가 null 이면
   ///       null — 아직 재지 않은 값을 "정상"으로 보고하지 않기 위해서다
-  /// 근거: 인용 — 요구사항서 `Vibration_Checking_App_Development_20260630.pdf`
-  ///       6쪽 "결과 Report 파일에 포함되어야 하는 정보" 표가 리포트에 실을
-  ///       값과 적색 표시 기준을 정했다. 거기서 Y축 진동 p2p 의 적색 기준을
-  ///       정했고, 황색 단계는 두지 않았다. 요구사항서 자체는
-  ///       저장소에 없고, 그 내용은 `pdf_report_dev/README.md` "판정 기준"
-  ///       절이 옮겨 적어 두었다
+  /// 근거: 인용 — `ReportThresholds` 의 적색 기준(2026-10-15 사용자
+  ///       지시, 원본 TUNE 리포트 서식의 적색 값). 리포트 신호등은
+  ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get yExceeded =>
       ReportThresholds.exceeds(yPtp, ReportThresholds.yPtpRedMg);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-09-15 20:13:49 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: zExceeded
   /// 목적: Z축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
   ///       안에서 기준이 적힌 곳을 한 군데로 두기 위해서다.
   /// 반환: 기준치(`ReportThresholds.zPtpRedMg`) 초과 시 true. `zPtp` 가 null 이면
   ///       null — 아직 재지 않은 값을 "정상"으로 보고하지 않기 위해서다
-  /// 근거: 인용 — 요구사항서 `Vibration_Checking_App_Development_20260630.pdf`
-  ///       6쪽 "결과 Report 파일에 포함되어야 하는 정보" 표가 리포트에 실을
-  ///       값과 적색 표시 기준을 정했다. 거기서 Z축 진동 p2p 의 적색 기준을
-  ///       정했고, 황색 단계는 두지 않았다. 요구사항서 자체는
-  ///       저장소에 없고, 그 내용은 `pdf_report_dev/README.md` "판정 기준"
-  ///       절이 옮겨 적어 두었다
+  /// 근거: 인용 — `ReportThresholds` 의 적색 기준(2026-10-15 사용자
+  ///       지시, 원본 TUNE 리포트 서식의 적색 값). 리포트 신호등은
+  ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get zExceeded =>
       ReportThresholds.exceeds(zPtp, ReportThresholds.zPtpRedMg);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-09-15 20:13:49 · nada
+  /// 수정: 2026-10-15 15:53:26 · nada
   /// 함수: noiseExceeded
   /// 목적: 최대 소음이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
@@ -451,12 +442,9 @@ class MeasurementResult {
   /// 반환: 기준치(`ReportThresholds.noiseMaxRedDba`) 초과 시 true.
   ///       `noiseMax` 가 null 이면 null — 아직 재지 않은 값을 "정상"으로
   ///       보고하지 않기 위해서다
-  /// 근거: 인용 — 요구사항서 `Vibration_Checking_App_Development_20260630.pdf`
-  ///       6쪽 "결과 Report 파일에 포함되어야 하는 정보" 표가 리포트에 실을
-  ///       값과 적색 표시 기준을 정했다. 거기서 최대 소음의 적색 기준을
-  ///       정했고, 황색 단계는 두지 않았다. 요구사항서 자체는
-  ///       저장소에 없고, 그 내용은 `pdf_report_dev/README.md` "판정 기준"
-  ///       절이 옮겨 적어 두었다
+  /// 근거: 인용 — `ReportThresholds` 의 적색 기준(2026-10-15 사용자
+  ///       지시, 원본 TUNE 리포트 서식의 적색 값). 리포트 신호등은
+  ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get noiseExceeded =>
       ReportThresholds.exceeds(noiseMax, ReportThresholds.noiseMaxRedDba);
 }

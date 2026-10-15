@@ -577,7 +577,7 @@ class ReportPage1 {
   /// 라벨이 없는 7~8행에서 값을 쓰기 시작하는 가로 좌표 (픽셀)
   static const int colValueNoLabelX = 742;
 
-  /// 황색 단계 칸의 가로 좌표 (픽셀). 요구사항에 황색 기준이 없어 비운다
+  /// 황색 기준치 칸의 가로 좌표 (픽셀)
   static const int colYellowX = 1531;
 
   /// 적색 기준치 칸의 가로 좌표 (픽셀)
@@ -592,7 +592,7 @@ class ReportPage1 {
   /// 라벨 없는 7~8행의 값을 칸의 어느 쪽에 붙일지
   static const LayoutAlign colValueNoLabelAlign = LayoutAlign.left;
 
-  /// 황색 단계 값을 칸의 어느 쪽에 붙일지. 지금은 비워 두는 칸이다
+  /// 황색 기준치를 칸의 어느 쪽에 붙일지
   static const LayoutAlign colYellowAlign = LayoutAlign.center;
 
   /// 작성: 2026-09-15 20:13:49 · nada
@@ -608,10 +608,10 @@ class ReportPage1 {
   /// 기준치 글자 크기 (픽셀)
   static const int thresholdSize = 28;
 
-  /// 서식에 남아 있는 적색 칸을 덮을 네모의 가로 길이 (픽셀)
+  /// 서식에 남아 있는 황색 · 적색 칸을 덮을 네모의 가로 길이 (픽셀)
   static const int eraseRedWidth = 150;
 
-  /// 서식에 남아 있는 적색 칸을 덮을 네모의 세로 길이 (픽셀)
+  /// 서식에 남아 있는 황색 · 적색 칸을 덮을 네모의 세로 길이 (픽셀)
   static const int eraseRedHeight = 46;
 
   /// 평균 소음 행의 세로 좌표 (픽셀)
@@ -695,6 +695,59 @@ class ReportPage1 {
 
   /// 분석 자료 표의 구분 이름을 칸의 어느 쪽에 붙일지
   static const LayoutAlign analysisCategoryAlign = LayoutAlign.left;
+
+  /// 분석 자료 표의 구분 이름이 시작하는 가로 좌표 (픽셀)
+  static const int analysisCategoryX = 313;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: analysisCategorySize
+  /// 목적: 분석 자료 표의 구분 이름을 새로 찍을 때 글자 크기 (픽셀).
+  /// 근거: 측정 — 서식 tem_1.jpg 에서 "Machine으로 부터 진동" 글자 높이가
+  ///       y 2185~2212(27 픽셀)다. 1쪽 표의 값 글자 크기(28)와 같게 둔다
+  static const int analysisCategorySize = 28;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: analysisCategoryWeight
+  /// 목적: 분석 자료 표의 구분 이름을 새로 찍을 때 글자 굵기.
+  /// 근거: 측정 — 서식 tem_1.jpg 의 구분 이름은 본문 글자보다 굵다. 보통
+  ///       굵기로 찍으면 이웃 행 이름보다 가늘고 흐리게 보였다(2026-10-15
+  ///       270dpi 비교)
+  static const LayoutWeight analysisCategoryWeight = LayoutWeight.bold;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: eraseAnalysisLabelX
+  /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 왼쪽 끝 가로 좌표 (픽셀).
+  ///       신호등 원(오른쪽 끝 x 258)에 닿지 않는다.
+  /// 근거: 측정 — 서식 tem_1.jpg 에서 구분 이름 글자가 x 311 에서
+  ///       시작한다
+  static const int eraseAnalysisLabelX = 300;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: eraseAnalysisLabelWidth
+  /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 가로 길이 (픽셀).
+  /// 근거: 측정 — 가장 긴 "Machine으로 부터 진동" 이 x 620 에서 끝난다.
+  ///       설명 칸(x 1172)보다 한참 앞에서 멈춘다
+  static const int eraseAnalysisLabelWidth = 360;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: eraseAnalysisLabelHeight
+  /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 세로 길이 (픽셀). 행
+  ///       세로 좌표를 가운데로 둔다.
+  /// 근거: 측정 — 글자 높이 27 픽셀에 위아래 여유를 둔 값. 행 간격(약
+  ///       101)의 절반을 넘지 않아 이웃 행을 덮지 않는다
+  static const int eraseAnalysisLabelHeight = 52;
+
+  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 변수: analysisRelabels
+  /// 목적: 서식에 박힌 분석 자료 구분 이름 가운데 바꿔 찍을 행과 새 이름.
+  ///       열쇠는 `analysisRowKeys` 의 행 이름이다. 서식 글자를 덮고 이
+  ///       이름을 찍는다.
+  /// 근거: 인용 — 2026-10-15 사용자 지시 "Machine 대신 권상기 머신,
+  ///       Belts 대신 로우프"
+  static const Map<String, String> analysisRelabels = <String, String>{
+    'machine': '권상기 머신으로 부터 진동',
+    'belts': '로우프',
+  };
 
   /// 분석 자료 표의 설명이 시작하는 가로 좌표 (픽셀)
   static const int analysisDescriptionX = 1172;

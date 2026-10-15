@@ -12,13 +12,15 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 const _layoutJsonPath = 'docs/report_layout.json';
 
 /// 작성: 2026-09-15 19:43:50 · nada
-/// 수정: 2026-10-12 02:15:16 · nada
+/// 수정: 2026-10-15 15:53:26 · nada
 /// 변수: _layoutJsonMd5
 /// 목적: 옮길 때 본 정본 기록의 md5. 정본이 바뀌면 이 값이 달라져,
 ///       사본을 함께 고쳐야 한다는 사실이 시험 실패로 드러난다.
 ///       2026-10-12 엔지니어 · 건물명 · 주소 칸 자리와 크기를 원본에 맞춰
 ///       고치며 정본과 `report_layout.dart` 를 함께 바꾸고 값을 갱신했다.
-const _layoutJsonMd5 = '25b9bc095804083b0541498d4cda16ae';
+///       2026-10-15 분석 자료 구분 이름 바꿔 찍기(`relabel` 등)를 더하며
+///       다시 갱신했다.
+const _layoutJsonMd5 = '8a809c829bbf66a942a3dc475ba41bde';
 
 /// 작성: 2026-09-15 19:43:50 · nada
 /// 함수: _layout
@@ -226,6 +228,23 @@ void main() {
         (table['col'] as Map<String, dynamic>)['description'],
       );
       expect(ReportPage1.analysisDescriptionSize, table['description_size']);
+      expect(
+        ReportPage1.analysisCategoryX,
+        (table['col'] as Map<String, dynamic>)['category'],
+      );
+      expect(ReportPage1.analysisCategorySize, table['category_size']);
+      final erase =
+          table['erase_label'] as Map<String, dynamic>; // json 의 덮을 네모
+      expect(ReportPage1.eraseAnalysisLabelX, erase['x']);
+      expect(ReportPage1.eraseAnalysisLabelWidth, erase['w']);
+      expect(ReportPage1.eraseAnalysisLabelHeight, erase['h']);
+      expect(
+        ReportPage1.analysisRelabels,
+        Map<String, String>.from(table['relabel'] as Map<String, dynamic>),
+      );
+      for (final key in ReportPage1.analysisRelabels.keys) {
+        expect(ReportPage1.analysisRowKeys, contains(key), reason: key);
+      }
 
       final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
       expect(ReportPage1.analysisCategoryAlign.name, align['category']);
