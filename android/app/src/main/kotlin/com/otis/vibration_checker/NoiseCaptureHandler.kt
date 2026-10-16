@@ -38,8 +38,8 @@ class NoiseCaptureHandler(private val context: Context) {
         /** 로그 태그 (Log.e 호출 시 출처를 이 이름으로 남긴다) */
         private const val TAG = "NoiseCaptureHandler"
 
-        /** 1초에 소리를 몇 번 샘플링할지(Hz). 44100은 CD 음질과 같다 */
-        private const val SAMPLE_RATE = 44100
+        /** 마이크 입력 표본률(Hz). 48kHz 비교 측정에 사용한다 */
+        private const val SAMPLE_RATE = 48000
 
         /** 한 채널(모노)만 받는다 */
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
