@@ -8,6 +8,7 @@ import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_notice.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
+import '../update/update_prompt.dart';
 
 /// 작성: 2026-10-11 17:28:28 · nada
 /// 클래스: _HomeLayout
@@ -23,7 +24,7 @@ class _HomeLayout {
 }
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
-/// 수정: 2026-10-11 17:28:28 · nada
+/// 수정: 2026-10-13 14:27:24 · nada
 /// 클래스: HomeScreen
 /// 목적: 이번 측정의 현장 정보(제번, 현장명, 우편번호 · 주소, 층수, 운전
 ///       방향, 기종, 하중, 해석 종류, 추가 참고사항)를 입력받고 측정을
@@ -32,8 +33,18 @@ class _HomeLayout {
 ///         본문 글자 크기 18 이상으로 맞춘다
 ///       - 입력 오류는 색·아이콘·문구 세 가지를 함께 표시하고, 오류가 난
 ///         위치로 자동 스크롤한다
+///       - 앱이 켜져 처음 뜰 때 한 번 업데이트를 확인한다
+///         (`UpdatePrompt.checkAtLaunch()`)
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 함수: HomeScreen
+  /// 목적: 홈 화면을 만든다.
+  /// 인자: updatePrompt — 시작 때 쓸 업데이트 안내 흐름. 안 주면 실제
+  ///       서버 · 안드로이드 설치 통로로 만든다
+  const HomeScreen({super.key, this.updatePrompt});
+
+  /// 시작 때 쓸 업데이트 안내 흐름. null 이면 기본 흐름
+  final UpdatePrompt? updatePrompt;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -140,15 +151,24 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _loadError;
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
+  /// 수정: 2026-10-13 14:27:24 · nada
   /// 함수: initState
   /// 목적: `initState`(이 화면이 새로 만들어질 때, 화면을 그리기 전에
   ///       Flutter가 딱 한 번만 불러주는 생명주기(lifecycle, "만들어짐
   ///       → 화면에 나타남 → 다시 그려짐 → 사라짐"처럼 정해진 순서로
   ///       불리는 함수들) 메서드다. 마지막으로 저장했던 입력값을 불러온다.
+  ///       첫 화면을 그린 뒤 업데이트를 확인한다 — 창을 띄우려면 화면이
+  ///       먼저 그려져 있어야 한다. 확인은 앱 실행마다 한 번이다.
   @override
   void initState() {
     super.initState();
     _loadSavedInputs(); // → 로직 이동: _loadSavedInputs()
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final prompt = widget.updatePrompt ?? UpdatePrompt(); // 업데이트 안내 흐름
+      // → 로직 이동: UpdatePrompt.checkAtLaunch()
+      prompt.checkAtLaunch(context);
+    });
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준

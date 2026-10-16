@@ -375,11 +375,14 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 16:54:15 · nada
+  /// 수정: 2026-10-15 22:32:44 · nada
   /// 함수: build
   /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자 카운트다운
-  ///       화면을, 아니면 경과 시간과 "테스트 완료" 버튼이 있는 실제
-  ///       측정 진행 화면을 보여준다.
+  ///       화면을, 아니면 경과 시간 · 현재 속도와 "테스트 완료" 버튼이 있는
+  ///       실제 측정 진행 화면을 보여준다. 현재 속도는 측정 중 어림값
+  ///       (`CaptureSession.liveSpeedMps`)이고 소수 첫째 자리까지 적는다.
+  ///       기준선을 모으는 첫 1초 동안은 값 대신 "—" 를 적는다. 저장하는
+  ///       최대 속도는 측정이 끝난 뒤 따로 계산하므로 다를 수 있다.
   @override
   Widget build(BuildContext context) {
     if (_isCountingDown) {
@@ -502,6 +505,27 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                           timeFormatted,
                           style: AppText.bigNumber.copyWith(
                             color: AppColors.onDark,
+                          ),
+                        ),
+                        const SizedBox(height: AppDims.gap5),
+
+                        // 현재 속도 섹션 (측정 중 어림값)
+                        Text(
+                          '현재 속도',
+                          style: AppText.bodyBold.copyWith(
+                            color: AppColors.onDarkSub,
+                          ),
+                        ),
+                        const SizedBox(height: AppDims.gap),
+                        ValueListenableBuilder<double?>(
+                          valueListenable: _capture.liveSpeedMps,
+                          builder: (_, speed, _) => Text(
+                            speed == null
+                                ? '— m/s'
+                                : '${speed.toStringAsFixed(1)} m/s',
+                            style: AppText.bigNumber.copyWith(
+                              color: AppColors.onDark,
+                            ),
                           ),
                         ),
                       ],

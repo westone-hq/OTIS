@@ -327,6 +327,57 @@ void main() {
     });
   });
 
+  group('MeasurementRepository 개수 제한', () {
+    // 2026-10-01 10:00:00 부터 1분씩 늦은 측정 ID
+    String idAt(int i) => '20261001-10${i.toString().padLeft(2, '0')}00';
+    Future<void> saveMany(int count) async {
+      for (var i = 0; i < count; i++) {
+        await repo.save(_result(idAt(i), DateTime(2026, 10, 1, 10, i)));
+      }
+    }
+
+    Future<List<String>> names() async {
+      final base = await repo.getBaseDirectory(); // 기준 폴더
+      return [
+        await for (final entry in base.list())
+          if (entry is Directory)
+            entry.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
+      ]..sort();
+    }
+
+    test('넘지 않으면 아무것도 지우지 않는다', () async {
+      await saveMany(MeasurementRepository.maxStoredMeasurements);
+
+      expect(await repo.pruneOldest(keepId: idAt(29)), isEmpty);
+      expect(await names(), hasLength(30));
+    });
+
+    test('넘으면 오래된 것부터 지우고 최근 30건을 남긴다', () async {
+      await saveMany(32);
+      final base = await repo.getBaseDirectory(); // 기준 폴더
+      // 결과 없이 멈춘 측정 폴더 — 오래된 것 하나, 최근 것 하나
+      await Directory('${base.path}/20260901-090000').create();
+      await Directory('${base.path}/20261001-120000').create();
+
+      final deleted = await repo.pruneOldest(keepId: idAt(31));
+
+      expect(deleted, <String>[idAt(1), idAt(0), '20260901-090000']);
+      final left = await names(); // 남은 폴더
+      expect(left, hasLength(31));
+      expect(left, contains('20261001-120000'));
+      expect((await repo.list()).length, 30);
+    });
+
+    test('방금 저장한 측정은 이름이 가장 오래돼 보여도 남긴다', () async {
+      await saveMany(31);
+
+      final deleted = await repo.pruneOldest(keepId: idAt(0));
+
+      expect(deleted, <String>[idAt(1)]);
+      expect(await names(), contains(idAt(0)));
+    });
+  });
+
   group('MeasurementRepository 리포트', () {
     test('저장된 것이 없으면 만들지 않고 null 이다', () async {
       expect(await repo.ensureReportPdf('없는측정'), isNull);

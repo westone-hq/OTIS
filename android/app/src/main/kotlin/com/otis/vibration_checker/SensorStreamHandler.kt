@@ -264,6 +264,7 @@ class SensorStreamHandler(
 
     /**
      * 작성: 2026-08-19 08:32:13 · 박건준
+     * 수정: 2026-10-15 22:51:06 · nada
      * 함수: onSensorChanged
      * 목적: 가속도 또는 중력 센서에서 새 값이 올 때마다 안드로이드가
      *       부른다. 원본 파일에 한 줄 적고, 배치 버퍼에 담아 뒀다가
@@ -303,7 +304,7 @@ class SensorStreamHandler(
             "zMg" to zMg,
             "dtUs" to dtUs,
             // 마이크 스레드가 채워 둔 최신 dBA. 권한 없거나 미시작이면 0.0
-            "noiseDba" to noiseCaptureHandler.sampleForSensor(tsNs),
+            "noiseDba" to noiseCaptureHandler.latestDba,
         )
 
         var readyBatch: List<Map<String, Any>>? = null // 이번에 내보낼 배치

@@ -204,7 +204,7 @@ class AppDialogIconButton extends StatelessWidget {
 }
 
 /// 작성: 2026-08-06 15:59:06 · 박건준
-/// 수정: 2026-10-04 13:37:23 · nada
+/// 수정: 2026-10-13 14:18:51 · nada
 /// 함수: showAppConfirmDialog
 /// 목적: 제목 · 문구 · 버튼 한두 개로 된 대화상자를 띄우고 사용자의
 ///       선택을 돌려준다. 측정 중단 확인, 측정 실패 · 중단 안내, 이메일
@@ -217,6 +217,8 @@ class AppDialogIconButton extends StatelessWidget {
 ///       cancelLabel — 취소 버튼 라벨. null 이면 확인 버튼 하나만 둔다
 ///       isDestructive — 확인 버튼을 위험 행동 색(빨강)으로 칠할지
 ///       barrierDismissible — 바깥을 눌러 닫을 수 있는지. 기본 false
+///       blockBack — 뒤로가기로 닫히지 않게 막을지. 기본 false. 버튼을
+///       눌러야만 지나갈 수 있는 창(필수 업데이트)에 쓴다
 /// 반환: 확인을 누르면 true. 취소를 누르거나 바깥을 눌러 닫으면 false
 Future<bool> showAppConfirmDialog(
   BuildContext context, {
@@ -226,26 +228,31 @@ Future<bool> showAppConfirmDialog(
   String? cancelLabel,
   bool isDestructive = false,
   bool barrierDismissible = false,
+  bool blockBack = false,
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,
     barrierDismissible: barrierDismissible,
-    builder: (ctx) => AlertDialog(
-      title: Text(title, style: AppText.subhead),
-      content: Text(message, style: AppText.body),
-      actions: [
-        if (cancelLabel != null)
+    builder: (ctx) => PopScope(
+      // 뒤로가기 막기. 버튼의 pop 은 막지 않는다 — 막는 것은 시스템 뒤로가기다
+      canPop: !blockBack,
+      child: AlertDialog(
+        title: Text(title, style: AppText.subhead),
+        content: Text(message, style: AppText.body),
+        actions: [
+          if (cancelLabel != null)
+            AppDialogButton(
+              label: cancelLabel,
+              onPressed: () => Navigator.of(ctx).pop(false),
+              primary: false,
+            ),
           AppDialogButton(
-            label: cancelLabel,
-            onPressed: () => Navigator.of(ctx).pop(false),
-            primary: false,
+            label: confirmLabel,
+            onPressed: () => Navigator.of(ctx).pop(true),
+            isDestructive: isDestructive,
           ),
-        AppDialogButton(
-          label: confirmLabel,
-          onPressed: () => Navigator.of(ctx).pop(true),
-          isDestructive: isDestructive,
-        ),
-      ],
+        ],
+      ),
     ),
   ); // 누른 버튼. 바깥을 눌러 닫았으면 null
   return confirmed ?? false;

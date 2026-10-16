@@ -64,3 +64,60 @@ flutter build apk --release
 
 지문 · 인증서 이름은 비밀이 아니다(APK 를 받은 누구나 볼 수 있다). 비밀은
 키 파일과 비밀번호다.
+
+## 배포 (앱 안 업데이트, GitHub Releases)
+
+구글 플레이 없이 배포 전용 공개 저장소의 릴리스로 배포한다. 앱은 켜질 때
+그 저장소의 최신 릴리스 `version.json` 을 받아 새 버전이 있으면
+"업데이트하세요" 창을 띄우고, 누르면 APK 를 받아 안드로이드 설치 화면을
+연다(`UpdatePrompt` · `UpdateChecker` · `UpdateInstaller.kt`).
+
+- 저장소: 소스 저장소 `westone-hq/OTIS`(공개)의 Releases 를 그대로 쓴다
+  (2026-10-16). 주소는 `lib/domain/update/update_config.dart` 의
+  `releaseRepository` 하나다. 앱은 로그인 없이 받으므로 저장소가 공개여야
+  한다 — 비공개로 바꾸면 업데이트 확인이 조용히 실패한다. 이 저장소의
+  "최신" 릴리스는 늘 앱 배포용이어야 한다(다른 용도의 릴리스를 최신으로
+  올리면 앱이 그 릴리스에서 version.json 을 찾다 실패한다).
+- 앱이 읽는 주소:
+  `https://github.com/<주인>/<저장소>/releases/latest/download/version.json`
+  — GitHub 가 가장 최근 릴리스로 넘겨 준다. 그래서 "최신" 으로 표시되는
+  릴리스(Pre-release · Draft 아님)에 올려야 앱이 본다.
+- 릴리스마다 자산 두 개: `vcheck-<버전>.apk`, `version.json`.
+
+### version.json
+
+```json
+{
+  "latest": 2,
+  "latestName": "0.0.1",
+  "minimum": 1,
+  "apkUrl": "https://github.com/<주인>/<저장소>/releases/download/v0.0.1/vcheck-0.0.1.apk",
+  "sha256": "<apk 의 SHA-256, 16진수 소문자 64자>",
+  "notes": "사용자에게 보여 줄 한두 줄"
+}
+```
+
+- `latest` · `minimum` 은 **빌드 번호**(pubspec `version:` 의 `+` 뒤)다.
+  버전 이름(`+` 앞)이 아니다.
+- `minimum` 보다 낮은 빌드는 업데이트하기 전까지 쓸 수 없다(닫을 수 없는
+  창). 보통은 올리지 않는다. 예전 빌드에 측정을 틀리게 하는 문제가 있을
+  때만 올린다.
+- 앱은 아래 중 하나라도 걸리면 이 파일을 버리고 안내하지 않는다: 항목
+  누락 · 자료형 다름 · `apkUrl` 이 https 가 아님 · `sha256` 형식 ·
+  `minimum` > `latest`.
+- 앱은 받은 APK 의 SHA-256 이 이 값과 다르면 설치하지 않는다.
+
+### 절차
+
+1. `pubspec.yaml` 의 `version:` 을 올린다. **빌드 번호(`+` 뒤)는 반드시
+   올린다** — 안드로이드는 같거나 낮은 번호로 덮어쓰지 않는다.
+2. `flutter build apk --release`, 위 "빌드와 서명 확인" 으로 릴리스 키
+   지문을 확인한다.
+3. `build/app/outputs/flutter-apk/app-release.apk` 를
+   `vcheck-<버전>.apk` 로 이름을 바꾸고 `sha256sum vcheck-<버전>.apk` 로
+   지문을 구한다.
+4. `version.json` 을 쓴다(`apkUrl` 의 태그 · 파일 이름이 5 와 같아야 한다).
+5. 배포 저장소에 태그 `v<버전>` 으로 릴리스를 만들고 두 파일을 올린다.
+   예: `gh release create v0.0.1 vcheck-0.0.1.apk version.json -R <주인>/<저장소> --title 0.0.1 --notes "..."`
+6. 실기기 한 대로 확인한다: 이전 빌드를 켜면 창이 뜨고, "업데이트" →
+   (처음이면 설치 허용) → 받기 → 설치 → 다시 켰을 때 창이 없어야 한다.

@@ -7,6 +7,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/live_speed_estimator.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
 
@@ -86,6 +87,20 @@ class CaptureSession {
   /// `start()` 의 구독이 채우고, `MeasurementRecorder.record()` 가 읽는다
   final GridResampler resampler = GridResampler(config: const CaptureConfig());
 
+  /// 측정 중 속도를 어림하는 추정기. `start()` 의 구독이 이벤트를 넣는다.
+  /// 화면 표시 전용이고 저장 · 리포트에는 쓰지 않는다
+  final LiveSpeedEstimator _speedEstimator = LiveSpeedEstimator();
+
+  /// 측정 중 어림한 속도의 크기 (m/s). 측정 화면이 보여 준다. 기준선을
+  /// 모으는 첫 1초 동안과 수집 전에는 null. 이벤트 시각으로
+  /// `CaptureConfig.livePublishMs` 마다 한 번만 바꿔 화면을 너무 자주 다시
+  /// 그리지 않게 한다
+  final ValueNotifier<double?> liveSpeedMps = ValueNotifier<double?>(null);
+
+  /// 마지막으로 `liveSpeedMps` 를 바꾼 이벤트 시각 (마이크로초). 아직
+  /// 바꾸지 않았으면 null
+  int? _lastSpeedPublishUs;
+
   /// 센서 이벤트 구독. `start()` 가 센서가 있을 때만 만들고 `stop()` 이
   /// 끊는다. 구독 중이 아니면 null
   StreamSubscription<NativeEvent>? _sensorSub;
@@ -137,7 +152,8 @@ class CaptureSession {
   ///       권한이 없으면 소음 수집 쪽이 0 으로 대신한다.
   ///       1. 화면 꺼짐 방지를 켠다. 한도 안에 응답이 없어도 넘어간다
   ///       2. 센서가 있으면 수집을 시작하고 이벤트를 `resampler` 에
-  ///          쌓는다. 측정은 볼륨키로 끝내므로 볼륨키도 가로챈다
+  ///          쌓는다. 같은 이벤트로 측정 중 속도(`liveSpeedMps`)도
+  ///          어림한다. 측정은 볼륨키로 끝내므로 볼륨키도 가로챈다
   ///       3. 센서 유무와 상관없이 무응답 감시를 건다. 센서가 없으면
   ///          값이 오지 않으므로 감시가 그 경우도 잡는다
   ///       기다리는 단계마다 그 사이에 `stop()` 이 끼었는지 본다. 끼었으면
@@ -171,6 +187,7 @@ class CaptureSession {
       _sensorSub = _sensorManager.nativeEventStream.listen((event) {
         _receivedSample = true;
         resampler.onEvent(event); // → 로직 이동: GridResampler.onEvent()
+        _publishSpeed(event); // → 로직 이동: _publishSpeed()
       });
       _volumeKeyEnabled = true;
       // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
@@ -184,6 +201,23 @@ class CaptureSession {
     _noResponseTimer = Timer(noResponseTimeout, () {
       if (!_receivedSample) onNoResponse();
     });
+  }
+
+  /// 작성: 2026-10-15 22:32:44 · nada
+  /// 함수: _publishSpeed
+  /// 목적: 이벤트 한 건을 속도 추정기에 넣고, 앞서 내보낸 뒤
+  ///       `CaptureConfig.livePublishMs` 가 지났으면 어림한 속도를
+  ///       `liveSpeedMps` 로 내보낸다. 간격은 이벤트 시각으로 잰다.
+  /// 인자: event — 안드로이드에서 도착한 원본 이벤트
+  void _publishSpeed(NativeEvent event) {
+    _speedEstimator.onEvent(event); // → 로직 이동: LiveSpeedEstimator.onEvent()
+    final last = _lastSpeedPublishUs; // 앞서 내보낸 시각, 처음이면 null
+    if (last != null &&
+        event.tsUs - last < CaptureConfig.livePublishMs * 1000) {
+      return;
+    }
+    _lastSpeedPublishUs = event.tsUs;
+    liveSpeedMps.value = _speedEstimator.speedMps;
   }
 
   /// 작성: 2026-10-04 13:29:41 · nada
