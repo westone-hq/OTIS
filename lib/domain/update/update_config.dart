@@ -11,12 +11,12 @@ class UpdateConfig {
 
   /// 작성: 2026-10-13 14:18:51 · nada
   /// 변수: releaseRepository
-  /// 목적: 배포 전용 공개 저장소("주인/이름"). 소스는 올리지 않고 릴리스
-  ///       자산(APK · version.json)만 둔다.
-  /// 근거: 미정 — 배포 저장소 주인(westone / OTIS)이 정해지지 않았다
-  ///       (docs/pending_checks.md). 정해지면 이 값 하나만 바꾼다. 지금
-  ///       값으로는 version.json 을 받지 못해 안내가 뜨지 않는다
-  static const String releaseRepository = 'westone-hq/otis-vcheck-release';
+  /// 목적: 릴리스(APK · version.json)를 올리는 공개 저장소("주인/이름").
+  ///       소스 저장소의 Releases 를 그대로 쓴다. 앱은 로그인 없이 받으므로
+  ///       공개 저장소여야 한다.
+  /// 근거: 인용 — 2026-10-16 사용자 지시 "지금 이 리포지토리에서 그대로"
+  ///       (배포 전용 저장소 `westone-hq/otis-vcheck-release` 안을 바꿈)
+  static const String releaseRepository = 'westone-hq/OTIS';
 
   /// 작성: 2026-10-13 14:18:51 · nada
   /// 변수: versionJsonUrl

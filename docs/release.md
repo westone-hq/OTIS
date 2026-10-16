@@ -72,9 +72,12 @@ flutter build apk --release
 "업데이트하세요" 창을 띄우고, 누르면 APK 를 받아 안드로이드 설치 화면을
 연다(`UpdatePrompt` · `UpdateChecker` · `UpdateInstaller.kt`).
 
-- 저장소: 소스 없이 릴리스 자산만 둔다. 주소는
-  `lib/domain/update/update_config.dart` 의 `releaseRepository` 하나다
-  (주인 미정 — `docs/pending_checks.md`).
+- 저장소: 소스 저장소 `westone-hq/OTIS`(공개)의 Releases 를 그대로 쓴다
+  (2026-10-16). 주소는 `lib/domain/update/update_config.dart` 의
+  `releaseRepository` 하나다. 앱은 로그인 없이 받으므로 저장소가 공개여야
+  한다 — 비공개로 바꾸면 업데이트 확인이 조용히 실패한다. 이 저장소의
+  "최신" 릴리스는 늘 앱 배포용이어야 한다(다른 용도의 릴리스를 최신으로
+  올리면 앱이 그 릴리스에서 version.json 을 찾다 실패한다).
 - 앱이 읽는 주소:
   `https://github.com/<주인>/<저장소>/releases/latest/download/version.json`
   — GitHub 가 가장 최근 릴리스로 넘겨 준다. 그래서 "최신" 으로 표시되는

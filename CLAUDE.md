@@ -322,10 +322,11 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - `docs/reference/sample_evimp.pdf` 는 축별 계수 분리 이전의 단일 계수로
   만들어졌다. 차이는 최대 0.14pt. 좌표가 아니라 참조 PDF 를 다시 만들어야 한다.
 - 요구사항서(`Vibration_Checking_App_Development_20260630.pdf`)가 저장소에 없다.
-- 앱 안 업데이트(2026-10-13)의 배포 저장소 주인(westone / OTIS)이 미정이다.
-  `UpdateConfig.releaseRepository` 에 권장안을 넣어 두었고, 저장소가 없으면
-  확인이 조용히 실패한다. 실기기 설치 경로(설치 허용 · 서명 충돌 · 설치 뒤
-  재시작)는 확인 전이다(`docs/pending_checks.md`).
+- 앱 안 업데이트(2026-10-13)는 소스 저장소 `westone-hq/OTIS`(공개)의
+  Releases 로 배포한다(2026-10-16, `UpdateConfig.releaseRepository`). 저장소를
+  비공개로 바꾸거나 최신 릴리스에 version.json 이 없으면 확인이 조용히
+  실패한다. 실기기 설치 경로(설치 허용 · 서명 충돌 · 설치 뒤 재시작)는 확인
+  전이다(`docs/pending_checks.md`).
 - 릴리스 서명 키(2026-10-13)로 바꾸기 전 디버그 키로 서명해 깐 기기는 한
   번 지우고 새로 깔아야 한다. 기기의 측정 결과도 지워지므로 먼저 옮긴다.
 - 서버 연동은 미구현이다. 로그인은 두지 않는다(수신 이메일은 기기에 목록으로
