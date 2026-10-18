@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
+import 'package:vibration_checker/model/measurement_result.dart';
 
 import '../../core/theme.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -51,13 +52,14 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-15 22:17:34 · nada
+/// 수정: 2026-10-18 10:12:30 · nada
 /// 클래스: _SendEmailSheetState
 /// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신 이메일
 ///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
 ///       발송을 실행한다. 보낸 주소는 기억해 다음에 미리 골라 둔다.
-///       보낼 수 있는 항목은 PDF 리포트와 로우 데이터(`raw.txt`, 256Hz
-///       격자에 맞춘 필터 · 기준선 보정 전 값) 둘이다. 안드로이드 센서
+///       보낼 수 있는 항목은 PDF 리포트, 로우 데이터(`raw.txt`, 256Hz
+///       격자에 맞춘 필터 · 기준선 보정 전 값), 현장 소음 녹음
+///       (`noise.m4a`, 2026-10-18 사용자 결정) 셋이다. 안드로이드 센서
 ///       원본 이벤트 기록(`native_raw.txt`)은 기기 측정 폴더에만 남기고
 ///       보내지 않는다 (2026-10-08 결정. 2026-10-07 에는 두 원본 파일을
 ///       모두 보내지 않기로 했었다). 소음 진단 산출물(데시벨 CSV ·
@@ -69,6 +71,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
   /// 로우 데이터(`raw.txt`)를 보낼 항목에 포함할지 여부
   bool _sendRaw = true;
+
+  /// 현장 소음 녹음(`noise.m4a`)을 보낼 항목에 포함할지 여부
+  bool _sendNoise = true;
 
   /// "보내기"를 눌러 메일을 조립·발송하는 중인지 여부. true인 동안
   /// 버튼을 비활성화해 중복 실행을 막는다
@@ -179,7 +184,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-15 22:17:34 · nada
+  /// 수정: 2026-10-18 10:12:30 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -192,11 +197,17 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       - PDF 리포트 — 없으면 그 자리에서 만든다
   ///       - 로우 데이터(`raw.txt`) — 나중에 다시 만들 수 없어, 없으면
   ///         (이 파일을 쓰기 전 측정, 저장 도중 실패) 누락으로 밝힌다
+  ///       - 현장 소음 녹음(`noise.m4a`) — 측정 중 마이크 녹음. 없으면
+  ///         (녹음 기능 전 측정, 마이크 권한 없음, 녹음 실패) 누락으로
+  ///         밝힌다
   ///       안드로이드 원본(`native_raw.txt`, 2026-10-08 결정)과 소음 진단
   ///       산출물(2026-10-15 결정)은 찾지도 붙이지도 않는다.
   ///       홈에서 적은 추가 참고사항이 있으면 첨부 목록 앞에 "[참고사항]"
   ///       머리줄과 함께 적은 그대로 넣는다. 없으면 그 덩어리를 통째로
   ///       뺀다. 참고사항은 리포트에 칸이 없어 메일 본문으로만 전한다.
+  ///       첫 줄 아래에 그 측정을 저장한 작업자(`_workerLine()`)를 적는다.
+  ///       지금 로그인한 사람이 아니라 결과에 실린 사람이다 — 다른 사람이
+  ///       예전 결과를 보내도 측정한 사람이 남는다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
   /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
   Future<Email> _buildJobEmail(String jobId) async {
@@ -259,13 +270,38 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       }
     }
 
+    if (_sendNoise) {
+      // → 로직 이동: MeasurementRepository.noiseAudioFile()
+      final audioFile = await repo.noiseAudioFile(
+        jobId,
+      ); // 그 측정의 noise.m4a, 없으면 null
+      if (audioFile != null) {
+        final name = MeasurementRepository.mailAttachmentName(
+          result,
+          'NOISE',
+          'm4a',
+        ); // 메일에 붙일 이름
+        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
+        final copy = await repo.mailAttachmentCopy(audioFile, name); // 사본
+        attachments.add(copy.path);
+        attachmentDescriptions.add('- $name: 측정 중 현장 소음 녹음(AAC)');
+      } else {
+        missing.add(
+          '누락: ${MeasurementRepository.noiseAudioFileName} — 이 측정에는 '
+          '현장 소음 녹음이 없습니다',
+        );
+      }
+    }
+
     final dateStr = DateFormat(
       'yyyy-MM-dd HH:mm',
     ).format(KoreaTime.of(result.dateTime)); // 메일 제목 날짜 (한국 시간)
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
     final notes = result.notes; // 추가 참고사항, 없으면 null
+    final worker = _workerLine(result); // 작업자 줄, 이름이 없으면 null
     final bodyLines = <String>[
       'OTIS 승강기 진동 측정 리포트입니다.',
+      ?worker,
       if (notes != null) ...['', '[참고사항]', notes, ''],
       ...attachmentDescriptions,
       '',
@@ -280,6 +316,26 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       recipients: _recipients(), // → 로직 이동: _recipients()
       attachmentPaths: attachments,
     );
+  }
+
+  /// 작성: 2026-10-18 09:41:12 · nada
+  /// 함수: _workerLine
+  /// 목적: 메일 본문에 적을 작업자 줄을 만든다. 성명 뒤 괄호에 사번,
+  ///       그 뒤에 업체명 · 관리팀을 가운뎃점으로 잇는다. 결과에 없는
+  ///       값(로그인 전 결과의 사번, OTIS 직원의 업체)은 그 자리째 뺀다.
+  /// 인자: result — 보낼 측정 결과
+  /// 반환: 예 "작업자: 홍길동 (T00001) · (주)시험승강기 · 설치1팀". 성명이
+  ///       없으면(설정에 이름을 적지 않던 예전 결과) null
+  static String? _workerLine(MeasurementResult result) {
+    final name = result.engineerName; // 성명, 없으면 null
+    if (name == null) return null;
+    final id = result.employeeId; // 사번, 없으면 null
+    final parts = <String>[
+      id == null ? name : '$name ($id)',
+      ?result.company,
+      ?result.team,
+    ]; // 가운뎃점으로 이을 조각
+    return '작업자: ${parts.join(' · ')}';
   }
 
   /// 작성: 2026-10-04 13:37:23 · nada
@@ -324,13 +380,14 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-10-04 13:37:23 · nada
-  /// 수정: 2026-10-15 22:17:34 · nada
+  /// 수정: 2026-10-18 10:12:30 · nada
   /// 함수: build
   /// 목적: 이메일 발송 시트를 그린다. 위에서부터 순서대로 놓는다.
   ///       1. 제목과 닫기 버튼
   ///       2. 받는 사람 — 등록된 이메일마다 체크 한 줄. 여러 개 고를 수
   ///          있다. "관리"를 누르면 설정 화면으로 간다
-  ///       3. 보낼 항목 체크 목록 (PDF 리포트, 로우 데이터). 안드로이드
+  ///       3. 보낼 항목 체크 목록 (PDF 리포트, 로우 데이터, 현장 소음).
+  ///          셋 다 처음에 체크돼 있다. 안드로이드
   ///          원본(2026-10-08 결정)과 소음 진단 산출물(2026-10-15 결정)은
   ///          보낼 항목이 아니라 목록에 없다
   ///       4. 고를 것이 빠졌을 때의 안내와 "보내기" 버튼
@@ -340,7 +397,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
   @override
   Widget build(BuildContext context) {
-    final noItem = !_sendPdf && !_sendRaw; // 보낼 항목을 하나도 안 골랐는지
+    final noItem = // 보낼 항목을 하나도 안 골랐는지
+        !_sendPdf && !_sendRaw && !_sendNoise;
     final noRecipient = _selected.isEmpty; // 받을 주소를 고르지 않았는지
     final warning = _emails.isEmpty
         ? null
@@ -430,6 +488,12 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                       value: _sendRaw,
                       onChanged: (val) =>
                           setState(() => _sendRaw = val ?? false),
+                    ),
+                    _buildCheckboxItem(
+                      title: '현장 소음 (m4a)',
+                      value: _sendNoise,
+                      onChanged: (val) =>
+                          setState(() => _sendNoise = val ?? false),
                     ),
                   ],
                 ),

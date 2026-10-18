@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 작성: 2026-08-19 10:35:27 · 박건준
-/// 수정: 2026-10-13 14:18:51 · nada
+/// 수정: 2026-10-18 09:41:12 · nada
 /// 클래스: PrefsStore
-/// 목적: 앱 설정(수신 이메일 목록, 지난번 수신자, 엔지니어 이름, 마지막
+/// 목적: 앱 설정(수신 이메일 목록, 지난번 수신자, 로그인 사번, 마지막
 ///       현장 정보, 업데이트 "나중에" 기록)을 기기에 저장하고 불러오는
-///       역할을 한다.
+///       역할을 한다. 로그인 전에 설정에 손으로 적던 엔지니어 이름
+///       (저장 키 "engineerName")은 2026-10-18 로그인 작업자 성명으로
+///       바꾸며 읽지 않는다. 예전 빌드가 남긴 값은 지우지 않고 둔다.
 class PrefsStore {
   /// 작성: 2026-07-05 08:15:28 · 박건준
   /// 변수: instance
@@ -86,37 +88,31 @@ class PrefsStore {
     await prefs.setStringList(_lastRecipientsKey, recipients);
   }
 
-  /// 작성: 2026-10-11 19:11:50 · nada
-  /// 변수: _engineerNameKey
-  /// 목적: 엔지니어 이름의 저장 키. 한 기기를 보통 한 사람이 써서 기기
-  ///       단위로 하나만 둔다.
-  /// 근거: 인용 — 2026-10-11 사용자 결정
-  static const String _engineerNameKey = 'engineerName';
+  /// 작성: 2026-10-18 09:09:47 · nada
+  /// 변수: _loginEmployeeIdKey
+  /// 목적: 로그인한 작업자 사번의 저장 키. 앱을 다시 켤 때 로그인을 다시
+  ///       받지 않으려고 둔다. 로그아웃하면 지운다.
+  static const String _loginEmployeeIdKey = 'loginEmployeeId';
 
-  /// 작성: 2026-10-11 19:11:50 · nada
-  /// 함수: loadEngineerName
-  /// 목적: 설정에 저장한 엔지니어 이름을 읽는다. 측정을 저장할 때
-  ///       (`MeasurementRecorder.record()`) 그 시점 이름을 결과에 싣고,
-  ///       설정 화면이 입력칸을 채우는 데 쓴다.
-  /// 반환: 엔지니어 이름. 저장한 적이 없거나 비어 있으면 null
-  Future<String?> loadEngineerName() async {
+  /// 작성: 2026-10-18 09:09:47 · nada
+  /// 함수: loadLoginEmployeeId
+  /// 목적: 기기에 남은 로그인 사번을 읽는다.
+  /// 반환: 사번. 로그인한 적이 없거나 로그아웃했으면 null
+  Future<String?> loadLoginEmployeeId() async {
     final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
-    final name = prefs.getString(_engineerNameKey)?.trim(); // 저장된 이름
-    return name == null || name.isEmpty ? null : name;
+    return prefs.getString(_loginEmployeeIdKey);
   }
 
-  /// 작성: 2026-10-11 19:11:50 · nada
-  /// 함수: saveEngineerName
-  /// 목적: 엔지니어 이름을 저장한다. 비우면 지운다 — 빈 문자열을 이름으로
-  ///       남기지 않는다.
-  /// 인자: name — 저장할 이름. 앞뒤 공백은 지운다
-  Future<void> saveEngineerName(String name) async {
+  /// 작성: 2026-10-18 09:09:47 · nada
+  /// 함수: saveLoginEmployeeId
+  /// 목적: 로그인 사번을 저장하거나 지운다.
+  /// 인자: employeeId — 저장할 사번. null 이면 지운다(로그아웃)
+  Future<void> saveLoginEmployeeId(String? employeeId) async {
     final prefs = await SharedPreferences.getInstance(); // 기기 저장소 접근 객체
-    final trimmed = name.trim(); // 앞뒤 공백을 지운 이름
-    if (trimmed.isEmpty) {
-      await prefs.remove(_engineerNameKey);
+    if (employeeId == null) {
+      await prefs.remove(_loginEmployeeIdKey);
     } else {
-      await prefs.setString(_engineerNameKey, trimmed);
+      await prefs.setString(_loginEmployeeIdKey, employeeId);
     }
   }
 

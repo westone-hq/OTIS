@@ -101,6 +101,13 @@ class MeasurementRepository {
   ///       이름.
   static const String nativeRawFileName = 'native_raw.txt';
 
+  /// 작성: 2026-10-18 10:12:30 · nada
+  /// 변수: noiseAudioFileName
+  /// 목적: 측정 중 마이크로 녹음한 현장 소음(AAC, M4A 틀) 파일 이름.
+  ///       안드로이드(`NoiseAudioEncoder`)가 남긴 것을 저장 절차가 이 폴더로
+  ///       옮겨 온다. 메일에 "현장 소음" 으로 붙는다.
+  static const String noiseAudioFileName = 'noise.m4a';
+
   /// 작성: 2026-09-27 11:00:00 · nada
   /// 변수: jobFileNames
   /// 목적: 측정 폴더에 놓이는 파일 이름을 모두 모아 둔 것. 낱개 상수와
@@ -113,6 +120,7 @@ class MeasurementRepository {
     rawFileName,
     metaFileName,
     nativeRawFileName,
+    noiseAudioFileName,
   ];
 
   /// 작성: 2026-09-26 09:30:00 · nada
@@ -442,6 +450,20 @@ class MeasurementRepository {
     // → 로직 이동: getBaseDirectory()
     final base = await getBaseDirectory(); // 산출물 기준 폴더
     final file = File('${base.path}/$id/$rawFileName'); // 그 측정의 raw.txt
+    return await file.exists() ? file : null;
+  }
+
+  /// 작성: 2026-10-18 10:12:30 · nada
+  /// 함수: noiseAudioFile
+  /// 목적: 측정 한 건의 현장 소음 녹음(`noise.m4a`)을 찾는다. `rawFile()`
+  ///       과 같이 폴더를 만들지 않고 찾기만 한다.
+  /// 인자: id — 측정 결과 식별자
+  /// 반환: 그 측정의 `noise.m4a`. 녹음 기능 전 측정이거나, 마이크 권한이
+  ///       없었거나, 녹음이 실패해 파일이 없으면 null
+  Future<File?> noiseAudioFile(String id) async {
+    // → 로직 이동: getBaseDirectory()
+    final base = await getBaseDirectory(); // 산출물 기준 폴더
+    final file = File('${base.path}/$id/$noiseAudioFileName'); // 그 측정의 녹음
     return await file.exists() ? file : null;
   }
 

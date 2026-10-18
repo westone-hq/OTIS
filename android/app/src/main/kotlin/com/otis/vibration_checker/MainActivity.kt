@@ -239,21 +239,27 @@ class MainActivity : FlutterActivity() {
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-09-15 13:30:00 · 박희정
+                     * 수정: 2026-10-18 10:12:30 · nada
                      * 함수: stopCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "stopCapture" 요청에 응답한다. 센서·소음
-                     *       캡처를 멈추고 원본 기록 파일 경로를 돌려준다.
-                     * 반환: result.success(String?) 로 응답. 저장된 파일
-                     *       경로, 저장하지 못했으면 null
+                     *       캡처를 멈추고 원본 기록 · 현장 소음 녹음 파일
+                     *       경로를 돌려준다.
+                     * 반환: result.success(Map) 로 응답.
+                     *       - "recordPath" — 원본 기록 경로, 못 했으면 null
+                     *       - "audioPath" — 현장 소음 녹음(M4A) 경로,
+                     *         녹음하지 않았거나 실패했으면 null
                      */
                     "stopCapture" -> {
                         // → 로직 이동: SensorStreamHandler.stop()
                         val recordPath = // 저장한 원본 기록 경로, 못 했으면 null
                             sensorStreamHandler.stop()
                         // → 로직 이동: NoiseCaptureHandler.stop()
-                        noiseCaptureHandler.stop()
-                        result.success(recordPath)
+                        val audioPath = // 닫은 소음 녹음 경로, 없으면 null
+                            noiseCaptureHandler.stop()
+                        result.success(
+                            mapOf("recordPath" to recordPath, "audioPath" to audioPath),
+                        )
                     }
                     /**
                      * 작성: 2026-10-01 13:04:31 · 박희정
@@ -379,10 +385,12 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-10-13 14:18:51 · nada
+     * 수정: 2026-10-18 10:12:30 · nada
      * 함수: onDestroy
      * 목적: 액티비티가 완전히 종료될 때 센서·소음·소음테스트 핸들러와
      *       업데이트 담당을 정리해, 자원을 계속 붙들고 있지 않게 한다.
+     *       측정 도중 끝나면 Flutter 가 받아 갈 수 없으므로 현장 소음
+     *       녹음은 닫으면서 지운다.
      */
     override fun onDestroy() {
         super.onDestroy()
@@ -391,7 +399,8 @@ class MainActivity : FlutterActivity() {
             sensorStreamHandler.stop()
         }
         if (::noiseCaptureHandler.isInitialized) {
-            noiseCaptureHandler.stop()
+            // → 로직 이동: NoiseCaptureHandler.stopAndDiscardAudio()
+            noiseCaptureHandler.stopAndDiscardAudio()
         }
         if (::updateInstaller.isInitialized) {
             // → 로직 이동: UpdateInstaller.dispose()

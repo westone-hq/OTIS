@@ -6,12 +6,13 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/adapter/measurement_recorder.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
-import 'package:vibration_checker/adapter/prefs_store.dart';
+import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/model/worker.dart';
 
 /// 작성: 2026-10-04 13:36:00 · nada
 /// 클래스: _TempPathProvider
@@ -121,6 +122,7 @@ void main() {
         resampler: _filledResampler(),
         site: null,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -145,6 +147,7 @@ void main() {
         resampler: _filledResampler(),
         site: reversed,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -156,6 +159,7 @@ void main() {
         resampler: _filledResampler(count: 1),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -170,6 +174,7 @@ void main() {
         resampler: _filledResampler(),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -198,6 +203,7 @@ void main() {
         resampler: _filledResampler(),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -217,6 +223,7 @@ void main() {
         resampler: _filledResampler(),
         site: _site,
         nativeRecordPath: native.path,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -238,10 +245,54 @@ void main() {
         resampler: _filledResampler(),
         site: _site,
         nativeRecordPath: native.path,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       );
 
       expect(await native.exists(), isFalse, reason: '측정마다 쌓이면 안 된다');
+    });
+
+    test('현장 소음 녹음을 측정 폴더의 noise.m4a 로 옮겨 맨 뒤에 두고 원래 것은 지운다', () async {
+      final audio = File('${temp.path}/noise_native_1.m4a'); // 녹음 자리
+      await audio.writeAsBytes(const <int>[0, 0, 0, 24]);
+
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: audio.path,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(
+        outcome.savedPaths.last,
+        endsWith(MeasurementRepository.noiseAudioFileName),
+      );
+      expect(await File(outcome.savedPaths.last).readAsBytes(), <int>[
+        0,
+        0,
+        0,
+        24,
+      ]);
+      expect(await audio.exists(), isFalse, reason: '측정마다 쌓이면 안 된다');
+    });
+
+    test('현장 소음 녹음이 없으면 저장은 성공하고 집계 파일에 적는다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.isSuccess, isTrue);
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('noiseAudioPath: null'));
     });
 
     test('원본 복사가 실패해도 저장은 성공하고 집계 파일에 적는다', () async {
@@ -249,6 +300,7 @@ void main() {
         resampler: _filledResampler(),
         site: _site,
         nativeRecordPath: '${temp.path}/missing_native.txt',
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -268,6 +320,7 @@ void main() {
         resampler: _filledResampler(count: 200),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -301,28 +354,43 @@ void main() {
       ).readAsString();
     }
 
-    test('저장할 때 설정의 엔지니어 이름을 싣고, 나중에 설정을 바꿔도 그대로다', () async {
-      await PrefsStore.instance.saveEngineerName('  홍길동 ');
+    test('저장할 때 로그인 작업자를 싣고, 나중에 다른 사람이 로그인해도 그대로다', () async {
+      LoginSession.instance.current = const Worker(
+        employeeId: 'T00001',
+        name: '홍길동',
+        company: '(주)시험승강기',
+        team: '설치1팀',
+      );
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(count: 1024),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
       expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
 
-      await PrefsStore.instance.saveEngineerName('김철수');
+      LoginSession.instance.current = const Worker(
+        employeeId: 'T00002',
+        name: '김철수',
+      );
       final saved = await MeasurementRepository.instance.load(
         '20260114-110359',
-      ); // 설정을 바꾼 뒤 다시 읽은 측정 결과
+      ); // 다른 사람이 로그인한 뒤 다시 읽은 측정 결과
       expect(saved?.engineerName, '홍길동');
+      expect(saved?.employeeId, 'T00001');
+      expect(saved?.company, '(주)시험승강기');
+      expect(saved?.team, '설치1팀');
+      LoginSession.instance.current = null;
     });
 
-    test('설정에 엔지니어 이름이 없으면 결과의 이름은 null 이다', () async {
+    test('로그인 작업자가 없으면 결과의 작업자 칸은 null 이다', () async {
+      LoginSession.instance.current = null;
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(count: 1024),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
       expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
@@ -331,6 +399,7 @@ void main() {
         '20260114-110359',
       ); // 저장한 측정 결과
       expect(saved?.engineerName, isNull);
+      expect(saved?.employeeId, isNull);
     });
 
     test('저장한 결과의 표본 속도는 100Hz 이고 집계 파일에 처리 · 가중 · 구간 내역을 남긴다', () async {
@@ -339,6 +408,7 @@ void main() {
         resampler: _filledResampler(count: 1024),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -395,6 +465,7 @@ void main() {
         ),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -411,6 +482,7 @@ void main() {
         resampler: _filledResampler(count: 512),
         site: _site,
         nativeRecordPath: null,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과
 
@@ -429,6 +501,7 @@ void main() {
         resampler: _filledResampler(count: 512),
         site: _site,
         nativeRecordPath: native.path,
+        noiseAudioPath: null,
         measuredAt: measuredAt,
       ); // 저장 결과 (기준선 구간 부족으로 실패)
 

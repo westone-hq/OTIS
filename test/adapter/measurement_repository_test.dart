@@ -288,6 +288,7 @@ void main() {
         MeasurementRepository.rawFileName,
         MeasurementRepository.metaFileName,
         MeasurementRepository.nativeRawFileName,
+        MeasurementRepository.noiseAudioFileName,
       ]);
       expect(
         MeasurementRepository.jobFileNames.toSet().length,

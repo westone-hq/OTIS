@@ -8,18 +8,22 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
 import androidx.core.content.ContextCompat
+import java.io.File
 import kotlin.math.exp
 import kotlin.math.log10
 import kotlin.math.sqrt
 
 /**
  * 작성: 2026-09-15 13:20:00 · 박희정
- * 수정: 2026-10-04 13:50:15 · nada
+ * 수정: 2026-10-18 10:12:30 · nada
  * 클래스: NoiseCaptureHandler
  * 목적: 측정하는 동안 마이크로 소음 크기(dBA)를 재서 `latestDba` 에
  *       채운다. 최근 `WINDOW_SEC` 만큼의 소리로 RMS(제곱 평균의 제곱근,
  *       소리 크기를 구하는 계산)를 내고, 그 창을 1초에 `HOP_HZ` 번씩
  *       밀며 값을 새로 낸다.
+ *       같은 마이크 표본을 `NoiseAudioEncoder` 로 M4A 파일(현장 소음
+ *       녹음)에도 남긴다. 녹음은 듣는 용도이고 dBA 계산과 따로 돈다 —
+ *       녹음이 실패해도 dBA 는 계속 잰다.
  *       권한이 없거나 초기화에 실패해도 앱을 죽이지 않고 0.0으로 대체한다.
  * 근거: 측정 — OTIS 소음계와 동시에 잰 비교에서 피크가 낮고 값이 계단처럼
  *       바뀌어, 창을 짧게 하고 더 자주 미는 실험값을 쓰고 있다
@@ -115,11 +119,21 @@ class NoiseCaptureHandler(private val context: Context) {
     private var captureThread: Thread? = null
 
     /**
+     * 현장 소음 녹음기. `start()` 가 만들고, 녹음 스레드가 표본을 넣으며,
+     * `stop()` 이 스레드가 끝난 뒤 파일을 닫는다. 녹음 중이 아니거나 녹음이
+     * 실패해 포기했으면 null
+     */
+    private var audioEncoder: NoiseAudioEncoder? = null
+
+    /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-15 22:51:06 · nada
+     * 수정: 2026-10-18 10:12:30 · nada
      * 함수: start
-     * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다.
+     * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다
+     *       — 그때 닫힌 앞 녹음은 받아 갈 곳이 없어 지운다.
      *       권한이 없거나 AudioRecord 초기화에 실패하면 예외 없이 0.0으로 둔다.
+     *       현장 소음 녹음(`openAudioEncoder()`)도 함께 켜고, 녹음 스레드가
+     *       읽은 표본을 그대로 넣는다. 녹음이 실패하면 녹음만 포기한다.
      *
      *       창이 가득 차기 전에는 값을 내지 않고 0.0을 내보낸다. 덜 찬 창의
      *       RMS는 0에서 실제 크기로 천천히 올라오는 경사라서 값이 아니다.
@@ -152,7 +166,7 @@ class NoiseCaptureHandler(private val context: Context) {
         calibrationOffsetDba: Double,
         micDbfsToDbaOffset: Double = DEFAULT_MIC_DBFS_TO_DBA_OFFSET,
     ) {
-        stop()
+        stopAndDiscardAudio() // → 로직 이동: stopAndDiscardAudio()
 
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED
@@ -199,6 +213,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
             isRecording = true
             audioRecord?.startRecording()
+            audioEncoder = openAudioEncoder() // → 로직 이동: openAudioEncoder()
 
             captureThread = Thread {
                 val hopBuffer = ShortArray(hopSamples) // 한 번에 읽어 올 표본
@@ -223,6 +238,17 @@ class NoiseCaptureHandler(private val context: Context) {
                             break
                         }
                         continue
+                    }
+
+                    audioEncoder?.let { encoder ->
+                        try {
+                            // → 로직 이동: NoiseAudioEncoder.feed()
+                            encoder.feed(hopBuffer, read)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "noise audio encode failed; recording dropped", e)
+                            encoder.abort() // → 로직 이동: NoiseAudioEncoder.abort()
+                            audioEncoder = null
+                        }
                     }
 
                     for (i in 0 until read) {
@@ -282,25 +308,63 @@ class NoiseCaptureHandler(private val context: Context) {
             }
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException starting AudioRecord", e)
-            stop()
+            stopAndDiscardAudio() // → 로직 이동: stopAndDiscardAudio()
             latestDba = 0.0
         } catch (e: Exception) {
             Log.e(TAG, "Exception starting AudioRecord", e)
-            stop()
+            stopAndDiscardAudio() // → 로직 이동: stopAndDiscardAudio()
             latestDba = 0.0
         }
     }
 
     /**
+     * 작성: 2026-10-18 10:12:30 · nada
+     * 함수: openAudioEncoder
+     * 목적: 현장 소음 녹음 파일을 앱 저장 공간 맨 위에 만들고 녹음기를
+     *       준비한다. 측정 폴더는 Flutter 가 저장할 때 정하므로, 원본 기록
+     *       (`SensorStreamHandler`)과 같이 여기 두었다가 Flutter 가 옮긴다.
+     * 반환: 녹음기. 이 기기에서 AAC 압축기를 열지 못하면 null — 녹음 없이
+     *       dBA 만 잰다
+     */
+    private fun openAudioEncoder(): NoiseAudioEncoder? {
+        val dir = // 녹음 파일을 둘 앱 저장 공간
+            context.getExternalFilesDir(null) ?: context.filesDir
+        val file = // 이번 측정의 녹음 파일
+            File(dir, "noise_native_${System.currentTimeMillis()}.m4a")
+        return try {
+            NoiseAudioEncoder(file, SAMPLE_RATE)
+        } catch (e: Exception) {
+            Log.e(TAG, "noise audio encoder unavailable", e)
+            if (file.exists()) file.delete()
+            null
+        }
+    }
+
+    /**
+     * 작성: 2026-10-18 10:12:30 · nada
+     * 함수: stopAndDiscardAudio
+     * 목적: 측정을 멈추되 닫힌 녹음 파일은 지운다. 받아 갈 곳이 없는
+     *       정지(다시 시작 전, 시작 실패, 화면 종료)에 쓴다 — 지우지 않으면
+     *       앱 저장 공간에 쌓인다.
+     */
+    fun stopAndDiscardAudio() {
+        val path = stop() // → 로직 이동: stop()
+        if (path != null && !File(path).delete()) Log.w(TAG, "delete failed: $path")
+    }
+
+    /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-15 22:51:06 · nada
+     * 수정: 2026-10-18 10:12:30 · nada
      * 함수: stop
      * 목적: 소음 측정을 멈추고 마이크 자원을 반납한다. latestDba도 0.0으로 돌린다.
      *       순서를 지킨다. 녹음을 먼저 멈춰 녹음 스레드의 읽기를 풀고, 그
      *       스레드가 끝나길 기다린 뒤에 녹음기를 반납한다 — 읽는 중인
      *       녹음기를 다른 스레드에서 반납하면 앱이 죽을 수 있다.
+     *       현장 소음 녹음 파일도 스레드가 끝난 뒤에 닫는다 — 표본을 넣는
+     *       스레드와 닫는 스레드가 겹치지 않게 한다.
+     * 반환: 닫은 현장 소음 녹음(M4A) 경로. 녹음하지 않았거나 실패했으면 null
      */
-    fun stop() {
+    fun stop(): String? {
         isRecording = false
         val record = audioRecord // 멈추고 반납할 녹음기, 없으면 null
         try {
@@ -315,6 +379,10 @@ class NoiseCaptureHandler(private val context: Context) {
         record?.release()
         audioRecord = null
         latestDba = 0.0
+        // → 로직 이동: NoiseAudioEncoder.finish()
+        val audioPath = audioEncoder?.finish() // 닫은 녹음 경로, 없으면 null
+        audioEncoder = null
+        return audioPath
     }
 }
 

@@ -23,8 +23,10 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/model/worker.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
 import 'package:vibration_checker/ui/features/measure/measuring_screen.dart';
@@ -216,7 +218,7 @@ Future<MeasurementResult> _recordFromRaw(
     site: MeasurementSession.instance.currentSite!,
     id: id,
     measuredAt: measuredAt,
-    engineerName: '홍길동',
+    worker: const Worker(employeeId: 'T00001', name: '홍길동'),
   ); // 조립 결과
   final result = assembled.result!.copyWith(
     signalConditioning:
@@ -281,9 +283,14 @@ void main() {
       buildSignature: '',
     );
     SharedPreferences.setMockInitialValues({
-      'engineerName': '홍길동',
       'emails': <String>['engineer@example.com', 'office@example.com'],
     });
+    LoginSession.instance.current = const Worker(
+      employeeId: 'T00001',
+      name: '홍길동',
+      company: '(주)시험승강기',
+      team: '설치1팀',
+    );
   });
 
   testWidgets('로우 데이터 흐름', (tester) async {

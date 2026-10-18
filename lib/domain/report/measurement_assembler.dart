@@ -3,6 +3,7 @@ import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/model/worker.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 
 /// 작성: 2026-09-15 13:08:37 · nada
@@ -93,7 +94,7 @@ class MeasurementAssembleResult {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -124,8 +125,8 @@ class MeasurementAssembler {
   ///         않은데 바꿀 수 없으면 층수처럼 사유를 올린다. 단위는 늘
   ///         `SiteInfo.loadUnit`(kg)이고, 하중이 없으면 단위도 뜻이 없어
   ///         null 로 둔다
-  ///       - 엔지니어 이름은 현장 정보가 아니라 기기 설정이라 따로 받는다.
-  ///         비어 있으면 null
+  ///       - 로그인한 작업자(성명 · 사번 · 업체명 · 관리팀)는 현장 정보가
+  ///         아니라 로그인 상태라 따로 받는다. 성명이 엔지니어 이름이다
   ///       - 소음 시계열을 격자에서 그대로 옮기고, 운행 구간 안 0 이 아닌
   ///         표본의 최대를 `noiseMax` 에 담는다. 쓸 표본이 하나도 없으면 null 로
   ///         둔다. 자세한 까닭은 클래스 주석의 소음 계약을 본다
@@ -135,7 +136,7 @@ class MeasurementAssembler {
   ///       measuredAt — 측정 시각. `grid.t0Ns` 는 단조시계(기기가 켜진
   ///       뒤 흐른 시간만 세는 시계) 값이라 벽시계 시각으로 쓸 수 없어
   ///       따로 받는다
-  ///       engineerName — 저장 시점 설정의 엔지니어 이름. 없으면 null
+  ///       worker — 저장 시점에 로그인해 있던 작업자. 없으면 null
   /// 반환: 변환된 측정 결과, 또는 변환하지 못한 사유
   /// 식: sampleRate = 1,000,000,000 / gridIntervalNs
   static MeasurementAssembleResult assemble({
@@ -143,7 +144,7 @@ class MeasurementAssembler {
     required SiteInfo site,
     required String id,
     required DateTime measuredAt,
-    String? engineerName,
+    Worker? worker,
   }) {
     if (grid.failureReason != null) {
       return MeasurementAssembleResult.failure(grid.failureReason!);
@@ -178,7 +179,6 @@ class MeasurementAssembler {
     }
     final postalCode = site.postalCode.trim(); // 우편번호. 비었으면 null 로 둔다
     final notes = site.notes.trim(); // 참고사항. 비었으면 null 로 둔다
-    final engineer = engineerName?.trim() ?? ''; // 엔지니어 이름, 없으면 빈 칸
 
     final xSeries = <double>[]; // X축 진동 시계열 (mg)
     final ySeries = <double>[]; // Y축 진동 시계열 (mg)
@@ -256,7 +256,10 @@ class MeasurementAssembler {
         analysisType: site.analysisType,
         postalCode: postalCode.isEmpty ? null : postalCode,
         notes: notes.isEmpty ? null : notes,
-        engineerName: engineer.isEmpty ? null : engineer,
+        engineerName: worker?.name,
+        employeeId: worker?.employeeId,
+        company: worker?.company,
+        team: worker?.team,
         dateTime: measuredAt,
         xSeries: xWeighted,
         ySeries: yWeighted,

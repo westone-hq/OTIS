@@ -55,14 +55,14 @@ void main() {
     expect(loaded['direction'], '하부 → 상부');
   });
 
-  test('엔지니어 이름을 앞뒤 공백 없이 저장하고 비우면 지운다', () async {
-    expect(await store.loadEngineerName(), isNull);
+  test('로그인 사번을 저장한 그대로 읽고 null 이면 지운다', () async {
+    expect(await store.loadLoginEmployeeId(), isNull);
 
-    await store.saveEngineerName('  홍길동 ');
-    expect(await store.loadEngineerName(), '홍길동');
+    await store.saveLoginEmployeeId('T00001');
+    expect(await store.loadLoginEmployeeId(), 'T00001');
 
-    await store.saveEngineerName('   ');
-    expect(await store.loadEngineerName(), isNull);
+    await store.saveLoginEmployeeId(null);
+    expect(await store.loadLoginEmployeeId(), isNull);
   });
 
   test('깨진 현장 정보는 저장된 적 없는 것처럼 빈 표로 읽는다', () async {
