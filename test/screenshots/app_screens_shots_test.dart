@@ -19,13 +19,16 @@ import 'package:vibration_checker/adapter/update_checker.dart';
 import 'package:vibration_checker/adapter/update_installer.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
+import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/model/worker.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
+import 'package:vibration_checker/ui/features/login/login_screen.dart';
 import 'package:vibration_checker/ui/features/measure/measuring_screen.dart';
 import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/measure/placement_sheet.dart';
@@ -376,9 +379,14 @@ void main() {
       buildSignature: '',
     );
     SharedPreferences.setMockInitialValues({
-      'engineerName': '홍길동',
       'emails': <String>['engineer@example.com', 'office@example.com'],
     });
+    LoginSession.instance.current = const Worker(
+      employeeId: 'T00001',
+      name: '홍길동',
+      company: '(주)시험승강기',
+      team: '설치1팀',
+    );
     MeasurementSession.instance.currentSite = const SiteInfo(
       jobNo: '2025F 1234R01',
       siteName: '시험 현장',
@@ -524,6 +532,13 @@ void main() {
         );
         await settle(tester, rounds: 100);
         await capture(tester, shotName('17_메일시트', size));
+      });
+
+      testWidgets('로그인', (tester) async {
+        setShotSize(tester, size);
+        await tester.pumpWidget(_app(const LoginScreen()));
+        await settle(tester);
+        await capture(tester, shotName('00_로그인', size));
       });
 
       testWidgets('설정', (tester) async {

@@ -4,7 +4,7 @@ import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-15 16:50:04 · nada
+/// 수정: 2026-10-18 09:41:12 · nada
 /// 클래스: MeasurementResult
 /// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
 ///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
@@ -55,9 +55,23 @@ class MeasurementResult {
   /// 두었거나 예전 측정이면 null
   final String? notes;
 
-  /// 측정을 저장할 때 설정에 있던 엔지니어 이름. 나중에 설정을 바꿔도
-  /// 이 값은 바뀌지 않는다. 설정이 비어 있었거나 예전 측정이면 null
+  /// 측정을 저장할 때 로그인해 있던 작업자의 성명. 리포트 엔지니어 칸에
+  /// 찍힌다. 나중에 다른 사람이 로그인해도 이 값은 바뀌지 않는다.
+  /// 로그인이 생기기 전(2026-10-18 전) 결과는 설정에 손으로 적은 이름이고,
+  /// 그때 설정이 비어 있었거나 더 예전 측정이면 null
   final String? engineerName;
+
+  /// 측정을 저장할 때 로그인해 있던 작업자의 사번. 로그인이 생기기 전
+  /// (2026-10-18 전) 결과면 null
+  final String? employeeId;
+
+  /// 측정을 저장할 때 로그인해 있던 작업자의 업체명. 명단에 업체가 비어
+  /// 있는 작업자(OTIS 직원)이거나 2026-10-18 전 결과면 null
+  final String? company;
+
+  /// 측정을 저장할 때 로그인해 있던 작업자의 관리팀. null 의 뜻은
+  /// `company` 와 같다
+  final String? team;
 
   /// 측정 일시
   final DateTime dateTime;
@@ -145,7 +159,7 @@ class MeasurementResult {
   final String? travelWindowFailure;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -161,7 +175,10 @@ class MeasurementResult {
   ///       analysisType — 해석 종류. 예전 측정이면 null
   ///       postalCode — 우편번호 (숫자 5자리). 예전 측정이면 null
   ///       notes — 추가 참고사항. 비웠거나 예전 측정이면 null
-  ///       engineerName — 저장 시점 엔지니어 이름. 없으면 null
+  ///       engineerName — 저장 시점 엔지니어 이름(로그인 작업자 성명).
+  ///       없으면 null
+  ///       employeeId, company, team — 저장 시점 로그인 작업자의 사번 ·
+  ///       업체명 · 관리팀. 없으면 null
   ///       dateTime — 측정 일시
   ///       xPtp, yPtp, zPtp — 축별 진동 P2P (mg). 계산하지 않은 예전
   ///       측정이면 null
@@ -191,6 +208,9 @@ class MeasurementResult {
     this.postalCode,
     this.notes,
     this.engineerName,
+    this.employeeId,
+    this.company,
+    this.team,
     required this.dateTime,
     this.xPtp,
     this.yPtp,
@@ -216,7 +236,7 @@ class MeasurementResult {
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -238,6 +258,9 @@ class MeasurementResult {
     String? postalCode,
     String? notes,
     String? engineerName,
+    String? employeeId,
+    String? company,
+    String? team,
     DateTime? dateTime,
     double? xPtp,
     double? yPtp,
@@ -276,6 +299,9 @@ class MeasurementResult {
       postalCode: postalCode ?? this.postalCode,
       notes: notes ?? this.notes,
       engineerName: engineerName ?? this.engineerName,
+      employeeId: employeeId ?? this.employeeId,
+      company: company ?? this.company,
+      team: team ?? this.team,
       dateTime: dateTime ?? this.dateTime,
       xPtp: xPtp ?? this.xPtp,
       yPtp: yPtp ?? this.yPtp,
@@ -302,7 +328,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -324,6 +350,9 @@ class MeasurementResult {
       'postalCode': postalCode,
       'notes': notes,
       'engineerName': engineerName,
+      'employeeId': employeeId,
+      'company': company,
+      'team': team,
       'dateTime': dateTime.toIso8601String(),
       'xPtp': xPtp,
       'yPtp': yPtp,
@@ -350,7 +379,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -362,6 +391,7 @@ class MeasurementResult {
   ///       남겨 처리 전 측정임을 드러낸다.
   ///       하중 · 하중 단위 · 해석 종류 · 우편번호 · 참고사항 · 엔지니어
   ///       이름도 같다. 2026-10-11 이전 파일에는 없어 null 로 읽는다.
+  ///       사번 · 업체명 · 관리팀도 같다. 2026-10-18 이전 파일에는 없다.
   ///       운행 구간 · 그 실패 사유도 같다. 2026-10-15 이전 파일에는 없다.
   ///       측정 일시는 채우지 않는다 — 없거나 읽을 수 없으면 "지금" 으로
   ///       대신하지 않고 실패를 올린다. 대신 넣으면 예전 결과가 방금 잰
@@ -390,6 +420,9 @@ class MeasurementResult {
       postalCode: map['postalCode'] as String?,
       notes: map['notes'] as String?,
       engineerName: map['engineerName'] as String?,
+      employeeId: map['employeeId'] as String?,
+      company: map['company'] as String?,
+      team: map['team'] as String?,
       // → 로직 이동: _dateTimeOf()
       dateTime: _dateTimeOf(map['dateTime']),
       xPtp: (map['xPtp'] as num?)?.toDouble(),

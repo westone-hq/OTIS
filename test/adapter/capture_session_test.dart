@@ -24,6 +24,10 @@ class _FakeSensors extends SensorChannelManager {
   /// 저장하지 않은 것으로 둔다
   String? recordPathOnStop;
 
+  /// 수집 정지 때 안드로이드가 현장 소음 녹음을 닫았다고 알릴 경로. null
+  /// 이면 녹음하지 않은 것으로 둔다
+  String? audioPathOnStop;
+
   /// 작성: 2026-10-05 10:00:11 · nada
   /// 함수: checkSensorsAvailable
   /// 목적: 시험이 풀어 줄 때까지 응답을 미룬다.
@@ -43,14 +47,15 @@ class _FakeSensors extends SensorChannelManager {
   }) async => calls.add('start');
 
   /// 작성: 2026-10-05 10:00:11 · nada
-  /// 수정: 2026-10-07 03:30:18 · nada
+  /// 수정: 2026-10-18 10:12:30 · nada
   /// 함수: stopCapture
-  /// 목적: 수집 정지 요청을 기록하고, 안드로이드처럼 원본 기록 경로를
-  ///       알린다(`recordPathOnStop`).
+  /// 목적: 수집 정지 요청을 기록하고, 안드로이드처럼 원본 기록 · 현장 소음
+  ///       녹음 경로를 알린다(`recordPathOnStop`, `audioPathOnStop`).
   @override
   Future<void> stopCapture() async {
     calls.add('stop');
     lastRecordPath = recordPathOnStop;
+    lastAudioPath = audioPathOnStop;
   }
 
   /// 작성: 2026-10-05 10:00:11 · nada
@@ -172,12 +177,17 @@ void main() {
     });
 
     /// 작성: 2026-10-07 03:30:18 · nada
+    /// 수정: 2026-10-18 10:12:30 · nada
     /// 함수: startedSession
-    /// 목적: 원본 기록 파일을 남기는 센서 통로로 수집을 켠 상태를 만든다.
+    /// 목적: 원본 기록 파일(과 현장 소음 녹음)을 남기는 센서 통로로 수집을
+    ///       켠 상태를 만든다.
     /// 인자: native — 정지 때 안드로이드가 저장했다고 알릴 원본 파일
+    ///       audio — 정지 때 닫았다고 알릴 녹음 파일. 없으면 녹음 없음
     /// 반환: 수집이 켜진 측정
-    Future<CaptureSession> startedSession(File native) async {
-      final sensors = _FakeSensors()..recordPathOnStop = native.path; // 통로
+    Future<CaptureSession> startedSession(File native, [File? audio]) async {
+      final sensors = _FakeSensors()
+        ..recordPathOnStop = native.path
+        ..audioPathOnStop = audio?.path; // 요청을 기록하는 센서 통로
       sensors.availableReply.complete(true);
       final session = CaptureSession(sensorManager: sensors); // 시험할 수집
       await session.start(onVolumeKey: () {}, onNoResponse: () {});
@@ -195,6 +205,18 @@ void main() {
       expect(await native.exists(), isFalse, reason: '쓰지 않는 원본이 쌓인다');
     });
 
+    test('중단(discard)하면 현장 소음 녹음도 지운다', () async {
+      final native = File('${temp.path}/raw_native_3.txt'); // 원본 자리
+      await native.writeAsString('accel 1 0 0 1000 3906\n');
+      final audio = File('${temp.path}/noise_native_3.m4a'); // 녹음 자리
+      await audio.writeAsBytes(const <int>[0, 0, 0, 24]);
+      final session = await startedSession(native, audio); // 켜진 수집
+
+      await session.discard();
+
+      expect(await audio.exists(), isFalse, reason: '쓰지 않는 녹음이 쌓인다');
+    });
+
     test('저장하는 마무리(stop)는 원본을 남긴다', () async {
       final native = File('${temp.path}/raw_native_2.txt'); // 원본 자리
       await native.writeAsString('accel 1 0 0 1000 3906\n');
@@ -204,6 +226,19 @@ void main() {
 
       expect(await native.exists(), isTrue, reason: '저장 절차가 옮겨야 한다');
       expect(session.nativeRecordPath, native.path);
+    });
+
+    test('저장하는 마무리(stop)는 현장 소음 녹음 경로를 넘겨 준다', () async {
+      final native = File('${temp.path}/raw_native_4.txt'); // 원본 자리
+      await native.writeAsString('accel 1 0 0 1000 3906\n');
+      final audio = File('${temp.path}/noise_native_4.m4a'); // 녹음 자리
+      await audio.writeAsBytes(const <int>[0, 0, 0, 24]);
+      final session = await startedSession(native, audio); // 켜진 수집
+
+      await session.stop();
+
+      expect(await audio.exists(), isTrue, reason: '저장 절차가 옮겨야 한다');
+      expect(session.noiseAudioPath, audio.path);
     });
   });
 }

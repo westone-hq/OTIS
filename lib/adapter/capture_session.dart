@@ -12,6 +12,7 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
 
 /// 작성: 2026-10-04 13:29:41 · nada
+/// 수정: 2026-10-18 10:12:30 · nada
 /// 클래스: CaptureSession
 /// 목적: 측정 한 번의 센서 수집을 켜고 끄는 절차를 맡는다. 측정 화면
 ///       (measuring_screen.dart)이 화면 모양과 상관없이 같은 순서로
@@ -20,7 +21,7 @@ import 'package:vibration_checker/domain/capture/noise_offset.dart';
 ///         가로채기, 무응답 감시를 차례로 건다
 ///       - `stop()` — 건 것을 거꾸로 푼다. 여러 번 불러도 안전하다
 ///       - `discard()` — 저장하지 않는 중단이면 멈춘 뒤 안드로이드 원본
-///         기록 파일까지 지운다
+///         기록 파일과 현장 소음 녹음까지 지운다
 ///       수집한 이벤트는 `resampler` 에 쌓이고, 저장은
 ///       `MeasurementRecorder`(measurement_recorder.dart)가 한다.
 class CaptureSession {
@@ -56,15 +57,16 @@ class CaptureSession {
   static const Duration _slowStepLimit = Duration(milliseconds: 500);
 
   /// 작성: 2026-10-05 10:00:11 · nada
+  /// 수정: 2026-10-18 10:12:30 · nada
   /// 변수: _stopCaptureLimit
   /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 정지는 안드로이드가 원본
-  ///       기록 파일을 닫고 경로를 돌려주는 단계라 다른 정리보다 길게
-  ///       기다린다. 이 한도가 `SensorChannelManager.stopCapture()` 자신의
-  ///       한도보다 짧으면 경로를 받기 전에 끊겨 원본 사본이 빠진다.
-  /// 근거: 인용 — 안드로이드 `SensorStreamHandler.stop()` 이 센서 스레드를
-  ///       최대 500ms, `NoiseCaptureHandler.stop()` 이 마이크 스레드를 최대
-  ///       300ms 기다린다. `SensorChannelManager` 의 응답 한도보다 길게 둔다
-  static const Duration _stopCaptureLimit = Duration(seconds: 2);
+  ///       기록 · 현장 소음 녹음 파일을 닫고 경로를 돌려주는 단계라 다른
+  ///       정리보다 길게 기다린다. 이 한도가 `SensorChannelManager.stopCapture()`
+  ///       자신의 한도보다 짧으면 경로를 받기 전에 끊겨 원본 사본과 녹음이
+  ///       빠진다.
+  /// 근거: 인용 — `SensorChannelManager` 의 응답 한도(3.5초, 그 근거를
+  ///       본다)보다 길게 둔다
+  static const Duration _stopCaptureLimit = Duration(seconds: 4);
 
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 변수: _wakelockOnLimit
@@ -143,6 +145,12 @@ class CaptureSession {
   /// 목적: 안드로이드가 `stop()` 때 저장한 원본 기록 파일 경로. 저장하지
   ///       못했거나 아직 멈추기 전이면 null.
   String? get nativeRecordPath => _sensorManager.lastRecordPath;
+
+  /// 작성: 2026-10-18 10:12:30 · nada
+  /// 함수: noiseAudioPath
+  /// 목적: 안드로이드가 `stop()` 때 닫은 현장 소음 녹음(M4A) 경로. 녹음하지
+  ///       못했거나 아직 멈추기 전이면 null.
+  String? get noiseAudioPath => _sensorManager.lastAudioPath;
 
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: start
@@ -231,23 +239,25 @@ class CaptureSession {
   }
 
   /// 작성: 2026-10-07 03:30:18 · nada
+  /// 수정: 2026-10-18 10:12:30 · nada
   /// 함수: discard
   /// 목적: 저장하지 않고 끝내는 측정(뒤로가기 중단, 앱 전환 중단, 센서
-  ///       무응답)의 수집을 멈추고, 안드로이드가 남긴 원본 기록 파일을
-  ///       지운다. 저장하지 않으면 측정 폴더가 생기지 않아 원본이 앱 저장
-  ///       공간 맨 위에 쌓이고, 쓰는 곳도 없다. 중단 확인 창도 "진행 중인
-  ///       측정 데이터는 저장되지 않습니다"라고 안내한다.
+  ///       무응답)의 수집을 멈추고, 안드로이드가 남긴 원본 기록 파일과
+  ///       현장 소음 녹음을 지운다. 저장하지 않으면 측정 폴더가 생기지 않아
+  ///       두 파일이 앱 저장 공간 맨 위에 쌓이고, 쓰는 곳도 없다. 중단 확인
+  ///       창도 "진행 중인 측정 데이터는 저장되지 않습니다"라고 안내한다.
   ///       지우지 못해도 기록만 남기고 넘어간다 — 화면 나가기를 막지 않는다.
   ///       `stop()` 처럼 여러 번 불러도 안전하다.
   Future<void> discard() async {
     await stop(); // → 로직 이동: stop()
-    final path = nativeRecordPath; // 지울 원본 경로, 저장 안 됐으면 null
-    if (path == null) return;
-    try {
-      final file = File(path); // 지울 원본 파일
-      if (await file.exists()) await file.delete();
-    } catch (e) {
-      debugPrint('중단한 측정의 원본 삭제 실패: $path, $e');
+    for (final path in <String?>[nativeRecordPath, noiseAudioPath]) {
+      if (path == null) continue; // 저장 안 된 파일
+      try {
+        final file = File(path); // 지울 파일
+        if (await file.exists()) await file.delete();
+      } catch (e) {
+        debugPrint('중단한 측정의 파일 삭제 실패: $path, $e');
+      }
     }
   }
 

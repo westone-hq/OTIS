@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:vibration_checker/adapter/login_store.dart';
 
 import 'ui/core/router.dart';
 import 'ui/core/theme.dart';
 
 /// 작성: 2026-08-17 11:15:41 · 박건준
+/// 수정: 2026-10-18 09:41:12 · nada
 /// 함수: main
 /// 목적: 앱 실행 진입점.
 ///       - `WidgetsFlutterBinding.ensureInitialized()` — 프레임워크 바인딩
 ///         (binding, 위젯 트리(widget tree, 화면을 이루는 위젯들이 부모-
 ///         자식 구조로 이어진 것)가 화면·센서 등 실제 엔진 기능을 쓸 수
 ///         있도록 연결하는 초기화 과정)을 실행한다.
+///       - `LoginStore.restore()` — 기기에 남은 로그인을 되살린다. 첫
+///         화면을 고르기(라우터가 로그인 화면으로 돌릴지) 전에 끝나야 해서
+///         기다린다. 명단을 읽지 못해도 앱은 띄운다 — 로그인 화면이
+///         로그인을 누를 때 같은 오류를 안내한다
 ///       - `runApp(...)` — 초기화된 바인딩 위에 앱 위젯 트리를 올려 화면을
 ///         그리기 시작한다.
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await LoginStore.instance.restore(); // → 로직 이동: LoginStore.restore()
+  } catch (e, st) {
+    debugPrint('로그인 되살리기 실패: $e\n$st');
+  }
   runApp(const VibrationCheckerApp()); // → 로직 이동: VibrationCheckerApp.build()
 }
 

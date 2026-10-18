@@ -20,16 +20,17 @@ flutter test --tags screenshot --run-skipped test/screenshots
 
 | 경로 | 역할 |
 |---|---|
-| `lib/model/` | 순수 자료형 (`MeasurementResult`) |
+| `lib/model/` | 순수 자료형 (`MeasurementResult` · `Worker`) |
+| `lib/domain/auth/` | 작업자 명단 읽기 · 로그인 판정 (`WorkerDirectory`) |
 | `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`), 지표 계산 전 신호 처리 (`SignalConditioner`), ISO 8041 주파수 가중 (`RideWeighting`). 수집 · 처리 수치는 `CaptureConfig` |
 | `lib/domain/report/` | 리포트 좌표·임계값·지표 계산. 운행 구간(`TravelWindow`) · 반주기 P2P(`HalfCycle`)도 여기. 숫자는 여기에만 둔다 |
-| `lib/domain/session/` | 화면 사이에 넘기는 이번 측정 상태 (`MeasurementSession`) |
+| `lib/domain/session/` | 화면 사이에 넘기는 이번 측정 상태 (`MeasurementSession`), 지금 로그인한 작업자 (`LoginSession`) |
 | `lib/domain/time/` | 사람이 읽는 시각을 한국 시간(UTC+9)으로 맞추는 `KoreaTime` |
 | `lib/domain/update/` | 앱 안 업데이트 — version.json 읽기(`UpdateInfo`) · 판정(`UpdateDecision`) · 배포 주소와 시간 값(`UpdateConfig`) |
 | `lib/adapter/` | 플랫폼 경계 — 센서 채널, 파일·저장소, PDF 렌더링, 환경설정. 측정 한 번의 수집 절차는 `capture_session.dart`, 저장 절차는 `measurement_recorder.dart`. 업데이트 확인은 `update_checker.dart`, 내려받기 · 설치 통로는 `update_installer.dart` |
 | `lib/ui/core/` | 라우터, 디자인 토큰(`theme.dart`), 공용 위젯(`widgets/`) |
 | `lib/ui/features/` | 화면별 폴더 (home · measure · history · result · settings · shared · update) |
-| `android/app/src/main/kotlin/` | `MainActivity` · `SensorStreamHandler` · `NoiseCaptureHandler` · `UpdateInstaller`(APK 내려받기 · SHA-256 확인 · `PackageInstaller` 설치) |
+| `android/app/src/main/kotlin/` | `MainActivity` · `SensorStreamHandler` · `NoiseCaptureHandler` · `NoiseAudioEncoder`(현장 소음 M4A 녹음) · `UpdateInstaller`(APK 내려받기 · SHA-256 확인 · `PackageInstaller` 설치) |
 | `pdf_report_dev/` | 리포트 좌표를 확정할 때 쓴 파이썬 프로토타입 (앱 빌드와 무관) |
 | `docs/comment_rules.md` | 주석 규칙. **코드 작업 전 매번 다시 읽는다** |
 | `docs/report_layout.json` | 리포트 좌표 정본. `report_layout_test` 가 Dart 상수와 대조한다 |
@@ -37,17 +38,27 @@ flutter test --tags screenshot --run-skipped test/screenshots
 | `docs/reference/H6N1AP65.pdf` | 원본 TUNE 리포트(실제 현장). 머리말 표기(하중 · 제품 · 주소)의 근거. **H6N1AP65.pdf 는 저장소 밖 보관**(`.gitignore`) — 실제 엔지니어명 · 현장명이 들어 있다. 시험 픽스처로 쓰지 않는다 |
 | `docs/noise_otis_offset_notes.md` | 소음 dBA 오프셋 · OTIS 차이 · 남은 과제 |
 | `docs/release.md` | 릴리스 서명 키 보관 · `android/key.properties` · 서명 확인(인증서 지문). 키가 없으면 릴리스 빌드가 멈춘다 |
+| `assets/workers/workers.json` | 로그인 작업자 명단(사번 · 성명 · 업체명 · 관리팀). OTIS 명단 엑셀(`설치 업체 List_*.xlsx`, 저장소 밖 · `.gitignore`)에서 `tool/import_workers.py` 로 만든다(아나콘다 파이썬, openpyxl). 실명이 평문으로 공개 저장소 · APK 에 들어간다(2026-10-18 사용자 결정) |
 | `assets/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
 
 ## 화면 흐름
 
 ```
+로그인(사번 · 비밀번호, 한 번 하면 기기에 남음) ─▶ 홈
 홈(현장 정보, 입력 즉시 저장) ─▶ 시작(대기 시간 · 거치 안내)
   ─[마이크 권한 확인]─▶ 측정(카운트다운 → 수집, 볼륨키로 종료)
   ─▶ 결과(/result/:id: 지표 · 결과 비교 · 메일 · 테스트 재실행)
 홈 ─▶ 저장 결과 목록(history) ─▶ 결과
-홈 ─▶ 설정(엔지니어 이름 · 수신 이메일 목록 · 앱 버전 · 업데이트 확인)
+홈 ─▶ 설정(작업자 · 로그아웃 · 수신 이메일 목록 · 앱 버전 · 업데이트 확인)
 ```
+
+- 로그인(2026-10-18): 사번 + 비밀번호, 비밀번호 = 사번(대소문자 · 앞뒤
+  공백 무시, 사용자 결정 "보안은 일단 신경쓰지 말고"). 서버가 없어 명단은
+  앱 자산 하나이고 바꿀 비밀번호도 없다. 로그인 사번을 기기에 남겨 앱을
+  다시 켜면 `LoginStore.restore()` 가 되살리고, 새 명단에서 빠진 사번이면
+  로그아웃시킨다. 로그인 전에는 라우터 `redirect` 가 모든 경로를 `/login`
+  으로 돌린다. 명단이 바뀌면 `tool/import_workers.py` 로 JSON 을 다시
+  만들고 앱을 새로 배포한다.
 
 - 앱 안 업데이트(2026-10-13, 절차는 `docs/release.md`): 홈이 앱 실행마다
   한 번, 설정이 "업데이트 확인" 으로 배포 저장소(GitHub Releases)의
@@ -69,9 +80,12 @@ flutter test --tags screenshot --run-skipped test/screenshots
 - 결과 화면 "테스트 재실행"은 되살린 현장 정보가 `validate()` 에 걸리면
   (하중 · 우편번호를 받기 전 예전 결과, lb 결과) 홈에서 채우라고 안내만
   하고 재지 않는다.
-- 엔지니어 이름은 설정에 기기 단위로 두고(`PrefsStore`), 측정을 저장하는
-  시점 값을 결과(`engineerName`)에 싣는다. 나중에 설정을 바꿔도 예전
-  리포트 이름은 그대로다.
+- 엔지니어 이름 = 로그인 작업자 성명(2026-10-18, 설정의 수동 입력칸은
+  뺐다). 측정을 저장하는 시점 작업자의 성명 · 사번 · 업체명 · 관리팀을
+  결과(`engineerName` · `employeeId` · `company` · `team`)에 싣는다. 나중에
+  다른 사람이 로그인해도 예전 리포트 이름은 그대로다. 그 전 결과는 설정에
+  손으로 적은 이름(또는 null)이고 사번 · 업체 · 팀은 null 이다. OTIS 직원
+  (명단에 업체 · 팀 빈 칸)은 업체 · 팀이 null 이다.
 - 리포트 1쪽 머리말: 하중 "2000 킬로그램", 측정 = 해석 종류, 주소 "주소,
   우편번호", 제품 "엘리베이터, 기종"(기종 쉼표는 리포트에서만 공백),
   엔지니어 = 저장 시점 이름(2 · 3쪽 엔지니어 칸도 같다), 층 정보
@@ -108,6 +122,17 @@ flutter test --tags screenshot --run-skipped test/screenshots
   1분에 5.3MB 씩 지우는 곳 없이 쌓이며 대화가 녹음될 수 있어서다. 소음
   오프셋 · A 가중을 다시 맞출 때는 커밋 b06d417 · a32df62 에서 되살린다.
   예전 빌드가 기기에 남긴 `noise_diagnostics/` 폴더는 앱이 지우지 않는다.
+- 현장 소음 녹음(2026-10-18 사용자 지시 "최종 메일 산출물에 현장 소음
+  포함", 형식은 MP3 대신 M4A): `NoiseCaptureHandler` 가 dBA 를 재는 같은
+  마이크 PCM(44.1kHz 모노)을 `NoiseAudioEncoder`(안드로이드 내장
+  `MediaCodec` AAC-LC 64 kbps + `MediaMuxer`)로 앱 저장 공간 맨 위
+  `noise_native_*.m4a` 에 쓰고, `stopCapture` 가 원본 기록 경로와 함께
+  돌려준다(`{recordPath, audioPath}`). 저장 절차가 측정 폴더의
+  `noise.m4a` 로 옮기고, 중단이면 `CaptureSession.discard()` 가 지운다.
+  녹음이 실패해도 dBA 는 계속 잰다(녹음만 포기, 메일에 "누락:"). 2026-10-15
+  에 진단 PCM 을 뺀 까닭 중 "대화가 녹음될 수 있다" 는 이 녹음에도
+  해당한다 — 사용자가 알고 넣기로 했다. 크기는 1분에 약 0.48MB 이고 30건
+  보관 정리가 측정 폴더째 지운다. 실기기 확인 전(`docs/pending_checks.md`).
 - 측정 결과는 기기에 최근 30건만 남긴다(2026-10-15,
   `MeasurementRepository.maxStoredMeasurements`). 저장 절차가 새 측정을
   저장한 뒤 `pruneOldest()` 로 측정 ID(한국 시간) 순서상 오래된 폴더부터
@@ -121,10 +146,13 @@ flutter test --tags screenshot --run-skipped test/screenshots
   표시 전용이라 저장하는 최대 속도(측정 뒤 전체 평균 · 직선 보정)와 다를 수
   있다(2026-10-15 로우 데이터 2건: 어림 최대 1.48 · 1.58, 저장 1.53 · 1.51).
   측정 중 휴대폰은 화면을 아래로 두므로 보이는 것은 화면을 볼 수 있을 때다
-- 메일은 PDF 리포트와 로우 데이터(`raw.txt`, 256Hz 격자 · 필터 · 기준선
-  보정 전)를 고른 만큼 붙인다. 둘 다 기본 체크이고, `raw.txt` 가 없는 측정은
-  본문에 "누락:" 줄로 밝힌다. 소음 진단 산출물 항목("데시벨 산출물" ·
-  "마이크 원본")은 기능과 함께 뺐다(2026-10-15). 추가 참고사항이 있으면 본문 첨부 목록 앞에
+- 메일은 PDF 리포트, 로우 데이터(`raw.txt`, 256Hz 격자 · 필터 · 기준선
+  보정 전), 현장 소음(`noise.m4a`, 첨부 이름 `NOISE_제번_측정ID.m4a`)을
+  고른 만큼 붙인다. 셋 다 기본 체크이고, `raw.txt` · `noise.m4a` 가 없는
+  측정은 본문에 "누락:" 줄로 밝힌다. 소음 진단 산출물 항목("데시벨 산출물" ·
+  "마이크 원본")은 기능과 함께 뺐다(2026-10-15). 본문 첫 줄 아래에 결과에
+  실린 작업자를 "작업자: 성명 (사번) · 업체 · 팀" 으로 적는다(없는 값은
+  뺀다, 성명이 없으면 줄째 뺀다). 추가 참고사항이 있으면 본문 첨부 목록 앞에
   "[참고사항]" 머리줄과 함께 넣는다. 안드로이드 원본(`native_raw.txt`)은 기기의
   측정 폴더에만 남기고 보내지 않는다(2026-10-08). 안드로이드 원본은
   측정이 실패해도 그 측정 폴더로 옮기고, 저장하지 않는 중단(뒤로가기 · 앱
@@ -329,8 +357,9 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   전이다(`docs/pending_checks.md`).
 - 릴리스 서명 키(2026-10-13)로 바꾸기 전 디버그 키로 서명해 깐 기기는 한
   번 지우고 새로 깔아야 한다. 기기의 측정 결과도 지워지므로 먼저 옮긴다.
-- 서버 연동은 미구현이다. 로그인은 두지 않는다(수신 이메일은 기기에 목록으로
-  둔다).
+- 서버 연동은 미구현이다. 로그인은 앱 안 명단으로만 판정한다(수신 이메일은
+  기기에 목록으로 둔다). 엑셀의 동명이인 33쌍은 리포트(성명만)로는 구분되지
+  않는다 — 결과 · 메일에는 사번이 남는다.
 - 소음 RMS 창(`WINDOW_SEC`) · 갱신 주기(`HOP_HZ`)는 OTIS 와 맞춰 보는
   실험값이다 (`NoiseCaptureHandler.kt`). 2026-10-12 부터 IEC 61672-1 "Fast"
   시정수(`FAST_TIME_WEIGHT_SEC`, 0.125초)로 평균 제곱값을 지수평활해 낸다.

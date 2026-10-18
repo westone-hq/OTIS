@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 import 'package:vibration_checker/adapter/measurement_repository.dart';
-import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
@@ -92,8 +92,8 @@ class RecordOutcome {
   final String? id;
 
   /// 저장한 파일 경로 목록. 리포트를 맨 앞에 둬 메일 첨부 목록에서 먼저
-  /// 보이게 한다. 리포트 · 안드로이드 원본 사본은 못 만들었으면 빠진다.
-  /// 실패면 빈 목록
+  /// 보이게 한다. 리포트 · 안드로이드 원본 사본 · 현장 소음 녹음은 못
+  /// 만들었으면 빠진다. 실패면 빈 목록
   final List<String> savedPaths;
 
   /// 작성: 2026-10-04 13:29:41 · nada
@@ -114,45 +114,50 @@ class MeasurementRecorder {
   MeasurementRecorder._();
 
   /// 작성: 2026-10-05 10:03:35 · nada
-  /// 함수: _copyNativeRecord
-  /// 목적: 안드로이드가 따로 저장한 원본 기록을 이번 측정 폴더로 옮긴다.
-  ///       - 복사에 성공하면 안드로이드 쪽 원본을 지운다. 지우지 않으면
+  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 함수: _moveNativeFile
+  /// 목적: 안드로이드가 앱 저장 공간 맨 위에 따로 남긴 파일(원본 기록,
+  ///       현장 소음 녹음)을 이번 측정 폴더로 옮긴다.
+  ///       - 복사에 성공하면 안드로이드 쪽 파일을 지운다. 지우지 않으면
   ///         측정할 때마다 앱 저장 공간에 쌓인다
-  ///       - 원본이 없거나 복사 · 삭제가 실패하면 그 사실을 집계 파일 끝에
-  ///         적고 넘어간다. 원본 사본은 확인용 자료라 이것 때문에 저장
-  ///         전체를 실패로 알리지 않는다
-  /// 인자: nativeRecordPath — 안드로이드가 저장한 원본 경로, 없으면 null
+  ///       - 파일이 없거나 복사 · 삭제가 실패하면 그 사실을 집계 파일 끝에
+  ///         `label` 을 머리로 한 줄 적고 넘어간다. 두 파일 모두 확인 ·
+  ///         청취용 자료라 이것 때문에 저장 전체를 실패로 알리지 않는다
+  /// 인자: sourcePath — 안드로이드가 남긴 파일 경로, 없으면 null
   ///       jobDirPath — 이번 측정 폴더 경로
+  ///       fileName — 측정 폴더 안에서 쓸 이름
   ///       metaPath — 사실을 덧붙일 집계 파일 경로
-  /// 반환: 측정 폴더 안의 원본 사본 경로. 복사하지 못했으면 null
-  static Future<String?> _copyNativeRecord(
-    String? nativeRecordPath,
-    String jobDirPath,
-    String metaPath,
-  ) async {
+  ///       label — 집계 줄 머리 (`rawRecord`, `noiseAudio`)
+  /// 반환: 측정 폴더 안의 사본 경로. 복사하지 못했으면 null
+  static Future<String?> _moveNativeFile({
+    required String? sourcePath,
+    required String jobDirPath,
+    required String fileName,
+    required String metaPath,
+    required String label,
+  }) async {
     final meta = File(metaPath); // 사실을 덧붙일 집계 파일
-    if (nativeRecordPath == null) {
-      await meta.writeAsString('rawRecordPath: null\n', mode: FileMode.append);
+    if (sourcePath == null) {
+      await meta.writeAsString('${label}Path: null\n', mode: FileMode.append);
       return null;
     }
-    final copyPath =
-        '$jobDirPath/${MeasurementRepository.nativeRawFileName}'; // 사본 경로
+    final copyPath = '$jobDirPath/$fileName'; // 사본 경로
     try {
-      await File(nativeRecordPath).copy(copyPath);
+      await File(sourcePath).copy(copyPath);
     } catch (e) {
-      debugPrint('원본 기록 복사 실패: $e');
+      debugPrint('$label 복사 실패: $e');
       await meta.writeAsString(
-        'rawRecordCopyFailed: $e\n',
+        '${label}CopyFailed: $e\n',
         mode: FileMode.append,
       );
       return null;
     }
     try {
-      await File(nativeRecordPath).delete();
+      await File(sourcePath).delete();
     } catch (e) {
-      debugPrint('원본 기록 삭제 실패: $e');
+      debugPrint('$label 삭제 실패: $e');
       await meta.writeAsString(
-        'rawRecordDeleteFailed: $nativeRecordPath\n',
+        '${label}DeleteFailed: $sourcePath\n',
         mode: FileMode.append,
       );
     }
@@ -241,7 +246,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-15 22:22:45 · nada
+  /// 수정: 2026-10-18 10:12:30 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -249,11 +254,11 @@ class MeasurementRecorder {
   ///       2. 격자로 환산하고, 성공 여부와 상관없이 집계 파일을 먼저
   ///          남긴다 — 환산이 실패한 이유를 나중에 집계에서 본다.
   ///          집계 파일 쓰기가 실패해도 멈추지 않는다
-  ///       3. 안드로이드가 따로 저장한 원본을 이번 측정 폴더로 옮긴다
-  ///          (`_copyNativeRecord()`). 뒤 단계가 실패해도 원본이 측정 폴더에
-  ///          남도록 실패 여부를 가르기 전에 옮긴다 — 실패한 측정의 원본이
-  ///          앱 저장 공간 맨 위에 쌓이지 않게 한다. 옮기지 못해도 멈추지
-  ///          않는다
+  ///       3. 안드로이드가 따로 저장한 원본 기록과 현장 소음 녹음을 이번
+  ///          측정 폴더로 옮긴다(`_moveNativeFile()`). 뒤 단계가 실패해도
+  ///          두 파일이 측정 폴더에 남도록 실패 여부를 가르기 전에 옮긴다
+  ///          — 실패한 측정의 파일이 앱 저장 공간 맨 위에 쌓이지 않게
+  ///          한다. 옮기지 못해도 멈추지 않는다
   ///       4. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다.
   ///          측정값 파일은 처리 전 격자 그대로다
   ///       5. 지표 계산 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)를
@@ -262,8 +267,8 @@ class MeasurementRecorder {
   ///       6. 처리한 격자를 측정 결과 모델로 바꾸고(가중 · 운행 구간 ·
   ///          지표, `MeasurementAssembler`), 가중 · 운행 구간을 집계 파일에
   ///          덧붙인 뒤 처리 방식(`SignalConditioner.methodLabel` +
-  ///          `RideWeighting.methodLabel`)을 실어 저장소에 저장한다. 설정의
-  ///          엔지니어 이름도 이 시점 값을 함께 싣는다
+  ///          `RideWeighting.methodLabel`)을 실어 저장소에 저장한다. 로그인한
+  ///          작업자(성명 · 사번 · 업체명 · 관리팀)도 이 시점 값을 함께 싣는다
   ///       7. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
   ///          기다리게 되고, 그 자리에서 실패하면 보내지 못한다. 실패해도
   ///          측정은 이미 저장됐으므로 멈추지 않는다 — 나중에
@@ -275,6 +280,8 @@ class MeasurementRecorder {
   /// 인자: resampler — 수집한 이벤트가 쌓인 환산기
   ///       site — 이번 측정의 현장 정보. 없으면 null
   ///       nativeRecordPath — 안드로이드가 저장한 원본 경로, 없으면 null
+  ///       noiseAudioPath — 안드로이드가 닫은 현장 소음 녹음(M4A) 경로,
+  ///       녹음하지 못했으면 null
   ///       measuredAt — 측정 시각. 측정 ID 와 파일 이름의 기준이다
   /// 반환: 저장 결과. 파일을 쓰다 난 예외는 `RecordFailure.ioError` 로
   ///       바꿔 돌려준다
@@ -282,6 +289,7 @@ class MeasurementRecorder {
     required GridResampler resampler,
     required SiteInfo? site,
     required String? nativeRecordPath,
+    required String? noiseAudioPath,
     required DateTime measuredAt,
   }) async {
     if (site == null || site.validate().isNotEmpty) {
@@ -310,12 +318,22 @@ class MeasurementRecorder {
         debugPrint('집계 파일 기록 실패: $e\n$st');
       }
 
-      // → 로직 이동: _copyNativeRecord()
-      final rawCopyPath = await _copyNativeRecord(
-        nativeRecordPath,
-        jobDir.path,
-        metaPath,
+      // → 로직 이동: _moveNativeFile()
+      final rawCopyPath = await _moveNativeFile(
+        sourcePath: nativeRecordPath,
+        jobDirPath: jobDir.path,
+        fileName: MeasurementRepository.nativeRawFileName,
+        metaPath: metaPath,
+        label: 'rawRecord',
       ); // 복사해 둔 안드로이드 원본 경로, 못 했으면 null
+      // → 로직 이동: _moveNativeFile()
+      final audioCopyPath = await _moveNativeFile(
+        sourcePath: noiseAudioPath,
+        jobDirPath: jobDir.path,
+        fileName: MeasurementRepository.noiseAudioFileName,
+        metaPath: metaPath,
+        label: 'noiseAudio',
+      ); // 옮겨 둔 현장 소음 녹음 경로, 못 했으면 null
 
       if (!grid.isSuccess) {
         return RecordOutcome.failure(
@@ -346,18 +364,18 @@ class MeasurementRecorder {
         );
       }
 
-      // 엔지니어 이름은 저장하는 이 시점 값을 결과에 싣는다. 나중에 설정을
-      // 바꿔도 이미 낸 리포트의 이름이 바뀌지 않게 한다
-      // → 로직 이동: PrefsStore.loadEngineerName()
-      final engineerName = await PrefsStore.instance
-          .loadEngineerName(); // 설정의 엔지니어 이름, 없으면 null
+      // 작업자는 저장하는 이 시점 값을 결과에 싣는다. 나중에 다른 사람이
+      // 로그인해도 이미 낸 리포트의 엔지니어 이름이 바뀌지 않게 한다.
+      // 로그인 전에는 라우터가 측정 화면에 들이지 않지만, 시험처럼 화면을
+      // 거치지 않고 부르면 비어 있을 수 있어 null 로 둔다
+      final worker = LoginSession.instance.current; // 로그인 작업자
       // → 로직 이동: MeasurementAssembler.assemble()
       final assembled = MeasurementAssembler.assemble(
         grid: conditionedGrid,
         site: site,
         id: id,
         measuredAt: measuredAt,
-        engineerName: engineerName,
+        worker: worker,
       ); // 측정 결과 모델로 바꾼 결과. 실패했으면 사유만 들어 있다
       if (!assembled.isSuccess) {
         return RecordOutcome.failure(
@@ -397,7 +415,13 @@ class MeasurementRecorder {
 
       return RecordOutcome.success(
         id: id,
-        savedPaths: <String>[?reportPath, valuePath, metaPath, ?rawCopyPath],
+        savedPaths: <String>[
+          ?reportPath,
+          valuePath,
+          metaPath,
+          ?rawCopyPath,
+          ?audioCopyPath,
+        ],
       );
     } catch (e, st) {
       debugPrint('측정 저장 실패: $e\n$st');

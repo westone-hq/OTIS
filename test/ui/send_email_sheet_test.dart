@@ -7,6 +7,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/model/worker.dart';
 import 'package:vibration_checker/ui/features/shared/send_email_sheet.dart';
 
 /// 작성: 2026-10-10 13:54:43 · nada
@@ -72,12 +73,13 @@ class _RecordingEmailSender extends FlutterEmailSenderPlatform {
 }
 
 /// 작성: 2026-10-10 13:54:43 · nada
-/// 수정: 2026-10-11 19:17:58 · nada
+/// 수정: 2026-10-18 09:41:12 · nada
 /// 함수: _result
 /// 목적: 메일로 보낼 측정 결과를 꾸민다.
 /// 인자: notes — 추가 참고사항. 없으면 null
+///       worker — 결과에 실을 저장 시점 작업자. 없으면 작업자 칸이 null
 /// 반환: 측정 결과
-MeasurementResult _result({String? notes}) {
+MeasurementResult _result({String? notes, Worker? worker}) {
   return MeasurementResult(
     id: _jobId,
     jobNo: 'J-1',
@@ -86,6 +88,10 @@ MeasurementResult _result({String? notes}) {
     topFloor: 8,
     direction: '상승',
     notes: notes,
+    engineerName: worker?.name,
+    employeeId: worker?.employeeId,
+    company: worker?.company,
+    team: worker?.team,
     dateTime: DateTime(2026, 1, 14, 11, 3, 59),
     xSeries: const <double>[],
     ySeries: const <double>[],
@@ -99,16 +105,26 @@ MeasurementResult _result({String? notes}) {
 }
 
 /// 작성: 2026-10-10 13:54:43 · nada
+/// 수정: 2026-10-18 10:12:30 · nada
 /// 함수: _saveJob
 /// 목적: 측정 한 건을 저장소에 저장하고, 측정 폴더에 리포트 · 원본 파일을
 ///       놓는다. 리포트를 미리 놓아 시험이 실제 PDF 를 그리지 않게 한다.
 ///       안드로이드 원본(`native_raw.txt`)은 늘 놓는다 — 붙지 않는지 봐야
 ///       한다.
 /// 인자: withRaw — `raw.txt` 를 놓을지
+///       withAudio — 현장 소음 녹음(`noise.m4a`)을 놓을지. 기본은 놓지
+///       않는다(녹음 기능 전 측정과 같다)
 ///       notes — 결과에 실을 추가 참고사항. 없으면 null
-Future<void> _saveJob({required bool withRaw, String? notes}) async {
+///       worker — 결과에 실을 저장 시점 작업자. 없으면 null
+Future<void> _saveJob({
+  required bool withRaw,
+  bool withAudio = false,
+  String? notes,
+  Worker? worker,
+}) async {
   final repo = MeasurementRepository.instance; // 시험할 저장소
-  final dir = await repo.save(_result(notes: notes)); // 이 측정의 폴더
+  // 이 측정의 폴더
+  final dir = await repo.save(_result(notes: notes, worker: worker));
   await File(
     '${dir.path}/${MeasurementRepository.reportFileName}',
   ).writeAsString('%PDF-1.4');
@@ -119,6 +135,11 @@ Future<void> _saveJob({required bool withRaw, String? notes}) async {
     await File(
       '${dir.path}/${MeasurementRepository.rawFileName}',
     ).writeAsString('EVIMP1\n256\n');
+  }
+  if (withAudio) {
+    await File(
+      '${dir.path}/${MeasurementRepository.noiseAudioFileName}',
+    ).writeAsBytes(const <int>[0, 0, 0, 24]);
   }
 }
 
@@ -214,17 +235,17 @@ bool _checked(WidgetTester tester, String email) {
 }
 
 /// 작성: 2026-10-04 16:44:32 · nada
-/// 수정: 2026-10-15 22:17:34 · nada
+/// 수정: 2026-10-18 10:12:30 · nada
 /// 함수: main
 /// 목적: 메일 시트를 시험한다.
 ///       - 받는 사람: 지난번 보낸 주소만 미리 고르는지, 여러 개를 고를 수
 ///         있는지
-///       - 보낼 항목: PDF 리포트와 로우 데이터 두 줄이고 기본으로 체크돼
-///         있는지, 소음 진단 산출물(데시벨 산출물 · 마이크 원본)은 목록에
-///         없는지, 전부 해제하면 보내기를 막는지
-///       - 첨부: 고른 항목만 제번 · 측정 ID 이름으로 붙는지, `raw.txt` 가
-///         없으면 본문에 누락을 밝히는지, 안드로이드 원본 · 소음 진단
-///         산출물은 어떤 경우에도 붙지 않는지
+///       - 보낼 항목: PDF 리포트 · 로우 데이터 · 현장 소음 세 줄이고
+///         기본으로 체크돼 있는지, 소음 진단 산출물(데시벨 산출물 · 마이크
+///         원본)은 목록에 없는지, 전부 해제하면 보내기를 막는지
+///       - 첨부: 고른 항목만 제번 · 측정 ID 이름으로 붙는지, `raw.txt` ·
+///         `noise.m4a` 가 없으면 본문에 누락을 밝히는지, 안드로이드 원본 ·
+///         소음 진단 산출물은 어떤 경우에도 붙지 않는지
 ///       - 보내기 버튼이 아래쪽 시스템 영역에 가리지 않는지
 void main() {
   late Directory temp; // 이번 시험이 쓸 임시 폴더
@@ -268,7 +289,7 @@ void main() {
     expect(_checked(tester, 'b@otis.com'), isTrue);
   });
 
-  testWidgets('보낼 항목은 PDF 리포트와 로우 데이터이고 둘 다 체크돼 있다', (tester) async {
+  testWidgets('보낼 항목은 PDF 리포트 · 로우 데이터 · 현장 소음이고 모두 체크돼 있다', (tester) async {
     SharedPreferences.setMockInitialValues({
       'emails': <String>['a@otis.com'],
     });
@@ -277,6 +298,7 @@ void main() {
 
     expect(_checked(tester, 'PDF 리포트'), isTrue);
     expect(_checked(tester, '로우 데이터 (raw.txt)'), isTrue);
+    expect(_checked(tester, '현장 소음 (m4a)'), isTrue);
     expect(find.textContaining('native'), findsNothing);
   });
 
@@ -299,7 +321,30 @@ void main() {
     expect(email.body, isNot(contains('noise_diagnostics')));
   });
 
-  testWidgets('PDF 와 로우 데이터를 제번 · 측정 ID 이름으로 함께 붙인다', (tester) async {
+  testWidgets('PDF · 로우 데이터 · 현장 소음을 제번 · 측정 ID 이름으로 함께 붙인다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(() => _saveJob(withRaw: true, withAudio: true));
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(_names(email), <String>[
+      'TUNE_J-1_$_jobId.pdf',
+      'RAW_J-1_$_jobId.txt',
+      'NOISE_J-1_$_jobId.m4a',
+    ]);
+    expect(
+      email.body,
+      contains('- RAW_J-1_$_jobId.txt: 256Hz 원시값(EVIMP1, 필터 · 기준선 보정 없음)'),
+    );
+    expect(email.body, contains('- NOISE_J-1_$_jobId.m4a: 측정 중 현장 소음 녹음(AAC)'));
+    expect(email.body, contains('※ 첨부 3개'));
+    expect(email.body, isNot(contains('누락')));
+  });
+
+  testWidgets('noise.m4a 가 없는 측정은 본문에 누락을 밝힌다', (tester) async {
     SharedPreferences.setMockInitialValues({
       'emails': <String>['a@otis.com'],
     });
@@ -308,15 +353,31 @@ void main() {
     await _openSheet(tester);
     final email = await _sendAndCapture(tester, sender);
 
+    expect(_names(email), isNot(contains(startsWith('NOISE_'))));
+    expect(
+      email.body,
+      contains('누락: ${MeasurementRepository.noiseAudioFileName}'),
+    );
+  });
+
+  testWidgets('현장 소음을 해제하면 녹음이 있어도 붙이지 않고 누락도 적지 않는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(() => _saveJob(withRaw: true, withAudio: true));
+
+    await _openSheet(tester);
+    // 세 번째 항목은 작은 화면에서 아래 버튼 뒤에 있어 먼저 스크롤한다
+    await tester.ensureVisible(find.text('현장 소음 (m4a)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('현장 소음 (m4a)'));
+    await tester.pumpAndSettle();
+    final email = await _sendAndCapture(tester, sender);
+
     expect(_names(email), <String>[
       'TUNE_J-1_$_jobId.pdf',
       'RAW_J-1_$_jobId.txt',
     ]);
-    expect(
-      email.body,
-      contains('- RAW_J-1_$_jobId.txt: 256Hz 원시값(EVIMP1, 필터 · 기준선 보정 없음)'),
-    );
-    expect(email.body, contains('※ 첨부 2개'));
     expect(email.body, isNot(contains('누락')));
   });
 
@@ -351,6 +412,51 @@ void main() {
 
     expect(email.body, isNot(contains('[참고사항]')));
     expect(email.body, startsWith('OTIS 승강기 진동 측정 리포트입니다.\n- TUNE_'));
+  });
+
+  testWidgets('결과에 실린 작업자를 첫 줄 아래에 사번 · 업체 · 팀과 함께 적는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(
+      () => _saveJob(
+        withRaw: true,
+        worker: const Worker(
+          employeeId: 'T00001',
+          name: '홍길동',
+          company: '(주)시험승강기',
+          team: '설치1팀',
+        ),
+      ),
+    );
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(
+      email.body,
+      startsWith(
+        'OTIS 승강기 진동 측정 리포트입니다.\n'
+        '작업자: 홍길동 (T00001) · (주)시험승강기 · 설치1팀\n- TUNE_',
+      ),
+    );
+  });
+
+  testWidgets('업체 · 팀이 빈 작업자는 성명과 사번만 적는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(
+      () => _saveJob(
+        withRaw: true,
+        worker: const Worker(employeeId: '200001', name: '김철수'),
+      ),
+    );
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(email.body, contains('\n작업자: 김철수 (200001)\n'));
   });
 
   testWidgets('로우 데이터만 고르면 그것 하나만 붙인다', (tester) async {
@@ -413,6 +519,10 @@ void main() {
     await _openSheet(tester);
     await tester.tap(find.text('PDF 리포트'));
     await tester.tap(find.text('로우 데이터 (raw.txt)'));
+    // 세 번째 항목은 작은 화면에서 아래 버튼 뒤에 있어 먼저 스크롤한다
+    await tester.ensureVisible(find.text('현장 소음 (m4a)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('현장 소음 (m4a)'));
     await tester.pumpAndSettle();
 
     expect(find.text('보낼 항목을 선택하세요'), findsOneWidget);

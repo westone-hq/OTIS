@@ -12,6 +12,7 @@ import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/model/worker.dart';
 
 import 'shot_harness.dart';
 
@@ -67,7 +68,7 @@ MeasurementResult _reference() {
     ),
     id: 'shot',
     measuredAt: DateTime.utc(2026, 1, 14, 2, 3, 59),
-    engineerName: '홍길동',
+    worker: const Worker(employeeId: 'T00001', name: '홍길동'),
   ).result!;
 }
 

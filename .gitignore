@@ -62,6 +62,10 @@ pdf_report_dev/**/*.pyc
 # 저장소에 올리지 않고 로컬에만 둔다. 코드 주석은 파일 이름만 인용한다
 docs/reference/H6N1AP65.pdf
 
+# OTIS 작업자 명단 엑셀 원본. 앱은 tool/import_workers.py 가 만든
+# assets/workers/workers.json 만 읽는다 (2026-10-18)
+/설치 업체 List_*.xlsx
+
 # Noise analysis output and Kotlin build cache
 tool/__pycache__/
 noise_diagnostics/

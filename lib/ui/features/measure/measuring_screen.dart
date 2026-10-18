@@ -325,6 +325,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       resampler: _capture.resampler,
       site: MeasurementSession.instance.currentSite,
       nativeRecordPath: _capture.nativeRecordPath,
+      noiseAudioPath: _capture.noiseAudioPath,
       measuredAt: DateTime.now(),
     ); // 저장 결과
     if (!outcome.isSuccess) {

@@ -57,4 +57,7 @@ flutter:
   # 파일째 읽어 PDF 에 심는 자산이기 때문이다
   assets:
     - assets/report/
+    # 로그인 작업자 명단(사번 · 성명 · 업체명 · 관리팀). OTIS 명단 엑셀에서
+    # tool/import_workers.py 로 만든다. 엑셀 원본은 저장소에 두지 않는다
+    - assets/workers/
 

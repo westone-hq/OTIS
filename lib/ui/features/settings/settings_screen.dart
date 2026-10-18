@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:vibration_checker/adapter/login_store.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
+import 'package:vibration_checker/domain/session/login_session.dart';
 
 import '../update/update_prompt.dart';
 
@@ -11,9 +14,9 @@ import '../../core/widgets/app_layout.dart';
 import '../../core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
-/// 수정: 2026-10-13 14:18:51 · nada
+/// 수정: 2026-10-18 09:41:12 · nada
 /// 클래스: SettingsScreen
-/// 목적: 설정 화면. 엔지니어 이름, 결과 수신 이메일 목록 관리(추가 ·
+/// 목적: 설정 화면. 로그인 작업자 · 로그아웃, 결과 수신 이메일 목록 관리(추가 ·
 ///       삭제)와 앱 버전 확인 · 업데이트 확인을 한 화면에서 처리한다. 어르신도 쓰기 편하도록 버튼 높이를 64dp 이상으로
 ///       두고, 오류는 테두리 색 · 아이콘 · 문구 3중으로 겹쳐 보여준다.
 class SettingsScreen extends StatefulWidget {
@@ -32,14 +35,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
-/// 수정: 2026-10-11 19:11:50 · nada
+/// 수정: 2026-10-18 09:41:12 · nada
 /// 클래스: _SettingsScreenState
-/// 목적: 설정 화면의 상태를 관리한다. 엔지니어 이름과 수신 이메일 목록을
-///       불러오고, 바꿀 때마다 저장한다.
+/// 목적: 설정 화면의 상태를 관리한다. 수신 이메일 목록을 불러오고, 바꿀
+///       때마다 저장한다. 로그인 작업자는 `LoginSession` 에서 바로 읽는다.
 class _SettingsScreenState extends State<SettingsScreen> {
-  /// 엔지니어 이름 입력창 컨트롤러. 입력할 때마다 기기에 저장한다
-  final _engineerCtl = TextEditingController();
-
   /// `TextEditingController`(입력창에 지금 적힌 글자를 코드에서 읽고
   /// 쓸 수 있게 연결해 주는 객체). 이메일 입력창에 연결해 두면,
   /// 사용자가 입력한 값을 `_emailCtl.text`로 읽거나 저장된 값을
@@ -67,15 +67,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _checkingUpdate = false;
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: initState
   /// 목적: 이 화면이 나타날 때 한 번, 입력 컨트롤러를 만들고 저장된
-  ///       엔지니어 이름 · 이메일 목록과 앱 버전을 불러와 화면에 채운다.
+  ///       이메일 목록과 앱 버전을 불러와 화면에 채운다.
   @override
   void initState() {
     super.initState();
     _emailCtl = TextEditingController();
-    _loadEngineerName(); // → 로직 이동: _loadEngineerName()
     _loadEmails(); // → 로직 이동: _loadEmails()
     _loadVersion(); // → 로직 이동: _loadVersion()
   }
@@ -111,14 +110,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() => _checkingUpdate = false);
   }
 
-  /// 작성: 2026-10-11 19:11:50 · nada
-  /// 함수: _loadEngineerName
-  /// 목적: 저장된 엔지니어 이름을 불러와 입력창을 채운다.
-  Future<void> _loadEngineerName() async {
-    // → 로직 이동: PrefsStore.loadEngineerName()
-    final saved = await PrefsStore.instance.loadEngineerName(); // 저장된 이름
-    if (!mounted || saved == null) return;
-    _engineerCtl.text = saved;
+  /// 작성: 2026-10-18 09:41:12 · nada
+  /// 함수: _logout
+  /// 목적: "로그아웃" 을 눌렀을 때 확인을 받고 로그아웃한 뒤 로그인 화면으로
+  ///       간다. 이미 저장한 측정 결과의 엔지니어 이름은 그대로 남는다.
+  Future<void> _logout() async {
+    // → 로직 이동: showAppConfirmDialog()
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: '로그아웃',
+      message: '로그아웃할까요?\n다시 측정하려면 사번으로 로그인해야 합니다.',
+      confirmLabel: '로그아웃',
+      cancelLabel: '취소',
+      barrierDismissible: true,
+    ); // 로그아웃을 골랐는지
+    if (!confirmed) return;
+    await LoginStore.instance.logout(); // → 로직 이동: LoginStore.logout()
+    if (!mounted) return;
+    context.go('/login'); // → 로직 이동: LoginScreen.build()
   }
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
@@ -133,12 +142,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-11 19:11:50 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: dispose
   /// 목적: 화면이 사라질 때 입력 컨트롤러를 해제해 메모리 누수를 막는다.
   @override
   void dispose() {
-    _engineerCtl.dispose();
     _emailCtl.dispose();
     super.dispose();
   }
@@ -232,8 +240,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-10-04 13:26:44 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: _buildListTile
-  /// 목적: 제목과 오른쪽 값 한 쌍을 보여주는 정보 행을 만든다.
+  /// 목적: 제목과 오른쪽 값 한 쌍을 보여주는 정보 행을 만든다. 값이
+  ///       길면(업체명 등) 줄을 바꿔 오른쪽에 맞춘다 — 한 줄에 묶으면
+  ///       화면 밖으로 넘친다.
   /// 인자: title — 왼쪽에 놓을 항목 이름
   ///       trailingText — 오른쪽에 놓을 값
   /// 반환: 정보 행 위젯
@@ -248,9 +259,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: AppText.body),
-          Text(
-            trailingText,
-            style: AppText.bodyBold.copyWith(color: AppColors.textSub),
+          const SizedBox(width: AppDims.gap2),
+          Flexible(
+            // 긴 값은 남은 폭 안에서 줄을 바꾼다
+            child: Text(
+              trailingText,
+              textAlign: TextAlign.end,
+              style: AppText.bodyBold.copyWith(color: AppColors.textSub),
+            ),
           ),
         ],
       ),
@@ -258,34 +274,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-13 14:18:51 · nada
+  /// 수정: 2026-10-18 09:41:12 · nada
   /// 함수: build
-  /// 목적: 설정 화면을 그린다. 엔지니어 이름 → 수신 이메일 목록 → 추가
-  ///       입력창 → 앱 버전 · 업데이트 확인 순으로 세로로 배치한다. 엔지니어 이름은
-  ///       선택이고, 측정을 저장할 때의 이름이 그 측정 리포트의 엔지니어
-  ///       칸에 찍힌다.
+  /// 목적: 설정 화면을 그린다. 로그인 작업자 · 로그아웃 → 수신 이메일 목록
+  ///       → 추가 입력창 → 앱 버전 · 업데이트 확인 순으로 세로로 배치한다.
+  ///       측정을 저장할 때 로그인한 작업자의 성명이 그 측정 리포트의
+  ///       엔지니어 칸에 찍힌다. 업체명 · 관리팀은 명단에 있을 때만
+  ///       보인다(OTIS 직원은 비어 있다).
   @override
   Widget build(BuildContext context) {
+    final worker = LoginSession.instance.current; // 로그인 작업자
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
       body: AppScrollBody(
         children: [
-          // 1. 엔지니어 이름
-          Text('엔지니어 이름 (선택)', style: AppText.bodyBold),
+          // 1. 로그인 작업자
+          Text('작업자', style: AppText.bodyBold),
           const SizedBox(height: AppDims.gap),
-          TextField(
-            controller: _engineerCtl,
-            style: AppText.body,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              hintText: '이름',
-              prefixIcon: Icon(Icons.person_outline, color: AppColors.textSub),
-            ),
-            // → 로직 이동: PrefsStore.saveEngineerName()
-            onChanged: (name) => PrefsStore.instance.saveEngineerName(name),
+          // 로그인 전에는 라우터가 이 화면에 들이지 않는다
+          if (worker != null) ...[
+            // → 로직 이동: _buildListTile()
+            _buildListTile(title: '성명', trailingText: worker.name),
+            const SizedBox(height: AppDims.gap),
+            // → 로직 이동: _buildListTile()
+            _buildListTile(title: '사번', trailingText: worker.employeeId),
+            const SizedBox(height: AppDims.gap),
+            if (worker.company case final company?) ...[
+              // → 로직 이동: _buildListTile()
+              _buildListTile(title: '업체', trailingText: company),
+              const SizedBox(height: AppDims.gap),
+            ],
+            if (worker.team case final team?) ...[
+              // → 로직 이동: _buildListTile()
+              _buildListTile(title: '관리팀', trailingText: team),
+              const SizedBox(height: AppDims.gap),
+            ],
+          ],
+          Text('성명이 리포트 엔지니어 칸에 찍힙니다', style: AppText.caption),
+          const SizedBox(height: AppDims.gap),
+          OutlinedButton(
+            onPressed: _logout, // → 로직 이동: _logout()
+            child: const Text('로그아웃'),
           ),
-          const SizedBox(height: AppDims.gap),
-          Text('리포트 엔지니어 칸에 찍힙니다', style: AppText.caption),
           const SizedBox(height: AppDims.gap3),
 
           // 2. 결과 수신 이메일 목록
