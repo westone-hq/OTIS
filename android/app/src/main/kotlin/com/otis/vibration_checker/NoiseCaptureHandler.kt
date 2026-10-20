@@ -15,12 +15,14 @@ import kotlin.math.sqrt
 
 /**
  * 작성: 2026-09-15 13:20:00 · 박희정
- * 수정: 2026-10-18 10:12:30 · nada
+ * 수정: 2026-10-20 17:10:22 · nada
  * 클래스: NoiseCaptureHandler
  * 목적: 측정하는 동안 마이크로 소음 크기(dBA)를 재서 `latestDba` 에
- *       채운다. 최근 `WINDOW_SEC` 만큼의 소리로 RMS(제곱 평균의 제곱근,
- *       소리 크기를 구하는 계산)를 내고, 그 창을 1초에 `HOP_HZ` 번씩
- *       밀며 값을 새로 낸다.
+ *       채운다. 표본마다 A 가중(`A_WEIGHTING_SOS`)을 건 뒤, 최근
+ *       `WINDOW_SEC` 만큼의 소리로 RMS(제곱 평균의 제곱근, 소리 크기를
+ *       구하는 계산)를 내고, 그 창을 1초에 `HOP_HZ` 번씩 밀며 값을 새로
+ *       낸다. A 가중은 2026-10-20 에 넣었다 — 그 전 빌드의 값은 가중 없이
+ *       오프셋 87.3 을 더한 값이다.
  *       같은 마이크 표본을 `NoiseAudioEncoder` 로 M4A 파일(현장 소음
  *       녹음)에도 남긴다. 녹음은 듣는 용도이고 dBA 계산과 따로 돈다 —
  *       녹음이 실패해도 dBA 는 계속 잰다.
@@ -52,15 +54,42 @@ class NoiseCaptureHandler(private val context: Context) {
 
         /**
          * 작성: 2026-10-04 13:50:15 · nada
+         * 수정: 2026-10-20 17:10:22 · nada
          * 변수: DEFAULT_MIC_DBFS_TO_DBA_OFFSET
-         * 목적: Flutter 가 오프셋을 넘기지 않았을 때 쓰는 dBFS→dBA 기본
-         *       오프셋. Flutter 는 늘 `kDefaultMicDbfsToDbaOffset`
+         * 목적: Flutter 가 오프셋을 넘기지 않았을 때 쓰는 A 가중 dBFS→dBA
+         *       기본 오프셋. Flutter 는 늘 `kDefaultMicDbfsToDbaOffset`
          *       (lib/domain/capture/noise_offset.dart)을 넘기므로, 이 값은
          *       그 값과 같게 맞춰 둔다. Dart 와 코틀린은 상수를 함께 쓸 수
          *       없어 두 곳에 있다.
          * 근거: 인용 — `kDefaultMicDbfsToDbaOffset` 의 근거를 본다
          */
-        const val DEFAULT_MIC_DBFS_TO_DBA_OFFSET = 87.3
+        const val DEFAULT_MIC_DBFS_TO_DBA_OFFSET = 105.2
+
+        /**
+         * 작성: 2026-10-20 17:10:22 · nada
+         * 변수: A_WEIGHTING_SOS
+         * 목적: A 가중(사람 귀가 소리 높이마다 다르게 느끼는 만큼 깎는 보정)
+         *       필터 계수. 2차 필터 세 단을 이어 건다. 한 단은
+         *       [b0, b1, b2, a0, a1, a2] 이고 a0 는 1 이다. 1kHz 에서 0 dB 다.
+         *       `SAMPLE_RATE`(44100Hz) 전용이다 — 표본 속도를 바꾸면 다시
+         *       계산해야 한다.
+         * 근거: 표준 — IEC 61672-1 A 가중의 아날로그 극(20.6 · 107.7 ·
+         *       737.9 · 12194 Hz)을 쌍일차 변환으로 44100Hz 에 옮겼다(SciPy
+         *       `bilinear_zpk` → `zpk2sos`). 표준 표와 31.5Hz ~ 4kHz 에서
+         *       0.1 dB 안이고, 8kHz −0.7 · 16kHz −8.6 dB 더 깎인다(변환이 높은
+         *       대역을 눌러 담는 성질). 승강기 소음은 대부분 이보다 낮다.
+         *       측정 — 2026-10-20 오티스폰 · 테스트폰 동시 기록 3건에서 이
+         *       가중을 넣으니 오티스 소음 곡선과의 상관이 0.88 ~ 0.90 →
+         *       0.96 ~ 0.98 로 올랐다(docs/noise_otis_offset_notes.md)
+         */
+        private val A_WEIGHTING_SOS = arrayOf(
+            doubleArrayOf(
+                0.2555878203785177, 0.5111756407570354, 0.2555878203785177,
+                1.0, -0.14053608242071078, 0.004937597615540203,
+            ),
+            doubleArrayOf(1.0, -2.0, 1.0, 1.0, -1.884901217428792, 0.8864214718161674),
+            doubleArrayOf(1.0, -2.0, 1.0, 1.0, -1.9941388812663283, 0.9941474694445309),
+        )
 
         /**
          * 작성: 2026-09-21 17:37:25 · 박희정
@@ -127,7 +156,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-18 10:12:30 · nada
+     * 수정: 2026-10-20 17:10:22 · nada
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다
      *       — 그때 닫힌 앞 녹음은 받아 갈 곳이 없어 지운다.
@@ -151,6 +180,8 @@ class NoiseCaptureHandler(private val context: Context) {
      *       micDbfsToDbaOffset — dBFS→dBA 기본 오프셋. 기본은
      *       `DEFAULT_MIC_DBFS_TO_DBA_OFFSET`
      * 식:   windowSamples = SAMPLE_RATE × WINDOW_SEC  (창에 담는 표본 수)
+     *       표본 = A 가중(`aWeight()`)을 건 표본. 녹음 파일에는 가중 전
+     *              표본을 넣는다
      *       meanSquare = 창 안 표본 제곱의 합 / windowSamples
      *                    창이 가득 찬 뒤에만 센다. 덜 찼으면 0.0을 내보낸다
      *       alpha = exp(-(이번 홉 표본 수 / SAMPLE_RATE) / FAST_TIME_WEIGHT_SEC)
@@ -217,6 +248,9 @@ class NoiseCaptureHandler(private val context: Context) {
 
             captureThread = Thread {
                 val hopBuffer = ShortArray(hopSamples) // 한 번에 읽어 올 표본
+                // A 가중 필터 세 단의 상태(단마다 지연 값 두 개). 측정마다 0 에서
+                // 시작한다
+                val aState = Array(A_WEIGHTING_SOS.size) { DoubleArray(2) }
                 // 표본 제곱값을 돌려 쓰는 고리 모양 저장소. 창을 밀 때 빠지는
                 // 값만 빼고 들어온 값만 더해, 창 전체를 매번 다시 세지 않는다
                 val ringSquares = DoubleArray(windowSamples) // 창 안 표본 제곱값
@@ -253,7 +287,9 @@ class NoiseCaptureHandler(private val context: Context) {
 
                     for (i in 0 until read) {
                         val norm = hopBuffer[i] / 32768.0 // -1~1 로 맞춘 표본
-                        val sq = norm * norm // 표본 제곱값
+                        // → 로직 이동: aWeight()
+                        val weighted = aWeight(norm, aState) // A 가중한 표본
+                        val sq = weighted * weighted // 가중한 표본 제곱값
                         if (filled >= windowSamples) {
                             sumSquares -= ringSquares[ringPos]
                         } else {
@@ -315,6 +351,30 @@ class NoiseCaptureHandler(private val context: Context) {
             stopAndDiscardAudio() // → 로직 이동: stopAndDiscardAudio()
             latestDba = 0.0
         }
+    }
+
+    /**
+     * 작성: 2026-10-20 17:10:22 · nada
+     * 함수: aWeight
+     * 목적: 표본 하나에 A 가중 필터(`A_WEIGHTING_SOS`) 세 단을 차례로
+     *       건다. 녹음 스레드가 표본마다 부른다.
+     * 인자: x — 가중 전 표본 (-1 ~ 1)
+     *       state — 단마다 지연 값 두 개. 부를 때마다 갱신한다
+     * 반환: 가중한 표본
+     * 식:   단마다 (전치 직접형 II)
+     *       y = b0·x + s0,  s0 = b1·x − a1·y + s1,  s1 = b2·x − a2·y
+     */
+    private fun aWeight(x: Double, state: Array<DoubleArray>): Double {
+        var value = x // 이 단에 들어가는 값
+        for (k in A_WEIGHTING_SOS.indices) {
+            val c = A_WEIGHTING_SOS[k] // 이 단의 계수
+            val s = state[k] // 이 단의 지연 값
+            val y = c[0] * value + s[0] // 이 단의 출력
+            s[0] = c[1] * value - c[4] * y + s[1]
+            s[1] = c[2] * value - c[5] * y
+            value = y
+        }
+        return value
     }
 
     /**
