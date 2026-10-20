@@ -103,6 +103,12 @@ class NoiseAudioEncoder(
     /** 자원을 이미 반납했는지. 두 번 반납하지 않게 한다 */
     private var released = false
 
+    /**
+     * 끝 표시가 붙은 조각을 이미 받았는지. 끝 표시를 넣은 직후의
+     * `drain()` 이 받아 버리면 `finish()` 의 `drain()` 이 더 기다리지 않게 한다
+     */
+    private var outputEnded = false
+
     init {
         val format = // 압축 설정 (AAC-LC, 모노)
             MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, 1)
@@ -235,16 +241,22 @@ class NoiseAudioEncoder(
 
     /**
      * 작성: 2026-10-18 10:12:30 · nada
+     * 수정: 2026-10-20 12:31:05 · nada
      * 함수: drain
      * 목적: 압축기가 내놓은 조각을 파일에 담는다. 첫 조각 전에 압축기가
-     *       알려 주는 형식으로 파일 틀의 소리 트랙을 만든다.
+     *       알려 주는 형식으로 파일 틀의 소리 트랙을 만든다. 끝 조각을
+     *       받았으면(`outputEnded`) 압축기에 더 묻지 않는다 — 끝 뒤에는
+     *       나올 조각이 없어, 기다리면 한도(약 1초)만큼 정지가 늦어진다.
      * 인자: endOfStream — true 면 끝 표시가 붙은 조각이 나올 때까지
      *       `MAX_WAIT_TRIES` 번 기다린다. false 면 지금 나온 것만 담는다
+     * 근거: 측정 — 2026-10-20 에뮬레이터(API 36.1) 측정에서 끝 표시를 넣은
+     *       직후의 `drain()` 이 끝 조각을 받아, `finish()` 가 1초를 다
+     *       기다린 뒤 "end of stream not reached" 를 남겼다
      */
     private fun drain(endOfStream: Boolean) {
         val info = MediaCodec.BufferInfo() // 나온 조각의 크기 · 시각 · 표시
         var tries = 0 // 끝 조각을 기다린 횟수
-        while (true) {
+        while (!outputEnded) {
             val index = // 나온 조각 번호, 아니면 상태 값(음수)
                 codec.dequeueOutputBuffer(info, if (endOfStream) TIMEOUT_US else 0L)
             when {
@@ -271,7 +283,9 @@ class NoiseAudioEncoder(
                         writtenFrames++
                     }
                     codec.releaseOutputBuffer(index, false)
-                    if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) return
+                    if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                        outputEnded = true
+                    }
                 }
             }
         }
