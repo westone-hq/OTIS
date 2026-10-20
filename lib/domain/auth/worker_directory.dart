@@ -109,24 +109,89 @@ class WorkerDirectory {
     return text == null || text.isEmpty ? null : text;
   }
 
+  /// 작성: 2026-10-20 09:12:40 · nada
+  /// 변수: _dubeolsikKeys
+  /// 목적: 한글 자판 상태에서 영문 자리를 눌렀을 때 들어오는 낱자 → 그
+  ///       자리의 영문. 사번 머리 "T" 를 한글 상태로 누르면 "ㅅ" 이 들어와
+  ///       명단에서 못 찾는 일을 막는다.
+  /// 근거: 표준 — KS X 5002 두벌식 자판 배열(쌍자음 · ㅒ · ㅖ 는 Shift 자리)
+  static const Map<String, String> _dubeolsikKeys = <String, String>{
+    'ㄱ': 'r',
+    'ㄲ': 'R',
+    'ㄴ': 's',
+    'ㄷ': 'e',
+    'ㄸ': 'E',
+    'ㄹ': 'f',
+    'ㅁ': 'a',
+    'ㅂ': 'q',
+    'ㅃ': 'Q',
+    'ㅅ': 't',
+    'ㅆ': 'T',
+    'ㅇ': 'd',
+    'ㅈ': 'w',
+    'ㅉ': 'W',
+    'ㅊ': 'c',
+    'ㅋ': 'z',
+    'ㅌ': 'x',
+    'ㅍ': 'v',
+    'ㅎ': 'g',
+    'ㅏ': 'k',
+    'ㅐ': 'o',
+    'ㅑ': 'i',
+    'ㅒ': 'O',
+    'ㅓ': 'j',
+    'ㅔ': 'p',
+    'ㅕ': 'u',
+    'ㅖ': 'P',
+    'ㅗ': 'h',
+    'ㅛ': 'y',
+    'ㅜ': 'n',
+    'ㅠ': 'b',
+    'ㅡ': 'm',
+    'ㅣ': 'l',
+  };
+
   /// 작성: 2026-10-18 09:09:47 · nada
+  /// 수정: 2026-10-20 09:12:40 · nada
   /// 함수: normalizeId
-  /// 목적: 사번을 대조할 형태로 맞춘다. 앞뒤 공백을 지우고 대문자로 바꾼다
-  ///       — 현장에서 "t00001" 처럼 소문자로 적어도 같은 사람으로 본다.
-  ///       명단을 읽을 때와 로그인 입력을 받을 때 둘 다 이 함수를 쓴다.
+  /// 목적: 사번을 대조할 형태로 맞춘다. 명단을 읽을 때와 로그인 입력을 받을
+  ///       때 둘 다 이 함수를 쓴다. 현장 휴대폰 키보드에서 생기는 입력
+  ///       차이를 같은 사번으로 본다.
+  ///       - 대문자로 바꾼다 — "t00001" 도 같은 사람이다
+  ///       - 공백(앞뒤 · 가운데, 전각 공백 포함)과 폭 없는 문자를 지운다
+  ///       - 전각 영숫자("Ｔ００００１")를 반각으로 바꾼다
+  ///       - 한글 자판 상태로 누른 낱자를 그 자리 영문으로 바꾼다
+  ///         (`_dubeolsikKeys`, "ㅅ00001" → "T00001")
+  ///       명단 사번은 모두 영문 · 숫자라(`tool/import_workers.py` 가 만든
+  ///       명단 977명 확인, 2026-10-20) 이 변환으로 두 사람이 같은 사번이
+  ///       되는 일은 없다.
   /// 인자: id — 사번 문자열
   /// 반환: 맞춘 사번
-  static String normalizeId(String id) => id.trim().toUpperCase();
+  /// 식:   전각 문자 코드 − 0xFEE0 = 반각 문자 코드 (U+FF01 ~ U+FF5E)
+  static String normalizeId(String id) {
+    final out = StringBuffer(); // 맞춘 글자를 모으는 곳
+    for (final rune in id.runes) {
+      final half = rune >= 0xFF01 && rune <= 0xFF5E
+          ? rune - 0xFEE0
+          : rune; // 전각이면 반각으로 바꾼 글자 코드
+      final char = String.fromCharCode(half); // 글자 하나
+      // 폭 없는 공백 · 이음 문자는 `trim()` 이 공백으로 보지 않아 따로 뺀다
+      if (char.trim().isEmpty || (half >= 0x200B && half <= 0x200D)) continue;
+      out.write(_dubeolsikKeys[char] ?? char);
+    }
+    return out.toString().toUpperCase();
+  }
 
   /// 작성: 2026-10-18 09:09:47 · nada
   /// 함수: find
   /// 목적: 사번으로 작업자를 찾는다. 앱을 다시 켤 때 기기에 남은 로그인
   ///       사번을 되살리는 데 쓴다(`LoginStore.restore()`).
-  /// 인자: employeeId — 사번. 대소문자 · 앞뒤 공백은 가리지 않는다
+  /// 인자: employeeId — 사번. `normalizeId()` 가 맞추는 차이는 가리지 않는다
   /// 반환: 작업자. 명단에 없으면 null
   Worker? find(String employeeId) => _byId[normalizeId(employeeId)];
 
   /// 작성: 2026-10-18 09:09:47 · nada
+  /// 수정: 2026-10-20 09:12:40 · nada
   /// 함수: authenticate
   /// 목적: 사번 · 비밀번호로 로그인을 판정한다. 비밀번호는 사번과 같다 —
   ///       사번과 같은 규칙(`normalizeId()`)으로 맞춰 비교한다.
@@ -138,14 +203,15 @@ class WorkerDirectory {
   LoginResult authenticate(String employeeId, String password) {
     final id = normalizeId(employeeId); // 맞춘 사번
     if (id.isEmpty) return const LoginResult.failure(LoginFailure.idMissing);
-    if (password.trim().isEmpty) {
+    final typed = normalizeId(password); // 사번과 같은 규칙으로 맞춘 비밀번호
+    if (typed.isEmpty) {
       return const LoginResult.failure(LoginFailure.passwordMissing);
     }
     final worker = _byId[id]; // 명단의 작업자, 없으면 null
     if (worker == null) {
       return const LoginResult.failure(LoginFailure.unknownId);
     }
-    if (normalizeId(password) != id) {
+    if (typed != id) {
       return const LoginResult.failure(LoginFailure.wrongPassword);
     }
     return LoginResult.success(worker);

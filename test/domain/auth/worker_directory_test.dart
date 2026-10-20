@@ -41,6 +41,27 @@ void main() {
     expect(directory.find('T99999'), isNull);
   });
 
+  test('한글 자판 · 전각 · 가운데 공백 · 폭 없는 문자는 같은 사번으로 맞춘다', () {
+    expect(WorkerDirectory.normalizeId('ㅅ00001'), 'T00001');
+    expect(WorkerDirectory.normalizeId('ㅆ00001'), 'T00001');
+    expect(WorkerDirectory.normalizeId('Ｔ００００１'), 'T00001');
+    expect(WorkerDirectory.normalizeId('T 000　01'), 'T00001');
+    expect(WorkerDirectory.normalizeId('​T00001 \n'), 'T00001');
+    expect(WorkerDirectory.normalizeId('２０００01'), '200001');
+    expect(directory.authenticate('ㅅ00001', 'ㅅ00001').worker?.name, '홍길동');
+  });
+
+  test('공백 · 폭 없는 문자만 있는 칸은 빈 칸으로 본다', () {
+    expect(
+      directory.authenticate(' ​ ', 'T00001').failure,
+      LoginFailure.idMissing,
+    );
+    expect(
+      directory.authenticate('T00001', '　').failure,
+      LoginFailure.passwordMissing,
+    );
+  });
+
   test('비밀번호가 사번과 같으면 로그인을 받아 준다', () {
     final result = directory.authenticate('t00001', 'T00001 '); // 판정 결과
     expect(result.failure, isNull);

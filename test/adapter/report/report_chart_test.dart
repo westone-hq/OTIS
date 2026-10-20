@@ -588,11 +588,11 @@ void main() {
       final result = _result().copyWith(xPtp: 14.2125, zPtp: 108.3677);
       final metrics = ReportMetrics.from(result); // 1쪽 표 지표
 
-      expect(ReportChartRenderer.p2pLabel(14.2125), 'P2P 14.2milli-G');
-      expect(ReportChartRenderer.p2pLabel(108.3677), 'P2P 108milli-G');
+      expect(ReportChartRenderer.ptpLabel(14.2125), 'ptp 14.2milli-G');
+      expect(ReportChartRenderer.ptpLabel(108.3677), 'ptp 108milli-G');
       expect(
         metrics.vertMax.display,
-        ReportChartRenderer.p2pLabel(108.3677).substring(4),
+        ReportChartRenderer.ptpLabel(108.3677).substring(4),
       );
     });
 
@@ -638,6 +638,104 @@ void main() {
       expect(at.minIndex, 777);
       final reduced = reduceSeries(values, columns: 300); // 그리는 표본
       expect(reduced.map((s) => s.index), containsAll(<int>[4321, 777]));
+    });
+  });
+
+  group('운행 구간 점선 (2026-10-20)', () {
+    const window = TravelWindow(
+      startIndex: 2000,
+      endIndex: 9000,
+      startSec: 2000 / _sampleRate,
+      endSec: 9000 / _sampleRate,
+      startM: 0.5,
+      endM: 56.5,
+    ); // 시험용 운행 구간
+    final box = ReportChartPage.slots.first; // 차트 자리
+    final frameLeft = ReportLayout.xToPoints(box.x); // 축 틀 왼쪽 (포인트)
+    final frameRight = ReportLayout.xToPoints(
+      box.x + box.width,
+    ); // 축 틀 오른쪽 (포인트)
+    // 행 첨자가 축 틀 안 어느 가로 자리인지 렌더러와 같은 식으로 구한다
+    double xOfIndex(int index) {
+      const span = (_rideSampleCount - 1) / _sampleRate * 1.02; // 가로축 폭 (초)
+      return frameLeft +
+          (frameRight - frameLeft) * (index / _sampleRate) / span;
+    }
+
+    // 차트 하나를 그려 그 쪽의 운행 구간 점선을 돌려준다
+    Future<List<({double left, double y, double right})>> drawGuides(
+      ChartAxisSpec spec,
+      MeasurementResult result,
+    ) async {
+      final document = PdfDocument(); // 만들어 낼 PDF 문서
+      final fontBytes = await rootBundle.load(
+        ReportLayout.regularFontAsset,
+      ); // 글꼴 원본
+      final renderer = ReportChartRenderer(
+        font: PdfTtfFont(document, fontBytes),
+      ); // 차트를 그릴 렌더러
+      final page = PdfPage(
+        document,
+        pageFormat: PdfPageFormat(
+          ReportLayout.pageWidthPt,
+          ReportLayout.pageHeightPt,
+        ),
+      ); // 차트를 얹을 쪽
+      renderer.draw(page.getGraphics(), spec: spec, box: box, result: result);
+      final bytes = await document.save(); // 만든 PDF
+      return guideLines(pdfChartStreams(bytes).join());
+    }
+
+    test('진동 차트는 A95 두 줄을 운행 구간에만 0 을 가운데 두고 긋는다', () async {
+      final result = _result().copyWith(
+        xA95: 4.0,
+        travelWindow: window,
+      ); // 구간 · A95 가 있는 결과
+      final lines = await drawGuides(ReportChartAxes.x, result); // 그은 점선
+
+      expect(lines.length, 2);
+      for (final line in lines) {
+        expect(line.left, closeTo(xOfIndex(2000), 0.01));
+        expect(line.right, closeTo(xOfIndex(9000), 0.01));
+      }
+      final range = ReportChartAxes.x.rangeFor(result.xSeries); // 세로축
+      final top = ReportLayout.yToPoints(box.y); // 축 틀 위 (포인트)
+      final bottom = ReportLayout.yToPoints(box.y + box.height); // 아래
+      double yOf(double value) =>
+          bottom + (top - bottom) * (value - range.min) / range.span;
+      expect(
+        lines.map((l) => l.y),
+        unorderedEquals(<Matcher>[
+          closeTo(yOf(2.0), 0.01),
+          closeTo(yOf(-2.0), 0.01),
+        ]),
+      );
+    });
+
+    test('A95 나 운행 구간이 없으면 진동 점선을 긋지 않는다', () async {
+      final noA95 = _result().copyWith(travelWindow: window); // A95 없음
+      final noWindow = _result().copyWith(xA95: 4.0); // 예전 결과
+
+      expect(await drawGuides(ReportChartAxes.x, noA95), isEmpty);
+      expect(await drawGuides(ReportChartAxes.x, noWindow), isEmpty);
+    });
+
+    test('소음 평균선은 운행 구간에만, 구간 없는 예전 결과는 폭 전체에 긋는다', () async {
+      final noise = List<double>.filled(_rideSampleCount, 45.0); // 소음 (dBA)
+      final windowed = _result().copyWith(
+        noiseSeries: noise,
+        travelWindow: window,
+      ); // 구간이 있는 결과
+      final legacy = _result().copyWith(noiseSeries: noise); // 예전 결과
+
+      final inWindow = await drawGuides(ReportChartAxes.noise, windowed);
+      expect(inWindow.length, 1);
+      expect(inWindow.single.left, closeTo(xOfIndex(2000), 0.01));
+      expect(inWindow.single.right, closeTo(xOfIndex(9000), 0.01));
+
+      final full = await drawGuides(ReportChartAxes.noise, legacy);
+      expect(full.single.left, closeTo(frameLeft, 0.01));
+      expect(full.single.right, closeTo(frameRight, 0.01));
     });
   });
 

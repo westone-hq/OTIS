@@ -104,3 +104,29 @@ List<List<double>> axisFrames(String stream, {required double pageWidthPt}) {
   }
   return out;
 }
+
+/// 작성: 2026-10-20 15:02:44 · nada
+/// 함수: guideLines
+/// 목적: 쪽 하나에서 운행 구간 점선(`ReportChartRenderer.guideDashPattern`
+///       무늬로 그은 선)을 뽑는다. 점선을 켜고 끈 사이에 그은 선분이다.
+///       격자 점선(1.2 · 1.2)과는 무늬가 달라 섞이지 않는다.
+/// 인자: stream — 쪽 하나의 내용 스트림
+/// 반환: 선분마다 (왼쪽 x, 세로 y, 오른쪽 x) 포인트 값
+List<({double left, double y, double right})> guideLines(String stream) {
+  final dashed = RegExp(
+    r'\[2\.3 2\.3\] 0 d(.*?)\[\] 0 d',
+    dotAll: true,
+  ); // 점선을 켜고 끈 사이 구간
+  final segment = RegExp(
+    r'([-\d.]+) ([-\d.]+) m\s+([-\d.]+) ([-\d.]+) l',
+  ); // 선분 하나
+  return <({double left, double y, double right})>[
+    for (final guide in dashed.allMatches(stream))
+      for (final line in segment.allMatches(guide.group(1)!))
+        (
+          left: double.parse(line.group(1)!),
+          y: double.parse(line.group(2)!),
+          right: double.parse(line.group(3)!),
+        ),
+  ];
+}

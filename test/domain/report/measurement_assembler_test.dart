@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
@@ -611,6 +612,85 @@ void main() {
       expect(model.accelSeries[2], closeTo(0.0, 1e-9));
     });
 
+    group('움직인 구간만 적분한다', () {
+      // 정지 구간 행 수만큼 0 에 가까운 잡음을 붙인다. 잡음은 같은 씨앗의
+      // 의사 난수라 매번 같다. ±1.5 mg 고르게 흩어져 적분하면 속도가 조금씩
+      // 떠다닌다 — 실기기 정지 기록과 같은 성질이다
+      List<GridSample> still(int rows, math.Random random) => <GridSample>[
+        for (var i = 0; i < rows; i++)
+          GridSample(
+            xMg: 0.0,
+            yMg: 0.0,
+            zMg: (random.nextDouble() - 0.5) * 3.0,
+          ),
+      ];
+
+      // 앞 정지 · 운행(사다리꼴) · 뒤 정지를 이어 운동을 계산한다
+      MeasurementAssembleResult rideWithStill(int leadRows, int tailRows) {
+        final random = math.Random(7); // 같은 잡음을 내는 씨앗
+        return MeasurementAssembler.assemble(
+          grid: _grid(<GridSample>[
+            ...still(leadRows, random),
+            ..._trapezoid(),
+            ...still(tailRows, random),
+          ]),
+          site: _site,
+          id: 'id',
+          measuredAt: measuredAt,
+        );
+      }
+
+      test('움직임이 없는 측정은 운행 거리 · 최대 속도가 0 이고 구간이 없다', () {
+        final assembled = MeasurementAssembler.assemble(
+          grid: _grid(still(256 * 60, math.Random(3))),
+          site: _site,
+          id: 'id',
+          measuredAt: measuredAt,
+        ); // 1분 정지
+
+        expect(assembled.motion, isNull);
+        expect(assembled.result!.distance, 0.0);
+        expect(assembled.result!.maxSpeed, 0.0);
+        expect(assembled.result!.speedSeries, everyElement(0.0));
+      });
+
+      test('도착 뒤 기다린 시간이 달라도 운행 거리가 같다', () {
+        final short = rideWithStill(512, 256).result!.distance!; // 뒤 1초
+        final long = rideWithStill(512, 256 * 20).result!.distance!; // 뒤 20초
+
+        expect((long - short).abs(), lessThan(0.05));
+        expect(short, closeTo(57.3, 0.1));
+      });
+
+      test('정지 구간의 속도는 0 이고 이동량은 변하지 않는다', () {
+        final assembled = rideWithStill(512, 256 * 5); // 앞 2초 · 뒤 5초
+        final result = assembled.result!; // 변환된 측정 결과
+        final motion = assembled.motion!; // 움직인 구간
+
+        expect(
+          result.speedSeries.sublist(0, motion.startIndex),
+          everyElement(0.0),
+        );
+        expect(
+          result.speedSeries.sublist(motion.endIndex + 1),
+          everyElement(0.0),
+        );
+        expect(
+          result.positionSeries.last,
+          result.positionSeries[motion.endIndex],
+        );
+        expect(motion.clippedAtStart, isFalse);
+        expect(motion.clippedAtEnd, isFalse);
+      });
+
+      test('정지 전에 측정을 끝내면 구간이 기록 끝에서 잘렸다고 알린다', () {
+        final assembled = rideWithStill(512, 0); // 도착하자마자 끝낸 측정
+
+        expect(assembled.motion!.clippedAtEnd, isTrue);
+        expect(assembled.motion!.clippedAtStart, isFalse);
+      });
+    });
+
     test('누적 이동량은 방향과 무관해 오르내려도 합산된다', () {
       // 같은 운행을 두 번 이어붙인다. 방향을 그대로 더하면 상쇄되지만,
       // 절댓값을 더하므로 이동량은 두 배에 가까워야 한다
@@ -646,9 +726,11 @@ void main() {
         }
       });
 
-      test('실측 데이터에서 프로토타입과 같은 값을 낸다', () {
-        // 기준값은 pdf_report_dev 의 `metrics.derive_kinematics()` 에 이
-        // 파일을 넣어 얻은 것이다. 값이 흔들리면 적분 경로가 바뀐 것이다
+      test('실측 데이터에서 파이썬 독립 계산과 같은 값을 낸다', () {
+        // 기준값은 처리 전 256Hz 이 파일에 움직인 구간 적분(2026-10-20,
+        // `pdf_report_dev/gen_conditioning_fixtures.py` 의 `_pipeline()` 운동
+        // 계산과 같은 식)을 numpy 로 따로 계산해 얻은 것이다. 값이 흔들리면
+        // 적분 경로가 바뀐 것이다
         final model = MeasurementAssembler.assemble(
           grid: _grid(_fixtureRows()),
           site: _site,
@@ -658,8 +740,8 @@ void main() {
 
         expect(model.zSeries.length, 11388);
         expect(model.sampleRate, closeTo(256.0, 1e-9));
-        expect(model.maxSpeed!, closeTo(1.743390961, 1e-6));
-        expect(model.distance!, closeTo(57.093948064, 1e-6));
+        expect(model.maxSpeed!, closeTo(1.736991639, 1e-6));
+        expect(model.distance!, closeTo(56.840220602, 1e-6));
         expect(model.speedSeries.first, closeTo(0.0, 1e-9));
         expect(model.speedSeries.last, closeTo(0.0, 1e-9));
       });
@@ -751,11 +833,13 @@ void main() {
       });
     });
 
-    test('합성 프로파일에서도 프로토타입과 같은 값을 낸다', () {
+    test('합성 프로파일에서도 파이썬 독립 계산과 같은 값을 낸다', () {
       // 실측 회귀는 위 `기준 데이터 ride_reference` 가 갖는다. 이 시험은 Dart
-      // 계산이 파이썬 프로토타입과 같은지 확인하는 용도로만 남겨둔다 —
+      // 계산이 numpy 로 따로 낸 값과 같은지 확인하는 용도로만 남겨둔다 —
       // 합성 입력이라 양 끝 가속도가 정확히 ±0.8 로 떨어져, 어긋나면
-      // 어디가 틀어졌는지 알아보기 쉽다
+      // 어디가 틀어졌는지 알아보기 쉽다. 정지 구간 없이 바로 출발 · 정지라
+      // 움직인 구간이 기록 전체이고 양 끝이 잘린 것으로 적힌다. 거리는
+      // 설계한 57.3 m 에 한 행(1/256초) 차이로 맞는다
       final model = MeasurementAssembler.assemble(
         grid: _grid(_trapezoid()),
         site: _site,
@@ -764,8 +848,8 @@ void main() {
       ).result!; // 변환된 측정 결과
 
       expect(model.zSeries.length, 8942);
-      expect(model.maxSpeed!, closeTo(1.749804272, 1e-6));
-      expect(model.distance!, closeTo(57.244250488, 1e-6));
+      expect(model.maxSpeed!, closeTo(1.75, 1e-6));
+      expect(model.distance!, closeTo(57.298828125, 1e-6));
       expect(model.accelSeries.first, closeTo(0.8, 1e-9));
       expect(model.accelSeries.last, closeTo(-0.8, 1e-9));
     });

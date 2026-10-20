@@ -13,6 +13,7 @@ import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration_checker/adapter/login_store.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/adapter/update_checker.dart';
@@ -20,6 +21,7 @@ import 'package:vibration_checker/adapter/update_installer.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/noise_offset.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
@@ -29,6 +31,7 @@ import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/model/worker.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
+import 'package:vibration_checker/ui/features/login/login_screen.dart';
 import 'package:vibration_checker/ui/features/measure/measuring_screen.dart';
 import 'package:vibration_checker/ui/features/measure/placement_sheet.dart';
 import 'package:vibration_checker/ui/features/measure/start_screen.dart';
@@ -36,6 +39,7 @@ import 'package:vibration_checker/ui/features/result/result_screen.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
 import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
+import '../support/fake_worker_bundle.dart';
 import 'shot_harness.dart';
 
 /// 작성: 2026-10-15 22:01:43 · nada
@@ -222,7 +226,9 @@ Future<MeasurementResult> _recordFromRaw(
   ); // 조립 결과
   final result = assembled.result!.copyWith(
     signalConditioning:
-        '${conditioner.methodLabel}+${RideWeighting.methodLabel}',
+        '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
+        '+${MeasurementAssembler.kinematicsMethodLabel}'
+        '+$kNoiseMethodLabel',
   ); // 저장 절차와 같이 처리 방식을 실은 측정 결과
   final repo = MeasurementRepository.instance; // 저장소
   final dir = await repo.save(result); // 측정 폴더
@@ -257,10 +263,12 @@ Map<String, Object?> _summary(MeasurementResult r) => <String, Object?>{
 };
 
 /// 작성: 2026-10-15 22:01:43 · nada
+/// 수정: 2026-10-18 11:20:05 · nada
 /// 함수: main
 /// 목적: 로우 데이터 두 개(`RAW_DIR` 의 오티스꺼.txt · 우리꺼.txt)로 사람이
-///       앱을 쓰는 순서대로 화면을 찍는다. 홈 입력 → 측정 시작 → 측정 화면
-///       → 결과 → 메일 → (두 번째) 결과 비교 → 저장 결과 목록. 측정 화면을
+///       앱을 쓰는 순서대로 화면을 찍는다. 로그인 → 홈 입력 → 측정 시작 →
+///       측정 화면 → 결과 → 메일 → (두 번째) 결과 비교 → 설정 → 저장 결과
+///       목록. 로그인은 시험용 명단(`FakeWorkerBundle`)으로 한다. 측정 화면을
 ///       볼륨키로 끝내는 대신 그 자리에서 로우 데이터로 저장 절차를 돈다.
 ///       리포트 PDF 는 `SHOT_DIR/pdf/` 에, 지표는 `SHOT_DIR/지표.json` 에
 ///       쓴다. `RAW_DIR` 이 없으면 건너뛴다. `RAW_RUNS`(예: "우리앱")를
@@ -303,9 +311,15 @@ void main() {
     final out = shotOutputDir(); // 쓸 폴더
     final pdfDir = Directory('${out.path}/pdf')..createSync(recursive: true);
     final sensors = _FakeSensors(); // 가짜 센서
+    LoginSession.instance.current = null; // 로그인 화면부터 찍는다
+    final loginStore = LoginStore(bundle: FakeWorkerBundle()); // 시험용 명단
     final router = GoRouter(
-      initialLocation: '/home',
+      initialLocation: '/login',
       routes: [
+        GoRoute(
+          path: '/login',
+          builder: (_, _) => LoginScreen(store: loginStore),
+        ),
         GoRoute(
           path: '/home',
           builder: (_, _) => HomeScreen(updatePrompt: _offlinePrompt()),
@@ -349,6 +363,18 @@ void main() {
       await settle(tester, rounds: 5);
     }
 
+    // 로그인 — 비밀번호는 사번과 같다
+    final loginFields = find.byType(TextField); // 사번 · 비밀번호 칸
+    await tester.enterText(loginFields.at(0), 'T00001');
+    await tester.enterText(loginFields.at(1), 'T00001');
+    await settle(tester, rounds: 5);
+    await shot('로그인');
+    await tester.tap(find.widgetWithText(ElevatedButton, '로그인'));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await settle(tester, rounds: 20);
+
     final summaries = <String, Object?>{}; // 지표 모음
     final runs =
         <({String label, String file, String id, DateTime at})>[
@@ -385,7 +411,11 @@ void main() {
         await tester.enterText(fields.at(5), '8');
         await tester.enterText(fields.at(6), '2000');
       }
-      await tester.enterText(fields.last, '${run.label} 로우 데이터 (${run.file})');
+      // 메일 본문에 들어가는 참고사항. 현장에서 적을 법한 문구로 둔다
+      await tester.enterText(fields.last, '카 바닥 중앙 거치, 문 닫힘 상태에서 측정');
+      await settle(tester, rounds: 5);
+      // 입력하며 내려간 화면을 맨 위로 올려, 아래 장과 겹치지 않게 찍는다
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
       await settle(tester, rounds: 5);
       await shot('${run.label}_홈_입력완료');
       if (first) {
@@ -462,6 +492,13 @@ void main() {
       router.go('/home');
       await settle(tester, rounds: 20);
     }
+
+    // 설정 — 로그인 작업자 · 수신 이메일 · 앱 버전
+    router.push('/settings');
+    await settle(tester, rounds: 20);
+    await shot('설정');
+    router.pop();
+    await settle(tester, rounds: 10);
 
     // 저장 결과 목록
     router.push('/history');

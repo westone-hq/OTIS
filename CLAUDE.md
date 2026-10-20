@@ -58,7 +58,11 @@ flutter test --tags screenshot --run-skipped test/screenshots
   다시 켜면 `LoginStore.restore()` 가 되살리고, 새 명단에서 빠진 사번이면
   로그아웃시킨다. 로그인 전에는 라우터 `redirect` 가 모든 경로를 `/login`
   으로 돌린다. 명단이 바뀌면 `tool/import_workers.py` 로 JSON 을 다시
-  만들고 앱을 새로 배포한다.
+  만들고 앱을 새로 배포한다. 사번 · 비밀번호 입력은 `normalizeId()` 가
+  대문자 · 공백 제거 · 전각 → 반각 · 한글 자판 낱자 → 영문(두벌식, "ㅅ" →
+  "T")으로 맞춰 비교하고, 입력칸은 영문 · 숫자 키보드를 띄운다(2026-10-20).
+  실제 명단 전원 로그인은 `worker_roster_test` 가, 실제 라우터의 로그인 전
+  차단은 `app_router_login_test` 가 본다.
 
 - 앱 안 업데이트(2026-10-13, 절차는 `docs/release.md`): 홈이 앱 실행마다
   한 번, 설정이 "업데이트 확인" 으로 배포 저장소(GitHub Releases)의
@@ -143,7 +147,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
   `LiveSpeedEstimator`(기준선 1초 → 1차 저역 250ms → 적분 → 정지 되돌림:
   거른 가속도 < 3 mg 이고 속도 < 0.2 m/s 가 0.5초)에 넣고, 이벤트 시각으로
   250ms 마다 `liveSpeedMps` 로 내보낸다. 기준선을 모으는 첫 1초는 "—".
-  표시 전용이라 저장하는 최대 속도(측정 뒤 전체 평균 · 직선 보정)와 다를 수
+  표시 전용이라 저장하는 최대 속도(측정 뒤 움직인 구간만 적분)와 다를 수
   있다(2026-10-15 로우 데이터 2건: 어림 최대 1.48 · 1.58, 저장 1.53 · 1.51).
   측정 중 휴대폰은 화면을 아래로 두므로 보이는 것은 화면을 볼 수 있을 때다
 - 메일은 PDF 리포트, 로우 데이터(`raw.txt`, 256Hz 격자 · 필터 · 기준선
@@ -174,7 +178,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
         3. 256Hz → 100Hz 재표본   25/64 다상 FIR, 카이저 창 β 5.0
         소음 열은 거르지 않고 100Hz 시각에 선형 보간한다
       ─▶ MeasurementAssembler.assemble()   지표 · 리포트 · result.json
-            4. 운동 · 최대 속도 · 운행 거리   가중 전 Z 전체에서 (`_deriveKinematics`)
+            4. 운동 · 최대 속도 · 운행 거리   가중 전 Z 의 움직인 구간만 적분 (`_deriveKinematics`)
             5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
             6. 운행 구간 (TravelWindow)      출발 · 정지 0.5 m 제외, 운행 1 m 이하면 실패
             7. 반주기 P2P (HalfCycle)        구간 안 최대 P2P · A95, 구간 안 소음 최대 · 평균
@@ -195,18 +199,23 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `conditionedRateHz` · `conditionedRowCount` 줄을 덧붙인다. 실패면
   `conditioningFailureReason` 한 줄만. 그 뒤에 `weighting` 과
   `travelWindowStart/EndSec` · `travelWindowStart/EndM`(구간을 못 정하면
-  `travelWindowFailureReason`) 줄을 덧붙인다.
+  `travelWindowFailureReason`) 줄을, 그 뒤에 `kinematics` 와
+  `motionWindowStart/EndSec`(정지 측정이면 `motionWindow: none`, 여유가 기록
+  앞 · 끝에서 잘렸으면 `motionWindowClippedAtStart/End: true`) 줄을 덧붙인다.
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
-  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)`,
-  `SignalConditioner.methodLabel` + `RideWeighting.methodLabel`) 과
-  `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`. `+iso18738` 이
+  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+motion(v>0.05,pad500ms)`,
+  `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
+  `MeasurementAssembler.kinematicsMethodLabel`) 과 `travelWindow`(첨자 · 초 ·
+  m) 또는 `travelWindowFailure`. `+motion` 이 없는 2026-10-20 전 결과는
+  기록 전체를 적분한 예전 거리 · 최대 속도다. `+iso18738` 이
   없는 2026-10-15 전 결과는 가중 없이 전체 구간에서 낸 지표이고(그대로 읽고
   차트 점도 그때 정의로 찍는다), `signalConditioning` 이 null 인 더 예전
   결과는 원시 256Hz 기준이다. 시계열 `x/y/zSeries` 는 지표를 낸 그 값(가중
   뒤)이라 차트도 같은 값을 그린다. 화면에는 보이지 않는다.
 - **가중 · 구간 상수**: `CaptureConfig.rideVerticalHighpassHz`(1.0) ·
   `rideVerticalHighpassOrder`(2) · `travelEdgeExclusionM`(0.5) ·
-  `minimumTravelM`(1.0). ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,
+  `minimumTravelM`(1.0) · `motionSpeedThresholdMps`(0.05) ·
+  `motionPaddingMs`(500). ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,
   Wk 12.5 Hz/0.63 · 2.37 → 3.35 Hz/0.91)는 `ride_weighting.dart` 에 있다.
   가중 필터는 한 방향(인과), 1 Hz 고역만 양방향이다.
 - **정본과 픽스처**: 처리 결과는 SciPy 1.18.1 과 같아야 한다
@@ -231,7 +240,10 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     --weighting test/fixtures/ride_reference.txt
     test/fixtures/conditioning_input_dev_256hz.txt test/fixtures`).
     `ride_weighting_test` · `measurement_assembler_test` 가 1e-9 · 1e-6 으로
-    대조한다
+    대조한다. `weighting_expected_metrics.json` 은 2026-10-20 움직인 구간
+    적분으로 다시 만들었다 — 이 PC 에 SciPy 1.18.1 이 없어 아나콘다 1.16.3
+    으로 만들었고(파일의 `scipy` 값), 가중 단위 픽스처를 같이 만들어 보니
+    1.18.1 판과 1e-12 안에서 같아 그 파일은 되돌렸다
 
   ```python
   x = x - x[:256].mean()                                  # 축마다 첫 1초 평균
@@ -320,8 +332,14 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   14 dB 만 지키고 0(미측정) 구간은 선을 끊는다. 개발폰 · 레퍼런스폰 · 하강
   가정 3자료 × 8차트 모두 축 밖 표본 0%. X · Y · Z 차트에는 최댓값 ·
   최솟값 자리에 흰 테를 두른 굵은 빨간 점을 찍고, 최댓값 점 옆(오른쪽,
-  자리가 없으면 왼쪽)에 흰 상자 · 굵은 빨간 글자로 "P2P 값 milli-G"(1쪽
-  표와 같은 지표)를 적는다. 소음 최댓값도 같은 방식이다(2026-10-15).
+  자리가 없으면 왼쪽)에 흰 상자 · 굵은 빨간 글자로 "ptp 값 milli-G"(1쪽
+  표와 같은 지표, 원본 표기 `a_x,ptp` 를 따라 소문자, 2026-10-20)를 적는다.
+  소음 최댓값도 같은 방식이다(2026-10-15). 운행 구간 점선(2026-10-20,
+  원본과 같은 모양): X · Y · 수직 차트는 ±A95/2 높이에 붉은 가로 점선 두
+  줄과 왼쪽 아래 "A95", 소음 차트는 평균 한 줄을 지표를 낸 운행 구간
+  (`travelWindow`) 시작부터 끝까지만 긋는다. 구간이 없는 예전 결과는 진동
+  점선 없음, 소음 평균선은 폭 전체. 점선 무늬는 원본을 600dpi 로 재 점 ·
+  빈칸 2.3pt(`ReportChartRenderer.guideDashPattern`).
   가로축은 가장 긴 시계열의 마지막 표본까지 담는다(`_timeSpan()`).
 - 신호 처리 남은 과제
   - 26.5Hz 봉우리가 개발폰에서 1.25~2.1배 크다. 40Hz 아래라 이 처리로 줄지
@@ -339,14 +357,37 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   쓴다(요구사항서 값 Z 15 · X·Y 10 · 소음 50 에서 바꿈). 앱 화면의 초과
   표시(결과 · 저장 결과 목록)도 같은 적색 기준(Z 30, X·Y 25.5, 소음 75)을
   쓴다. 그 값이 무엇을 근거로 정해졌는지는 미확인이다.
-- 운행 거리 · 최대 속도는 수직 가속도를 두 번 적분해 내므로 휴대폰 가속도계의
-  작은 치우침(0.2 ~ 1.1 mg)에 따라 2% 안팎(25 m 에 약 0.5 m) 흔들린다
-  (2026-10-15 오티스폰 · 개발폰 동시 측정 25.57 · 25.19 m). 보정 방식만
-  바꿔도 같은 기록이 0.3 ~ 0.5 m 움직이며(전체 평균 빼기 · 정지 구간 치우침
-  직선 보간 · 운행 구간만 적분), 계산 오류는 아니다(파이썬 독립 계산과 같다).
-  어느 쪽이 실제에 가까운지는 실제 거리를 아는 운행(층고 도면)으로 확인해야
-  한다(`docs/pending_checks.md`).
-- 소음 dBA 오프셋 87.3 은 임시값. A가중 없음 (`noise_otis_offset_notes.md`).
+- 운행 거리 · 최대 속도(2026-10-20 결정, 사용자 승인): 움직인 구간만
+  적분한다. 기록 전체를 적분하던 예전 방식은 가만히 있어도 속도가 떠다녀
+  (1분에 ±0.02 m/s) 정지 구간이 거리에 섞였다 — 1분 정지 기록이 0.68 m
+  (실제 리포트에 "운행 거리 0.7m"), 같은 운행도 도착 뒤 기다린 시간(1 ~
+  6초)에 따라 최대 0.57 m 달라졌다. 같은 승강기(BS15721003) 같은 구간 기록
+  6건에서 거리 표준편차 0.204 → 0.067 m, 오티스폰 · 개발폰 동시 측정 차
+  0.30 · 0.38 → 0.16 · 0.17 m. 자료(오티스폰 · 테스트폰 동시 기록 zip 3개)는
+  분석 뒤 삭제했다(2026-10-20 사용자 지시) — 수치는 이 항목과
+  `docs/noise_otis_offset_notes.md` 에만 남는다.
+  배율 오차 흔적은 없었다(두 폰 최대 속도 비 0.985 · 0.99 · 1.02, 개발폰
+  native_raw 정지 크기 996 mg · 기울여 둔 기록 1003 mg 로 ±0.4% 안). 같은
+  기록에서 예전 방식보다 0.4 ~ 0.6 m 작다. 오티스 앱과의 관계는 엇갈린다 —
+  10-15 오티스 기록(`자료/오티스꺼.txt`)은 새 방식 1.499 m/s · 25.04 m 가
+  그날 오티스 리포트(1.50 m/s · 24.9 m)에 맞고 예전 방식(1.529 · 25.57)은
+  어긋나며, 원본 리포트 기록(ride_reference)은 원본 57.3 m 에 예전 57.09 가
+  지금 56.84 보다 가깝다. 그 10-15 오티스 리포트의 로우 데이터가 이
+  파일인지는 미확인이다(위 "두 번째 대조" 의 24.95 m 는 지금 계산으로
+  재현되지 않는다). 실제 거리는 층고 도면을 아는 운행으로 확인해야 한다
+  (`docs/pending_checks.md`).
+  운행 구간(`TravelWindow`)이 위치로 정해지므로, 도착 뒤 정지가 길던 기록은
+  예전에 구간 끝이 정지 구간 안까지 들어갔다(개발폰 픽스처 0.48초) — 지금은
+  들어가지 않는다.
+- 소음(2026-10-20): 표본마다 A 가중(IEC 61672-1, 44.1kHz 2차 필터 3단,
+  `NoiseCaptureHandler.A_WEIGHTING_SOS`)을 건 뒤 창 RMS · Fast 평활에 오프셋
+  105.2(`kDefaultMicDbfsToDbaOffset`)를 더한다. 녹음(`noise.m4a`)은 가중 전
+  소리다. result.json 처리 방식 끝 `+noise(A,fast,+105.2)` 가 없는 전 결과는
+  A 가중 없이 +87.3 이다. 테스트폰 · 오티스폰 동시 기록 3건에서 오티스와의
+  상관 0.88 ~ 0.90 → 0.96 ~ 0.98, 정면 기록은 평균 · 최대가 0.2 dB 안으로
+  맞고 나머지 둘은 조용한 구간이 ±5 dB 갈린다. 오프셋은 임시값이다 — 두 폰을
+  같은 자리 · 같은 방향에 두고 다시 재 확정하고, 폰마다 마이크 감도가 달라
+  기기별 보정이 필요할 수 있다(`noise_otis_offset_notes.md`).
 - `docs/reference/sample_evimp.pdf` 는 축별 계수 분리 이전의 단일 계수로
   만들어졌다. 차이는 최대 0.14pt. 좌표가 아니라 참조 PDF 를 다시 만들어야 한다.
 - 요구사항서(`Vibration_Checking_App_Development_20260630.pdf`)가 저장소에 없다.

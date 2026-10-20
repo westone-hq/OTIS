@@ -36,6 +36,8 @@ UP, DOWN = 25, 64
 CUTOFF_HZ = 40
 ORDER = 4
 BASELINE_ROWS = 256  # 1000ms
+MOTION_MPS = 0.05  # CaptureConfig.motionSpeedThresholdMps
+MOTION_PAD_MS = 500  # CaptureConfig.motionPaddingMs
 
 
 def main(src: str, out_dir: str) -> None:
@@ -147,16 +149,24 @@ def _pipeline(src):
                       UP, DOWN, axis=0, window=('kaiser', 5.0))
     n = len(c)
     noise100 = np.interp(np.arange(n) / FS, np.arange(len(noise)) / RATE_IN, noise)
+    # 운동: 움직인 구간만 적분한다(2026-10-20, 앱 _deriveKinematics 와 같다)
     acc = c[:, 2] * 9.80665e-3
-    acc = acc - acc.mean()
-    v = np.cumsum(acc) / FS
-    v = v - (v[0] + (v[-1] - v[0]) * np.arange(n) / (n - 1))
+    a0 = acc - acc.mean()
+    v0 = np.cumsum(a0) / FS
+    v0 = v0 - (v0[0] + (v0[-1] - v0[0]) * np.arange(n) / (n - 1))
+    moving = np.where(np.abs(v0) > MOTION_MPS)[0]
+    v = np.zeros(n)
+    if len(moving):
+        pad = round(MOTION_PAD_MS / 1000 * FS)
+        ms, me = max(0, moving[0] - pad), min(n - 1, moving[-1] + pad)
+        acc = acc - acc[ms:me + 1].mean()
+        v[ms:me + 1] = np.cumsum(acc[ms:me + 1]) / FS
     pos = np.cumsum(np.abs(v)) / FS
     start = int(np.argmax(np.abs(pos - pos[0]) > EDGE_M))
     end = int(n - 1 - np.argmax(np.abs(pos[-1] - pos[::-1]) > EDGE_M))
     w = slice(start, end + 1)
     out = {'rows100': n, 'maxSpeed': float(np.abs(v).max()),
-           'distance': float(pos.max() - pos.min()),
+           'distance': float(pos[-1]),
            'startIndex': start, 'endIndex': end}
     series = {'x': weight_horizontal(c[:, 0]), 'y': weight_horizontal(c[:, 1]),
               'z': weight_vertical(c[:, 2])}

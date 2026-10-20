@@ -419,7 +419,8 @@ void main() {
       expect(saved?.sampleRate, 100.0);
       expect(
         saved?.signalConditioning,
-        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)',
+        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)'
+        '+motion(v>0.05,pad500ms)+noise(A,fast,+105.2)',
       );
 
       final meta = await metaText(); // 집계 파일 내용
@@ -442,6 +443,9 @@ void main() {
         expect(meta, contains('$key: '), reason: key);
       }
       expect(meta, contains('conditionedRateHz: 100'));
+      expect(meta, contains('kinematics: motion(v>0.05,pad500ms)'));
+      // 이 시험 격자는 움직임이 없는 무작위 값이라 정지 측정으로 적힌다
+      expect(meta, contains('motionWindow: none'));
       expect(meta, contains('conditionedRowCount: ${saved!.xSeries.length}'));
       expect(
         meta,

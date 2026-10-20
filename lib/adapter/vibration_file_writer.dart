@@ -4,6 +4,7 @@ import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
+import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-08-18 23:43:06 · 박건준
@@ -268,6 +269,46 @@ class VibrationFileWriter {
   /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 한 줄
   static String encodeConditioningFailure(String reason) =>
       '${lineEnding}conditioningFailureReason: $reason$lineEnding';
+
+  /// 작성: 2026-10-20 14:05:12 · nada
+  /// 함수: encodeMotionMeta
+  /// 목적: 운행 거리 · 최대 속도를 적분한 움직인 구간을 집계 파일 끝에
+  ///       덧붙일 문자열로 만든다. 거리가 이상할 때 어느 구간을 적분했는지
+  ///       집계 파일만 보고 알 수 있게 한다.
+  ///       - 적분 방식 한 줄(`MeasurementAssembler.kinematicsMethodLabel`)
+  ///       - 구간 시작 · 끝 (초). 정지 측정이면 그 사실 한 줄
+  ///       - 구간 여유가 기록 앞 · 끝에서 잘렸으면 그 사실. 승강기가 서기
+  ///         전에 측정을 끝냈거나 움직이는 중에 시작했으면 거리가 작게 나올
+  ///         수 있다
+  /// 인자: motion — 움직인 구간. 정지 측정이면 null
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
+  static String encodeMotionMeta(MotionWindow? motion) {
+    final buffer = StringBuffer(lineEnding); // 앞 집계와 빈 줄로 나눈다
+    // 한 줄을 쓰고 줄바꿈 문자를 붙인다
+    void line(String text) => buffer
+      ..write(text)
+      ..write(lineEnding);
+
+    line('kinematics: ${MeasurementAssembler.kinematicsMethodLabel}');
+    if (motion == null) {
+      line('motionWindow: none');
+      line('# 문턱을 넘는 움직임이 없어 운행 거리 · 최대 속도를 0 으로 둔다.');
+      return buffer.toString();
+    }
+    line(
+      'motionWindowStartSec: ${motion.startSec.toStringAsFixed(decimalDigits)}',
+    );
+    line('motionWindowEndSec: ${motion.endSec.toStringAsFixed(decimalDigits)}');
+    if (motion.clippedAtStart) {
+      line('motionWindowClippedAtStart: true');
+      line('# 측정 시작 때 이미 움직이고 있었을 수 있다. 거리가 작게 나올 수 있다.');
+    }
+    if (motion.clippedAtEnd) {
+      line('motionWindowClippedAtEnd: true');
+      line('# 승강기가 서기 전에 측정을 끝냈을 수 있다. 거리가 작게 나올 수 있다.');
+    }
+    return buffer.toString();
+  }
 
   /// 작성: 2026-10-15 16:50:04 · nada
   /// 함수: encodeTravelMeta

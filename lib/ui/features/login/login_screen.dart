@@ -130,6 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
           TextField(
             controller: _idCtl,
             style: AppText.body,
+            // 영문 · 숫자 키보드를 띄운다. 한글 상태로 누른 낱자는
+            // `WorkerDirectory.normalizeId()` 가 다시 영문으로 바꾼다
+            keyboardType: TextInputType.visiblePassword,
             textCapitalization: TextCapitalization.characters,
             autocorrect: false,
             textInputAction: TextInputAction.next,
@@ -150,6 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _passwordCtl,
             focusNode: _passwordFocus,
             style: AppText.body,
+            keyboardType: TextInputType.visiblePassword,
             obscureText: true,
             autocorrect: false,
             enableSuggestions: false,
