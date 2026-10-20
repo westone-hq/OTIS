@@ -314,6 +314,26 @@ class ReportChartAxes {
     return null;
   }
 
+  /// 작성: 2026-10-20 15:02:44 · nada
+  /// 함수: a95Of
+  /// 목적: 진동 세 축 차트에 점선으로 그을 A95 를 측정 결과에서 꺼낸다.
+  ///       `ptpOf()` 와 같이 1쪽 표가 쓰는 지표(`xA95` · `yA95` · `zA95`)를
+  ///       그대로 쓴다.
+  /// 인자: spec — 축 사양
+  ///       result — 지표를 가진 측정 결과
+  /// 반환: A95 (mg). 진동 축이 아니거나 계산하지 않은 결과면 null
+  static double? a95Of(ChartAxisSpec spec, MeasurementResult result) {
+    switch (spec.key) {
+      case 'x':
+        return result.xA95;
+      case 'y':
+        return result.yA95;
+      case 'z':
+        return result.zA95;
+    }
+    return null;
+  }
+
   /// 작성: 2026-10-15 16:50:04 · nada
   /// 함수: peakToPeakPair
   /// 목적: 최대 P2P 를 만든 두 지점을 찾는다. 운행 구간이 있으면 그 구간
@@ -593,12 +613,14 @@ class ReportChartRenderer {
   static const double guideLineWidth = 0.4;
 
   /// 작성: 2026-09-26 14:10:00 · nada
+  /// 수정: 2026-10-20 15:02:44 · nada
   /// 변수: guideDashPattern
-  /// 목적: 평균 기준선 점선의 켠 길이와 끈 길이 (포인트).
-  /// 근거: 미확인 — 원본 리포트의 기준선이 점선이라는 것은 확인했으나,
-  ///       점과 빈칸의 길이는 재지 못했다. 격자 점선과 구분되게 조금 길게
-  ///       잡았다
-  static const List<double> guideDashPattern = <double>[2.4, 1.6];
+  /// 목적: 운행 구간 점선(진동 A95 두 줄, 소음 평균 한 줄)의 켠 길이와 끈
+  ///       길이 (포인트).
+  /// 근거: 측정 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관) 2쪽을
+  ///       600dpi 로 그려 붉은 점선을 재니 X · 소음 차트 모두 점 2.28pt ·
+  ///       빈칸 2.28pt 다(2026-10-20)
+  static const List<double> guideDashPattern = <double>[2.3, 2.3];
 
   /// 작성: 2026-09-26 14:10:00 · nada
   /// 수정: 2026-10-15 15:53:26 · nada
@@ -654,6 +676,12 @@ class ReportChartRenderer {
 
   /// 격자 점선의 켠 길이와 끈 길이 (포인트)
   static const List<double> gridDashPattern = <double>[1.2, 1.2];
+
+  /// 작성: 2026-10-20 15:02:44 · nada
+  /// 변수: a95Label
+  /// 목적: 진동 A95 점선 왼쪽에 적는 글자. 원본 리포트 표기를 그대로 쓴다.
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf 2쪽 X · Y · 수직 차트
+  static const String a95Label = 'A95';
 
   /// 눈금 표시선이 축 틀 밖으로 나오는 길이 (포인트)
   static const double tickLength = 2.0;
@@ -722,13 +750,13 @@ class ReportChartRenderer {
     : labelFont = labelFont ?? font;
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-11 19:20:58 · nada
+  /// 수정: 2026-10-20 15:02:44 · nada
   /// 함수: draw
   /// 목적: 차트 한 개를 주어진 자리에 그린다. 순서대로 한다.
   ///       1. 그릴 시계열을 꺼내고, 거기에 맞는 세로축 범위를 고른다
   ///       2. 축 틀 · 격자 · 눈금 · 라벨을 그린다
   ///       3. 시계열이 비어 있지 않으면 파형을 얹고, 소음 평균선 ·
-  ///          최댓값과 진동 세 축 P2P 표시를 붙인다
+  ///          최댓값, 진동 세 축 A95 점선과 최대 P2P 표시를 붙인다
   ///
   ///       시계열이 비어도 축 틀까지는 그린다. 자리를 통째로 비우면 나중에
   ///       그 값이 붙었을 때 서식이 바뀐 것처럼 보인다. 지금은 소음이 그
@@ -776,26 +804,30 @@ class ReportChartRenderer {
         skipZeros: spec.scale.ignoreZeros,
       );
       _drawAnnotations(canvas, frame, spec, values, result);
+      _drawA95Band(canvas, frame, spec, result); // → 로직 이동: _drawA95Band()
       _drawPeakToPeak(canvas, frame, spec, values, result);
     }
   }
 
   /// 작성: 2026-10-11 19:20:58 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
-  /// 함수: p2pLabel
-  /// 목적: 진동 차트 표시점 옆에 적을 P2P 문구를 만든다. 숫자 표기 · 단위
-  ///       는 1쪽 표와 같은 규칙(`ReportMetric.display`,
-  ///       `ReportMetric.vibrationUnit`)을 써 두 곳이 같게 보인다.
-  /// 인자: ptp — P2P (mg)
-  /// 반환: "P2P 14.2milli-G" 꼴 문구
-  static String p2pLabel(double ptp) {
+  /// 수정: 2026-10-20 15:02:44 · nada
+  /// 함수: ptpLabel
+  /// 목적: 진동 차트 표시점 옆에 적을 최대 P2P 문구를 만든다. 숫자 표기 ·
+  ///       단위는 1쪽 표와 같은 규칙(`ReportMetric.display`,
+  ///       `ReportMetric.vibrationUnit`)을 써 두 곳이 같게 보인다. 머리말은
+  ///       원본 리포트 차트 표기(`a_x,ptp`)의 소문자 "ptp" 를 쓴다.
+  /// 인자: ptp — 최대 P2P (mg)
+  /// 반환: "ptp 14.2milli-G" 꼴 문구
+  /// 근거: 인용 — 2026-10-20 사용자 지시 "오티스 pdf 에 나오는 p2p 용어
+  ///       소문자 ptp 로". 원본 TUNE 리포트 H6N1AP65.pdf 2쪽 "a_x,ptp"
+  static String ptpLabel(double ptp) {
     final metric = ReportMetric(
       key: 'p2p',
       value: ptp,
       unit: ReportMetric.vibrationUnit,
       verdict: ReportVerdict.none,
     ); // 표와 같은 규칙으로 숫자를 다듬을 지표
-    return 'P2P ${metric.display}';
+    return 'ptp ${metric.display}';
   }
 
   /// 작성: 2026-10-11 19:20:58 · nada
@@ -807,7 +839,7 @@ class ReportChartRenderer {
   ///         운행 구간이 있는 결과는 지표와 같은 정의 — 최대 반주기 P2P 를
   ///         만든 이웃 봉우리 · 골 — 이고, 그 전 예전 결과는 시계열 전체의
   ///         최댓값 · 최솟값이다(그때 지표 정의)
-  ///       - 높은 쪽 점 옆(오른쪽, 자리가 없으면 왼쪽)에 "P2P 값" 을 흰
+  ///       - 높은 쪽 점 옆(오른쪽, 자리가 없으면 왼쪽)에 "ptp 값" 을 흰
   ///         상자에 굵게 적는다(`_drawSideLabel()`). 값은 1쪽 표와 같은
   ///         지표다(`ReportChartAxes.ptpOf()`)
   ///       P2P 가 없는 축(진동 축이 아님, 구간을 못 정한 결과, 예전 결과)은
@@ -849,7 +881,7 @@ class ReportChartRenderer {
     _drawSideLabel(
       canvas,
       frame,
-      p2pLabel(ptp),
+      ptpLabel(ptp), // → 로직 이동: ptpLabel()
       anchorX: frame.xOfTime(at.high / result.sampleRate),
       anchorY: frame.yOfValue(values[at.high]),
     );
@@ -928,10 +960,12 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-26 14:10:00 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-20 15:02:44 · nada
   /// 함수: _drawAnnotations
   /// 목적: 원본 리포트가 소음 차트에 붙이는 표시 둘을 그린다.
-  ///       - 평균 자리에 가로로 긋는 붉은 점선 한 줄
+  ///       - 평균 자리에 가로로 긋는 붉은 점선 한 줄. 평균을 낸 운행
+  ///         구간에만 긋는다(`_travelSpan()`, 원본과 같다). 구간이 없는
+  ///         예전 결과는 차트 폭 전체다
   ///       - 최댓값이 나온 자리에 굵은 빨간 점(`_drawMarker()`), 그 옆에
   ///         "최대 값"(`_drawSideLabel()`). P2P 표시와 같은 규칙이다
   ///         (2026-10-15 사용자 지시). 최댓값은 운행 구간 안에서 낸 값이라
@@ -973,15 +1007,9 @@ class ReportChartRenderer {
         ? null
         : metrics.byKey(meanKey)?.value; // 평균 (그 축의 단위)
     if (mean != null) {
-      final y = frame.yOfValue(mean); // 기준선의 세로 자리
-      canvas
-        ..setStrokeColor(reportPdfColor(ReportColors.chartGuide))
-        ..setLineWidth(guideLineWidth)
-        ..setLineDashPattern(guideDashPattern)
-        ..moveTo(frame.left, y)
-        ..lineTo(frame.right, y)
-        ..strokePath()
-        ..setLineDashPattern();
+      final span = _travelSpan(frame, result); // → 로직 이동: _travelSpan()
+      // → 로직 이동: _drawGuideLine()
+      _drawGuideLine(canvas, span.left, span.right, frame.yOfValue(mean));
     }
 
     final peak = peakKey == null
@@ -1015,6 +1043,102 @@ class ReportChartRenderer {
     }
 
     canvas.restoreContext();
+  }
+
+  /// 작성: 2026-10-20 15:02:44 · nada
+  /// 함수: _drawA95Band
+  /// 목적: 진동 세 축 차트에 A95 를 붉은 가로 점선 두 줄로 표시한다. 0 을
+  ///       가운데 두고 ±A95/2 높이에, 지표를 낸 운행 구간 시작부터 끝까지
+  ///       길게 긋는다. 첫 줄 왼쪽 아래에 "A95" 를 적는다. 원본 리포트와
+  ///       같은 모양이다. 두 줄 사이 폭이 1쪽 표의 A95 다.
+  ///       진동 축이 아니거나, A95 가 없거나(예전 결과 · 구간을 못 정한
+  ///       결과), 운행 구간이 없으면 긋지 않는다. 0 으로 채워 긋지 않는다.
+  /// 인자: canvas — 그리기 도구
+  ///       frame — 축 틀과 값 옮기기
+  ///       spec — 그리는 축의 사양
+  ///       result — 지표와 운행 구간을 가진 측정 결과
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf 2쪽. X 차트 점선이 ±2.4,
+  ///       수직 차트가 ±1.8 로 1쪽 A95(수평 4.8 · 수직 3.6)의 절반이고, 약
+  ///       6.5 ~ 40초(운행 구간)에만 그어져 있다. 2026-10-20 사용자 지시
+  ///       "운행구간 점선 표시 다시 살려주자. 점선은 가로로 길게"
+  void _drawA95Band(
+    PdfGraphics canvas,
+    _ChartFrame frame,
+    ChartAxisSpec spec,
+    MeasurementResult result,
+  ) {
+    // → 로직 이동: ReportChartAxes.a95Of()
+    final a95 = ReportChartAxes.a95Of(spec, result); // 그을 A95, 없으면 null
+    if (a95 == null || result.travelWindow == null) return;
+    final span = _travelSpan(frame, result); // → 로직 이동: _travelSpan()
+    final upper = frame.yOfValue(a95 / 2); // 위 점선 세로 자리
+    final lower = frame.yOfValue(-a95 / 2); // 아래 점선 세로 자리
+    for (final y in <double>[upper, lower]) {
+      // → 로직 이동: _drawGuideLine()
+      _drawGuideLine(canvas, span.left, span.right, y);
+    }
+
+    final width = _widthOf(a95Label, tickLabelSize); // 글자 폭
+    final x = math.max(
+      frame.left + labelInset,
+      span.left - labelGap - width,
+    ); // 글자 왼쪽 끝. 점선 시작 왼쪽에 두되 틀 밖으로 나가지 않게 한다
+    final centerY = math.max(
+      frame.bottom + labelInset + tickLabelSize / 2,
+      lower - tickLabelSize / 2,
+    ); // 글자 세로 가운데. 아래 점선 바로 밑
+    // → 로직 이동: _drawText()
+    _drawText(
+      canvas,
+      text: a95Label,
+      size: tickLabelSize,
+      x: x,
+      centerY: centerY,
+    );
+  }
+
+  /// 작성: 2026-10-20 15:02:44 · nada
+  /// 함수: _travelSpan
+  /// 목적: 운행 구간 점선을 그을 가로 범위를 고른다. 지표를 낸 운행 구간
+  ///       (`MeasurementResult.travelWindow`)의 시작 · 끝 행 시각이고, 구간이
+  ///       없는 예전 결과는 차트 폭 전체다. 틀 밖으로 나가지 않게 자른다.
+  /// 인자: frame — 축 틀과 값 옮기기
+  ///       result — 운행 구간과 표본 주기를 가진 측정 결과
+  /// 반환: 왼쪽 · 오른쪽 끝 (포인트)
+  ({double left, double right}) _travelSpan(
+    _ChartFrame frame,
+    MeasurementResult result,
+  ) {
+    final window = result.travelWindow; // 운행 구간, 예전 결과면 null
+    if (window == null) return (left: frame.left, right: frame.right);
+    final left = frame.xOfTime(
+      window.startIndex / result.sampleRate,
+    ); // 구간 시작 가로 자리
+    final right = frame.xOfTime(
+      window.endIndex / result.sampleRate,
+    ); // 구간 끝 가로 자리
+    return (
+      left: left.clamp(frame.left, frame.right).toDouble(),
+      right: right.clamp(frame.left, frame.right).toDouble(),
+    );
+  }
+
+  /// 작성: 2026-10-20 15:02:44 · nada
+  /// 함수: _drawGuideLine
+  /// 목적: 붉은 가로 점선 한 줄을 긋는다. 다 그은 뒤 점선 무늬를 실선으로
+  ///       되돌린다 — 무늬 설정이 남으면 다음에 긋는 선까지 점선이 된다.
+  /// 인자: canvas — 그리기 도구
+  ///       left, right — 선 왼쪽 · 오른쪽 끝 (포인트)
+  ///       y — 선 세로 자리 (포인트)
+  void _drawGuideLine(PdfGraphics canvas, double left, double right, double y) {
+    canvas
+      ..setStrokeColor(reportPdfColor(ReportColors.chartGuide))
+      ..setLineWidth(guideLineWidth)
+      ..setLineDashPattern(guideDashPattern)
+      ..moveTo(left, y)
+      ..lineTo(right, y)
+      ..strokePath()
+      ..setLineDashPattern();
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada

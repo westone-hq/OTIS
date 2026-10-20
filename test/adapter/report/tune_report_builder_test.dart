@@ -133,7 +133,7 @@ void main() {
         2,
         reason: '아래 무늬 문자열이 이 상수에서 온다',
       );
-      expect('[2.4 1.6] 0 d'.allMatches(page2).length, 1, reason: '평균 기준선 한 줄');
+      expect('[2.3 2.3] 0 d'.allMatches(page2).length, 1, reason: '평균 기준선 한 줄');
       expect(
         '$markerColorOperand RG'.allMatches(page2).length,
         2,
@@ -145,7 +145,7 @@ void main() {
         reason: '표시점과 그 값 두 가지를 붉게 채운다',
       );
       expect(
-        '[2.4 1.6] 0 d'.allMatches(charts.last).length,
+        '[2.3 2.3] 0 d'.allMatches(charts.last).length,
         0,
         reason: '3쪽 차트에는 붙지 않는다',
       );
