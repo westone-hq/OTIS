@@ -270,7 +270,8 @@ class MeasurementRecorder {
   ///          덧붙인 뒤(운동을 적분한 움직인 구간도 함께) 처리 방식
   ///          (`SignalConditioner.methodLabel` + `RideWeighting.methodLabel`
   ///          + `MeasurementAssembler.kinematicsMethodLabel` +
-  ///          `kNoiseMethodLabel`)을 실어
+  ///          `MeasurementAssembler.jerkMethodLabel` + `kNoiseMethodLabel`)을
+  ///          실어
   ///          저장소에 저장한다. 로그인한
   ///          작업자(성명 · 사번 · 업체명 · 관리팀)도 이 시점 값을 함께 싣는다
   ///       7. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
@@ -405,6 +406,7 @@ class MeasurementRecorder {
           signalConditioning:
               '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
               '+${MeasurementAssembler.kinematicsMethodLabel}'
+              '+${MeasurementAssembler.jerkMethodLabel}'
               '+$kNoiseMethodLabel',
         ),
       );

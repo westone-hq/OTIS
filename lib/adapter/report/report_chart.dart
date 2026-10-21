@@ -206,23 +206,18 @@ class ReportChartAxes {
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-11 15:34:38 · nada
+  /// 수정: 2026-10-21 10:05:00 · nada
   /// 변수: jerk
   /// 목적: 저크(가속도가 얼마나 빠르게 변하는지) 차트의 세로축. 0 을
-  ///       가운데 둔다.
-  /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 저크 축 첫
-  ///       단계와 같다
-  /// 미구현: 저크는 40Hz 저역을 거친 수직 진동(지표 계산 전 신호 처리
-  ///       뒤 `zSeries`)에서 만든 가속도를 그대로 미분한 값이라, 수 Hz
-  ///       이상 흔들림이 그대로 남는다. 원본 리포트의 저크 곡선은 훨씬
-  ///       매끈하다. 이 차트는 지금 모양만 참고할 수 있고, 저크만 더 낮게
-  ///       거르는 처리가 정해질 때 같이 정리한다.
-  ///       미확인: 원본 리포트가 저크를 어떤 차단 주파수로 걸러 그렸는지
+  ///       가운데 둔다. 저크는 1.6Hz 저역 가속도를 미분한 값이라
+  ///       (`CaptureConfig.jerkLowpassHz`) 정상 운행이면 ±0.6 안이다.
+  /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관) · 2026-10-21
+  ///       오티스폰 리포트 3쪽 저크 차트 범위 ±0.6, 눈금 0.2
   static const ChartAxisSpec jerk = ChartAxisSpec(
     key: 'jerk',
     label: 'jerk (m/s^3)',
     scale: ChartScale(
-      minimum: ChartAxisRange(min: -0.5, max: 0.5, tickStep: 0.25),
+      minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.2),
       kind: ChartScaleKind.symmetric,
     ),
   );

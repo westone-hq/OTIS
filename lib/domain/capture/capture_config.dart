@@ -258,6 +258,24 @@ class CaptureConfig {
   ///       중 떠다님이 다시 섞인다
   static const int motionPaddingMs = 500;
 
+  /// 작성: 2026-10-21 10:05:00 · nada
+  /// 변수: jerkLowpassHz
+  /// 목적: 저크(가속도가 변하는 빠르기)를 내기 전에 가속도에 거는 저역
+  ///       필터의 차단 주파수 (Hz). 양방향(영위상)으로 건 뒤 중앙 차분으로
+  ///       미분한다. 같은 저역 가속도로 정속 구간도 정한다(`MotionZones`).
+  /// 근거: 측정 — 2026-10-21 OTIS 리포트 3쪽 저크 차트 4개(오티스폰 3회 +
+  ///       H6N1AP65 원본)를 픽셀로 읽어 같은 원시데이터에 여러 필터를 건
+  ///       곡선과 견주니 4차 버터워스 1.6Hz 양방향이 RMSE 0.019 ~ 0.032
+  ///       m/s³ 로 가장 작았다(0.25초 이동평균 0.13, 필터 없음 0.8).
+  ///       개발폰 원시데이터에 같은 처리를 하면 봉우리가 OTIS 와 0.02 안이다
+  static const double jerkLowpassHz = 1.6;
+
+  /// 작성: 2026-10-21 10:05:00 · nada
+  /// 변수: jerkLowpassOrder
+  /// 목적: `jerkLowpassHz` 저역 필터의 차수. 버터워스이고 양방향으로 건다.
+  /// 근거: 측정 — `jerkLowpassHz` 와 같은 비교에서 4차가 가장 맞았다
+  static const int jerkLowpassOrder = 4;
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: idealIntervalNs
   /// 목적: 격자 한 칸의 간격을 나노초로 반환한다. `GridResampler`가

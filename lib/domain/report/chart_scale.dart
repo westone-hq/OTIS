@@ -49,16 +49,22 @@ class ChartAxisRange {
       min <= dataMin && dataMax <= max;
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-21 10:05:00 · nada
   /// 함수: ticks
-  /// 목적: 눈금 값을 아래끝부터 차례로 만든다. 간격을 거듭 더하지 않고
-  ///       번호에 곱해 더하는 이유는, 0.2 처럼 이진수로 딱 떨어지지 않는
-  ///       간격을 거듭 더하면 오차가 쌓여 마지막 눈금이 위끝에서 벗어나기
-  ///       때문이다.
+  /// 목적: 눈금 값을 아래끝부터 차례로 만든다. 간격을 거듭 더하거나
+  ///       번호에 간격을 곱하지 않고 폭을 칸 수로 나누는 이유는, 0.2 처럼
+  ///       이진수로 딱 떨어지지 않는 간격은 −0.6 + 6 x 0.2 처럼 계산해도
+  ///       0.6000000000000002 가 되어 마지막 눈금이 위끝에서 벗어나기
+  ///       때문이다. 폭을 나누면 마지막 눈금이 위끝 그대로다.
   /// 반환: 아래끝부터 위끝까지의 눈금 값 목록
-  /// 식: tick_i = min + i x tickStep,  i = 0 .. round(span / tickStep)
+  /// 식: n = round(span / tickStep)
+  ///     tick_i = min + span x i / n,  i = 0 .. n
   List<double> ticks() {
     final count = (span / tickStep).round(); // 눈금이 나누는 칸 수
-    return List<double>.generate(count + 1, (i) => min + i * tickStep);
+    return List<double>.generate(
+      count + 1,
+      (i) => i == count ? max : min + span * i / count,
+    );
   }
 }
 

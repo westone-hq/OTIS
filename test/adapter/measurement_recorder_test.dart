@@ -420,7 +420,7 @@ void main() {
       expect(
         saved?.signalConditioning,
         'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)'
-        '+motion(v>0.05,pad500ms)+noise(A,fast,+105.2)',
+        '+motion(v>0.05,pad500ms)+jerk(lp1.6bw4zp)+noise(A,fast,+105.2)',
       );
 
       final meta = await metaText(); // 집계 파일 내용

@@ -4,6 +4,9 @@
     python pdf_report_dev/gen_conditioning_fixtures.py \
         test/fixtures/conditioning_input_dev_256hz.txt test/fixtures
 
+    # 2026-10-21 저크 · 가속도 차트 저역 픽스처 1개만 만든다
+    python pdf_report_dev/gen_conditioning_fixtures.py --jerk test/fixtures
+
     # 2026-10-15 가중 · 운행 구간 픽스처 2개만 만든다(아래 3개는 건드리지 않는다)
     python pdf_report_dev/gen_conditioning_fixtures.py --weighting \
         test/fixtures/ride_reference.txt \
@@ -209,8 +212,46 @@ def weighting(ride_src: str, dev_src: str, out_dir: str) -> None:
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
 
+JERK_HZ, JERK_ORDER = 1.6, 4      # CaptureConfig.jerkLowpassHz · jerkLowpassOrder
+ACC_CHART_HZ, ACC_CHART_ORDER = 10.0, 4  # 3쪽 가속도 차트 저역 (2026-10-21)
+
+
+def jerk(out_dir: str) -> None:
+    """2026-10-21 저크 · 가속도 차트 저역 픽스처(jerk_unit_cases.json)를 만든다.
+
+    100Hz 합성 가속도(m/s²) 600표본: 사다리꼴 가감속 + 7Hz · 23Hz 흔들림.
+    1.6Hz · 10Hz 4차 버터워스 계수와 sosfiltfilt 출력, 1.6Hz 출력의 중앙 차분.
+    """
+    out = Path(out_dir)
+    t = np.arange(600) / FS
+    ramp = np.clip(t - 1.0, 0, 1) - np.clip(t - 4.0, 0, 1)  # 1~2초 올라 4~5초 내려감
+    x = (0.5 * ramp + 0.05 * np.sin(2 * np.pi * 7 * t)
+         + 0.02 * np.sin(2 * np.pi * 23 * t)).round(12)
+    sos_j = butter(JERK_ORDER, JERK_HZ, fs=FS, output='sos')
+    sos_a = butter(ACC_CHART_ORDER, ACC_CHART_HZ, fs=FS, output='sos')
+    smooth = sosfiltfilt(sos_j, x)
+    j = np.empty_like(smooth)
+    j[1:-1] = (smooth[2:] - smooth[:-2]) * FS / 2
+    j[0] = (smooth[1] - smooth[0]) * FS
+    j[-1] = (smooth[-1] - smooth[-2]) * FS
+    cases = {
+        'scipy': scipy.__version__,
+        'fs': FS,
+        'input': x.tolist(),
+        'sos_jerk': sos_j.tolist(),
+        'smooth_jerk': smooth.round(12).tolist(),
+        'jerk': j.round(12).tolist(),
+        'sos_acc_chart': sos_a.tolist(),
+        'acc_chart': sosfiltfilt(sos_a, x).round(12).tolist(),
+    }
+    (out / 'jerk_unit_cases.json').write_text(json.dumps(cases))
+    print('jerk_unit_cases.json', len(x), 'samples')
+
+
 if __name__ == '__main__':
     if sys.argv[1] == '--weighting':
         weighting(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif sys.argv[1] == '--jerk':
+        jerk(sys.argv[2])
     else:
         main(sys.argv[1], sys.argv[2])

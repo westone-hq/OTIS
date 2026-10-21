@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
@@ -370,16 +371,21 @@ class MeasurementAssembler {
   }
 
   /// 작성: 2026-09-15 19:14:22 · nada
+  /// 수정: 2026-10-21 10:05:00 · nada
   /// 변수: _minimumRows
   /// 목적: 변환에 필요한 최소 격자 행 수. 이보다 적으면 변환하지 않고
   ///       사유를 올린다.
-  ///       3 인 이유는 저크를 가운데 차분(앞뒤 값의 차이를 그 사이
-  ///       간격으로 나누는 계산)으로 구하기 때문이다. 가운데 점 하나를
-  ///       구하려면 앞뒤가 있어야 해서 최소 세 점이 필요하다.
-  ///       행이 그보다 적으면 파생 물리량이 전부 0 으로 나오는데, 그러면
-  ///       재서 0 이 나온 측정과 잴 것이 없어서 0 인 측정을 구분할 수
-  ///       없게 된다.
-  static const int _minimumRows = 3;
+  ///       저크 전에 거는 양방향 저역 필터(`CaptureConfig.jerkLowpassOrder`
+  ///       차)는 양 끝을 덧대 늘려 거르므로(`Butterworth.filtfilt()`) 입력이
+  ///       덧댐 길이보다 길어야 한다. 그보다 짧은 격자로 저크 · 가속도를
+  ///       0 이나 거르지 않은 값으로 채우면 재서 나온 값과 구분할 수 없어,
+  ///       변환하지 않고 사유를 올린다. 실제 측정은 신호 처리가 2초 미만을
+  ///       먼저 돌려보내 늘 이보다 길다.
+  /// 식: 덧댐 = 3 x (2 x 구간 수 + 1),  구간 수 = 차수 / 2
+  ///     최소 행 = 덧댐 + 1 = 3 x (차수 + 1) + 1   (4차 → 16)
+  /// 근거: 표준 — SciPy `sosfiltfilt()` 의 `padlen` 기본값
+  ///       (`Butterworth.padLength()`)
+  static const int _minimumRows = 3 * (CaptureConfig.jerkLowpassOrder + 1) + 1;
 
   /// 작성: 2026-09-15 14:32:07 · nada
   /// 변수: _mgToMetersPerSecondSquared
@@ -399,8 +405,19 @@ class MeasurementAssembler {
       'motion(v>${CaptureConfig.motionSpeedThresholdMps},'
       'pad${CaptureConfig.motionPaddingMs}ms)';
 
+  /// 작성: 2026-10-21 10:05:00 · nada
+  /// 함수: jerkMethodLabel
+  /// 목적: 저크를 낸 방식을 결과 파일(result.json `signalConditioning`)에
+  ///       남길 문자열. 이 표시가 없는 2026-10-21 전 결과의 저크는 40Hz
+  ///       저역 가속도를 그대로 미분한 값이라 수십 배 크다(±10 ~ 20 m/s³).
+  ///       - `jerk(lp차단bw차수zp)` — 가속도에 버터워스 저역을 양방향(영위상)
+  ///         으로 건 뒤 중앙 차분했다
+  static String get jerkMethodLabel =>
+      'jerk(lp${CaptureConfig.jerkLowpassHz}'
+      'bw${CaptureConfig.jerkLowpassOrder}zp)';
+
   /// 작성: 2026-09-15 14:32:07 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-21 10:05:00 · nada
   /// 함수: _deriveKinematics
   /// 목적: 수직 진동 시계열에서 가속도 · 속도 · 누적 이동량 · 저크와
   ///       최대 속도 · 운행 거리를 만든다. 순서대로 한다.
@@ -414,7 +431,9 @@ class MeasurementAssembler {
   ///          3단계로 구간 끝 속도가 정확히 0 이 된다
   ///       5. 속도의 절댓값을 더해 나가 누적 이동량을 만든다. 구간 밖에서는
   ///          변하지 않는다
-  ///       6. 가속도의 변화율로 저크를 만든다
+  ///       6. 가속도에 `CaptureConfig.jerkLowpassHz` 저역을 양방향으로 걸고
+  ///          (`accelSmooth`), 그 변화율로 저크를 만든다. 같은 저역
+  ///          가속도를 정속 구간 판정에도 쓴다
   ///       움직인 구간이 없으면(정지 측정) 속도 · 이동량은 모두 0 이고,
   ///       치우침은 전체 평균으로 뺀다. 0 은 재지 않은 값이 아니라 "움직이지
   ///       않았다" 는 측정값이다.
@@ -438,7 +457,8 @@ class MeasurementAssembler {
   /// 식: accel(i) = zSeries(i) x 9.80665e-3 - 구간 평균
   ///     speed(i) = (누적합 accel(s..i)) x dt   (s ≤ i ≤ e, 밖은 0)
   ///     position(i) = (누적합 |speed(0..i)|) x dt
-  ///     jerk(i) = (accel(i+1) - accel(i-1)) / (2 x dt)
+  ///     smooth = filtfilt(버터워스 저역 1.6Hz 4차, accel)
+  ///     jerk(i) = (smooth(i+1) - smooth(i-1)) / (2 x dt)
   /// 근거: 측정 — 2026-10-20 같은 승강기 같은 구간 기록 6건(오티스폰 ·
   ///       테스트폰, 원본은 분석 뒤 삭제)에서 기록 사이 거리 표준편차가
   ///       0.204 → 0.067 m, 동시 측정 두 폰 차이가 0.30 · 0.38 → 0.16 ·
@@ -448,13 +468,7 @@ class MeasurementAssembler {
   ///       57.09 · 지금 56.84 m 다. 오티스 앱도 정지 구간까지 적분하는
   ///       것으로 보이나 확인하지 못했다. 층고 도면을 아는 운행으로 확인한다
   ///       (docs/pending_checks.md)
-  /// 미구현: 저크를 가속도에서 바로 미분한다. 받는 `zSeries` 는 지표 계산
-  ///       전 신호 처리(`SignalConditioner`)에서 40Hz 저역(낮은 주파수만
-  ///       통과시키고 빠른 흔들림을 걸러내는 처리)을 거친 값이라, 미분하면
-  ///       수 Hz 이상 흔들림이 그대로 남은 곡선이 나온다. 원본 리포트의
-  ///       저크 곡선은 훨씬 매끈하다. 저크만 더 낮게 거르는 처리가 정해질
-  ///       때 바꾼다. 그때까지 저크 차트는 형태만 참고한다.
-  ///       미확인: 원본 리포트가 저크를 어떤 차단 주파수로 걸렀는지
+  ///       저크 저역의 근거는 `CaptureConfig.jerkLowpassHz` 를 본다
   static _Kinematics _deriveKinematics(
     List<double> zSeries,
     double sampleRate,
@@ -507,15 +521,26 @@ class MeasurementAssembler {
       if (magnitude > maxSpeed) maxSpeed = magnitude;
     }
 
+    // → 로직 이동: Butterworth.filtfilt()
+    final accelSmooth = Butterworth.filtfilt(
+      // → 로직 이동: Butterworth.lowpass()
+      Butterworth.lowpass(
+        order: CaptureConfig.jerkLowpassOrder,
+        cutoffHz: CaptureConfig.jerkLowpassHz,
+        sampleRateHz: sampleRate,
+      ),
+      accel,
+    ); // 저크 저역을 건 가속도 (m/s²)
     final jerk = List<double>.filled(n, 0.0); // 저크 시계열 (m/s³)
-    jerk[0] = (accel[1] - accel[0]) / dt;
-    jerk[n - 1] = (accel[n - 1] - accel[n - 2]) / dt;
+    jerk[0] = (accelSmooth[1] - accelSmooth[0]) / dt;
+    jerk[n - 1] = (accelSmooth[n - 1] - accelSmooth[n - 2]) / dt;
     for (var i = 1; i < n - 1; i++) {
-      jerk[i] = (accel[i + 1] - accel[i - 1]) / (2 * dt);
+      jerk[i] = (accelSmooth[i + 1] - accelSmooth[i - 1]) / (2 * dt);
     }
 
     return _Kinematics(
       accel: accel,
+      accelSmooth: accelSmooth,
       speed: speed,
       position: position,
       jerk: jerk,
@@ -578,13 +603,17 @@ class MeasurementAssembler {
 }
 
 /// 작성: 2026-09-15 14:32:07 · nada
-/// 수정: 2026-10-20 14:05:12 · nada
+/// 수정: 2026-10-21 10:05:00 · nada
 /// 클래스: _Kinematics
 /// 목적: 수직 진동에서 뽑아낸 파생 물리량과 거기서 나온 두 지표를 한
 ///       묶음으로 담는다. `_deriveKinematics()` 가 만들어 돌려준다.
 class _Kinematics {
   /// 가속도 시계열 (m/s²). 움직인 구간 평균(치우침)을 뺀 값
   final List<double> accel;
+
+  /// `accel` 에 저크 저역(`CaptureConfig.jerkLowpassHz`)을 양방향으로 건
+  /// 가속도 (m/s²). 저크와 정속 구간 판정이 함께 쓴다
+  final List<double> accelSmooth;
 
   /// 속도 시계열 (m/s). 움직인 구간 안만 적분한 값이고 밖은 0
   final List<double> speed;
@@ -608,6 +637,7 @@ class _Kinematics {
   /// 함수: _Kinematics
   /// 목적: 파생 물리량과 두 지표를 그대로 담는 생성자.
   /// 인자: accel — 가속도 시계열 (m/s²)
+  ///       accelSmooth — 저크 저역을 건 가속도 (m/s²)
   ///       speed — 속도 시계열 (m/s)
   ///       position — 누적 이동량 시계열 (m)
   ///       jerk — 저크 시계열 (m/s³)
@@ -616,6 +646,7 @@ class _Kinematics {
   ///       motion — 움직인 구간. 정지 측정이면 null
   const _Kinematics({
     required this.accel,
+    required this.accelSmooth,
     required this.speed,
     required this.position,
     required this.jerk,

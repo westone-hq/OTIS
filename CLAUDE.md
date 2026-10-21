@@ -179,6 +179,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
         소음 열은 거르지 않고 100Hz 시각에 선형 보간한다
       ─▶ MeasurementAssembler.assemble()   지표 · 리포트 · result.json
             4. 운동 · 최대 속도 · 운행 거리   가중 전 Z 의 움직인 구간만 적분 (`_deriveKinematics`)
+               저크                           가속도 → 1.6Hz 4차 버터워스 양방향 → 중앙 차분
             5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
             6. 운행 구간 (TravelWindow)      출발 · 정지 0.5 m 제외, 운행 1 m 이하면 실패
             7. 반주기 P2P (HalfCycle)        구간 안 최대 P2P · A95, 구간 안 소음 최대 · 평균
@@ -203,11 +204,14 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `motionWindowStart/EndSec`(정지 측정이면 `motionWindow: none`, 여유가 기록
   앞 · 끝에서 잘렸으면 `motionWindowClippedAtStart/End: true`) 줄을 덧붙인다.
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
-  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+motion(v>0.05,pad500ms)`,
-  `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
-  `MeasurementAssembler.kinematicsMethodLabel`) 과 `travelWindow`(첨자 · 초 ·
-  m) 또는 `travelWindowFailure`. `+motion` 이 없는 2026-10-20 전 결과는
-  기록 전체를 적분한 예전 거리 · 최대 속도다. `+iso18738` 이
+  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+motion(v>0.05,pad500ms)
+  +jerk(lp1.6bw4zp)+noise(A,fast,+105.2)`, `SignalConditioner.methodLabel` +
+  `RideWeighting.methodLabel` + `MeasurementAssembler.kinematicsMethodLabel` +
+  `MeasurementAssembler.jerkMethodLabel` + `kNoiseMethodLabel`) 과
+  `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`. `+motion` 이 없는
+  2026-10-20 전 결과는 기록 전체를 적분한 예전 거리 · 최대 속도다. `+jerk`
+  가 없는 2026-10-21 전 결과의 저크는 40Hz 가속도를 그대로 미분해 ±10 ~ 20
+  m/s³ 로 크다(그대로 읽고 그린다). `+iso18738` 이
   없는 2026-10-15 전 결과는 가중 없이 전체 구간에서 낸 지표이고(그대로 읽고
   차트 점도 그때 정의로 찍는다), `signalConditioning` 이 null 인 더 예전
   결과는 원시 256Hz 기준이다. 시계열 `x/y/zSeries` 는 지표를 낸 그 값(가중
@@ -215,7 +219,10 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - **가중 · 구간 상수**: `CaptureConfig.rideVerticalHighpassHz`(1.0) ·
   `rideVerticalHighpassOrder`(2) · `travelEdgeExclusionM`(0.5) ·
   `minimumTravelM`(1.0) · `motionSpeedThresholdMps`(0.05) ·
-  `motionPaddingMs`(500). ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,
+  `motionPaddingMs`(500) · `jerkLowpassHz`(1.6) · `jerkLowpassOrder`(4). 저크
+  저역은 OTIS 리포트 저크 차트 4개와 RMSE 0.02 ~ 0.03 m/s³ 로 맞춘 값이다
+  (2026-10-21). 저크 필터의 양 끝 덧댐(15행) 때문에 조립은 16행 미만 격자를
+  사유와 함께 돌려보낸다. ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,
   Wk 12.5 Hz/0.63 · 2.37 → 3.35 Hz/0.91)는 `ride_weighting.dart` 에 있다.
   가중 필터는 한 방향(인과), 1 Hz 고역만 양방향이다.
 - **정본과 픽스처**: 처리 결과는 SciPy 1.18.1 과 같아야 한다
@@ -325,7 +332,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     보간 방식 미확인)
 - 리포트 차트 세로축(2026-10-10 · 10-11, `lib/domain/report/chart_scale.dart`):
   원본 리포트 범위(X ±4 · Y ±10 · Z ±20 · 소음 40~54 · 위치 0~10 · 속도
-  0~1 · 가속도 ±0.6 · 저크 ±0.5)를 최소 범위로 두고, 데이터 양 끝에 10% 씩
+  0~1 · 가속도 ±0.6 · 저크 ±0.6(눈금 0.2, 2026-10-21))를 최소 범위로 두고, 데이터 양 끝에 10% 씩
   여유를 더한 범위가 그 안이면 그대로, 넘치면 1 · 2 · 2.5 · 5 × 10ⁿ 눈금
   (6칸 이하)으로 넓힌다. 진동 · 가속도 · 저크는 0 가운데, 위치 · 속도는 0
   아래끝(속도는 크기를 그린다, 저장 값은 부호 그대로), 소음은 넓힐 때 폭
