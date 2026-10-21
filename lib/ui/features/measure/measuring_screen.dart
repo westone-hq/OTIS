@@ -329,6 +329,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       noiseAudioPath: _capture.noiseAudioPath,
       measuredAt: DateTime.now(),
       placement: _capture.placement,
+      noiseSampleRateHz: _capture.noiseSampleRateHz,
     ); // 저장 결과
     if (!outcome.isSuccess) {
       // → 로직 이동: recordFailureMessage()

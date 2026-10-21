@@ -164,6 +164,12 @@ class CaptureSession {
   ///       못했거나 아직 멈추기 전이면 null.
   String? get noiseAudioPath => _sensorManager.lastAudioPath;
 
+  /// 작성: 2026-10-22 12:00:00 · nada
+  /// 함수: noiseSampleRateHz
+  /// 목적: 안드로이드가 `stop()` 때 알려 준 소음 마이크 표본 속도(Hz, 48000
+  ///       또는 44100). 마이크를 못 열었거나 아직 멈추기 전이면 null.
+  int? get noiseSampleRateHz => _sensorManager.lastNoiseSampleRateHz;
+
   /// 작성: 2026-10-04 13:29:41 · nada
   /// 함수: start
   /// 목적: 수집을 시작한다. 순서대로 진행한다. 마이크 권한은 여기서

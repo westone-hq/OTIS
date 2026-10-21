@@ -249,7 +249,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 12:00:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -276,7 +276,7 @@ class MeasurementRecorder {
   ///          + `MeasurementAssembler.kinematicsMethodLabel` +
   ///          `MeasurementAssembler.jerkMethodLabel` +
   ///          `MeasurementAssembler.accelChartMethodLabel` +
-  ///          `MotionZones.methodLabel` + `kNoiseMethodLabel`)
+  ///          `MotionZones.methodLabel` + `noiseMethodLabel()`)
   ///          과 거치 방향을 실어
   ///          저장소에 저장한다. 로그인한
   ///          작업자(성명 · 사번 · 업체명 · 관리팀)도 이 시점 값을 함께 싣는다
@@ -296,6 +296,8 @@ class MeasurementRecorder {
   ///       measuredAt — 측정 시각. 측정 ID 와 파일 이름의 기준이다
   ///       placement — 수집 처음 1초로 판정한 거치 방향
   ///       (`CaptureSession.placement`). 판정 전에 끝났으면 null
+  ///       noiseSampleRateHz — 소음 마이크를 연 표본 속도
+  ///       (`CaptureSession.noiseSampleRateHz`). 못 열었으면 null
   /// 반환: 저장 결과. 파일을 쓰다 난 예외는 `RecordFailure.ioError` 로
   ///       바꿔 돌려준다
   static Future<RecordOutcome> record({
@@ -305,6 +307,7 @@ class MeasurementRecorder {
     required String? noiseAudioPath,
     required DateTime measuredAt,
     PlacementReading? placement,
+    int? noiseSampleRateHz,
   }) async {
     if (site == null || site.validate().isNotEmpty) {
       return const RecordOutcome.failure(RecordFailure.siteMissing);
@@ -415,6 +418,12 @@ class MeasurementRecorder {
         // → 로직 이동: VibrationFileWriter.encodePlacementMeta()
         VibrationFileWriter.encodePlacementMeta(placement),
       );
+      // → 로직 이동: _appendMeta()
+      await _appendMeta(
+        metaPath,
+        // → 로직 이동: VibrationFileWriter.encodeNoiseMeta()
+        VibrationFileWriter.encodeNoiseMeta(noiseSampleRateHz),
+      );
       // → 로직 이동: MeasurementRepository.save()
       await repo.save(
         assembled.result!.copyWith(
@@ -427,7 +436,8 @@ class MeasurementRecorder {
               '+${MeasurementAssembler.jerkMethodLabel}'
               '+${MeasurementAssembler.accelChartMethodLabel}'
               '+${MotionZones.methodLabel}'
-              '+$kNoiseMethodLabel',
+              // → 로직 이동: noiseMethodLabel()
+              '+${noiseMethodLabel(noiseSampleRateHz)}',
         ),
       );
 

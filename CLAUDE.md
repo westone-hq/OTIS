@@ -163,7 +163,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
   예전 빌드가 기기에 남긴 `noise_diagnostics/` 폴더는 앱이 지우지 않는다.
 - 현장 소음 녹음(2026-10-18 사용자 지시 "최종 메일 산출물에 현장 소음
   포함", 형식은 MP3 대신 M4A): `NoiseCaptureHandler` 가 dBA 를 재는 같은
-  마이크 PCM(44.1kHz 모노)을 `NoiseAudioEncoder`(안드로이드 내장
+  마이크 PCM(48kHz 모노, 못 열면 44.1kHz — 2026-10-22)을 `NoiseAudioEncoder`(안드로이드 내장
   `MediaCodec` AAC-LC 64 kbps + `MediaMuxer`)로 앱 저장 공간 맨 위
   `noise_native_*.m4a` 에 쓰고, `stopCapture` 가 원본 기록 경로와 함께
   돌려준다(`{recordPath, audioPath}`). 저장 절차가 측정 폴더의
@@ -500,6 +500,15 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   맞고 나머지 둘은 조용한 구간이 ±5 dB 갈린다. 오프셋은 임시값이다 — 두 폰을
   같은 자리 · 같은 방향에 두고 다시 재 확정하고, 폰마다 마이크 감도가 달라
   기기별 보정이 필요할 수 있다(`noise_otis_offset_notes.md`).
+  2026-10-22: 시간가중을 Slow(1초, `kNoiseTimeWeightSec` = 코틀린
+  `TIME_WEIGHT_SEC`)로, 마이크를 48000Hz(못 열면 44100Hz, A 가중 계수 두 벌)로
+  바꿨다. 처리 방식 `+noise(A,slow,+105.2,48000Hz)`, meta.txt
+  `noiseTimeWeighting` · `noiseSampleRateHz` · `noiseOffsetDb`. 2026-10-21 동시
+  측정 3회에서 최대가 OTIS PDF 대비 +5.3 / +2.5 / +3.6 → +1.0 / −0.6 / −0.6 dB
+  (저장된 Fast 열에 1초 평활을 더한 어림)이고, 대신 dB 평균이 0.7 ~ 2.6 dB
+  오른다(에너지 평활). 이미 저장된 소음열은 다시 계산하지 않는다. 계수 ·
+  평활은 `noise_weighting_test` 가 SciPy 픽스처(`--noise`)와 코틀린 소스
+  상수를 대조한다.
 - 리포트 서식 이미지의 지운 자국: 2 · 3쪽 `tem_2.jpg` 는 예전 차트를 붓으로
   지운 옅은 회색 덩어리(252 ~ 254)가 차트 둘레 그림자처럼 찍혀 2026-10-21
   흰색으로 정리했다(세 채널 246 이상만, 띠 · 로고 그대로). 1쪽 `tem_1.jpg`
@@ -522,5 +531,6 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   기기에 목록으로 둔다). 엑셀의 동명이인 33쌍은 리포트(성명만)로는 구분되지
   않는다 — 결과 · 메일에는 사번이 남는다.
 - 소음 RMS 창(`WINDOW_SEC`) · 갱신 주기(`HOP_HZ`)는 OTIS 와 맞춰 보는
-  실험값이다 (`NoiseCaptureHandler.kt`). 2026-10-12 부터 IEC 61672-1 "Fast"
-  시정수(`FAST_TIME_WEIGHT_SEC`, 0.125초)로 평균 제곱값을 지수평활해 낸다.
+  실험값이다 (`NoiseCaptureHandler.kt`). 2026-10-12 부터 평균 제곱값을
+  지수평활해 낸다 — 2026-10-22 부터 IEC 61672-1 "Slow" 시정수
+  (`TIME_WEIGHT_SEC`, 1초), 그 전은 "Fast"(0.125초).

@@ -221,6 +221,30 @@ void main() {
       expect(meta, contains('placementGravityZmg: 997.25'));
     });
 
+    test('소음 마이크 표본 속도 · 시간가중을 처리 방식과 집계 파일에 남긴다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+        noiseSampleRateHz: 48000,
+      ); // 저장 결과
+      final saved = await MeasurementRepository.instance.load(outcome.id!);
+      expect(
+        saved!.signalConditioning,
+        endsWith('+noise(A,slow,+105.2,48000Hz)'),
+      );
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('noiseTimeWeighting: slow (1.0s)'));
+      expect(meta, contains('noiseSampleRateHz: 48000'));
+      expect(meta, contains('noiseOffsetDb: 105.2'));
+    });
+
     test('판정 전에 끝난 측정은 거치를 비우고 집계에 unknown 으로 적는다', () async {
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(),
@@ -478,7 +502,7 @@ void main() {
         saved?.signalConditioning,
         'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)'
         '+motion(v>0.05,pad500ms)+jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)'
-        '+zones(v>0.05,pk0.5,a<0.03,min1000ms)+noise(A,fast,+105.2)',
+        '+zones(v>0.05,pk0.5,a<0.03,min1000ms)+noise(A,slow,+105.2)',
       );
 
       final meta = await metaText(); // 집계 파일 내용

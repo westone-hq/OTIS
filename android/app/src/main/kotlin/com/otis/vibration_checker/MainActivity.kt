@@ -263,7 +263,7 @@ class MainActivity : FlutterActivity() {
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-10-18 10:12:30 · nada
+                     * 수정: 2026-10-22 12:00:00 · nada
                      * 함수: stopCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "stopCapture" 요청에 응답한다. 센서·소음
@@ -273,6 +273,8 @@ class MainActivity : FlutterActivity() {
                      *       - "recordPath" — 원본 기록 경로, 못 했으면 null
                      *       - "audioPath" — 현장 소음 녹음(M4A) 경로,
                      *         녹음하지 않았거나 실패했으면 null
+                     *       - "noiseSampleRate" — 소음 마이크를 연 표본
+                     *         속도(Hz, 48000 또는 44100). 열지 못했으면 null
                      */
                     "stopCapture" -> {
                         // → 로직 이동: SensorStreamHandler.stop()
@@ -281,8 +283,14 @@ class MainActivity : FlutterActivity() {
                         // → 로직 이동: NoiseCaptureHandler.stop()
                         val audioPath = // 닫은 소음 녹음 경로, 없으면 null
                             noiseCaptureHandler.stop()
+                        val noiseRate = // 소음 마이크를 연 표본 속도, 못 열었으면 0
+                            noiseCaptureHandler.activeSampleRate
                         result.success(
-                            mapOf("recordPath" to recordPath, "audioPath" to audioPath),
+                            mapOf(
+                                "recordPath" to recordPath,
+                                "audioPath" to audioPath,
+                                "noiseSampleRate" to noiseRate.takeIf { it > 0 },
+                            ),
                         )
                     }
                     /**

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/noise_offset.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
@@ -389,6 +390,29 @@ class VibrationFileWriter {
       '(≤ ${CaptureConfig.placementFaceDownMaxMg} faceDown, '
       '≥ ${CaptureConfig.placementFaceUpMinMg} faceUp, 그 밖 tilted).',
     );
+    return buffer.toString();
+  }
+
+  /// 작성: 2026-10-22 12:00:00 · nada
+  /// 함수: encodeNoiseMeta
+  /// 목적: 소음 계산 방식(시간가중 · 마이크 표본 속도)을 집계 파일 끝에
+  ///       덧붙일 문자열로 만든다. 2026-10-22 에 Fast → Slow · 44.1 → 48kHz 로
+  ///       바꿔, 예전 측정과 견줄 때 어느 쪽인지 집계 파일만 보고 알게 한다.
+  /// 인자: sampleRateHz — 소음 마이크를 연 표본 속도(Hz). 못 열었으면 null
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
+  static String encodeNoiseMeta(int? sampleRateHz) {
+    final buffer = StringBuffer(lineEnding); // 앞 집계와 빈 줄로 나눈다
+    // 한 줄을 쓰고 줄바꿈 문자를 붙인다
+    void line(String text) => buffer
+      ..write(text)
+      ..write(lineEnding);
+
+    line('noiseTimeWeighting: slow (${kNoiseTimeWeightSec}s)');
+    line('noiseSampleRateHz: ${sampleRateHz ?? 'none'}');
+    line('noiseOffsetDb: $kDefaultMicDbfsToDbaOffset');
+    if (sampleRateHz == null) {
+      line('# 소음 마이크를 열지 못했다(권한 없음 등). 소음 값은 0(미측정)이다.');
+    }
     return buffer.toString();
   }
 

@@ -234,7 +234,7 @@ Future<MeasurementResult> _recordFromRaw(
         '+${MeasurementAssembler.jerkMethodLabel}'
         '+${MeasurementAssembler.accelChartMethodLabel}'
         '+${MotionZones.methodLabel}'
-        '+$kNoiseMethodLabel',
+        '+${noiseMethodLabel(48000)}',
   ); // 저장 절차와 같이 처리 방식을 실은 측정 결과
   final repo = MeasurementRepository.instance; // 저장소
   final dir = await repo.save(result); // 측정 폴더

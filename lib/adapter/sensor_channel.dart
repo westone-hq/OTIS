@@ -119,6 +119,10 @@ class SensorChannelManager {
   /// 실패했으면 null
   String? lastAudioPath;
 
+  /// 측정을 끝냈을 때 안드로이드가 알려 준 소음 마이크 표본 속도(Hz, 48000
+  /// 또는 44100). 마이크를 열지 못했거나 응답이 없으면 null
+  int? lastNoiseSampleRateHz;
+
   /// 작성: 2026-10-01 13:04:31 · 박희정
   /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: volumeKeyPresses
@@ -236,6 +240,7 @@ class SensorChannelManager {
     lastCaptureError = null;
     lastRecordPath = null;
     lastAudioPath = null;
+    lastNoiseSampleRateHz = null;
     try {
       // → 로직 이동: MainActivity.startCapture
       await _methodChannel.invokeMethod('startCapture', {
@@ -249,25 +254,28 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 수정: 2026-10-22 12:00:00 · nada
   /// 함수: stopCapture
   /// 목적: 안드로이드에게 그만 보내고 지금까지 모은 걸 파일로 저장해
   ///       경로를 알려달라고 명령을 내린다. `_stopReplyLimit` 안에 응답이
   ///       없거나 실패하면 포기하고 넘어간다.
   /// 반환: 없음. 성공하면 `lastRecordPath` 에 원본 기록 경로를,
-  ///       `lastAudioPath` 에 현장 소음 녹음 경로를 담는다(각각 없으면
-  ///       null). 실패하거나 시간 초과되면 둘 다 null 을 담는다
+  ///       `lastAudioPath` 에 현장 소음 녹음 경로를,
+  ///       `lastNoiseSampleRateHz` 에 소음 마이크 표본 속도를 담는다(각각
+  ///       없으면 null). 실패하거나 시간 초과되면 모두 null 을 담는다
   Future<void> stopCapture() async {
     try {
       // → 로직 이동: MainActivity.stopCapture
       final reply = await _methodChannel
-          .invokeMapMethod<String, String?>('stopCapture')
-          .timeout(_stopReplyLimit); // 두 경로를 담은 응답, 없으면 null
-      lastRecordPath = reply?['recordPath'];
-      lastAudioPath = reply?['audioPath'];
+          .invokeMapMethod<String, Object?>('stopCapture')
+          .timeout(_stopReplyLimit); // 두 경로 · 표본 속도를 담은 응답
+      lastRecordPath = reply?['recordPath'] as String?;
+      lastAudioPath = reply?['audioPath'] as String?;
+      lastNoiseSampleRateHz = reply?['noiseSampleRate'] as int?;
     } catch (_) {
       lastRecordPath = null;
       lastAudioPath = null;
+      lastNoiseSampleRateHz = null;
     }
     _parsedStream = null; // 다음 측정을 위해 이전 스트림 캐시를 비운다
   }

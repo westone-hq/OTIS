@@ -7,6 +7,9 @@
     # 2026-10-21 저크 · 가속도 차트 저역 픽스처 1개만 만든다
     python pdf_report_dev/gen_conditioning_fixtures.py --jerk test/fixtures
 
+    # 2026-10-22 소음 A 가중(44.1 · 48kHz) · Slow 평활 픽스처 1개만 만든다
+    python pdf_report_dev/gen_conditioning_fixtures.py --noise test/fixtures
+
     # 2026-10-15 가중 · 운행 구간 픽스처 2개만 만든다(아래 3개는 건드리지 않는다)
     python pdf_report_dev/gen_conditioning_fixtures.py --weighting \
         test/fixtures/ride_reference.txt \
@@ -293,10 +296,60 @@ def jerk(out_dir: str) -> None:
     print('jerk_unit_cases.json', len(x), 'samples')
 
 
+NOISE_RATES = (44100, 48000)  # NoiseCaptureHandler FALLBACK · PREFERRED_SAMPLE_RATE
+NOISE_HOP_HZ = 512             # NoiseCaptureHandler.HOP_HZ
+NOISE_TIME_WEIGHT_SEC = 1.0    # NoiseCaptureHandler.TIME_WEIGHT_SEC (Slow, 2026-10-22)
+
+
+def _a_weighting_sos(fs):
+    """IEC 61672-1 A 가중 아날로그 극을 쌍일차 변환으로 fs 에 옮기고 1kHz 0 dB 로 맞춘다."""
+    from scipy.signal import bilinear_zpk, sosfreqz, zpk2sos
+    f1, f2, f3, f4 = 20.598997, 107.65265, 737.86223, 12194.217
+    z = [0, 0, 0, 0]
+    p = [-2 * np.pi * f for f in (f1, f1, f4, f4, f2, f3)]
+    k = (2 * np.pi * f4) ** 2 * 10 ** (1.9997 / 20)
+    zd, pd, kd = bilinear_zpk(z, p, k, fs)
+    sos = zpk2sos(zd, pd, kd)
+    _, h = sosfreqz(sos, worN=[1000], fs=fs)
+    sos[0, :3] /= abs(h[0])
+    return sos
+
+
+def noise(out_dir: str) -> None:
+    """2026-10-22 소음 픽스처(noise_weighting_cases.json)를 만든다.
+
+    - 표본 속도마다 A 가중 계수(앱 NoiseCaptureHandler 와 같은 설계)
+    - Slow(1초) 지수평활: 홉(표본 속도 // 512 표본)마다 평균 제곱값을
+      y = a·y + (1 − a)·x, a = exp(−홉/fs/τ) 로 평활한 응답. 첫 값은 평활 없이
+      그대로(앱과 같다). 입력은 1 이 50 홉, 100 이 200 홉, 다시 1 이 200 홉
+    """
+    from scipy.signal import lfilter
+    out = Path(out_dir)
+    cases = {'scipy': scipy.__version__, 'timeWeightSec': NOISE_TIME_WEIGHT_SEC}
+    x = np.concatenate([np.ones(50), np.full(200, 100.0), np.ones(200)])
+    for fs in NOISE_RATES:
+        hop = fs // NOISE_HOP_HZ
+        a = np.exp(-(hop / fs) / NOISE_TIME_WEIGHT_SEC)
+        y = np.empty_like(x)
+        y[0] = x[0]
+        y[1:], _ = lfilter([1 - a], [1, -a], x[1:], zi=[a * x[0]])
+        cases[str(fs)] = {
+            'sos': _a_weighting_sos(fs).tolist(),
+            'hop': hop,
+            'alpha': a,
+            'input': x.tolist(),
+            'smoothed': y.tolist(),
+        }
+    (out / 'noise_weighting_cases.json').write_text(json.dumps(cases, indent=1))
+    print('noise_weighting_cases.json', NOISE_RATES)
+
+
 if __name__ == '__main__':
     if sys.argv[1] == '--weighting':
         weighting(sys.argv[2], sys.argv[3], sys.argv[4])
     elif sys.argv[1] == '--jerk':
         jerk(sys.argv[2])
+    elif sys.argv[1] == '--noise':
+        noise(sys.argv[2])
     else:
         main(sys.argv[1], sys.argv[2])
