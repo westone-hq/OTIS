@@ -21,8 +21,9 @@ const _layoutJsonPath = 'docs/report_layout.json';
 ///       2026-10-15 분석 자료 구분 이름 바꿔 찍기(`relabel` 등)를 더하며
 ///       다시 갱신했다.
 ///       2026-10-21 수직 행 황색 · 적색 문구 자리(`remark`)를 더하며 다시
+///       갱신했다. 2026-10-22 그 글자 크기 · 줄 간격(28 · 36)을 바꾸며 다시
 ///       갱신했다.
-const _layoutJsonMd5 = 'caf9152216d919267106e73bdc5d3458';
+const _layoutJsonMd5 = 'c6e6d6981e94f6003bda5196dae43945';
 
 /// 작성: 2026-09-15 19:43:50 · nada
 /// 함수: _layout
