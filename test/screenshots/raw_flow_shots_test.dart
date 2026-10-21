@@ -229,6 +229,7 @@ Future<MeasurementResult> _recordFromRaw(
   final result = assembled.result!.copyWith(
     signalConditioning:
         '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
+        '+${MeasurementAssembler.verticalLowpassMethodLabel}'
         '+${MeasurementAssembler.kinematicsMethodLabel}'
         '+${MeasurementAssembler.jerkMethodLabel}'
         '+${MeasurementAssembler.accelChartMethodLabel}'

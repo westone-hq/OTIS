@@ -327,6 +327,7 @@ void main() {
       'xPtp': r.xPtp,
       'yPtp': r.yPtp,
       'zPtp': r.zPtp,
+      'zJptp': r.zJptp,
       'xA95': r.xA95,
       'yA95': r.yA95,
       'zA95': r.zA95,

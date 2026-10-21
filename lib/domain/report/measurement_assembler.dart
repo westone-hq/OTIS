@@ -107,7 +107,7 @@ class MotionWindow {
 }
 
 /// 작성: 2026-09-15 13:08:37 · nada
-/// 수정: 2026-10-21 13:10:00 · nada
+/// 수정: 2026-10-21 22:40:00 · nada
 /// 클래스: MeasurementAssembler
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과와 현장
 ///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 진동 시계열은
@@ -127,7 +127,9 @@ class MotionWindow {
 ///          가중 전 수직 진동에서 움직인 구간만 적분해 낸다(2026-10-20,
 ///          `_deriveKinematics()`)
 ///       2. 진동에 주파수 가중(`RideWeighting`)을 건다 — 수평 Wd, 수직
-///          1Hz 고역 + Wk. 가감속이 빠져 Z 가 늘 적색을 넘던 문제가 없다
+///          1Hz 고역 + Wk. 가감속이 빠져 Z 가 늘 적색을 넘던 문제가 없다.
+///          수직은 그 뒤 20Hz 저역을 더 건다(`_verticalLowpass()`, 2026-10-21
+///          2차 — 개발폰 센서 고주파 잡음)
 ///       3. 위치에서 운행 구간(`TravelWindow`, 출발 · 정지 0.5 m 제외)을
 ///          정한다
 ///       4. 구간 안 가중 시계열의 반주기 P2P(`HalfCycle`)에서 최대 P2P 와
@@ -163,7 +165,7 @@ class MotionWindow {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-21 22:40:00 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -179,7 +181,7 @@ class MeasurementAssembler {
   ///         거리를 만든다. `_deriveKinematics()` 참고. 적분한 움직인
   ///         구간은 결과와 함께 돌려줘 저장 절차가 집계 파일에 적게 한다
   ///       - 진동 세 축에 가중을 걸어(`RideWeighting`) 그 값을 시계열로
-  ///         싣는다. 가중을 걸 수 없는 격자(`RideWeighting.canApply()`,
+  ///         싣는다. 수직은 가중 뒤 20Hz 저역을 더 건다(`_verticalLowpass()`). 가중을 걸 수 없는 격자(`RideWeighting.canApply()`,
   ///         아주 짧거나 성김)는 가중 없이 싣고 지표는 비운 채 사유를
   ///         남긴다
   ///       - 운행 구간(`TravelWindow.of()`)을 정해 그 안에서 진동 최대
@@ -233,13 +235,16 @@ class MeasurementAssembler {
       );
     }
     final gridRate = 1000000000 / grid.gridIntervalNs; // 격자 표본 속도 (Hz)
-    // 차트용 가속도 저역(10Hz)은 표본 속도의 절반보다 낮아야 설계된다.
-    // 실제 격자(100Hz)는 늘 맞고, 어긋난 시험 격자를 예외로 죽이지 않고
-    // 사유와 함께 돌려보낸다
-    if (gridRate <= 2 * CaptureConfig.accelChartLowpassHz) {
+    // 차트용 가속도 저역(10Hz) · 수직 저역(20Hz)은 표본 속도의 절반보다
+    // 낮아야 설계된다. 실제 격자(100Hz)는 늘 맞고, 어긋난 시험 격자를
+    // 예외로 죽이지 않고 사유와 함께 돌려보낸다
+    final highestCutoff = math.max(
+      CaptureConfig.accelChartLowpassHz,
+      CaptureConfig.rideVerticalLowpassHz,
+    ); // 이 함수가 설계하는 저역 가운데 가장 높은 차단 (Hz)
+    if (gridRate <= 2 * highestCutoff) {
       return MeasurementAssembleResult.failure(
-        '표본 속도가 차트 가속도 저역 '
-        '${CaptureConfig.accelChartLowpassHz}Hz 의 두 배 이하다: '
+        '표본 속도가 저역 차단 ${highestCutoff}Hz 의 두 배 이하다: '
         '${gridRate.toStringAsFixed(1)}Hz',
       );
     }
@@ -295,9 +300,13 @@ class MeasurementAssembler {
         ? RideWeighting.horizontal(ySeries, sampleRate)
         : ySeries; // 지표 · 차트에 쓸 Y (mg)
     final zWeighted = canWeight
-        // → 로직 이동: RideWeighting.vertical()
-        ? RideWeighting.vertical(zSeries, sampleRate)
-        : zSeries; // 지표 · 차트에 쓸 Z (mg)
+        // → 로직 이동: _verticalLowpass()
+        ? _verticalLowpass(
+            // → 로직 이동: RideWeighting.vertical()
+            RideWeighting.vertical(zSeries, sampleRate),
+            sampleRate,
+          )
+        : zSeries; // 지표 · 차트에 쓸 Z (mg). 가중 뒤 20Hz 저역
 
     // 가중하지 못한 시계열로 지표를 내지 않는다 — 기준이 원본 리포트의
     // 가중 지표 기준이라 견줄 수 없다
@@ -478,6 +487,42 @@ class MeasurementAssembler {
   static String get jerkMethodLabel =>
       'jerk(lp${CaptureConfig.jerkLowpassHz}'
       'bw${CaptureConfig.jerkLowpassOrder}zp)';
+
+  /// 작성: 2026-10-21 22:40:00 · nada
+  /// 함수: verticalLowpassMethodLabel
+  /// 목적: 수직 진동 경로 끝 저역을 결과 파일(`signalConditioning`)에 남길
+  ///       문자열. 가중 표시(`RideWeighting.methodLabel`) 바로 뒤에 붙인다.
+  ///       이 표시가 없는 2026-10-21 2차 전 결과의 수직 시계열 · 지표는 이
+  ///       저역을 걸지 않은 값이다(그대로 읽는다).
+  ///       - `zlp(차단bw차수zp)` — 가중한 Z 에 버터워스 저역을 양방향으로 걸었다
+  static String get verticalLowpassMethodLabel =>
+      'zlp(${CaptureConfig.rideVerticalLowpassHz}'
+      'bw${CaptureConfig.rideVerticalLowpassOrder}zp)';
+
+  /// 작성: 2026-10-21 22:40:00 · nada
+  /// 함수: _verticalLowpass
+  /// 목적: 가중한 수직 진동에 `CaptureConfig.rideVerticalLowpassHz` 저역을
+  ///       양방향으로 건다. 표의 수직 최대 · Jptp · A95 와 2쪽 수직 차트 ·
+  ///       표시점이 모두 이 시계열에서 나온다.
+  /// 인자: series — 가중한 Z (mg). `_minimumRows` 개 이상이다
+  ///       sampleRate — 표본 속도 (Hz). 차단의 두 배보다 크다(`assemble()`
+  ///       이 먼저 본다)
+  /// 반환: 거른 Z (mg, 같은 길이)
+  /// 근거: `CaptureConfig.rideVerticalLowpassHz` 를 본다
+  static List<double> _verticalLowpass(
+    List<double> series,
+    double sampleRate,
+  ) =>
+      // → 로직 이동: Butterworth.filtfilt()
+      Butterworth.filtfilt(
+        // → 로직 이동: Butterworth.lowpass()
+        Butterworth.lowpass(
+          order: CaptureConfig.rideVerticalLowpassOrder,
+          cutoffHz: CaptureConfig.rideVerticalLowpassHz,
+          sampleRateHz: sampleRate,
+        ),
+        series,
+      );
 
   /// 작성: 2026-10-21 11:20:00 · nada
   /// 함수: accelChartMethodLabel

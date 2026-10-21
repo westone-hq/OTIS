@@ -204,6 +204,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
                저크                           가속도 → 1.6Hz 4차 버터워스 양방향 → 중앙 차분
                가속도 차트(표시용)             가속도 → 10Hz 4차 버터워스 양방향
             5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
+               수직 저역                       Z 만 가중 뒤 20Hz 4차 버터워스 양방향 (`_verticalLowpass`)
             6. 운행 구간 (TravelWindow)      출발 · 정지 0.5 m 제외, 운행 1 m 이하면 실패
             7. 반주기 P2P (HalfCycle)        구간 안 최대 P2P · A95, 구간 안 소음 최대 · 평균
             8. 정속 · 가감속 (MotionZones)   수직 최대 = 정속 구간 최대, Jptp = 가감속 구간 최대
@@ -230,16 +231,18 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   운행 구간 줄 뒤에는 `zones` 와 `steadyStart/EndSec`(못 정하면
   `zonesFailureReason`) 줄이 붙는다.
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
-  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+motion(v>0.05,pad500ms)
+  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)+motion(v>0.05,pad500ms)
   +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms)
   +noise(A,fast,+105.2)`,
   `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
+  `MeasurementAssembler.verticalLowpassMethodLabel` +
   `MeasurementAssembler.kinematicsMethodLabel` + `jerkMethodLabel` +
   `accelChartMethodLabel` + `MotionZones.methodLabel` + `kNoiseMethodLabel`) 과
   `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`, `motionZones`
   (첨자 · 초) 또는 `motionZonesFailure`, `zJptp` · `zPtpPositionM`. `+zones`
   가 없는 2026-10-21 전 결과의 `zPtp` 는 운행 구간 전체 최대이고 Jptp ·
-  위치가 없다. `+motion` 이 없는
+  위치가 없다. `+zlp` 가 없는 2026-10-21 2차 전 결과의 수직 시계열 · 지표는
+  20Hz 저역을 걸지 않은 값이다. `+motion` 이 없는
   2026-10-20 전 결과는 기록 전체를 적분한 예전 거리 · 최대 속도다. `+jerk`
   가 없는 2026-10-21 전 결과의 저크는 40Hz 가속도를 그대로 미분해 ±10 ~ 20
   m/s³ 로 크다(그대로 읽고 그린다). `+acc` 가 없는 결과의 `accelSeries` 는
@@ -249,7 +252,8 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   결과는 원시 256Hz 기준이다. 시계열 `x/y/zSeries` 는 지표를 낸 그 값(가중
   뒤)이라 차트도 같은 값을 그린다. 화면에는 보이지 않는다.
 - **가중 · 구간 상수**: `CaptureConfig.rideVerticalHighpassHz`(1.0) ·
-  `rideVerticalHighpassOrder`(2) · `travelEdgeExclusionM`(0.5) ·
+  `rideVerticalHighpassOrder`(2) · `rideVerticalLowpassHz`(20) ·
+  `rideVerticalLowpassOrder`(4) · `travelEdgeExclusionM`(0.5) ·
   `minimumTravelM`(1.0) · `motionSpeedThresholdMps`(0.05) ·
   `motionPaddingMs`(500) · `jerkLowpassHz`(1.6) · `jerkLowpassOrder`(4) ·
   `accelChartLowpassHz`(10) · `accelChartLowpassOrder`(4, 차트 표시용) ·
@@ -362,6 +366,19 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     방식 미확인). 운행 거리는 같은 로우 데이터에서 오티스 앱과 같으므로,
     동시 측정에서 나는 차이(0.4 m 안팎)는 보정 방식이 아니라 두 기기
     센서의 치우침 차이다
+  - 2026-10-21 2차: 수직(Z)만 가중 뒤 20Hz 4차 버터워스 저역 양방향을 더
+    건다(`CaptureConfig.rideVerticalLowpassHz`). 같은 운행 정속 구간
+    대역별 RMS(개발폰 ÷ 오티스폰)가 1–20Hz 1.0~1.1배, 20–40Hz 1.5배,
+    40–50Hz 5.8~6.6배로, 개발폰 가속도계의 20Hz 위 잡음이 수직 최대를
+    키웠다. 개발폰 대 OTIS PDF 수직 ptp 가 −6 / +12 / +33% → −9 / +6 / +1%,
+    Jptp −1 / −12 / −13%, A95 −6 / −2 / −1%. 대가로 오티스폰 기록
+    (ride_reference)은 진짜 20~40Hz 성분이 깎여 원본 대비 최대가 −9% →
+    −14%(±15% 경계)다. 25Hz 는 3회 ptp 가 +19% 로 남고, 15Hz 는
+    ride_reference 가 −19% 로 밖이라 고르지 않았다. 수평은 지금도 OTIS 대비
+    −2 ~ +10% 이고 저역을 걸면 3회 A95 가 +21% 로 벌어져 걸지 않는다. 2회
+    ptp 차이(+6 ~ +13%)는 어느 차단에서도 줄지 않아 잡음이 아니다. 한
+    현장 3회 비교로 정한 값이라 다른 현장 동시 측정으로 다시 확인한다
+    (`docs/pending_checks.md`)
   - `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다. 운행 구간(A95 · 수평 ·
     소음)은 거리로만 정하고, 정속 구간은 수직 최대 · Jptp 에만 쓴다
     (2026-10-21, 예전 "정속 구간 감지는 넣지 않는다" 를 바꿈). A95 백분위는

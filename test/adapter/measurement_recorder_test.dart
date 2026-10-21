@@ -419,7 +419,7 @@ void main() {
       expect(saved?.sampleRate, 100.0);
       expect(
         saved?.signalConditioning,
-        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)'
+        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)'
         '+motion(v>0.05,pad500ms)+jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)'
         '+zones(v>0.05,pk0.5,a<0.03,min1000ms)+noise(A,fast,+105.2)',
       );

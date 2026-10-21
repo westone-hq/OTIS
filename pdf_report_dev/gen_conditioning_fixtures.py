@@ -21,8 +21,9 @@
     weighting_unit_cases.json        100Hz 합성 신호 400표본에 건 ISO 8041 가중
                                      (수평 Wd, 수직 1Hz 고역 양방향 + Wk)과 계수
     weighting_expected_metrics.json  두 실측 기록(ride_reference, 개발폰)을 앱과
-                                     같은 길(신호 처리 → 운동 → 가중 → 운행 구간
-                                     → 반주기 P2P)로 계산한 지표
+                                     같은 길(신호 처리 → 운동 → 가중(수직은 뒤에
+                                     20Hz 저역) → 운행 구간 → 반주기 P2P, 수직
+                                     최대 · Jptp 는 정속 · 가감속 구간)로 계산한 지표
 주의: unit_cases 의 값은 소수 12자리로 반올림해 저장한다.
       그래서 다시 만든 값과 6.7e-13 정도 차이가 날 수 있다(시험 기준 1e-9).
 """
@@ -123,6 +124,39 @@ def weight_vertical(z, fs=FS):
     return sosfilt(_sos(WK, fs), sosfiltfilt(_hp1(fs), z))
 
 
+Z_LP_HZ, Z_LP_ORDER = 20.0, 4  # CaptureConfig.rideVerticalLowpassHz · Order (2026-10-21 2차)
+ZONE_V, ZONE_PEAK, ZONE_A, ZONE_MIN_S = 0.05, 0.5, 0.03, 1.0  # CaptureConfig.zone* (2026-10-21)
+
+
+def vertical_path(z, fs=FS):
+    """앱 수직 경로: 가중(1Hz 고역 양방향 + Wk) 뒤 20Hz 4차 저역 양방향."""
+    return sosfiltfilt(butter(Z_LP_ORDER, Z_LP_HZ, fs=fs, output='sos'), weight_vertical(z, fs))
+
+
+def _zones(v, smooth):
+    """MotionZones.of() 와 같다. 정하지 못하면 None."""
+    run = np.where(np.abs(v) > ZONE_V)[0]
+    if not len(run):
+        return None
+    rs, re = run[0], run[-1]
+    a = np.abs(smooth)
+    over = np.where(a[rs:re + 1] > a[rs:re + 1].max() * ZONE_PEAK)[0] + rs
+    ap, dp = over[0], over[-1]
+    cs = next((i for i in range(ap, dp + 1) if a[i] < ZONE_A), None)
+    ce = next((i for i in range(dp, ap - 1, -1) if a[i] < ZONE_A), None)
+    if cs is None or ce is None or ce - cs + 1 < round(ZONE_MIN_S * FS):
+        return None
+    return int(rs), int(re), int(cs), int(ce)
+
+
+def _max_p2p(series, lo, hi):
+    p = _half_cycle_p2p(series[lo:hi + 1]) if hi > lo else []
+    if not p:
+        return None
+    best = max(p, key=lambda t: t[0])
+    return float(best[0]), [best[1] + lo, best[2] + lo]
+
+
 def _half_cycle_p2p(series):
     peaks, idx = [], []
     cur, cur_i, sign = 0.0, -1, 0
@@ -172,7 +206,7 @@ def _pipeline(src):
            'distance': float(pos[-1]),
            'startIndex': start, 'endIndex': end}
     series = {'x': weight_horizontal(c[:, 0]), 'y': weight_horizontal(c[:, 1]),
-              'z': weight_vertical(c[:, 2])}
+              'z': vertical_path(c[:, 2])}
     for k, s in series.items():
         p2p = _half_cycle_p2p(s[w])
         vals = sorted(p for p, _, _ in p2p)
@@ -180,6 +214,17 @@ def _pipeline(src):
         out[k + 'Ptp'] = float(best[0])
         out[k + 'PtpIndices'] = [best[1] + start, best[2] + start]
         out[k + 'A95'] = float(vals[int(np.ceil(0.95 * len(vals))) - 1])
+    # 수직 최대 = 정속 구간 최대, Jptp = 가감속 구간 최대 (2026-10-21, 앱 MotionZones)
+    smooth = sosfiltfilt(butter(4, 1.6, fs=FS, output='sos'), acc)
+    zones = _zones(v, smooth)
+    if zones is None:
+        out['zPtp'] = out['zPtpIndices'] = out['zJptp'] = None
+    else:
+        rs, re, cs, ce = zones
+        out['steadyStartIndex'], out['steadyEndIndex'] = cs, ce
+        out['zPtp'], out['zPtpIndices'] = _max_p2p(series['z'], cs, ce)
+        js = [j for j in (_max_p2p(series['z'], rs, cs - 1), _max_p2p(series['z'], ce + 1, re)) if j]
+        out['zJptp'] = max(j[0] for j in js) if js else None
     wn = noise100[w]
     wn = wn[wn != 0]
     out['noiseAvg'] = float(wn.mean()) if len(wn) else None

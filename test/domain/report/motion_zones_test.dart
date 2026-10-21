@@ -48,8 +48,8 @@ import '../../support/otis_1021_records.dart';
 ///       - 합성 사다리꼴 운행: 정속 시작 · 끝, 하강, 정속 없음 · 운행 없음
 ///       - 2026-10-21 동시 측정 6건 · ride_reference: 점검 참고값과 ±0.3초
 ///       - 정속 구간 저크가 잔잔한지 (RMS < 0.05 m/s³)
-///       - 수직 ptp · Jptp 가 OTIS 리포트 값과 ±15% (밖인 값은 작업메모에
-///         표로 남기고 지금 값을 고정해 바뀌면 알린다)
+///       - 수직 ptp · Jptp · A95 가 지금 계산값과 ±2% (OTIS · 원본 대비는
+///         시험 주석 · 작업메모 표로만 남긴다)
 void main() {
   group('합성 운행', () {
     test('사다리꼴: 정속은 가속이 끝난 뒤부터 감속이 시작되기 전까지다', () {
@@ -151,40 +151,45 @@ void main() {
     });
   });
 
-  group('수직 ptp · Jptp (OTIS 리포트 값과 ±15%)', () {
-    // OTIS 리포트 2쪽 수직 차트 값. 개발폰 기록과 짝이다
-    const otis = <String, (double, double)>{
-      'dev_up1': (20.5, 17.1),
-      'dev_up2': (19.6, 19.1),
-      'dev_down3': (13.2, 32.6),
-    }; // 기록 → (ptp, Jptp) mg
-    // ±15% 밖이라 지금 값을 고정해 두는 것(작업메모_20261021.md 묶음 3 표).
-    // dev_down3 ptp 는 같은 순간 오티스폰 원시데이터도 14.7 로 OTIS 리포트
-    // 13.2 보다 크다 — 두 기기가 잰 진동 자체의 차이로 본다
-    const pinned = <String, double>{'dev_down3.ptp': 17.5};
+  group('수직 ptp · Jptp · A95 회귀 (지금 계산값 ±2%)', () {
+    // 수직 경로 = 가중 뒤 20Hz 4차 저역 양방향(2026-10-21 2차,
+    // `CaptureConfig.rideVerticalLowpassHz`). OTIS PDF · 원본 대비 ±15% 는
+    // 시험으로 걸지 않는다 — ride_reference 최대가 −14% 로 경계에 붙어 있다.
+    // 참고 표(작업메모_20261021.md 2차 묶음 1):
+    //   기록       ptp / Jptp / A95   대 OTIS PDF(20.5·19.1… / 원본 6.1·3.6)
+    //   dev_up1    18.65 / 16.86 / 14.40   −9% / −1% / −6%   (OTIS 20.5/17.1/15.4)
+    //   dev_up2    20.75 / 16.86 / 14.70   +6% / −12% / −2%  (OTIS 19.6/19.1/15.0)
+    //   dev_down3  13.33 / 28.22 / 9.45    +1% / −13% / −1%  (OTIS 13.2/32.6/9.5)
+    //   ride_ref   5.26 / 7.39 / 3.66      −14% / — / +2%     (원본 6.1/—/3.6)
+    // dev_down3 는 화면을 위로 놓고 기록돼 Z 를 뒤집어 읽는다(P2P 는 같다)
+    const pinned = <String, (double, double, double)>{
+      'dev_up1': (18.65, 16.86, 14.40),
+      'dev_up2': (20.75, 16.86, 14.70),
+      'dev_down3': (13.33, 28.22, 9.45),
+      'otis_up1': (18.86, 16.30, 14.14),
+      'otis_up2': (18.38, 16.33, 14.24),
+      'otis_down3': (12.18, 26.48, 10.19),
+      'ride_reference': (5.26, 7.39, 3.66),
+    }; // 기록 → (ptp, Jptp, A95) mg
+    final paths = <String, String>{
+      ...otis1021Records,
+      'ride_reference': rideReferencePath,
+    }; // 기록 이름 → 경로
 
-    for (final entry in otis.entries) {
+    for (final entry in pinned.entries) {
       test(entry.key, () {
-        final result = assembleRecord(otis1021Records[entry.key]!).result!;
-        final ptp = result.zPtp!;
-        final jptp = result.zJptp!;
-        final pinnedPtp = pinned['${entry.key}.ptp']; // 고정값, 없으면 null
-        if (pinnedPtp == null) {
-          expect(ptp, closeTo(entry.value.$1, entry.value.$1 * 0.15));
-        } else {
-          expect(ptp, closeTo(pinnedPtp, 0.1));
-        }
-        expect(jptp, closeTo(entry.value.$2, entry.value.$2 * 0.15));
+        final result = assembleRecord(
+          paths[entry.key]!,
+          flipVertical: faceUpRecords.contains(entry.key),
+        ).result!;
+        final (ptp, jptp, a95) = entry.value;
+        expect(result.zPtp, closeTo(ptp, ptp * 0.02), reason: 'ptp');
+        expect(result.zJptp, closeTo(jptp, jptp * 0.02), reason: 'Jptp');
+        expect(result.zA95, closeTo(a95, a95 * 0.02), reason: 'A95');
         // 수직 최대는 정속 구간 안에서 났으므로 그 위치도 운행 안이다
         expect(result.zPtpPositionM, inInclusiveRange(0, result.distance!));
       });
     }
-
-    test('ride_reference: 정속 구간 ptp 가 원본 6.1 과 ±15%', () {
-      final result = assembleRecord(rideReferencePath).result!;
-      expect(result.zPtp, closeTo(6.1, 6.1 * 0.15));
-      expect(result.zJptp, isNotNull);
-    });
   });
 
   test('구간 판정 상수는 점검 지시 값이다', () {

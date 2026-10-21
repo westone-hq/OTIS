@@ -248,7 +248,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-21 22:40:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -270,6 +270,7 @@ class MeasurementRecorder {
   ///          지표, `MeasurementAssembler`), 가중 · 운행 구간을 집계 파일에
   ///          덧붙인 뒤(운동을 적분한 움직인 구간도 함께) 처리 방식
   ///          (`SignalConditioner.methodLabel` + `RideWeighting.methodLabel`
+  ///          + `MeasurementAssembler.verticalLowpassMethodLabel`
   ///          + `MeasurementAssembler.kinematicsMethodLabel` +
   ///          `MeasurementAssembler.jerkMethodLabel` +
   ///          `MeasurementAssembler.accelChartMethodLabel` +
@@ -408,6 +409,7 @@ class MeasurementRecorder {
         assembled.result!.copyWith(
           signalConditioning:
               '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
+              '+${MeasurementAssembler.verticalLowpassMethodLabel}'
               '+${MeasurementAssembler.kinematicsMethodLabel}'
               '+${MeasurementAssembler.jerkMethodLabel}'
               '+${MeasurementAssembler.accelChartMethodLabel}'
