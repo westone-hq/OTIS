@@ -208,8 +208,9 @@ flutter test --tags screenshot --run-skipped test/screenshots
   예전 식 −(raw_z − gravity_z) 와 같고, 화면을 위로 놓거나 기울여도 위로
   가속 = 양수다. 예전 식은 화면을 위로 놓으면 부호가 뒤집혔다(2026-10-21
   개발폰 하강 기록). 가속도계 영점 · 배율 오차(화면 위 개발폰 약 13.6 mg)는
-  raw 에 남고 기준선 0 맞춤에서 빠진다. 거치 방향을 확인 · 경고하는 기능은
-  없다.
+  raw 에 남고 기준선 0 맞춤에서 빠진다(raw.txt 는 2026-10-21 2차부터 축별
+  평균을 빼 내보낸다). 거치 방향은 2026-10-22 부터 판정 · 경고 · 기록한다
+  (위 "거치 방향" 항목).
 
 ## 진동 신호 처리
 
@@ -257,11 +258,12 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
   (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)+motion(v>0.05,pad500ms)
   +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms)
-  +noise(A,fast,+105.2)`,
+  +noise(A,slow,+105.2,48000Hz)`,
   `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
   `MeasurementAssembler.verticalLowpassMethodLabel` +
   `MeasurementAssembler.kinematicsMethodLabel` + `jerkMethodLabel` +
-  `accelChartMethodLabel` + `MotionZones.methodLabel` + `kNoiseMethodLabel`) 과
+  `accelChartMethodLabel` + `MotionZones.methodLabel` +
+  `noiseMethodLabel(마이크 표본 속도)`) 과
   `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`, `motionZones`
   (첨자 · 초) 또는 `motionZonesFailure`, `zJptp` · `zPtpPositionM`. `+zones`
   가 없는 2026-10-21 전 결과의 `zPtp` 는 운행 구간 전체 최대이고 Jptp ·
@@ -434,7 +436,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   (`travelWindow`) 시작부터 끝까지만 긋는다. 구간이 없는 예전 결과는 진동
   점선 없음, 소음 평균선은 폭 전체. 점선 무늬는 원본을 600dpi 로 재 점 ·
   빈칸 2.3pt(`ReportChartRenderer.guideDashPattern`).
-  가로축은 가장 긴 시계열의 마지막 표본까지 담는다(`_timeSpan()`).
+  가로축은 가장 긴 시계열의 마지막 표본까지 담는다(`timeWindow()`).
   3쪽 위치 · 속도(2026-10-21, `ChartScaleKind.padded`, 2026-10-08 "0 에서
   시작, 끝을 눈금에 맞춰 바깥으로 반올림" 을 바꿈): 데이터 최소 · 최대에서
   폭의 10% 씩 바깥을 틀 끝으로 두고 반올림하지 않는다. 눈금은 틀 안의

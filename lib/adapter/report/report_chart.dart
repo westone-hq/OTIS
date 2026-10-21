@@ -1363,8 +1363,7 @@ class ReportChartRenderer {
   ///       (OTIS 2 · 3쪽과 같다).
   /// 인자: time — `timeWindow()` 가 정한 왼쪽 끝 · 폭 · 간격
   /// 반환: 0 부터 오른쪽 끝을 넘지 않는 마지막 눈금까지의 시각 목록 (초)
-  /// 식: rough = span / timeTickTarget
-  ///     step  = 10^floor(log10(rough)) x {1, 2, 5, 10} 중 rough 이상인 최솟값
+  /// 식: n = floor((start + span) / step),  tick_i = i x step,  i = 0 .. n
   List<double> _timeTicks(({double start, double span, double step}) time) {
     final count = // 0 초부터 오른쪽 끝까지 눈금 칸 수
     ((time.start + time.span) / time.step + 1e-9)
