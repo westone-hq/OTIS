@@ -502,7 +502,7 @@ void main() {
         saved?.signalConditioning,
         'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)'
         '+motion(v>0.05,pad500ms)+jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)'
-        '+zones(v>0.05,pk0.5,a<0.03,min1000ms)+noise(A,slow,+105.2)',
+        '+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)+noise(A,slow,+105.2)',
       );
 
       final meta = await metaText(); // 집계 파일 내용
@@ -541,7 +541,10 @@ void main() {
       expect(saved.travelWindowFailure, isNotNull);
       expect(saved.zPtp, isNull);
       // 정속 구간도 같은 이유로 정하지 못하고 사유를 남긴다
-      expect(meta, contains('zones: zones(v>0.05,pk0.5,a<0.03,min1000ms)'));
+      expect(
+        meta,
+        contains('zones: zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)'),
+      );
       expect(meta, contains('zonesFailureReason: '));
       expect(saved.motionZones, isNull);
       expect(saved.motionZonesFailure, isNotNull);

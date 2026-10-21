@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
 
@@ -53,17 +55,21 @@ class MotionZones {
   double get steadyEndSec => steadyEndIndex / sampleRate;
 
   /// 작성: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-22 15:40:00 · nada
   /// 함수: methodLabel
   /// 목적: 구간을 나눈 방식을 결과 파일(result.json `signalConditioning`)에
   ///       남길 문자열. 이 표시가 없는 2026-10-21 전 결과의 수직 최대
   ///       (`zPtp`)는 운행 구간(출발 · 정지 0.5 m 제외) 전체의 최대라 가감속
   ///       구간이 섞여 있고 `zJptp` 가 없다.
-  ///       - `zones(v>속도,pk비율,a<가속도,min길이ms)` — `of()` 의 네 상수
+  ///       - `zones(v>속도,pk비율,a<가속도,min길이ms,jpad넓힘ms)` — `of()` 의
+  ///         네 상수와 Jptp 구간을 넓힌 길이. `jpad` 가 없는 2026-10-22 전
+  ///         결과의 Jptp 는 운행(|v| > 문턱) 안에서만 낸 값이다
   static String get methodLabel =>
       'zones(v>${CaptureConfig.zoneRunSpeedMps},'
       'pk${CaptureConfig.zonePeakRatio},'
       'a<${CaptureConfig.zoneSteadyAccelMps2},'
-      'min${CaptureConfig.zoneMinimumSteadyMs}ms)';
+      'min${CaptureConfig.zoneMinimumSteadyMs}ms,'
+      'jpad${CaptureConfig.zoneTransientPaddingMs}ms)';
 
   /// 작성: 2026-10-21 13:10:00 · nada
   /// 함수: steadyMaximum
@@ -82,18 +88,25 @@ class MotionZones {
   }
 
   /// 작성: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-22 15:40:00 · nada
   /// 함수: transientMaximum
-  /// 목적: 가감속 구간(운행 시작 ~ 정속 앞, 정속 뒤 ~ 운행 끝) 안 최대
-  ///       반주기 P2P 를 찾는다. 2쪽 수직 차트 `Jptp` 다. 두 조각을 따로
-  ///       세고(정속 구간을 건너 이웃 봉우리를 잇지 않는다) 큰 쪽을 고른다.
+  /// 목적: 가감속 구간 안 최대 반주기 P2P 를 찾는다. 2쪽 수직 차트 `Jptp`
+  ///       다. 가감속 구간은 운행 시작 `CaptureConfig.zoneTransientPaddingMs`
+  ///       앞 ~ 정속 앞, 정속 뒤 ~ 운행 끝 같은 길이 뒤다(기록 끝에서 자른다).
+  ///       속도가 문턱을 넘기 전 출발 충격을 넣기 위해서다(2026-10-22). 두
+  ///       조각을 따로 세고(정속 구간을 건너 이웃 봉우리를 잇지 않는다) 큰
+  ///       쪽을 고른다.
   /// 인자: series — 가중한 진동 시계열 (mg, 이 구간과 같은 격자)
   /// 반환: 최대 반주기 P2P. 두 조각 모두 반주기가 두 개도 안 되면 null
   HalfCyclePeakToPeak? transientMaximum(List<double> series) {
     if (runEndIndex >= series.length) return null;
+    final pad = // 운행 앞뒤로 넓힐 행 수
+    (CaptureConfig.zoneTransientPaddingMs / 1000 * sampleRate)
+        .round();
     HalfCyclePeakToPeak? best; // 두 조각 가운데 큰 것
     for (final (start, end) in <(int, int)>[
-      (runStartIndex, steadyStartIndex - 1),
-      (steadyEndIndex + 1, runEndIndex),
+      (math.max(0, runStartIndex - pad), steadyStartIndex - 1),
+      (steadyEndIndex + 1, math.min(series.length - 1, runEndIndex + pad)),
     ]) {
       if (end <= start) continue;
       // → 로직 이동: HalfCycle.maximum()

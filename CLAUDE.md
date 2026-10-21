@@ -112,7 +112,12 @@ flutter test --tags screenshot --run-skipped test/screenshots
   나눈다(가속도 최대 50% 를 넘는 처음 · 마지막이 가속 · 감속 봉우리, 그 사이
   |a| < 0.03 m/s² 인 처음 · 마지막이 정속 시작 · 끝, 정속 1초 미만이면 실패
   → 수직 최대 · Jptp "—"). 1쪽 수직 최대(`zPtp`)는 정속 구간 안 최대 반주기
-  P2P, `zJptp` 는 가감속 구간 최대로 2쪽 수직 차트에만 "Jptp 값milli-G" 로
+  P2P, `zJptp` 는 가감속 구간 최대(2026-10-22 부터 운행 시작 0.4초 앞 ~ 끝
+  0.4초 뒤까지 넣는다 — 속도가 문턱을 넘기 전 출발 충격, `CaptureConfig.
+  zoneTransientPaddingMs`. 지시는 0.5초였으나 원본 리포트 a_z,Jptp 18.9 를
+  0.3 · 0.4초가 그대로 내고 0.5초는 구간 시작점 반쪽 흔들림이 25.7 을 만들어
+  0.4초로 했다. 하강 출발 충격은 OTIS 32.6 보다 개발폰 39.4 · 오티스폰 원시
+  37.9 로 크다)로 2쪽 수직 차트에만 "Jptp 값milli-G" 로
   적는다(두 글자 상자는 겹치지 않게 비킨다). 수직 평균(A95)은 운행 구간
   (0.5 m 제외) 그대로다. 1쪽 수직 두 행이 황색 · 적색이면 서식 라벨 · 값을
   덮고 OTIS 문구 두 줄을 다른 행 설명 글자와 같은 크기(28px, 2026-10-22)로
@@ -259,7 +264,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `zonesFailureReason`) 줄이 붙는다.
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
   (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)+motion(v>0.05,pad500ms)
-  +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms)
+  +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)
   +noise(A,slow,+105.2,48000Hz)`,
   `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
   `MeasurementAssembler.verticalLowpassMethodLabel` +
@@ -286,7 +291,8 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `motionPaddingMs`(500) · `jerkLowpassHz`(1.6) · `jerkLowpassOrder`(4) ·
   `accelChartLowpassHz`(10) · `accelChartLowpassOrder`(4, 차트 표시용) ·
   `zoneRunSpeedMps`(0.05) · `zonePeakRatio`(0.5) · `zoneSteadyAccelMps2`(0.03)
-  · `zoneMinimumSteadyMs`(1000, 정속 · 가감속 구간). 저크
+  · `zoneMinimumSteadyMs`(1000, 정속 · 가감속 구간) · `zoneTransientPaddingMs`
+  (400, Jptp 구간 넓힘). 저크
   저역은 OTIS 리포트 저크 차트 4개와 RMSE 0.02 ~ 0.03 m/s³ 로 맞춘 값이다
   (2026-10-21). 저크 필터의 양 끝 덧댐(15행) 때문에 조립은 16행 미만 격자를
   사유와 함께 돌려보낸다. ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,

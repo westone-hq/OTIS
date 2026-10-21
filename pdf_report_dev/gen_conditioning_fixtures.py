@@ -129,6 +129,7 @@ def weight_vertical(z, fs=FS):
 
 Z_LP_HZ, Z_LP_ORDER = 20.0, 4  # CaptureConfig.rideVerticalLowpassHz · Order (2026-10-21 2차)
 ZONE_V, ZONE_PEAK, ZONE_A, ZONE_MIN_S = 0.05, 0.5, 0.03, 1.0  # CaptureConfig.zone* (2026-10-21)
+ZONE_JPAD_S = 0.4  # CaptureConfig.zoneTransientPaddingMs (2026-10-22)
 
 
 def vertical_path(z, fs=FS):
@@ -226,7 +227,9 @@ def _pipeline(src):
         rs, re, cs, ce = zones
         out['steadyStartIndex'], out['steadyEndIndex'] = cs, ce
         out['zPtp'], out['zPtpIndices'] = _max_p2p(series['z'], cs, ce)
-        js = [j for j in (_max_p2p(series['z'], rs, cs - 1), _max_p2p(series['z'], ce + 1, re)) if j]
+        jp = round(ZONE_JPAD_S * FS)  # Jptp 구간을 운행 앞뒤로 넓힐 행 수
+        js = [j for j in (_max_p2p(series['z'], max(0, rs - jp), cs - 1),
+                          _max_p2p(series['z'], ce + 1, min(n - 1, re + jp))) if j]
         out['zJptp'] = max(j[0] for j in js) if js else None
     wn = noise100[w]
     wn = wn[wn != 0]

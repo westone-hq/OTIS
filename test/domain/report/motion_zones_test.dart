@@ -159,17 +159,19 @@ void main() {
     //   기록       ptp / Jptp / A95   대 OTIS PDF(20.5·19.1… / 원본 6.1·3.6)
     //   dev_up1    18.65 / 16.86 / 14.40   −9% / −1% / −6%   (OTIS 20.5/17.1/15.4)
     //   dev_up2    20.75 / 16.86 / 14.70   +6% / −12% / −2%  (OTIS 19.6/19.1/15.0)
-    //   dev_down3  13.33 / 28.22 / 9.45    +1% / −13% / −1%  (OTIS 13.2/32.6/9.5)
-    //   ride_ref   5.26 / 7.39 / 3.66      −14% / — / +2%     (원본 6.1/—/3.6)
+    //   dev_down3  13.33 / 39.41 / 9.45    +1% / +21% / −1%  (OTIS 13.2/32.6/9.5)
+    //   ride_ref   5.26 / 18.90 / 3.66     −14% / 0% / +2%    (원본 6.1/18.9/3.6)
+    // Jptp 는 2026-10-22 부터 운행 앞뒤 0.4초를 넣는다(출발 충격,
+    // `CaptureConfig.zoneTransientPaddingMs`)
     // dev_down3 는 화면을 위로 놓고 기록돼 Z 를 뒤집어 읽는다(P2P 는 같다)
     const pinned = <String, (double, double, double)>{
       'dev_up1': (18.65, 16.86, 14.40),
       'dev_up2': (20.75, 16.86, 14.70),
-      'dev_down3': (13.33, 28.22, 9.45),
+      'dev_down3': (13.33, 39.41, 9.45),
       'otis_up1': (18.86, 16.30, 14.14),
       'otis_up2': (18.38, 16.33, 14.24),
-      'otis_down3': (12.18, 26.48, 10.19),
-      'ride_reference': (5.26, 7.39, 3.66),
+      'otis_down3': (12.18, 37.89, 10.19),
+      'ride_reference': (5.26, 18.90, 3.66),
     }; // 기록 → (ptp, Jptp, A95) mg
     final paths = <String, String>{
       ...otis1021Records,
@@ -226,6 +228,10 @@ void main() {
     expect(CaptureConfig.zonePeakRatio, 0.5);
     expect(CaptureConfig.zoneSteadyAccelMps2, 0.03);
     expect(CaptureConfig.zoneMinimumSteadyMs, 1000);
-    expect(MotionZones.methodLabel, 'zones(v>0.05,pk0.5,a<0.03,min1000ms)');
+    expect(CaptureConfig.zoneTransientPaddingMs, 400);
+    expect(
+      MotionZones.methodLabel,
+      'zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)',
+    );
   });
 }
