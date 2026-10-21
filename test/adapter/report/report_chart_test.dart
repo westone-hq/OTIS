@@ -978,6 +978,79 @@ void main() {
     });
   });
 
+  group('A95 글자 자리 (2026-10-22, 점선 오른쪽 끝)', () {
+    const frame = (left: 50.0, bottom: 100.0, right: 250.0, top: 200.0);
+    const width = 9.0; // 글자 폭 (포인트)
+    const height = ReportChartRenderer.tickLabelSize; // 글자 세로
+    const gap = ReportChartRenderer.labelGap; // 점선과 띄움
+    ChartRect place({
+      double spanRight = 200,
+      List<ChartRect> avoid = const [],
+    }) => ReportChartRenderer.placeA95Label(
+      frame: frame,
+      spanRight: spanRight,
+      upperY: 160,
+      lowerY: 140,
+      width: width,
+      avoid: avoid,
+    );
+
+    test('빈자리면 점선 오른쪽 끝 바깥, 아래 점선 바로 밑이다', () {
+      final rect = place(); // 고른 자리
+      expect(rect.left, 200 + gap);
+      expect(rect.bottom, 140 - gap - height);
+    });
+
+    test('ptp 상자가 그 자리를 차지하면 위 점선 위로 비킨다', () {
+      final rect = place(
+        avoid: [(left: 195, bottom: 125, width: 40, height: 15)],
+      ); // 고른 자리
+      expect(rect.left, 200 + gap);
+      expect(rect.bottom, 160 + gap);
+    });
+
+    test('바깥 두 자리가 막히면 점선 끝 안쪽으로 들어간다', () {
+      final rect = place(
+        avoid: [(left: 201, bottom: 100, width: 40, height: 100)],
+      ); // 고른 자리
+      expect(rect.left + width, 200, reason: '글자 끝 = 점선 끝');
+      expect(rect.bottom, 140 - gap - height);
+    });
+
+    test('빨간 점도 피한다', () {
+      const ring =
+          ReportChartRenderer.markerRadius +
+          ReportChartRenderer.markerRingWidth; // 점 반지름
+      final rect = place(
+        avoid: [
+          (
+            left: 205 - ring,
+            bottom: 133 - ring,
+            width: ring * 2,
+            height: ring * 2,
+          ),
+        ],
+      ); // 아래 바깥 자리에 점이 있음
+      expect(rect.bottom, 160 + gap);
+    });
+
+    test('운행 구간이 기록 끝까지면 틀 안으로 밀어 넣는다', () {
+      final rect = place(spanRight: 250); // 점선 끝 = 틀 오른쪽
+      expect(
+        rect.left + width,
+        lessThanOrEqualTo(frame.right - ReportChartRenderer.labelInset),
+      );
+    });
+
+    test('모두 막히면 첫 자리를 쓴다', () {
+      final rect = place(
+        avoid: [(left: 0, bottom: 0, width: 400, height: 400)],
+      ); // 틀 전체를 덮음
+      expect(rect.left, 200 + gap);
+      expect(rect.bottom, 140 - gap - height);
+    });
+  });
+
   group('운행 구간 · 반주기 표시점 (2026-10-15)', () {
     const window = TravelWindow(
       startIndex: 100,

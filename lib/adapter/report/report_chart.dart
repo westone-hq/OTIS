@@ -864,7 +864,11 @@ class ReportChartRenderer {
       );
       _drawAnnotations(canvas, frame, spec, values, result);
       _drawA95Band(canvas, frame, spec, result); // → 로직 이동: _drawA95Band()
-      _drawPeakToPeak(canvas, frame, spec, values, result);
+      // → 로직 이동: _drawPeakToPeak()
+      final taken = _drawPeakToPeak(canvas, frame, spec, values, result);
+      // A95 글자는 ptp · Jptp 상자와 빨간 점을 피하므로 그 뒤에 적는다
+      // → 로직 이동: _drawA95Label()
+      _drawA95Label(canvas, frame, spec, result, taken);
     }
   }
 
@@ -934,16 +938,19 @@ class ReportChartRenderer {
   ///       spec — 그리는 축의 사양
   ///       values — 그린 시계열 (줄이기 전)
   ///       result — 지표와 표본 주기를 가진 측정 결과
+  /// 반환: 적은 글자 상자와 빨간 점(흰 테 포함)이 차지한 자리. A95 글자
+  ///       (`_drawA95Label()`)가 피한다. 아무것도 적지 않았으면 빈 목록
   /// 근거: 인용 — 2026-10-15 사용자 지시 "굵은 점으로 표시하고 그 선
   ///       왼쪽이든 오른쪽이든 가능한 부분에 값 표시", 2026-10-15 점검 지시
   ///       "빨간 점 두 개는 최대 반주기 P2P 를 만든 이웃 봉우리 · 골 쌍"
-  void _drawPeakToPeak(
+  List<_Box> _drawPeakToPeak(
     PdfGraphics canvas,
     _ChartFrame frame,
     ChartAxisSpec spec,
     List<double> values,
     MeasurementResult result,
   ) {
+    final drawn = <_Box>[]; // 적은 상자 · 점 자리
     // → 로직 이동: ReportChartAxes.ptpOf()
     final ptp = ReportChartAxes.ptpOf(spec, result); // 적을 P2P, 없으면 null
     final vertical = spec.key == 'z'
@@ -959,12 +966,15 @@ class ReportChartRenderer {
     if (ptp != null && at != null) {
       // → 로직 이동: _drawPair()
       taken = _drawPair(canvas, frame, values, result, at, ptpLabel(ptp));
+      drawn.add(taken);
+      // → 로직 이동: _markerBoxes()
+      drawn.addAll(_markerBoxes(frame, values, result, at));
     }
     final jptp = result.zJptp; // 가감속 구간 최대, 없으면 null
     final jat = vertical?.transient; // Jptp 두 지점, 없으면 null
     if (jptp != null && jat != null) {
       // → 로직 이동: _drawPair()
-      _drawPair(
+      final label = _drawPair(
         canvas,
         frame,
         values,
@@ -972,8 +982,39 @@ class ReportChartRenderer {
         jat,
         jptpLabel(jptp), // → 로직 이동: jptpLabel()
         avoid: taken,
-      );
+      ); // Jptp 글자 상자
+      drawn.add(label);
+      // → 로직 이동: _markerBoxes()
+      drawn.addAll(_markerBoxes(frame, values, result, jat));
     }
+    return drawn;
+  }
+
+  /// 작성: 2026-10-22 17:40:00 · nada
+  /// 함수: _markerBoxes
+  /// 목적: 반주기 P2P 두 지점의 빨간 점(흰 테 포함)이 차지한 네모 자리를 낸다.
+  ///       `_drawPair()` 가 찍은 자리와 같은 식으로 센다.
+  /// 인자: frame — 축 틀과 값 옮기기
+  ///       values — 그린 시계열 (줄이기 전)
+  ///       result — 표본 주기를 가진 측정 결과
+  ///       at — (높은 쪽, 낮은 쪽) 첨자
+  /// 반환: 점 두 개의 네모 자리
+  List<_Box> _markerBoxes(
+    _ChartFrame frame,
+    List<double> values,
+    MeasurementResult result,
+    ({int high, int low}) at,
+  ) {
+    const ring = markerRadius + markerRingWidth; // 흰 테 반지름 (포인트)
+    return <_Box>[
+      for (final index in <int>[at.low, at.high])
+        _Box(
+          left: frame.xOfTime(index / result.sampleRate) - ring,
+          bottom: frame.yOfValue(values[index]) - ring,
+          width: ring * 2,
+          height: ring * 2,
+        ),
+    ];
   }
 
   /// 작성: 2026-10-21 13:10:00 · nada
@@ -1223,8 +1264,8 @@ class ReportChartRenderer {
   /// 함수: _drawA95Band
   /// 목적: 진동 세 축 차트에 A95 를 붉은 가로 점선 두 줄로 표시한다. 0 을
   ///       가운데 두고 ±A95/2 높이에, 지표를 낸 운행 구간 시작부터 끝까지
-  ///       길게 긋는다. 첫 줄 왼쪽 아래에 "A95" 를 적는다. 원본 리포트와
-  ///       같은 모양이다. 두 줄 사이 폭이 1쪽 표의 A95 다.
+  ///       길게 긋는다. 원본 리포트와 같은 모양이다. 두 줄 사이 폭이 1쪽 표의
+  ///       A95 다. "A95" 글자는 `_drawA95Label()` 이 따로 적는다.
   ///       진동 축이 아니거나, A95 가 없거나(예전 결과 · 구간을 못 정한
   ///       결과), 운행 구간이 없으면 긋지 않는다. 0 으로 채워 긋지 않는다.
   /// 인자: canvas — 그리기 도구
@@ -1251,24 +1292,124 @@ class ReportChartRenderer {
       // → 로직 이동: _drawGuideLine()
       _drawGuideLine(canvas, span.left, span.right, y);
     }
+  }
 
-    final width = _widthOf(a95Label, tickLabelSize); // 글자 폭
-    final x = math.max(
-      frame.left + labelInset,
-      span.left - labelGap - width,
-    ); // 글자 왼쪽 끝. 점선 시작 왼쪽에 두되 틀 밖으로 나가지 않게 한다
-    final centerY = math.max(
-      frame.bottom + labelInset + tickLabelSize / 2,
-      lower - tickLabelSize / 2,
-    ); // 글자 세로 가운데. 아래 점선 바로 밑
+  /// 작성: 2026-10-22 17:40:00 · nada
+  /// 함수: _drawA95Label
+  /// 목적: A95 점선 오른쪽 끝에 "A95" 를 적는다. 자리는 `placeA95Label()` 이
+  ///       고른다(ptp · Jptp 글자 상자와 빨간 점을 피한다). 점선을 긋지 않는
+  ///       결과(`_drawA95Band()` 와 같은 조건)면 적지 않는다.
+  /// 인자: canvas — 그리기 도구
+  ///       frame — 축 틀과 값 옮기기
+  ///       spec — 그리는 축의 사양
+  ///       result — 지표와 운행 구간을 가진 측정 결과
+  ///       taken — 피할 상자 · 점 자리 (`_drawPeakToPeak()` 반환)
+  /// 근거: 인용 — 2026-10-22 리뷰 지시 "2쪽 "A95" 글자: 점선 오른쪽 끝으로
+  ///       옮긴다. 다른 글자 상자 · 표시점과 겹치지 않는 규칙을 그대로 쓴다"
+  void _drawA95Label(
+    PdfGraphics canvas,
+    _ChartFrame frame,
+    ChartAxisSpec spec,
+    MeasurementResult result,
+    List<_Box> taken,
+  ) {
+    // → 로직 이동: ReportChartAxes.a95Of()
+    final a95 = ReportChartAxes.a95Of(spec, result); // 적을 A95, 없으면 null
+    if (a95 == null || result.travelWindow == null) return;
+    final span = _travelSpan(frame, result); // → 로직 이동: _travelSpan()
+    // → 로직 이동: placeA95Label()
+    final place = placeA95Label(
+      frame: (
+        left: frame.left,
+        bottom: frame.bottom,
+        right: frame.right,
+        top: frame.top,
+      ),
+      spanRight: span.right,
+      upperY: frame.yOfValue(a95 / 2),
+      lowerY: frame.yOfValue(-a95 / 2),
+      width: _widthOf(a95Label, tickLabelSize),
+      avoid: <ChartRect>[
+        for (final box in taken)
+          (
+            left: box.left,
+            bottom: box.bottom,
+            width: box.width,
+            height: box.height,
+          ),
+      ],
+    ); // 글자 자리
     // → 로직 이동: _drawText()
     _drawText(
       canvas,
       text: a95Label,
       size: tickLabelSize,
-      x: x,
-      centerY: centerY,
+      x: place.left,
+      centerY: place.bottom + tickLabelSize / 2,
     );
+  }
+
+  /// 작성: 2026-10-22 17:40:00 · nada
+  /// 함수: placeA95Label
+  /// 목적: "A95" 글자 자리를 고른다. 아래 순서로 피할 자리(`avoid`)와 겹치지
+  ///       않는 첫 자리를 쓰고, 모두 겹치면 첫 자리를 쓴다(`_drawSideLabel()`
+  ///       과 같은 규칙).
+  ///       1. 점선 오른쪽 끝 바깥, 아래 점선 바로 밑
+  ///       2. 점선 오른쪽 끝 바깥, 위 점선 바로 위
+  ///       3. 점선 오른쪽 끝 안쪽(글자 끝 = 점선 끝), 아래 점선 밑
+  ///       4. 점선 오른쪽 끝 안쪽, 위 점선 위
+  ///       어느 자리든 축 틀 안으로 밀어 넣는다(운행 구간이 기록 끝까지면
+  ///       바깥 자리가 틀을 넘는다).
+  /// 인자: frame — 축 틀 (포인트)
+  ///       spanRight — 점선 오른쪽 끝 (포인트)
+  ///       upperY, lowerY — 위 · 아래 점선 세로 자리 (포인트)
+  ///       width — 글자 폭 (포인트)
+  ///       avoid — 피할 자리 (포인트)
+  /// 반환: 글자 네모 (왼쪽 · 아래 끝, 가로 · 세로)
+  static ChartRect placeA95Label({
+    required ({double left, double bottom, double right, double top}) frame,
+    required double spanRight,
+    required double upperY,
+    required double lowerY,
+    required double width,
+    required List<ChartRect> avoid,
+  }) {
+    const height = tickLabelSize; // 글자 세로 (포인트)
+    final minLeft = frame.left + labelInset; // 글자 왼쪽 끝 하한
+    final maxLeft = math.max(minLeft, frame.right - labelInset - width); // 상한
+    final minBottom = frame.bottom + labelInset; // 글자 아래 끝 하한
+    final maxBottom = math.max(
+      minBottom,
+      frame.top - labelInset - height,
+    ); // 글자 아래 끝 상한
+    // 틀 안으로 밀어 넣은 자리
+    ChartRect at(double left, double bottom) => (
+      left: left.clamp(minLeft, maxLeft).toDouble(),
+      bottom: bottom.clamp(minBottom, maxBottom).toDouble(),
+      width: width,
+      height: height,
+    );
+    // 두 네모가 겹치는지. 변이 맞닿기만 하면 겹치지 않는다(`_Box.overlaps()`)
+    bool overlaps(ChartRect a, ChartRect b) =>
+        a.left < b.left + b.width &&
+        b.left < a.left + a.width &&
+        a.bottom < b.bottom + b.height &&
+        b.bottom < a.bottom + a.height;
+
+    final below = lowerY - labelGap - height; // 아래 점선 밑 (아래 끝)
+    final above = upperY + labelGap; // 위 점선 위 (아래 끝)
+    final outside = spanRight + labelGap; // 점선 끝 바깥 (왼쪽 끝)
+    final inside = spanRight - width; // 점선 끝 안쪽 (왼쪽 끝)
+    final candidates = <ChartRect>[
+      at(outside, below),
+      at(outside, above),
+      at(inside, below),
+      at(inside, above),
+    ]; // 차례로 볼 자리
+    for (final candidate in candidates) {
+      if (!avoid.any((box) => overlaps(candidate, box))) return candidate;
+    }
+    return candidates.first;
   }
 
   /// 작성: 2026-10-20 15:02:44 · nada
@@ -1716,6 +1857,12 @@ class ReportChartRenderer {
     return tickLabelDecimals;
   }
 }
+
+/// 작성: 2026-10-22 17:40:00 · nada
+/// 타입: ChartRect
+/// 목적: PDF 좌표(포인트, 아래가 0)의 네모 자리. 글자 자리를 고르는 공개
+///       함수(`ReportChartRenderer.placeA95Label()`)가 주고받는다.
+typedef ChartRect = ({double left, double bottom, double width, double height});
 
 /// 작성: 2026-10-21 13:10:00 · nada
 /// 클래스: _Box
