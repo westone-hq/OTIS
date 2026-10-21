@@ -91,13 +91,10 @@ final List<_Metric> _metrics = <_Metric>[
   _Metric(
     label: '최대 속도',
     unit: 'm/s',
-    // 리포트 1쪽과 같은 0.05 단위 반올림으로 보인다(저장 값은 그대로)
-    read: (r) => switch (r.maxSpeed) {
-      // → 로직 이동: ReportMetric.roundSpeed()
-      final speed? => ReportMetric.roundSpeed(speed),
-      null => null,
-    },
-    decimals: 2,
+    read: (r) => r.maxSpeed,
+    // 리포트 1쪽과 같은 자리 수(반올림 없이 둘째 자리)
+    // → 로직 이동: ReportMetric.decimalsFor()
+    decimals: ReportMetric.decimalsFor('m/s'),
   ),
 ];
 

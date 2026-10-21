@@ -126,12 +126,14 @@ flutter test --tags screenshot --run-skipped test/screenshots
   (`MeasurementRepository.listEntries()`, 2026-10-15). 측정 일시를 "지금"
   으로 채워 읽지 않는다(`MeasurementResult.fromMap` 은 `FormatException`).
 - 리포트 값 칸 소수 자리: 최대 속도 둘째 자리(1.74m/s), 나머지 첫째 자리,
-  100 이상은 정수(`ReportMetric._decimalsByUnit`). 최대 속도는 그 전에
-  0.05 m/s 단위로 반올림한다(2026-10-22, `ReportMetric.roundSpeed()`, 1.518 →
-  1.50 · 1.737 → 1.75). 2026-10-21 비교 7건 가운데 5건이 이 규칙으로 OTIS
-  표시값과 같고, 1.529 · 1.532 는 1.55 가 돼 OTIS 1.50 과 다르다(2026-10-21
-  보고의 "7건 모두" 는 틀렸다). OTIS 규칙은 미확인(정격 속도 표기일 수
-  있다). 결과 화면도 같은 함수를 쓰고, result.json 은 반올림 전 값이다.
+  100 이상은 정수(`ReportMetric._decimalsByUnit`, 결과 화면도
+  `ReportMetric.decimalsFor()` 로 같은 자리). 최대 속도는 반올림 단위 없이
+  둘째 자리다 — 2026-10-22 에 넣은 0.05 m/s 반올림을 같은 날 되돌렸다.
+  2026-10-21 비교 7건 가운데 5건만 OTIS 표시값과 같았다(1.529 · 1.532 →
+  1.55, OTIS 1.50). 정속 구간 평균 속도를 0.05 로 반올림하면 7건 모두
+  맞지만 OTIS 값이 1.50 · 1.75 두 가지뿐이고 경계 여유가 0.003 이라 근거가
+  약하다 — result.json `steadySpeedMps`(표시 안 함)에 남겨 다른 정격 속도
+  현장에서 확인한다(`docs/pending_checks.md`).
 - 사람이 읽는 시각(리포트 머리말 · 측정 ID · 저장 결과 목록 · 결과 화면 ·
   메일 제목)은 기기 시간대와 상관없이 한국 시간이다(`KoreaTime.of()`,
   2026-10-15). 저장 값(`dateTime`)은 그대로 둔다.

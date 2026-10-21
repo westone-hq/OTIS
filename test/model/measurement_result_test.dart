@@ -198,14 +198,20 @@ void main() {
     expect(back.placement, 'faceUp');
     expect(back.placementKind, Placement.faceUp);
     expect(back.placementGravityZMg, 998.5);
+    final speed = MeasurementResult.fromJson(
+      jsonEncode(_result().copyWith(steadySpeedMps: 1.507).toMap()),
+    ); // 정속 평균 속도를 실은 결과
+    expect(speed.steadySpeedMps, 1.507);
 
     final legacy = _result().toMap()
       ..remove('placement')
-      ..remove('placementGravityZMg'); // 2026-10-22 이전 형태
+      ..remove('placementGravityZMg')
+      ..remove('steadySpeedMps'); // 2026-10-22 이전 형태
     final old = MeasurementResult.fromJson(jsonEncode(legacy)); // 예전 결과
     expect(old.placement, isNull);
     expect(old.placementKind, isNull);
     expect(old.placementGravityZMg, isNull);
+    expect(old.steadySpeedMps, isNull);
   });
 
   test('측정 일시가 없거나 깨졌으면 지금 시각으로 채우지 않고 실패한다', () {

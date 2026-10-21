@@ -192,6 +192,35 @@ void main() {
     }
   });
 
+  test('정속 구간 평균 속도를 결과에 남긴다(표시 안 함, 2026-10-22)', () {
+    // 2026-10-21 파이썬 계산(작업메모)과 같은 값. OTIS 표시값은 1.50 · 1.75
+    const expected = <String, double>{
+      'otis_up1': 1.522,
+      'otis_up2': 1.512,
+      'otis_down3': 1.480,
+      'dev_up1': 1.507,
+      'dev_up2': 1.503,
+      'dev_down3': 1.517,
+      'ride_reference': 1.732,
+    }; // 기록 → 정속 평균 (m/s)
+    final paths = <String, String>{
+      ...otis1021Records,
+      'ride_reference': rideReferencePath,
+    }; // 기록 이름 → 경로
+    for (final entry in expected.entries) {
+      final result = assembleRecord(
+        paths[entry.key]!,
+        flipVertical: faceUpRecords.contains(entry.key),
+      ).result!;
+      expect(
+        result.steadySpeedMps,
+        closeTo(entry.value, 0.002),
+        reason: entry.key,
+      );
+      expect(result.steadySpeedMps!, lessThan(result.maxSpeed!));
+    }
+  });
+
   test('구간 판정 상수는 점검 지시 값이다', () {
     expect(CaptureConfig.zoneRunSpeedMps, 0.05);
     expect(CaptureConfig.zonePeakRatio, 0.5);

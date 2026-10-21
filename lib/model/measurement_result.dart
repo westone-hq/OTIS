@@ -6,7 +6,7 @@ import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-22 09:30:00 · nada
+/// 수정: 2026-10-22 15:00:00 · nada
 /// 클래스: MeasurementResult
 /// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
 ///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
@@ -199,8 +199,13 @@ class MeasurementResult {
   /// 거치 방향 판정에 쓴 중력 Z 평균 (mg). null 의 뜻은 `placement` 와 같다
   final double? placementGravityZMg;
 
+  /// 정속 구간(`motionZones`) 평균 속도 크기 (m/s). 화면 · 리포트에 보이지
+  /// 않고, OTIS 최대 속도 표시 규칙을 다른 정격 속도 현장에서 견줄 때 쓰려고
+  /// 남긴다(2026-10-22). null 이면 정속 구간을 정하지 못했거나 그 전 결과다
+  final double? steadySpeedMps;
+
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 15:00:00 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -240,6 +245,7 @@ class MeasurementResult {
   ///       motionZonesFailure — 그 구간을 정하지 못한 사유. 없으면 null
   ///       placement — 거치 방향 이름. 없으면 null
   ///       placementGravityZMg — 판정에 쓴 중력 Z 평균 (mg). 없으면 null
+  ///       steadySpeedMps — 정속 구간 평균 속도 크기 (m/s). 없으면 null
   const MeasurementResult({
     required this.id,
     required this.jobNo,
@@ -286,10 +292,11 @@ class MeasurementResult {
     this.motionZonesFailure,
     this.placement,
     this.placementGravityZMg,
+    this.steadySpeedMps,
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 15:00:00 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -342,6 +349,7 @@ class MeasurementResult {
     String? motionZonesFailure,
     String? placement,
     double? placementGravityZMg,
+    double? steadySpeedMps,
   }) {
     return MeasurementResult(
       id: id ?? this.id,
@@ -389,11 +397,12 @@ class MeasurementResult {
       motionZonesFailure: motionZonesFailure ?? this.motionZonesFailure,
       placement: placement ?? this.placement,
       placementGravityZMg: placementGravityZMg ?? this.placementGravityZMg,
+      steadySpeedMps: steadySpeedMps ?? this.steadySpeedMps,
     );
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 15:00:00 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -438,6 +447,7 @@ class MeasurementResult {
       'motionZonesFailure': motionZonesFailure,
       'placement': placement,
       'placementGravityZMg': placementGravityZMg,
+      'steadySpeedMps': steadySpeedMps,
       'xSeries': xSeries,
       'ySeries': ySeries,
       'zSeries': zSeries,
@@ -450,7 +460,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 15:00:00 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -466,7 +476,7 @@ class MeasurementResult {
   ///       운행 구간 · 그 실패 사유도 같다. 2026-10-15 이전 파일에는 없다.
   ///       수직 가감속 최대 · 최대 위치 · 정속 구간 · 그 실패 사유도 같다.
   ///       2026-10-21 이전 파일에는 없다. 거치 방향 · 그 중력 Z 평균도 같다.
-  ///       2026-10-22 이전 파일에는 없다.
+  ///       2026-10-22 이전 파일에는 없다. 정속 구간 평균 속도도 같다.
   ///       측정 일시는 채우지 않는다 — 없거나 읽을 수 없으면 "지금" 으로
   ///       대신하지 않고 실패를 올린다. 대신 넣으면 예전 결과가 방금 잰
   ///       것처럼 보이고 목록 차례도 틀어진다(관통 원칙 1 · 4).
@@ -524,6 +534,7 @@ class MeasurementResult {
       motionZonesFailure: map['motionZonesFailure'] as String?,
       placement: map['placement'] as String?,
       placementGravityZMg: (map['placementGravityZMg'] as num?)?.toDouble(),
+      steadySpeedMps: (map['steadySpeedMps'] as num?)?.toDouble(),
       xSeries: toDoubleList(map['xSeries']),
       ySeries: toDoubleList(map['ySeries']),
       zSeries: toDoubleList(map['zSeries']),

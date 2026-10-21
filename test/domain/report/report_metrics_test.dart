@@ -101,23 +101,19 @@ void main() {
 
       expect(metrics.maxSpeed.value, closeTo(1.743390961, 1e-9));
       expect(metrics.travelDistance.value, closeTo(57.093948064, 1e-9));
-      // 최대 속도는 0.05 단위로 반올림해 둘째 자리까지 찍는다(2026-10-22)
-      expect(metrics.maxSpeed.display, '1.75m/s');
+      // 최대 속도는 반올림 단위 없이 둘째 자리(2026-10-22 0.05 반올림 되돌림)
+      expect(metrics.maxSpeed.display, '1.74m/s', reason: '속도는 둘째 자리');
       expect(metrics.travelDistance.display, '57.1m');
     });
 
-    test('최대 속도 표시는 0.05 m/s 단위 반올림이다', () {
+    test('최대 속도는 0.05 단위로 반올림하지 않고 둘째 자리로 찍는다', () {
       String shown(double speed) =>
           ReportMetrics.from(_result(maxSpeed: speed)).maxSpeed.display;
-      expect(shown(1.518), '1.50m/s');
-      expect(shown(1.737), '1.75m/s');
-      expect(shown(1.525), '1.50m/s', reason: '1.525 는 이진수로 1.52499… 라 가까운 쪽');
-      expect(shown(1.526), '1.55m/s');
-      expect(shown(1.474), '1.45m/s');
-      expect(shown(1.5), '1.50m/s');
-      expect(ReportMetric.roundSpeed(1.532), closeTo(1.55, 1e-12));
-      expect(ReportMetric.roundSpeed(1.500), closeTo(1.50, 1e-12));
-      expect(ReportMetric.speedDisplayStepMps, 0.05);
+      expect(shown(1.518), '1.52m/s');
+      expect(shown(1.529), '1.53m/s');
+      expect(shown(1.737), '1.74m/s');
+      expect(ReportMetric.decimalsFor('m/s'), 2);
+      expect(ReportMetric.decimalsFor('dBA'), 1);
     });
 
     test('최대 속도 · 운행 거리는 판정없음이고 기준 칸에는 0 을 찍는다', () {

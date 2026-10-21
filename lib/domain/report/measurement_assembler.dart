@@ -391,6 +391,10 @@ class MeasurementAssembler {
             : _positionAtPeak(steadyPeak, zWeighted, motion.position),
         motionZones: zones,
         motionZonesFailure: zoning.failureReason,
+        // → 로직 이동: _steadySpeed()
+        steadySpeedMps: zones == null
+            ? null
+            : _steadySpeed(zones, motion.speed),
         xA95: a95Of(xWeighted),
         yA95: a95Of(yWeighted),
         zA95: a95Of(zWeighted),
@@ -402,6 +406,25 @@ class MeasurementAssembler {
       ),
       motion: motion.motion,
     );
+  }
+
+  /// 작성: 2026-10-22 15:00:00 · nada
+  /// 함수: _steadySpeed
+  /// 목적: 정속 구간 평균 속도 크기를 낸다. 표시하지 않고 결과 파일에만 남겨
+  ///       다른 현장에서 OTIS 최대 속도 표시 규칙을 견줄 때 쓴다.
+  /// 인자: zones — 정속 · 가감속 구간
+  ///       speed — 속도 시계열 (m/s, 부호 그대로)
+  /// 반환: 평균 속도 크기 (m/s)
+  /// 식: mean(|speed(i)|),  i = 정속 시작 .. 정속 끝
+  /// 근거: 측정 — 2026-10-21 비교 7건에서 이 값을 0.05 단위로 반올림하면
+  ///       OTIS 표시값(1.50 · 1.75)과 모두 같았다. 다만 OTIS 값이 두 가지뿐이고
+  ///       경계 여유가 0.003 이라 근거가 약하다(docs/pending_checks.md)
+  static double _steadySpeed(MotionZones zones, List<double> speed) {
+    var sum = 0.0; // 정속 구간 속도 크기 합
+    for (var i = zones.steadyStartIndex; i <= zones.steadyEndIndex; i++) {
+      sum += speed[i].abs();
+    }
+    return sum / (zones.steadyEndIndex - zones.steadyStartIndex + 1);
   }
 
   /// 작성: 2026-10-21 13:10:00 · nada

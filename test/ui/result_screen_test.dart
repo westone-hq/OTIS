@@ -135,11 +135,7 @@ void main() {
       expect(find.text(label), findsOneWidget, reason: label);
     }
     expect(find.text('26.0'), findsOneWidget);
-    expect(
-      find.text('1.75'),
-      findsOneWidget,
-      reason: '최대 속도 1.74 는 리포트와 같은 0.05 단위 반올림으로 1.75',
-    );
+    expect(find.text('1.74'), findsOneWidget, reason: '리포트와 같은 둘째 자리');
     expect(
       find.byIcon(Icons.error_outline),
       findsNWidgets(2),
