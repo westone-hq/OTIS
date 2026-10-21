@@ -13,7 +13,6 @@ import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/report/motion_zones.dart';
-import 'package:vibration_checker/domain/report/noise_slow.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
@@ -535,25 +534,6 @@ void main() {
       expect(
         ReportChartAxes.seriesOf(ReportChartAxes.noise, _result()),
         isEmpty,
-      );
-    });
-
-    test('소음 차트는 Slow(1초) 시계열을 그리고 최대 표시점이 그 위에 있다', () {
-      // 2026-10-22: 최대 표시점 값(1쪽 표 소음 최대)이 그린 곡선 위에 정확히
-      // 놓여야 자리를 찾는다(`indexInTravel` 은 값이 같은 첫 자리를 찾는다)
-      final noisy = _result().copyWith(
-        noiseSeries: List<double>.generate(
-          _rideSampleCount,
-          (i) => 45.0 + (i >= 3000 && i < 3768 ? 12.0 : 0.0),
-        ),
-      ); // 3000번째부터 3초 봉우리가 있는 소음
-      final drawn = ReportChartAxes.seriesOf(ReportChartAxes.noise, noisy);
-
-      expect(drawn, NoiseSlow.series(noisy.noiseSeries, noisy.sampleRate));
-      expect(drawn.reduce(math.max), lessThan(57.0), reason: 'Fast 는 57');
-      expect(
-        ReportChartAxes.indexInTravel(drawn, noisy.noiseMaxSlow!, noisy),
-        greaterThan(3000),
       );
     });
 

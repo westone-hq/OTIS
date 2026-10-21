@@ -12,7 +12,6 @@ import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/report/motion_zones.dart';
-import 'package:vibration_checker/domain/report/noise_slow.dart';
 import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
@@ -277,8 +276,7 @@ class MeasurementRecorder {
   ///          + `MeasurementAssembler.kinematicsMethodLabel` +
   ///          `MeasurementAssembler.jerkMethodLabel` +
   ///          `MeasurementAssembler.accelChartMethodLabel` +
-  ///          `MotionZones.methodLabel` + `noiseMethodLabel()` +
-  ///          `NoiseSlow.methodLabel`)
+  ///          `MotionZones.methodLabel` + `noiseMethodLabel()`)
   ///          과 거치 방향을 실어
   ///          저장소에 저장한다. 로그인한
   ///          작업자(성명 · 사번 · 업체명 · 관리팀)도 이 시점 값을 함께 싣는다
@@ -439,8 +437,7 @@ class MeasurementRecorder {
               '+${MeasurementAssembler.accelChartMethodLabel}'
               '+${MotionZones.methodLabel}'
               // → 로직 이동: noiseMethodLabel()
-              '+${noiseMethodLabel(noiseSampleRateHz)}'
-              '+${NoiseSlow.methodLabel}',
+              '+${noiseMethodLabel(noiseSampleRateHz)}',
         ),
       );
 

@@ -234,10 +234,7 @@ def _pipeline(src):
     wn = noise100[w]
     wn = wn[wn != 0]
     out['noiseAvg'] = float(wn.mean()) if len(wn) else None
-    # 소음 최대 = Fast 열에 1초 에너지 평활(Slow)을 더한 값의 구간 최대 (2026-10-22, 앱 NoiseSlow)
-    sn = noise_slow(noise100)[w]
-    sn = sn[sn != 0]
-    out['noiseMax'] = float(sn.max()) if len(sn) else None
+    out['noiseMax'] = float(wn.max()) if len(wn) else None
     return out
 
 
@@ -305,28 +302,6 @@ def jerk(out_dir: str) -> None:
 NOISE_RATES = (44100, 48000)  # NoiseCaptureHandler FALLBACK · PREFERRED_SAMPLE_RATE
 NOISE_HOP_HZ = 512             # NoiseCaptureHandler.HOP_HZ
 NOISE_TIME_WEIGHT_SEC = 0.125  # NoiseCaptureHandler.FAST_TIME_WEIGHT_SEC (Fast)
-NOISE_MAX_SLOW_SEC = 1.0       # CaptureConfig.noiseMaxSlowSec (Dart 가 소음 최대에 더하는 Slow)
-
-
-def noise_slow(dba, fs=FS, tau=NOISE_MAX_SLOW_SEC):
-    """Fast 소음열(dBA, 0 = 미측정)에 에너지 기준 지수평활을 더한 Slow 열 (앱 NoiseSlow.series).
-
-    0 표본은 0 그대로 두고 상태를 건드리지 않는다. 첫 측정 표본은 그대로.
-    """
-    k = 1 - np.exp(-(1 / fs) / tau)
-    out = np.zeros(len(dba))
-    e = None
-    for i, level in enumerate(dba):
-        if level == 0:
-            continue
-        p = 10 ** (level / 10)
-        if e is None:
-            e = p
-            out[i] = level
-            continue
-        e = e + k * (p - e)
-        out[i] = 10 * np.log10(e)
-    return out
 
 
 def _a_weighting_sos(fs):
@@ -368,12 +343,6 @@ def noise(out_dir: str) -> None:
             'input': x.tolist(),
             'smoothed': y.tolist(),
         }
-    # Dart 소음 최대용 Slow(1초): 100Hz dBA 열(앞 0 구간 · 50 → 70 계단 · 중간 0)
-    lv = np.concatenate([np.zeros(20), np.full(150, 50.0), np.full(150, 70.0),
-                         np.zeros(10), np.full(170, 50.0)])
-    cases['slowTimeWeightSec'] = NOISE_MAX_SLOW_SEC
-    cases['slow'] = {'fs': FS, 'input': lv.tolist(),
-                     'slow': noise_slow(lv).tolist()}
     (out / 'noise_weighting_cases.json').write_text(json.dumps(cases, indent=1))
     print('noise_weighting_cases.json', NOISE_RATES)
 

@@ -269,8 +269,7 @@ class ReportMetrics {
         ? null
         // → 로직 이동: _withoutWarmupZeros()
         : _average(_withoutWarmupZeros(noiseRange)); // 소음 평균 (dBA)
-    // → 로직 이동: MeasurementResult.noiseMaxSlow
-    final noisePeak = result.noiseMaxSlow; // 소음 최대 (dBA, Slow 1초)
+    final noisePeak = result.noiseMax; // 소음 최대 (dBA). 시계열에서 다시 세지 않는다
 
     // 수평 최대 행의 적색 칸은 하나뿐이다. X 와 Y 기준이 갈라지면 그 칸으로
     // 둘을 다 보여줄 수 없고, 조용히 X 기준만 나가 틀린 표가 된다. 방어

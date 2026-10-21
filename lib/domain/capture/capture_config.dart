@@ -228,15 +228,6 @@ class CaptureConfig {
   static const int placementAlertDelayMs =
       defaultEdgeTrimMs + defaultBaselineWindowMs + placementAlertMarginMs;
 
-  /// 작성: 2026-10-22 16:20:00 · nada
-  /// 변수: noiseMaxSlowSec
-  /// 목적: 소음 최대를 낼 때 저장된 Fast 소음열에 더하는 지수평활 시정수
-  ///       (초, 에너지 기준, `NoiseSlow`). 소음 평균에는 쓰지 않는다.
-  /// 근거: 표준 — IEC 61672-1 "Slow" 1초. 측정 — 2026-10-21 동시 측정 3회
-  ///       최대가 OTIS PDF 와 +1.0 / −0.6 / −0.6 dB. 같은 평활로 평균을 내면
-  ///       0.7 ~ 2.6 dB 올라 평균은 Fast 그대로 둔다(2026-10-22 리뷰 결정)
-  static const double noiseMaxSlowSec = 1.0;
-
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 변수: defaultTargetSampleRateHz
   /// 목적: targetSampleRateHz 기본값이다.
@@ -423,7 +414,11 @@ class CaptureConfig {
   ///       출발 충격은 넓힌 길이와 상관없이 OTIS 보다 16 ~ 21% 크다(처리 차이).
   ///       넓힌 구간은 기록 앞뒤 버림(0.5초)과 겹치지 않는다(운행 시작이 가장
   ///       이른 기록도 2.1초). 정지 뒤 넓힌 구간의 최대는 2 ~ 8 mg 라 문 열림은
-  ///       들어오지 않는다
+  ///       들어오지 않는다.
+  ///       넓히기 전 ride_reference Jptp 7.4 는 원본 18.9 의 −61% 라, OTIS 는
+  ///       출발 · 정지 충격을 Jptp 에 넣는 것으로 본다. 다만 0.4초 18.9 /
+  ///       0.5초 25.7 로 경계에 민감하고 원본 기록 하나에 맞춘 값이다. Jptp 는
+  ///       판정 없이 2쪽 수직 차트에만 적는다(2026-10-22 리뷰 결정 "유지")
   static const int zoneTransientPaddingMs = 400;
 
   /// 작성: 2026-10-21 13:10:00 · nada

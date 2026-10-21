@@ -3,12 +3,10 @@ import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-15 20:13:49 · nada
-/// 수정: 2026-10-22 16:20:00 · nada
 /// 함수: _result
 /// 목적: 판정만 보려고 만드는 측정 결과. 판정에 쓰이지 않는 값은 비워 둔다.
 /// 인자: xPtp, yPtp, zPtp — 축별 진동 p2p (mg). 안 주면 null
-///       noiseMax — 최대 소음 (dBA). 안 주면 null. 판정 게터는 소음열에서
-///       최대를 다시 세므로(`noiseMaxSlow`) 이 값 한 표본짜리 소음열도 싣는다
+///       noiseMax — 최대 소음 (dBA). 안 주면 null
 /// 반환: 판정 게터만 볼 수 있게 채운 측정 결과
 MeasurementResult _result({
   double? xPtp,
@@ -31,7 +29,7 @@ MeasurementResult _result({
     xSeries: const <double>[],
     ySeries: const <double>[],
     zSeries: const <double>[],
-    noiseSeries: noiseMax == null ? const <double>[] : <double>[noiseMax],
+    noiseSeries: const <double>[],
     positionSeries: const <double>[],
     speedSeries: const <double>[],
     accelSeries: const <double>[],

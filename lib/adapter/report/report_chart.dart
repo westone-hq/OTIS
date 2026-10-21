@@ -8,7 +8,6 @@ import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
-import 'package:vibration_checker/domain/report/noise_slow.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
@@ -284,10 +283,7 @@ class ReportChartAxes {
       case 'z':
         return result.zSeries;
       case 'noise':
-        // 소음 차트 · 최대 표시점은 Slow(1초) 시계열이다(2026-10-22). 평균
-        // 점선은 표의 평균(Fast)이다
-        // → 로직 이동: NoiseSlow.series()
-        return NoiseSlow.series(result.noiseSeries, result.sampleRate);
+        return result.noiseSeries;
       case 'pos':
         return result.positionSeries;
       case 'vel':

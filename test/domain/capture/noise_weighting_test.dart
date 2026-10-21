@@ -3,9 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
-import 'package:vibration_checker/domain/report/noise_slow.dart';
 
 /// 작성: 2026-10-22 12:00:00 · nada
 /// 변수: _kotlinPath
@@ -62,8 +60,6 @@ List<List<double>> _sos(String source, String name) {
 ///       - Fast(0.125초) 지수평활 — 앱과 같은 식(홉마다 a = exp(−홉/fs/τ), 첫
 ///         값은 그대로)으로 계산한 응답이 SciPy `lfilter` 와 같은지
 ///       - Dart 쪽 시정수(`kNoiseTimeWeightSec`)가 코틀린과 같은지
-///       - 소음 최대에 쓰는 Dart Slow(1초) 평활(`NoiseSlow.series()`)이 SciPy
-///         정본과 같은지
 void main() {
   final source = File(_kotlinPath).readAsStringSync(); // 코틀린 소스
   final cases =
@@ -132,29 +128,9 @@ void main() {
     }
   });
 
-  test('처리 방식 표시에 Fast · 표본 속도 · 최대 Slow 를 남긴다', () {
+  test('처리 방식 표시에 Fast · 표본 속도를 남긴다', () {
     expect(noiseMethodLabel(48000), 'noise(A,fast,+105.2,48000Hz)');
     expect(noiseMethodLabel(44100), 'noise(A,fast,+105.2,44100Hz)');
     expect(noiseMethodLabel(null), 'noise(A,fast,+105.2)');
-    expect(NoiseSlow.methodLabel, 'noisemax(slow1.0s)');
-  });
-
-  test('소음 최대용 Slow(1초) 평활이 SciPy 정본과 같다', () {
-    expect(cases['slowTimeWeightSec'], CaptureConfig.noiseMaxSlowSec);
-    final c = cases['slow'] as Map<String, dynamic>; // Slow 픽스처
-    final input = [for (final v in c['input'] as List) (v as num).toDouble()];
-    final expected = [for (final v in c['slow'] as List) (v as num).toDouble()];
-    final slow = NoiseSlow.series(
-      input,
-      (c['fs'] as num).toDouble(),
-    ); // 앱 Slow 열
-    expect(slow.length, expected.length);
-    for (var i = 0; i < expected.length; i++) {
-      expect(slow[i], closeTo(expected[i], 1e-9), reason: '$i');
-    }
-    // 0(미측정)은 0 그대로, 첫 측정 표본은 평활 없이 그대로다
-    expect(slow.first, 0);
-    expect(slow[20], 50.0);
-    expect(slow[320], 0);
   });
 }

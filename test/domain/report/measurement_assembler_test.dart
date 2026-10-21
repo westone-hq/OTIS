@@ -546,14 +546,10 @@ void main() {
     });
 
     test('격자가 실어 온 소음을 그대로 옮기고 최대는 운행 구간 안에서 센다', () {
-      // 출발 직후(100행, 0.5 m 전)의 70 dBA 는 구간 밖이라 최대에 들지 않는다.
-      // 최대는 Slow(1초) 평활 뒤 값이라(2026-10-22) 52 dBA 를 5초(1280행)
-      // 이어 둔다 — 시정수의 5배라 Slow 가 52 에 0.05 dB 안으로 오른다
+      // 출발 직후(100행, 0.5 m 전)의 70 dBA 는 구간 밖이라 최대에 들지 않는다
       final model = MeasurementAssembler.assemble(
         grid: _grid(
-          _rideWithNoise(
-            (i) => i == 100 ? 70.0 : (i >= 4000 && i < 5280 ? 52.0 : 44.0),
-          ),
+          _rideWithNoise((i) => i == 100 ? 70.0 : (i == 4000 ? 52.0 : 44.0)),
         ),
         site: _site,
         id: 'id',
@@ -563,9 +559,7 @@ void main() {
       expect(model.noiseSeries.length, 8942);
       expect(model.noiseSeries[100], 70.0, reason: '시계열은 자르지 않는다');
       expect(model.travelWindow!.startIndex, greaterThan(100));
-      expect(model.noiseMax, closeTo(52.0, 0.05));
-      expect(model.noiseMax!, lessThan(52.0), reason: 'Slow 는 52 에 다가갈 뿐');
-      expect(model.noiseMaxSlow, model.noiseMax, reason: '열 때 다시 세도 같다');
+      expect(model.noiseMax, closeTo(52.0, 1e-9));
     });
 
     test('마이크가 꺼진 측정을 "소음 정상" 으로 찍지 않는다', () {
