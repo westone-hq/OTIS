@@ -235,10 +235,18 @@ void main() {
         ReportChartAxes.x,
         ReportChartAxes.y,
         ReportChartAxes.z,
+      ]) {
+        expect(spec.scale.kind, ChartScaleKind.symmetric, reason: spec.key);
+      }
+      for (final spec in <ChartAxisSpec>[
         ReportChartAxes.accel,
         ReportChartAxes.jerk,
       ]) {
-        expect(spec.scale.kind, ChartScaleKind.symmetric, reason: spec.key);
+        expect(
+          spec.scale.kind,
+          ChartScaleKind.paddedSymmetric,
+          reason: spec.key,
+        );
       }
       for (final spec in <ChartAxisSpec>[
         ReportChartAxes.position,
@@ -250,24 +258,73 @@ void main() {
       expect(ReportChartAxes.noise.scale.ignoreZeros, isTrue);
     });
 
-    test('가로축 여백은 3쪽 네 차트만 둔다', () {
-      for (final spec in <ChartAxisSpec>[
-        ReportChartAxes.position,
-        ReportChartAxes.speed,
-        ReportChartAxes.accel,
-        ReportChartAxes.jerk,
+    test('가속도 · 저크 틀은 ±1.2 x 최대 절댓값이고 눈금은 틀 안 0.2 간격이다', () {
+      // OTIS 3쪽 예: 가속도 최대 0.58 → ±0.70, 저크 0.61 → ±0.73
+      for (final (spec, peak) in <(ChartAxisSpec, double)>[
+        (ReportChartAxes.accel, 0.58),
+        (ReportChartAxes.jerk, 0.61),
       ]) {
-        expect(spec.padTime, isTrue, reason: spec.key);
+        final range = spec.rangeFor(<double>[-peak * 0.9, 0.1, peak]);
+        expect(range.max, closeTo(peak * 1.2, peak * 1.2 * 0.01));
+        expect(range.min, closeTo(-peak * 1.2, peak * 1.2 * 0.01));
+        expect(
+          range.ticks(),
+          <double>[
+            -0.6,
+            -0.4,
+            -0.2,
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+          ].map((v) => closeTo(v, 1e-9)).toList(),
+        );
       }
-      for (final spec in <ChartAxisSpec>[
-        ReportChartAxes.x,
-        ReportChartAxes.y,
-        ReportChartAxes.z,
-        ReportChartAxes.noise,
-      ]) {
-        expect(spec.padTime, isFalse, reason: spec.key);
-      }
+      // 음수 쪽이 크면 그 절댓값으로 대칭이다
+      final down = ReportChartAxes.accel.rangeFor(const <double>[-0.5, 0.2]);
+      expect(down.max, closeTo(0.6, 1e-9));
+      expect(down.min, closeTo(-0.6, 1e-9));
+      // 모두 0 이면 최소 범위
+      final still = ReportChartAxes.jerk.rangeFor(const <double>[0, 0]);
+      expect(<double>[still.min, still.max], const <double>[-0.6, 0.6]);
+    });
+
+    test('가로축은 2 · 3쪽 모두 양쪽 4% 여백이고 눈금은 30 · 45초 → 5초, 60초 넘으면 10초', () {
+      ({double start, double span, double step}) of(double seconds) =>
+          ReportChartRenderer.timeWindow((seconds * 100).round() + 1, 100);
+      final t31 = of(31.4); // OTIS 예 31.4초
+      expect(t31.start, closeTo(-1.256, 1e-6));
+      expect(t31.start + t31.span, closeTo(32.656, 1e-6));
+      expect(t31.step, 5);
+      expect(of(44.5).step, 5);
+      expect(of(60).step, 5);
+      expect(of(61).step, 10);
+      expect(of(10).step, 1);
       expect(ReportChartRenderer.timePaddingRatio, 0.04);
+    });
+
+    test('눈금 숫자는 한 축 안에서 소수 자리를 맞춘다', () {
+      String f(double v, double step) =>
+          ReportChartRenderer.formatTick(v, step);
+      expect(
+        <String>[
+          for (final v in <double>[0, 0.5, 1, 1.5]) f(v, 0.5),
+        ],
+        <String>['0.0', '0.5', '1.0', '1.5'],
+      );
+      expect(
+        <String>[
+          for (final v in <double>[0.6, 0.4, 0, -0.2]) f(v, 0.2),
+        ],
+        <String>['0.6', '0.4', '0.0', '-0.2'],
+      );
+      expect(f(25, 5), '25');
+      expect(f(40, 10), '40');
+      expect(f(0.25, 0.25), '0.25');
+      expect(f(-1e-17, 0.2), '0.0', reason: '−0 을 찍지 않는다');
+      expect(ReportChartRenderer.tickDecimals(5), 0);
+      expect(ReportChartRenderer.tickDecimals(0.5), 1);
+      expect(ReportChartRenderer.tickDecimals(0.25), 2);
     });
   });
 
@@ -722,9 +779,11 @@ void main() {
     ); // 축 틀 오른쪽 (포인트)
     // 행 첨자가 축 틀 안 어느 가로 자리인지 렌더러와 같은 식으로 구한다
     double xOfIndex(int index) {
-      const span = (_rideSampleCount - 1) / _sampleRate * 1.02; // 가로축 폭 (초)
+      const length = (_rideSampleCount - 1) / _sampleRate; // 측정 길이 (초)
+      const start = -length * 0.04; // 가로축 왼쪽 끝 (초)
+      const span = length * 1.08; // 가로축 폭 (초)
       return frameLeft +
-          (frameRight - frameLeft) * (index / _sampleRate) / span;
+          (frameRight - frameLeft) * (index / _sampleRate - start) / span;
     }
 
     // 차트 하나를 그려 그 쪽의 운행 구간 점선을 돌려준다

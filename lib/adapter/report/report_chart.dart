@@ -36,11 +36,6 @@ class ChartAxisSpec {
   /// 않는 축은 null
   final String? peakKey;
 
-  /// 가로축(시간) 양쪽에 측정 길이의 `ReportChartRenderer.timePaddingRatio`
-  /// 씩 여백을 둘지. 리포트 3쪽 네 차트가 쓴다(2026-10-21). false 면 0 초에서
-  /// 시작한다
-  final bool padTime;
-
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 수정: 2026-10-10 11:48:41 · nada
   /// 함수: ChartAxisSpec
@@ -50,14 +45,12 @@ class ChartAxisSpec {
   ///       scale — 세로축 범위 규칙
   ///       meanKey — 평균 기준선 값을 가져올 지표 행 이름. 기본 null
   ///       peakKey — 최댓값 표시점 값을 가져올 지표 행 이름. 기본 null
-  ///       padTime — 가로축 양쪽에 여백을 둘지. 기본 false
   const ChartAxisSpec({
     required this.key,
     required this.label,
     required this.scale,
     this.meanKey,
     this.peakKey,
-    this.padTime = false,
   });
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -181,7 +174,6 @@ class ReportChartAxes {
       minimum: ChartAxisRange(min: 0.0, max: 10.0, tickStep: 2.0),
       kind: ChartScaleKind.padded,
     ),
-    padTime: true,
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -199,31 +191,33 @@ class ReportChartAxes {
       minimum: ChartAxisRange(min: 0.0, max: 1.0, tickStep: 0.2),
       kind: ChartScaleKind.padded,
     ),
-    padTime: true,
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-10 11:48:41 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 변수: accel
-  /// 목적: 수직 가속도 차트의 세로축. 0 을 가운데 둔다.
-  /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 가속도 축
-  ///       첫 단계와 같다
+  /// 목적: 수직 가속도 차트의 세로축. 0 을 가운데 두고 틀 = ±(데이터 최대
+  ///       절댓값 x 1.2), 반올림 없음(`ChartScaleKind.paddedSymmetric`).
+  ///       최소 범위는 데이터가 모두 0 일 때만 쓴다.
+  /// 근거: 측정 — 2026-10-22 OTIS 리포트 3쪽 가속도 · 저크 차트 6개의 틀이
+  ///       데이터 최대 절댓값의 1.20 ~ 1.22배(저크 3회만 1.34). 예전 "±0.6
+  ///       을 넘으면 ±0.75 · ±1 로 넓힘" 을 바꾼다
   static const ChartAxisSpec accel = ChartAxisSpec(
     key: 'acc',
     label: 'acc (m/s^2)',
     scale: ChartScale(
       minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.3),
-      kind: ChartScaleKind.symmetric,
+      kind: ChartScaleKind.paddedSymmetric,
     ),
-    padTime: true,
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-21 10:05:00 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 변수: jerk
-  /// 목적: 저크(가속도가 얼마나 빠르게 변하는지) 차트의 세로축. 0 을
-  ///       가운데 둔다. 저크는 1.6Hz 저역 가속도를 미분한 값이라
-  ///       (`CaptureConfig.jerkLowpassHz`) 정상 운행이면 ±0.6 안이다.
+  /// 목적: 저크(가속도가 얼마나 빠르게 변하는지) 차트의 세로축. 가속도와
+  ///       같은 0 대칭 여백 규칙이다(`accel` 근거 참고). 저크는 1.6Hz 저역
+  ///       가속도를 미분한 값이라(`CaptureConfig.jerkLowpassHz`) 정상 운행이면
+  ///       ±0.6 안이다.
   /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관) · 2026-10-21
   ///       오티스폰 리포트 3쪽 저크 차트 범위 ±0.6, 눈금 0.2
   static const ChartAxisSpec jerk = ChartAxisSpec(
@@ -231,9 +225,8 @@ class ReportChartAxes {
     label: 'jerk (m/s^3)',
     scale: ChartScale(
       minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.2),
-      kind: ChartScaleKind.symmetric,
+      kind: ChartScaleKind.paddedSymmetric,
     ),
-    padTime: true,
   );
 
   /// 작성: 2026-09-26 14:10:00 · nada
@@ -762,33 +755,30 @@ class ReportChartRenderer {
   ///       나누기가 무너지는 것을 막는다
   static const double minTimeSpanSec = 1.0;
 
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 변수: timeHeadroom
-  /// 목적: 마지막 표본이 축 오른쪽 끝에 닿지 않도록 두는 여유 배수.
-  /// 근거: 인용 — 프로토타입 `charts.py` 가 쓰는 값과 같다
-  static const double timeHeadroom = 1.02;
-
   /// 작성: 2026-10-21 16:30:00 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 변수: timePaddingRatio
-  /// 목적: 여백을 두는 가로축(`ChartAxisSpec.padTime`)의 양쪽 여백을 측정
-  ///       길이에 대한 비로 둔 것.
+  /// 목적: 가로축 양쪽 여백을 측정 길이에 대한 비로 둔 것. 2 · 3쪽 여덟
+  ///       차트가 같이 쓴다(`timeWindow()`).
   /// 근거: 측정 — 2026-10-21 OTIS 리포트 3쪽 가로축. 31.4초 → −1.26 ~ 32.6초,
   ///       44.5초 → −1.79 ~ 46.3초 (양쪽 4%)
   static const double timePaddingRatio = 0.04;
 
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 변수: timeTickTarget
-  /// 목적: 가로축 눈금이 나눌 칸 수의 목표.
-  /// 근거: 미확인 — 원본 리포트의 가로축 눈금 간격은 측정 길이에 따라
-  ///       달라져 고정값을 옮겨 적을 수 없다. 차트 가로 폭에 라벨이
-  ///       겹치지 않는 선에서 이 수를 골랐다
-  static const int timeTickTarget = 6;
+  /// 작성: 2026-10-22 10:30:00 · nada
+  /// 변수: maxTimeTickCells
+  /// 목적: 가로축 눈금 간격을 고를 때 측정 길이를 나누는 칸 수의 상한.
+  /// 근거: 인용 — 2026-10-22 점검 지시 "30초 운행 → 5초, 45초 운행 → 5초,
+  ///       60초 넘으면 10초". 이 세 예를 모두 맞추는 상한이 12칸이다(45초 /
+  ///       5초 = 9칸, 60초 / 5초 = 12칸). 같은 지시의 "눈금 칸 6 ~ 8개" 는
+  ///       45초 → 5초(9칸)와 함께 맞출 수 없어 예를 따랐다. OTIS 2 · 3쪽은
+  ///       30초 운행에 5초 간격이다
+  static const int maxTimeTickCells = 12;
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-10 11:48:41 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 변수: tickLabelDecimals
-  /// 목적: 눈금 라벨을 만들 때 일단 남길 소수 자리 수. 뒤따르는 0 은
-  ///       지우므로 실제로 찍히는 자리 수는 이보다 적을 수 있다.
+  /// 목적: 눈금 라벨 소수 자리 수의 상한. 실제 자리 수는 그 축 눈금 간격이
+  ///       필요한 만큼이다(`tickDecimals()`).
   /// 근거: 측정 — 최소 범위 간격 중 가장 잘게 나뉜 것이 저크의 0.25 다.
   ///       넓힌 축은 최소 범위보다 넓고, 최소 범위 폭이 가장 좁은 저크도
   ///       1.0 이라 6칸으로 나눠도 간격이 0.1 아래로 내려가지 않는다.
@@ -836,13 +826,12 @@ class ReportChartRenderer {
     final values = ReportChartAxes.seriesOf(spec, result); // 이 차트가 그릴 값
     // → 로직 이동: ChartAxisSpec.rangeFor()
     final range = spec.rangeFor(values); // 값에 맞춰 고른 세로축 범위
-    // → 로직 이동: _timeWindow()
-    final time = _timeWindow(
+    // → 로직 이동: timeWindow()
+    final time = timeWindow(
       // → 로직 이동: ReportChartAxes.longestSeriesLength()
       ReportChartAxes.longestSeriesLength(result),
       result.sampleRate,
-      padded: spec.padTime,
-    ); // 가로축 왼쪽 끝 · 폭 (초)
+    ); // 가로축 왼쪽 끝 · 폭 · 눈금 간격 (초)
     final frame = _ChartFrame(
       left: ReportLayout.xToPoints(box.x),
       right: ReportLayout.xToPoints(box.x + box.width),
@@ -854,15 +843,12 @@ class ReportChartRenderer {
     ); // 이 차트의 축 틀과 값 옮기기
     final valueTicks = range.ticks(); // 세로축 눈금 값
     // → 로직 이동: _timeTicks()
-    final timeTicks = _timeTicks(
-      frame.timeStartSec,
-      frame.timeSpanSec,
-    ); // 가로축 눈금 시각 (초)
+    final timeTicks = _timeTicks(time); // 가로축 눈금 시각 (초)
 
     _drawGrid(canvas, frame, valueTicks, timeTicks);
     _drawFrame(canvas, frame);
-    _drawValueAxis(canvas, frame, valueTicks, spec.label);
-    _drawTimeAxis(canvas, frame, timeTicks);
+    _drawValueAxis(canvas, frame, valueTicks, range.tickStep, spec.label);
+    _drawTimeAxis(canvas, frame, timeTicks, time.step);
     if (values.isNotEmpty) {
       _drawSeries(
         canvas,
@@ -1325,90 +1311,65 @@ class ReportChartRenderer {
       ..setLineDashPattern();
   }
 
-  /// 작성: 2026-09-17 10:05:00 · nada
-  /// 함수: _timeSpan
-  /// 목적: 가로축이 담을 시간 폭을 정한다. 마지막 표본이 축 오른쪽 끝에
-  ///       딱 붙으면 파형 끝이 축 틀 선에 묻히므로 여유를 둔다.
-  ///
-  ///       표본 수는 그리는 축의 것이 아니라 측정 전체에서 가장 긴
-  ///       시계열의 것을 받는다. 축마다 제 길이로 폭을 잡으면, 마이크
-  ///       권한이 꺼져 소음이 빈 측정에서 소음 차트만 다른 시간대를
-  ///       그린다 — 위 세 차트가 0~45초인데 소음만 0~1초가 된다.
-  /// 인자: sampleCount — 측정 전체에서 가장 긴 시계열의 표본 개수
-  ///       sampleRate — 표본 주기 (Hz)
-  /// 반환: 가로축이 담을 시간 폭 (초). 표본이 하나 이하면 하한을 쓴다
-  /// 식: span = max(minTimeSpanSec, (sampleCount - 1) / sampleRate x
-  ///     timeHeadroom)
-  double _timeSpan(int sampleCount, double sampleRate) {
-    if (sampleCount < 2) return minTimeSpanSec;
-    final lastSecond = (sampleCount - 1) / sampleRate; // 마지막 표본의 시각
-    return math.max(minTimeSpanSec, lastSecond * timeHeadroom);
-  }
-
   /// 작성: 2026-10-21 16:30:00 · nada
-  /// 함수: _timeWindow
-  /// 목적: 가로축 왼쪽 끝과 폭을 정한다.
-  ///       - 여백 없음: 0 초부터 `_timeSpan()` 폭(오른쪽에만 2% 여유)
-  ///       - 여백 있음: 측정 길이 T 의 `timePaddingRatio` 씩 양쪽 — 왼쪽 끝
-  ///         −4% T, 오른쪽 끝 104% T. 리포트 3쪽 네 차트가 같은 값을 받아
-  ///         위아래 시간이 맞는다
+  /// 수정: 2026-10-22 10:30:00 · nada
+  /// 함수: timeWindow
+  /// 목적: 가로축 왼쪽 끝 · 폭 · 눈금 간격을 정한다. 리포트 2쪽 · 3쪽 여덟
+  ///       차트가 모두 이 함수 하나를 쓴다(2026-10-22, 2쪽에도 여백).
+  ///       - 측정 길이 T 의 `timePaddingRatio` 씩 양쪽에 여백 — 왼쪽 끝 −4% T,
+  ///         오른쪽 끝 104% T. 0 초가 틀 안쪽에 온다
+  ///       - 눈금 간격은 1 · 2 · 5 x 10ⁿ 가운데 T 를 `maxTimeTickCells` 칸
+  ///         이하로 나누는 가장 작은 값(30 · 45초 → 5초, 60초 넘으면 10초)
+  ///       표본 수는 그리는 축의 것이 아니라 측정 전체에서 가장 긴 시계열의
+  ///       것을 받는다. 축마다 제 길이로 폭을 잡으면, 마이크 권한이 꺼져
+  ///       소음이 빈 측정에서 소음 차트만 다른 시간대를 그린다.
   /// 인자: sampleCount — 측정 전체에서 가장 긴 시계열의 표본 개수
   ///       sampleRate — 표본 주기 (Hz)
-  ///       padded — 양쪽 여백을 둘지
-  /// 반환: (왼쪽 끝, 폭) 초
+  /// 반환: (왼쪽 끝, 폭, 눈금 간격) 초
   /// 식: T = max(minTimeSpanSec, (sampleCount - 1) / sampleRate)
   ///     start = -T x ratio,  span = T x (1 + 2 x ratio)
-  ({double start, double span}) _timeWindow(
+  static ({double start, double span, double step}) timeWindow(
     int sampleCount,
-    double sampleRate, {
-    required bool padded,
-  }) {
-    if (!padded) {
-      // → 로직 이동: _timeSpan()
-      return (start: 0.0, span: _timeSpan(sampleCount, sampleRate));
-    }
+    double sampleRate,
+  ) {
     final length = math.max(
       minTimeSpanSec,
       sampleCount < 2 ? 0.0 : (sampleCount - 1) / sampleRate,
     ); // 측정 길이 (초)
+    var magnitude = math
+        .pow(10, (math.log(length / maxTimeTickCells) / math.ln10).floor())
+        .toDouble(); // 눈금 간격 후보의 자릿수
+    var step = magnitude; // 고른 눈금 간격 (초)
+    search:
+    while (true) {
+      for (final mantissa in <double>[1.0, 2.0, 5.0]) {
+        step = magnitude * mantissa;
+        if (length / step <= maxTimeTickCells + 1e-9) break search;
+      }
+      magnitude *= 10;
+    }
     return (
       start: -length * timePaddingRatio,
       span: length * (1 + 2 * timePaddingRatio),
+      step: step,
     );
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-21 16:30:00 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 함수: _timeTicks
-  /// 목적: 가로축 눈금 시각을 0 부터 만든다. 측정 길이가 현장마다 달라
-  ///       간격을 고정할 수 없으므로, 목표 칸 수로 나눈 값을 1 · 2 · 5 와
-  ///       10의 거듭제곱을 곱한 수 중 그보다 크거나 같은 가장 작은 것으로
-  ///       올린다. 이렇게 하면 어떤 길이에서도 눈금이 읽기 좋은 수로
-  ///       떨어진다. 왼쪽 여백(음수 시각)에는 눈금을 찍지 않는다 — 0 초가
-  ///       첫 눈금이다(OTIS 3쪽과 같다).
-  /// 인자: start — 가로축 왼쪽 끝 시각 (초). 0 이거나 음수
-  ///       span — 가로축이 담는 시간 폭 (초)
+  /// 목적: 가로축 눈금 시각을 0 부터 `timeWindow()` 의 간격으로 만든다.
+  ///       왼쪽 여백(음수 시각)에는 눈금을 찍지 않는다 — 0 초가 첫 눈금이다
+  ///       (OTIS 2 · 3쪽과 같다).
+  /// 인자: time — `timeWindow()` 가 정한 왼쪽 끝 · 폭 · 간격
   /// 반환: 0 부터 오른쪽 끝을 넘지 않는 마지막 눈금까지의 시각 목록 (초)
   /// 식: rough = span / timeTickTarget
   ///     step  = 10^floor(log10(rough)) x {1, 2, 5, 10} 중 rough 이상인 최솟값
-  List<double> _timeTicks(double start, double span) {
-    final rough = span / timeTickTarget; // 목표대로 나눴을 때의 거친 간격
-    final magnitude = math
-        .pow(10, (math.log(rough) / math.ln10).floor())
-        .toDouble(); // rough 와 자릿수가 같은 10의 거듭제곱
-    final normalized = rough / magnitude; // 거친 간격을 1~10 으로 줄인 값
-
-    var multiplier = 10.0; // 자릿수에 곱할 수. 못 고르면 자릿수를 올린다
-    for (final candidate in <double>[1.0, 2.0, 5.0]) {
-      if (normalized <= candidate) {
-        multiplier = candidate;
-        break;
-      }
-    }
-
-    final step = magnitude * multiplier; // 눈금 사이 간격 (초)
-    final count = (start + span) ~/ step; // 0 초부터 오른쪽 끝까지 눈금 칸 수
-    return List<double>.generate(count + 1, (i) => i * step);
+  List<double> _timeTicks(({double start, double span, double step}) time) {
+    final count = // 0 초부터 오른쪽 끝까지 눈금 칸 수
+    ((time.start + time.span) / time.step + 1e-9)
+        .floor();
+    return List<double>.generate(count + 1, (i) => i * time.step);
   }
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -1481,6 +1442,7 @@ class ReportChartRenderer {
     PdfGraphics canvas,
     _ChartFrame frame,
     List<double> ticks,
+    double step,
     String label,
   ) {
     canvas
@@ -1497,7 +1459,7 @@ class ReportChartRenderer {
     final labelRight = frame.left - tickLength - tickLabelGap; // 라벨 오른쪽 끝
     var widest = 0.0; // 눈금 라벨 중 가장 넓은 것의 너비 (포인트)
     for (final tick in ticks) {
-      final text = _formatTick(tick); // 이 눈금에 찍을 문구
+      final text = formatTick(tick, step); // 이 눈금에 찍을 문구
       final width = _widthOf(text, tickLabelSize); // 그 문구의 너비
       if (width > widest) widest = width;
       _drawText(
@@ -1529,6 +1491,7 @@ class ReportChartRenderer {
     PdfGraphics canvas,
     _ChartFrame frame,
     List<double> ticks,
+    double step,
   ) {
     canvas
       ..setStrokeColor(reportPdfColor(ReportColors.text))
@@ -1546,7 +1509,7 @@ class ReportChartRenderer {
     final tickLabelCenterY =
         frame.bottom - tickLength - tickLabelGap - tickLabelSize / 2;
     for (final tick in ticks) {
-      final text = _formatTick(tick); // 이 눈금에 찍을 문구
+      final text = formatTick(tick, step); // 이 눈금에 찍을 문구
       _drawText(
         canvas,
         text: text,
@@ -1719,19 +1682,35 @@ class ReportChartRenderer {
       (face ?? font).stringMetrics(text).advanceWidth * size;
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 함수: _formatTick
-  /// 목적: 눈금 값을 라벨 문구로 만든다. 뒤따르는 0 과 남은 소수점을 지워
-  ///       40 은 `40`, 0.25 는 `0.25` 로 찍는다. 0 자리가 아주 작은 음수로
-  ///       계산돼 `-0` 이 되는 것도 `0` 으로 되돌린다.
+  /// 수정: 2026-10-22 10:30:00 · nada
+  /// 함수: formatTick
+  /// 목적: 눈금 값을 라벨 문구로 만든다. 한 축 안의 눈금은 소수 자리 수를
+  ///       맞춘다 — 간격이 0.5 면 `0.0 0.5 1.0 1.5`, 0.2 면 `0.6 0.4 …`,
+  ///       정수 간격(5 m · 10 dBA)이면 정수(2026-10-22, OTIS 2 · 3쪽과
+  ///       같다). 0 자리가 아주 작은 음수로 계산돼 `-0.0` 이 되는 것은 `0.0`
+  ///       으로 되돌린다.
   /// 인자: value — 눈금 값
+  ///       step — 그 축의 눈금 간격
   /// 반환: 눈금에 찍을 문구
-  String _formatTick(double value) {
-    var text = value.toStringAsFixed(tickLabelDecimals); // 소수 자리를 고정한 문구
-    if (text.contains('.')) {
-      text = text.replaceFirst(RegExp(r'0+$'), '');
-      text = text.replaceFirst(RegExp(r'\.$'), '');
+  static String formatTick(double value, double step) {
+    // → 로직 이동: tickDecimals()
+    final decimals = tickDecimals(step); // 이 축의 소수 자리 수
+    final text = value.toStringAsFixed(decimals); // 자리를 맞춘 문구
+    return double.parse(text) == 0 ? 0.0.toStringAsFixed(decimals) : text;
+  }
+
+  /// 작성: 2026-10-22 10:30:00 · nada
+  /// 함수: tickDecimals
+  /// 목적: 눈금 간격을 정확히 적는 데 필요한 소수 자리 수를 구한다.
+  ///       `tickLabelDecimals` 를 넘지 않는다.
+  /// 인자: step — 눈금 간격
+  /// 반환: 소수 자리 수 (5 → 0, 0.5 · 0.2 → 1, 0.25 → 2)
+  static int tickDecimals(double step) {
+    for (var d = 0; d < tickLabelDecimals; d++) {
+      final scaled = step * math.pow(10, d); // 간격을 10^d 배 한 값
+      if ((scaled - scaled.roundToDouble()).abs() < 1e-9) return d;
     }
-    return text == '-0' ? '0' : text;
+    return tickLabelDecimals;
   }
 }
 

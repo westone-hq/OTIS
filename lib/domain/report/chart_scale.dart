@@ -89,7 +89,7 @@ class ChartAxisRange {
 }
 
 /// 작성: 2026-10-10 11:38:05 · nada
-/// 수정: 2026-10-21 16:30:00 · nada
+/// 수정: 2026-10-22 10:30:00 · nada
 /// 클래스: ChartScaleKind
 /// 목적: 데이터에 맞춰 넓힐 때 축을 어떤 모양으로 넓히는지.
 ///       - `symmetric` — 0 을 가운데 둔다. 위아래로 흔들리는 진동 ·
@@ -108,7 +108,10 @@ class ChartAxisRange {
 ///         하강(위치 감소 · 속도 음수)도 같은 규칙이다. OTIS 리포트 3쪽과
 ///         같다. 2026-10-08 "위치 · 속도는 0 에서 시작, 끝을 눈금에 맞춰
 ///         바깥으로 반올림" 을 바꾼다
-enum ChartScaleKind { symmetric, zeroAnchored, free, padded }
+///       - `paddedSymmetric` — `padded` 를 0 대칭으로 쓴 것. 틀 = ±(데이터
+///         최대 절댓값 x 1.2), 반올림 없음. 가속도 · 저크(2026-10-22, OTIS
+///         3쪽 실측 1.20 ~ 1.22). 데이터가 모두 0 이면 최소 범위를 쓴다
+enum ChartScaleKind { symmetric, zeroAnchored, free, padded, paddedSymmetric }
 
 /// 작성: 2026-10-10 11:38:05 · nada
 /// 수정: 2026-10-11 19:20:58 · nada
@@ -194,12 +197,13 @@ class ChartScale {
   });
 
   /// 작성: 2026-10-10 11:38:05 · nada
-  /// 수정: 2026-10-21 16:30:00 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 함수: rangeFor
   /// 목적: 그릴 값에 맞는 세로축 범위를 정한다. 순서는 클래스 주석과 같다.
   ///       `padded` 축은 최소 범위와 견주지 않고 데이터로만 정한다
   ///       (`_paddedRange()`). 데이터가 한 값뿐이면(정지 측정) 최소 범위를
-  ///       데이터로 보고 정한다.
+  ///       데이터로 보고 정한다. `paddedSymmetric` 은 0 을 가운데 두고 큰 쪽
+  ///       절댓값으로 같은 규칙을 쓴다.
   /// 인자: values — 그릴 값 목록. 단위는 그 축의 단위를 따른다
   /// 반환: 모든 값이 들어가는 범위. 값이 없으면 최소 범위
   ChartAxisRange rangeFor(List<double> values) {
@@ -211,6 +215,13 @@ class ChartScale {
       if (high == null || value > high) high = value;
     }
     if (low == null || high == null) return minimum;
+    if (kind == ChartScaleKind.paddedSymmetric) {
+      final peak = math.max(low.abs(), high.abs()); // 데이터 최대 절댓값
+      // 모두 0 이면(정지 측정 등) 틀 폭이 0 이 되지 않게 최소 범위를 쓴다
+      if (peak == 0) return minimum;
+      // → 로직 이동: _paddedRange()
+      return _paddedRange(-peak, peak);
+    }
     if (kind == ChartScaleKind.padded) {
       // → 로직 이동: _paddedRange()
       return high > low
@@ -275,7 +286,7 @@ class ChartScale {
   }
 
   /// 작성: 2026-10-10 11:38:05 · nada
-  /// 수정: 2026-10-21 16:30:00 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 함수: _paddedBounds
   /// 목적: 축의 양 끝을 모양에 맞춰 잡고 여유를 더한다.
   ///       - `symmetric` — 큰 쪽 절댓값으로 위아래를 같게 잡는다
@@ -298,9 +309,11 @@ class ChartScale {
         final pad = (top - bottom) * headroomRatio; // 한쪽 끝에 더할 여유
         return (low: bottom < 0.0 ? bottom - pad : 0.0, high: top + pad);
       case ChartScaleKind.free:
-      // `padded` 는 `rangeFor()` 가 먼저 `_paddedRange()` 로 보내 여기 오지
-      // 않는다. 와도 같은 여유라 `free` 와 함께 둔다
+      // `padded` · `paddedSymmetric` 은 `rangeFor()` 가 먼저
+      // `_paddedRange()` 로 보내 여기 오지 않는다. 와도 같은 여유라 `free`
+      // 와 함께 둔다
       case ChartScaleKind.padded:
+      case ChartScaleKind.paddedSymmetric:
         final pad = (high - low) * headroomRatio; // 한쪽 끝에 더할 여유
         return (low: low - pad, high: high + pad);
     }
