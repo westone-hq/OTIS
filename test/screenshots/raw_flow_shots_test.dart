@@ -25,6 +25,7 @@ import 'package:vibration_checker/domain/capture/noise_offset.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
@@ -230,6 +231,7 @@ Future<MeasurementResult> _recordFromRaw(
         '+${MeasurementAssembler.kinematicsMethodLabel}'
         '+${MeasurementAssembler.jerkMethodLabel}'
         '+${MeasurementAssembler.accelChartMethodLabel}'
+        '+${MotionZones.methodLabel}'
         '+$kNoiseMethodLabel',
   ); // 저장 절차와 같이 처리 방식을 실은 측정 결과
   final repo = MeasurementRepository.instance; // 저장소

@@ -294,6 +294,42 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-21 점검 지시 "4차 버터워스 저역 10 Hz 양방향"
   static const int accelChartLowpassOrder = 4;
 
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 변수: zoneRunSpeedMps
+  /// 목적: 정속 · 가감속 구간을 나눌 "운행" 의 속도 문턱 (m/s). 속도
+  ///       크기가 이 값을 넘는 처음부터 마지막까지가 운행이다
+  ///       (`MotionZones.of()`).
+  /// 근거: 인용 — 2026-10-21 점검 지시. 움직인 구간 문턱
+  ///       (`motionSpeedThresholdMps`)과 같은 값이고 근거도 같다(정지 중
+  ///       적분 속도 떠다님 최대 0.022 m/s 의 두 배 이상)
+  static const double zoneRunSpeedMps = 0.05;
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 변수: zonePeakRatio
+  /// 목적: 가속 · 감속 봉우리를 찾는 비율. 운행 안 1.6Hz 저역 가속도
+  ///       크기가 그 최대의 이 비율을 처음 넘는 곳이 가속 봉우리, 마지막으로
+  ///       넘는 곳이 감속 봉우리다.
+  /// 근거: 측정 — 2026-10-21 이 방식으로 오티스폰 3 · 개발폰 3 ·
+  ///       ride_reference 의 정속 시작 · 끝이 점검 참고값과 0.1초 안이다.
+  ///       "속도 ≥ 최대속도 99%" 방식은 H6N1AP65 에서 속도 떠다님 때문에
+  ///       정속을 25 ~ 37초로 잘못 잡아 쓰지 않는다
+  static const double zonePeakRatio = 0.5;
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 변수: zoneSteadyAccelMps2
+  /// 목적: 정속으로 보는 1.6Hz 저역 가속도 크기의 상한 (m/s²). 가속
+  ///       봉우리 뒤 처음으로 이보다 작아지는 곳이 정속 시작, 감속 봉우리
+  ///       앞 마지막으로 작은 곳이 정속 끝이다.
+  /// 근거: 측정 — `zonePeakRatio` 와 같은 비교
+  static const double zoneSteadyAccelMps2 = 0.03;
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 변수: zoneMinimumSteadyMs
+  /// 목적: 정속 구간의 최소 길이 (밀리초). 이보다 짧으면 정속을 정하지
+  ///       못한 것으로 보고 수직 최대(정속 구간 최대)를 비운다.
+  /// 근거: 인용 — 2026-10-21 점검 지시 "정속 길이 1초 미만이면 실패"
+  static const int zoneMinimumSteadyMs = 1000;
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: idealIntervalNs
   /// 목적: 격자 한 칸의 간격을 나노초로 반환한다. `GridResampler`가

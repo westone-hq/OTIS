@@ -12,6 +12,7 @@ import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
@@ -736,6 +737,101 @@ void main() {
       final full = await drawGuides(ReportChartAxes.noise, legacy);
       expect(full.single.left, closeTo(frameLeft, 0.01));
       expect(full.single.right, closeTo(frameRight, 0.01));
+    });
+  });
+
+  group('수직 ptp · Jptp 표시 (2026-10-21)', () {
+    const zones = MotionZones(
+      runStartIndex: 1000,
+      runEndIndex: 9000,
+      steadyStartIndex: 3000,
+      steadyEndIndex: 7000,
+      sampleRate: _sampleRate,
+    ); // 시험용 정속 · 가감속 구간
+    const window = TravelWindow(
+      startIndex: 1200,
+      endIndex: 8800,
+      startSec: 1200 / _sampleRate,
+      endSec: 8800 / _sampleRate,
+      startM: 0.5,
+      endM: 56.5,
+    ); // 시험용 운행 구간
+
+    // 수직 차트 하나를 그려 그 쪽 내용 스트림을 돌려준다
+    Future<String> drawZ(MeasurementResult result) async {
+      final document = PdfDocument(); // 만들어 낼 PDF 문서
+      final fontBytes = await rootBundle.load(
+        ReportLayout.regularFontAsset,
+      ); // 글꼴 원본
+      final renderer = ReportChartRenderer(
+        font: PdfTtfFont(document, fontBytes),
+      ); // 차트를 그릴 렌더러
+      final page = PdfPage(
+        document,
+        pageFormat: PdfPageFormat(
+          ReportLayout.pageWidthPt,
+          ReportLayout.pageHeightPt,
+        ),
+      ); // 차트를 얹을 쪽
+      renderer.draw(
+        page.getGraphics(),
+        spec: ReportChartAxes.z,
+        box: ReportChartPage.slots[2],
+        result: result,
+      );
+      return pdfChartStreams(await document.save()).join();
+    }
+
+    // 정속 · 가감속 구간에 봉우리를 하나씩 둔 수직 시계열
+    List<double> zWith({required int steadyAt, required int transientAt}) {
+      final values = List<double>.generate(
+        _rideSampleCount,
+        (i) => i.isEven ? 1.0 : -1.0,
+      ); // 잔잔한 진동 (mg)
+      values[steadyAt] = 9.0;
+      values[transientAt] = 12.0;
+      return values;
+    }
+
+    test('Jptp 라벨 문구는 ptp 와 같은 숫자 규칙이다', () {
+      expect(ReportChartRenderer.jptpLabel(17.14), 'Jptp 17.1milli-G');
+      expect(ReportChartRenderer.jptpLabel(123.4), 'Jptp 123milli-G');
+    });
+
+    test('정속 쌍은 정속 구간, Jptp 쌍은 가감속 구간에서 찾는다', () {
+      final values = zWith(steadyAt: 5000, transientAt: 2000);
+      final result = _result().copyWith(motionZones: zones);
+      final pairs = ReportChartAxes.verticalPairs(values, result)!;
+      expect(pairs.steady!.high, 5000);
+      expect(pairs.transient!.high, 2000);
+      expect(ReportChartAxes.verticalPairs(values, _result()), isNull);
+    });
+
+    test('Jptp 가 있으면 글자 상자가 둘이고 서로 겹치지 않는다', () async {
+      // 두 봉우리를 정속 경계 양쪽 바로 옆에 두어 글자가 같은 자리로 간다
+      final values = zWith(steadyAt: 3002, transientAt: 2998);
+      values[2998] = 9.0;
+      final base = _result().copyWith(
+        zSeries: values,
+        travelWindow: window,
+        motionZones: zones,
+        zPtp: 10.0,
+      ); // Jptp 없는 결과
+      final one = labelBoxes(await drawZ(base)); // ptp 상자만
+      final two = labelBoxes(
+        await drawZ(base.copyWith(zJptp: 10.0)),
+      ); // ptp · Jptp 상자
+
+      expect(one.length, 1);
+      expect(two.length, 2);
+      final a = two[0];
+      final b = two[1];
+      final overlaps =
+          a.left < b.left + b.width &&
+          b.left < a.left + a.width &&
+          a.bottom < b.bottom + b.height &&
+          b.bottom < a.bottom + a.height; // 두 상자가 겹치는지
+      expect(overlaps, isFalse, reason: '$a / $b');
     });
   });
 

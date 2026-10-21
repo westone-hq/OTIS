@@ -411,6 +411,57 @@ void main() {
     });
   });
 
+  group('수직 행 황색 · 적색 문구 (2026-10-21 OTIS)', () {
+    test('초록 · 값 없음은 문구가 없다', () {
+      final metrics = ReportMetrics.from(
+        _result(zPtp: 12.0).copyWith(zA95: 5.0),
+      ); // 초록
+      expect(metrics.vertMax.remarkLines, isNull);
+      expect(metrics.vertAvg.remarkLines, isNull);
+      expect(ReportMetrics.from(_result()).vertMax.remarkLines, isNull);
+    });
+
+    test('평균 행은 A95 값을 넣은 두 줄이다', () {
+      final metrics = ReportMetrics.from(_result().copyWith(zA95: 15.4));
+      expect(metrics.vertAvg.remarkLines, <String>[
+        '진동측정결과가 15.4milli-G A95 로',
+        '일관되게 높게 측정되었습니다',
+      ]);
+    });
+
+    test('최대 행은 하부층 기준 위치를 소수 첫째 자리로 적는다', () {
+      final metrics = ReportMetrics.from(
+        _result(zPtp: 22.04).copyWith(zPtpPositionM: 5.46),
+      ); // 황색
+      expect(metrics.vertMax.remarkLines, <String>[
+        '최대의 진동 22.0milli-G 가 하부층 정지레벨로부터',
+        '5.5m 에서 측정되었습니다.',
+      ]);
+      final red = ReportMetrics.from(
+        _result(zPtp: 31.0).copyWith(zPtpPositionM: 12.0),
+      ); // 적색
+      expect(red.vertMax.verdict, ReportVerdict.red);
+      expect(red.vertMax.remarkLines, isNotNull);
+    });
+
+    test('위치가 없는 예전 결과는 위치 없이 적는다', () {
+      final metrics = ReportMetrics.from(_result(zPtp: 22.0));
+      expect(metrics.vertMax.remarkLines, <String>[
+        '최대의 진동 22.0milli-G 가',
+        '측정되었습니다.',
+      ]);
+    });
+
+    test('수평 · 소음 행은 황색이어도 문구가 없다', () {
+      final metrics = ReportMetrics.from(
+        _result(xPtp: 20.0, yPtp: 5.0, noiseMax: 73.0),
+      ); // 수평 · 소음 황색
+      expect(metrics.horizMax.verdict, ReportVerdict.yellow);
+      expect(metrics.horizMax.remarkLines, isNull);
+      expect(metrics.noiseMax.remarkLines, isNull);
+    });
+  });
+
   group('표 짜임새', () {
     test('여덟 행이 서식 순서대로 나온다', () {
       final metrics = ReportMetrics.from(_result()); // 산출된 지표

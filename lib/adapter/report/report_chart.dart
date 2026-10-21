@@ -356,11 +356,48 @@ class ReportChartAxes {
       end: math.min(window.endIndex, values.length - 1),
     ); // 최대 반주기 P2P, 못 만들면 null
     if (best == null) return null;
+    return orderedPair(values, best); // → 로직 이동: orderedPair()
+  }
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: orderedPair
+  /// 목적: 반주기 P2P 의 두 봉우리 자리를 값이 큰 쪽 · 작은 쪽으로 가른다.
+  /// 인자: values — 그린 시계열
+  ///       best — 반주기 P2P
+  /// 반환: (높은 쪽, 낮은 쪽) 첨자
+  static ({int high, int low}) orderedPair(
+    List<double> values,
+    HalfCyclePeakToPeak best,
+  ) {
     final first = best.firstIndex; // 앞 반주기 봉우리 자리
     final second = best.secondIndex; // 뒤 반주기 봉우리 자리
     return values[first] >= values[second]
         ? (high: first, low: second)
         : (high: second, low: first);
+  }
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: verticalPairs
+  /// 목적: 수직 차트에 찍을 두 쌍을 찾는다 — 정속 구간 최대(`zPtp`)와
+  ///       가감속 구간 최대(`zJptp`)를 만든 봉우리 · 골. 지표와 같은 함수
+  ///       (`MotionZones.steadyMaximum()` · `transientMaximum()`)로 찾아
+  ///       차트 점과 표 값이 같은 반주기를 가리킨다.
+  /// 인자: values — 그린 수직 시계열 (줄이기 전)
+  ///       result — 정속 · 가감속 구간을 가진 측정 결과
+  /// 반환: (정속 쌍, 가감속 쌍). 구간이 없는 결과(2026-10-21 전 · 구간을
+  ///       못 정함)면 null. 쌍 하나를 못 찾으면 그 자리만 null
+  static ({({int high, int low})? steady, ({int high, int low})? transient})?
+  verticalPairs(List<double> values, MeasurementResult result) {
+    final zones = result.motionZones; // 정속 · 가감속 구간, 없으면 null
+    if (zones == null) return null;
+    // → 로직 이동: MotionZones.steadyMaximum()
+    final steady = zones.steadyMaximum(values); // 정속 최대, 없으면 null
+    // → 로직 이동: MotionZones.transientMaximum()
+    final transient = zones.transientMaximum(values); // 가감속 최대
+    return (
+      steady: steady == null ? null : orderedPair(values, steady),
+      transient: transient == null ? null : orderedPair(values, transient),
+    );
   }
 
   /// 작성: 2026-10-15 16:50:04 · nada
@@ -815,18 +852,40 @@ class ReportChartRenderer {
   /// 반환: "ptp 14.2milli-G" 꼴 문구
   /// 근거: 인용 — 2026-10-20 사용자 지시 "오티스 pdf 에 나오는 p2p 용어
   ///       소문자 ptp 로". 원본 TUNE 리포트 H6N1AP65.pdf 2쪽 "a_x,ptp"
-  static String ptpLabel(double ptp) {
+  static String ptpLabel(double ptp) =>
+      // → 로직 이동: _vibrationLabel()
+      _vibrationLabel('ptp', ptp);
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: jptpLabel
+  /// 목적: 수직 차트 가감속 구간 최대 옆에 적을 문구를 만든다. 숫자 표기는
+  ///       `ptpLabel()` 과 같다.
+  /// 인자: jptp — 가감속 구간 최대 P2P (mg)
+  /// 반환: "Jptp 17.1milli-G" 꼴 문구
+  /// 근거: 인용 — 2026-10-21 점검 지시. OTIS 리포트 2쪽 수직 차트
+  ///       "a_z,Jptp"
+  static String jptpLabel(double jptp) =>
+      // → 로직 이동: _vibrationLabel()
+      _vibrationLabel('Jptp', jptp);
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: _vibrationLabel
+  /// 목적: 머리말 뒤에 1쪽 표와 같은 규칙으로 다듬은 진동 값을 붙인다.
+  /// 인자: prefix — 머리말 ("ptp", "Jptp")
+  ///       value — 진동 값 (mg)
+  /// 반환: "머리말 값milli-G" 꼴 문구
+  static String _vibrationLabel(String prefix, double value) {
     final metric = ReportMetric(
       key: 'p2p',
-      value: ptp,
+      value: value,
       unit: ReportMetric.vibrationUnit,
       verdict: ReportVerdict.none,
     ); // 표와 같은 규칙으로 숫자를 다듬을 지표
-    return 'ptp ${metric.display}';
+    return '$prefix ${metric.display}';
   }
 
   /// 작성: 2026-10-11 19:20:58 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: _drawPeakToPeak
   /// 목적: 진동 세 축 차트에 최대 P2P 를 만든 두 지점을 표시하고 값을 적는다.
   ///       - 두 지점(`ReportChartAxes.peakToPeakPair()`)에 굵은 빨간 점
@@ -837,6 +896,10 @@ class ReportChartRenderer {
   ///       - 높은 쪽 점 옆(오른쪽, 자리가 없으면 왼쪽)에 "ptp 값" 을 흰
   ///         상자에 굵게 적는다(`_drawSideLabel()`). 값은 1쪽 표와 같은
   ///         지표다(`ReportChartAxes.ptpOf()`)
+  ///       - 수직 차트는 정속 구간 최대(`zPtp`) 쌍에 "ptp", 가감속 구간
+  ///         최대(`zJptp`) 쌍에 "Jptp" 를 함께 적는다(OTIS 리포트와 같다).
+  ///         두 글자 상자가 겹치면 뒤 상자를 위 · 아래로 옮긴다. 정속 ·
+  ///         가감속 구간이 없는 2026-10-21 전 결과는 예전처럼 하나만 적는다
   ///       P2P 가 없는 축(진동 축이 아님, 구간을 못 정한 결과, 예전 결과)은
   ///       바로 돌아간다. 0 으로 채우지 않는다.
   /// 인자: canvas — 그리기 도구
@@ -856,13 +919,56 @@ class ReportChartRenderer {
   ) {
     // → 로직 이동: ReportChartAxes.ptpOf()
     final ptp = ReportChartAxes.ptpOf(spec, result); // 적을 P2P, 없으면 null
-    // → 로직 이동: ReportChartAxes.peakToPeakPair()
-    final at = ReportChartAxes.peakToPeakPair(
-      values,
-      result,
-    ); // 두 지점, 못 찾으면 null
-    if (ptp == null || at == null) return;
+    final vertical = spec.key == 'z'
+        // → 로직 이동: ReportChartAxes.verticalPairs()
+        ? ReportChartAxes.verticalPairs(values, result)
+        : null; // 수직 정속 · 가감속 쌍, 구간 없는 결과 · 다른 축이면 null
+    final at = vertical == null
+        // → 로직 이동: ReportChartAxes.peakToPeakPair()
+        ? ReportChartAxes.peakToPeakPair(values, result)
+        : vertical.steady; // ptp 두 지점, 못 찾으면 null
 
+    _Box? taken; // 이미 적은 글자 상자. 다음 글자가 피한다
+    if (ptp != null && at != null) {
+      // → 로직 이동: _drawPair()
+      taken = _drawPair(canvas, frame, values, result, at, ptpLabel(ptp));
+    }
+    final jptp = result.zJptp; // 가감속 구간 최대, 없으면 null
+    final jat = vertical?.transient; // Jptp 두 지점, 없으면 null
+    if (jptp != null && jat != null) {
+      // → 로직 이동: _drawPair()
+      _drawPair(
+        canvas,
+        frame,
+        values,
+        result,
+        jat,
+        jptpLabel(jptp), // → 로직 이동: jptpLabel()
+        avoid: taken,
+      );
+    }
+  }
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: _drawPair
+  /// 목적: 반주기 P2P 두 지점에 빨간 점을 찍고 높은 쪽 옆에 문구를 적는다.
+  /// 인자: canvas — 그리기 도구
+  ///       frame — 축 틀과 값 옮기기
+  ///       values — 그린 시계열 (줄이기 전)
+  ///       result — 표본 주기를 가진 측정 결과
+  ///       at — (높은 쪽, 낮은 쪽) 첨자
+  ///       text — 적을 문구
+  ///       avoid — 피할 글자 상자. 없으면 null
+  /// 반환: 적은 글자 상자
+  _Box _drawPair(
+    PdfGraphics canvas,
+    _ChartFrame frame,
+    List<double> values,
+    MeasurementResult result,
+    ({int high, int low}) at,
+    String text, {
+    _Box? avoid,
+  }) {
     for (final index in <int>[at.low, at.high]) {
       // → 로직 이동: _drawMarker()
       _drawMarker(
@@ -871,14 +977,14 @@ class ReportChartRenderer {
         frame.yOfValue(values[index]),
       );
     }
-
     // → 로직 이동: _drawSideLabel()
-    _drawSideLabel(
+    return _drawSideLabel(
       canvas,
       frame,
-      ptpLabel(ptp), // → 로직 이동: ptpLabel()
+      text,
       anchorX: frame.xOfTime(at.high / result.sampleRate),
       anchorY: frame.yOfValue(values[at.high]),
+      avoid: avoid,
     );
   }
 
@@ -900,6 +1006,7 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: _drawSideLabel
   /// 목적: 표시점 옆에 값을 흰 상자에 빨간 굵은 글자로 적는다.
   ///       - 가로: 점 오른쪽에 둔다. 상자가 축 틀 오른쪽을 넘으면 점
@@ -910,16 +1017,22 @@ class ReportChartRenderer {
   ///         그대로 두면 글자가 틀 밖으로 잘린다
   ///       - 흰 상자와 빨간 테두리를 깔아 파형 선이 글자와 겹쳐 보이지
   ///         않게 한다
+  ///       - 피할 상자(`avoid`)가 있으면 겹치지 않는 자리를 차례로 찾는다:
+  ///         같은 높이 → 한 칸 아래 → 한 칸 위(각각 오른쪽 먼저). 모두
+  ///         겹치면 같은 높이 오른쪽에 둔다
   /// 인자: canvas — 그리기 도구
   ///       frame — 축 틀과 값 옮기기
   ///       text — 적을 문구
   ///       anchorX, anchorY — 옆에 붙을 표시점 중심 (포인트)
-  void _drawSideLabel(
+  ///       avoid — 겹치지 않게 피할 상자. 없으면 null
+  /// 반환: 적은 상자
+  _Box _drawSideLabel(
     PdfGraphics canvas,
     _ChartFrame frame,
     String text, {
     required double anchorX,
     required double anchorY,
+    _Box? avoid,
   }) {
     final textWidth = _widthOf(text, markerLabelSize, labelFont); // 글자 폭
     final boxWidth = textWidth + labelPadding * 2; // 상자 가로 (포인트)
@@ -928,14 +1041,47 @@ class ReportChartRenderer {
     final minLeft = frame.left + labelInset; // 상자 왼쪽 끝 하한
     final maxLeft = frame.right - labelInset - boxWidth; // 상자 왼쪽 끝 상한
 
-    var left = anchorX + reach; // 상자 왼쪽 끝. 먼저 점 오른쪽에 둔다
-    if (left > maxLeft) left = anchorX - reach - boxWidth;
-    left = left.clamp(minLeft, math.max(minLeft, maxLeft)).toDouble();
+    // 상자 왼쪽 끝을 고른다. 오른쪽이면 점 오른쪽에 두되 틀을 넘으면
+    // 왼쪽에 둔다
+    double leftOf({required bool right}) {
+      var left = right ? anchorX + reach : anchorX - reach - boxWidth;
+      if (right && left > maxLeft) left = anchorX - reach - boxWidth;
+      return left.clamp(minLeft, math.max(minLeft, maxLeft)).toDouble();
+    }
 
-    final centerY = anchorY.clamp(
-      frame.bottom + labelInset + boxHeight / 2,
-      frame.top - labelInset - boxHeight / 2,
-    ); // 상자 세로 가운데
+    // 상자 세로 가운데를 틀 안으로 밀어 넣는다
+    double centerOf(double y) => y
+        .clamp(
+          frame.bottom + labelInset + boxHeight / 2,
+          frame.top - labelInset - boxHeight / 2,
+        )
+        .toDouble();
+
+    const step = boxHeight + labelGap; // 위 · 아래로 옮길 한 칸 (포인트)
+    var left = leftOf(right: true); // 상자 왼쪽 끝
+    var centerY = centerOf(anchorY); // 상자 세로 가운데
+    if (avoid != null) {
+      for (final (dy, right) in <(double, bool)>[
+        (0, true),
+        (0, false),
+        (-step, true),
+        (-step, false),
+        (step, true),
+        (step, false),
+      ]) {
+        final candidate = _Box(
+          left: leftOf(right: right),
+          bottom: centerOf(anchorY + dy) - boxHeight / 2,
+          width: boxWidth,
+          height: boxHeight,
+        ); // 이 자리에 둔 상자
+        if (!candidate.overlaps(avoid)) {
+          left = candidate.left;
+          centerY = candidate.bottom + boxHeight / 2;
+          break;
+        }
+      }
+    }
 
     canvas
       ..setFillColor(PdfColors.white)
@@ -951,6 +1097,12 @@ class ReportChartRenderer {
       centerY: centerY,
       color: ReportColors.chartMarker,
       font: labelFont,
+    );
+    return _Box(
+      left: left,
+      bottom: centerY - boxHeight / 2,
+      width: boxWidth,
+      height: boxHeight,
     );
   }
 
@@ -1509,4 +1661,45 @@ class ReportChartRenderer {
     }
     return text == '-0' ? '0' : text;
   }
+}
+
+/// 작성: 2026-10-21 13:10:00 · nada
+/// 클래스: _Box
+/// 목적: 차트에 적은 글자 상자 하나의 자리 (포인트, PDF 좌표라 아래가 작다).
+///       두 글자 상자가 겹치는지 보는 데 쓴다.
+class _Box {
+  /// 왼쪽 끝
+  final double left;
+
+  /// 아래 끝
+  final double bottom;
+
+  /// 가로
+  final double width;
+
+  /// 세로
+  final double height;
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: _Box
+  /// 목적: 상자 자리를 그대로 담는다.
+  /// 인자: left, bottom — 왼쪽 · 아래 끝
+  ///       width, height — 가로 · 세로
+  const _Box({
+    required this.left,
+    required this.bottom,
+    required this.width,
+    required this.height,
+  });
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: overlaps
+  /// 목적: 다른 상자와 겹치는지 본다. 변이 맞닿기만 하면 겹치지 않는다.
+  /// 인자: other — 견줄 상자
+  /// 반환: 겹치면 true
+  bool overlaps(_Box other) =>
+      left < other.left + other.width &&
+      other.left < left + width &&
+      bottom < other.bottom + other.height &&
+      other.bottom < bottom + height;
 }

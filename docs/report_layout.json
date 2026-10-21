@@ -208,6 +208,14 @@
         "w": 150,
         "h": 46
       },
+      "remark": {
+        "x": 742,
+        "erase_x": 735,
+        "erase_w": 712,
+        "erase_h": 86,
+        "size": 25,
+        "line_gap": 34
+      },
       "col_align": {
         "category": "left",
         "value": "left",

@@ -5,6 +5,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/model/worker.dart';
@@ -106,7 +107,7 @@ class MotionWindow {
 }
 
 /// 작성: 2026-09-15 13:08:37 · nada
-/// 수정: 2026-10-20 14:05:12 · nada
+/// 수정: 2026-10-21 13:10:00 · nada
 /// 클래스: MeasurementAssembler
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과와 현장
 ///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 진동 시계열은
@@ -131,8 +132,12 @@ class MotionWindow {
 ///          정한다
 ///       4. 구간 안 가중 시계열의 반주기 P2P(`HalfCycle`)에서 최대 P2P 와
 ///          A95 를, 구간 안 소음에서 최대를 낸다
+///       5. 수직 최대(`zPtp`)는 정속 구간, 가감속 최대(`zJptp`)는 그 밖
+///          운행에서 낸다(`MotionZones`, 2026-10-21). 수직 A95 는 4 그대로
 ///       운행 구간을 정하지 못하면(운행 1 m 이하 등) 진동 · 소음 지표를
-///       비우고 사유(`travelWindowFailure`)를 남긴다
+///       비우고 사유(`travelWindowFailure`)를 남긴다. 정속 구간을 정하지
+///       못하면 수직 최대 · 가감속 최대만 비우고 사유(`motionZonesFailure`)를
+///       남긴다
 ///
 ///       소음 두 값의 계약
 ///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
@@ -158,7 +163,7 @@ class MotionWindow {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -180,6 +185,9 @@ class MeasurementAssembler {
   ///       - 운행 구간(`TravelWindow.of()`)을 정해 그 안에서 진동 최대
   ///         P2P · A95(`HalfCycle`)와 소음 최대를 낸다. 못 정하면 그 일곱
   ///         지표를 null 로 두고 사유를 싣는다
+  ///       - 수직 최대 P2P 는 정속 구간(`MotionZones.of()`) 안에서, 가감속
+  ///         최대(`zJptp`)는 그 밖 운행에서 내고, 수직 최대가 나온 위치를
+  ///         함께 싣는다. 정속을 못 정하면 그 셋을 null 로 두고 사유를 싣는다
   ///       - `site.model`(기종)도 함께 옮긴다. 비어 있으면 null 로 둔다.
   ///         이걸 실어 두면 리포트가 측정 결과 하나만 받으면 되고
   ///         현장 정보를 따로 들고 다니지 않아도 된다
@@ -310,6 +318,24 @@ class MeasurementAssembler {
     // → 로직 이동: HalfCycle.a95()
     double? a95Of(List<double> series) =>
         window == null ? null : HalfCycle.a95(series, start: start, end: end);
+    // 수직 최대는 정속 구간, 가감속 최대는 그 밖 운행에서 낸다(OTIS 리포트
+    // `a_z,ptp` · `a_z,Jptp`). 운행 구간을 못 정한 결과는 다른 지표처럼
+    // 비운다
+    final zoning = canWeight
+        // → 로직 이동: MotionZones.of()
+        ? MotionZones.of(motion.speed, motion.accelSmooth, sampleRate)
+        : MotionZonesResult.failure(
+            travel.failureReason ?? '가중을 걸 수 없는 격자다',
+          ); // 정속 · 가감속 구간
+    final zones = zoning.zones; // 정한 구간, 못 정했으면 null
+    final steadyPeak = window == null
+        ? null
+        // → 로직 이동: MotionZones.steadyMaximum()
+        : zones?.steadyMaximum(zWeighted); // 정속 구간 수직 최대
+    final transientPeak = window == null
+        ? null
+        // → 로직 이동: MotionZones.transientMaximum()
+        : zones?.transientMaximum(zWeighted); // 가감속 구간 수직 최대
     final resolvedNoiseMax = window == null
         ? null
         // → 로직 이동: _peakIgnoringZeros()
@@ -348,7 +374,14 @@ class MeasurementAssembler {
         jerkSeries: motion.jerk,
         xPtp: maxOf(xWeighted),
         yPtp: maxOf(yWeighted),
-        zPtp: maxOf(zWeighted),
+        zPtp: steadyPeak?.value,
+        zJptp: transientPeak?.value,
+        zPtpPositionM: steadyPeak == null
+            ? null
+            // → 로직 이동: _positionAtPeak()
+            : _positionAtPeak(steadyPeak, zWeighted, motion.position),
+        motionZones: zones,
+        motionZonesFailure: zoning.failureReason,
         xA95: a95Of(xWeighted),
         yA95: a95Of(yWeighted),
         zA95: a95Of(zWeighted),
@@ -360,6 +393,25 @@ class MeasurementAssembler {
       ),
       motion: motion.motion,
     );
+  }
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: _positionAtPeak
+  /// 목적: 반주기 P2P 가 나온 순간의 위치를 고른다. 두 봉우리 가운데 크기가
+  ///       큰 쪽 자리의 위치다 — 차트 빨간 점 옆 글자가 붙는 자리와 같다.
+  /// 인자: peak — 반주기 P2P
+  ///       series — 그 P2P 를 낸 진동 시계열 (mg)
+  ///       position — 위치 시계열 (m)
+  /// 반환: 위치 (m)
+  static double _positionAtPeak(
+    HalfCyclePeakToPeak peak,
+    List<double> series,
+    List<double> position,
+  ) {
+    final at = series[peak.firstIndex].abs() >= series[peak.secondIndex].abs()
+        ? peak.firstIndex
+        : peak.secondIndex; // 큰 봉우리 자리
+    return position[at];
   }
 
   /// 작성: 2026-09-15 21:38:58 · nada

@@ -5,6 +5,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-08-18 23:43:06 · 박건준
@@ -311,12 +312,14 @@ class VibrationFileWriter {
   }
 
   /// 작성: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: encodeTravelMeta
   /// 목적: 주파수 가중과 운행 구간을 집계 파일 끝에 덧붙일 문자열로 만든다.
   ///       지표는 가중한 시계열의 운행 구간 안에서 내므로, 리포트 값이
   ///       어느 구간에서 나왔는지 집계 파일만 보고 알 수 있어야 한다.
   ///       - 가중 방식 한 줄 — 수치는 실제로 쓴 상수에서 옮긴다
   ///       - 운행 구간 시작 · 끝 (초, m). 정하지 못했으면 그 사유 한 줄
+  ///       - 정속 구간 판정 방식과 시작 · 끝 (초). 정하지 못했으면 그 사유
   /// 인자: result — 지표를 낸 측정 결과
   /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
   static String encodeTravelMeta(MeasurementResult result) {
@@ -347,6 +350,18 @@ class VibrationFileWriter {
       '# 진동 · 소음 지표는 위 가중 뒤 시계열의 운행 구간(출발 · 정지 '
       '${CaptureConfig.travelEdgeExclusionM}m 제외) 안에서 낸다.',
     );
+    final zones = result.motionZones; // 정속 · 가감속 구간, 못 정했으면 null
+    line('zones: ${MotionZones.methodLabel}');
+    if (zones == null) {
+      line('zonesFailureReason: ${result.motionZonesFailure}');
+    } else {
+      line('steadyStartSec: ${fixed(zones.steadyStartSec)}');
+      line('steadyEndSec: ${fixed(zones.steadyEndSec)}');
+      line(
+        '# 수직 최대(zPtp)는 정속 구간, 가감속 최대(zJptp)는 그 밖 운행에서 '
+        '낸다.',
+      );
+    }
     return buffer.toString();
   }
 

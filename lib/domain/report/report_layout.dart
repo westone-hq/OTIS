@@ -614,6 +614,34 @@ class ReportPage1 {
   /// 서식에 남아 있는 황색 · 적색 칸을 덮을 네모의 세로 길이 (픽셀)
   static const int eraseRedHeight = 46;
 
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 변수: remarkX
+  /// 목적: 황색 · 적색 행의 OTIS 문구(`ReportMetric.remarkLines`)를 쓰기
+  ///       시작하는 가로 좌표 (픽셀). 서식 설명 라벨 자리(`colValueNoLabelX`
+  ///       와 같은 열)다.
+  /// 근거: 인용 — 2026-10-21 점검 지시. OTIS 리포트는 황색 · 적색 행의
+  ///       설명 칸에 라벨 · 값 대신 문장을 적는다
+  static const int remarkX = 742;
+
+  /// 문구를 쓰기 전에 서식 설명 라벨 · 값 자리를 덮을 네모의 왼쪽 끝 (픽셀)
+  static const int remarkEraseX = 735;
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 변수: remarkEraseWidth
+  /// 목적: 문구 자리를 덮을 네모의 가로 길이 (픽셀). 오른쪽 끝(1447)이 황색
+  ///       칸 덮개 왼쪽 끝(`colYellowX` − `eraseRedWidth` / 2 = 1456)에 닿지
+  ///       않는다. 문구가 이 폭을 넘으면 글자를 줄인다.
+  static const int remarkEraseWidth = 712;
+
+  /// 문구 자리를 덮을 네모의 세로 길이 (픽셀). 행 줄무늬 안이다
+  static const int remarkEraseHeight = 86;
+
+  /// 문구 글자 크기 (픽셀). 두 줄이 한 행에 들어가게 값보다 조금 작다
+  static const int remarkSize = 25;
+
+  /// 문구 두 줄의 세로 간격 (픽셀). 행 가운데에서 위아래로 반씩 띄운다
+  static const int remarkLineGap = 34;
+
   /// 평균 소음 행의 세로 좌표 (픽셀)
   static const int noiseAvgY = 995;
 

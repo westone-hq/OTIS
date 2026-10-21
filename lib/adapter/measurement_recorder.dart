@@ -10,6 +10,7 @@ import 'package:vibration_checker/domain/capture/noise_offset.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
@@ -247,7 +248,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -271,7 +272,8 @@ class MeasurementRecorder {
   ///          (`SignalConditioner.methodLabel` + `RideWeighting.methodLabel`
   ///          + `MeasurementAssembler.kinematicsMethodLabel` +
   ///          `MeasurementAssembler.jerkMethodLabel` +
-  ///          `MeasurementAssembler.accelChartMethodLabel` + `kNoiseMethodLabel`)
+  ///          `MeasurementAssembler.accelChartMethodLabel` +
+  ///          `MotionZones.methodLabel` + `kNoiseMethodLabel`)
   ///          을 실어
   ///          저장소에 저장한다. 로그인한
   ///          작업자(성명 · 사번 · 업체명 · 관리팀)도 이 시점 값을 함께 싣는다
@@ -409,6 +411,7 @@ class MeasurementRecorder {
               '+${MeasurementAssembler.kinematicsMethodLabel}'
               '+${MeasurementAssembler.jerkMethodLabel}'
               '+${MeasurementAssembler.accelChartMethodLabel}'
+              '+${MotionZones.methodLabel}'
               '+$kNoiseMethodLabel',
         ),
       );

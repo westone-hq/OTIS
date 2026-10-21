@@ -104,6 +104,19 @@ flutter test --tags screenshot --run-skipped test/screenshots
   기준을 넘으면 빨강, 값이 없으면 회색이고 최대 속도 · 운행 거리는 원이
   없다. 분석 자료 표의 "Machine으로 부터 진동" · "Belts" 는 서식 글자를
   덮고 "권상기 머신으로 부터 진동" · "로우프" 로 찍는다.
+- 수직 최대 · Jptp(2026-10-21, OTIS 리포트와 같은 정의): `MotionZones.of()`
+  가 운행(|v| > 0.05 m/s)을 1.6Hz 저역 가속도로 정속 · 가감속 구간으로
+  나눈다(가속도 최대 50% 를 넘는 처음 · 마지막이 가속 · 감속 봉우리, 그 사이
+  |a| < 0.03 m/s² 인 처음 · 마지막이 정속 시작 · 끝, 정속 1초 미만이면 실패
+  → 수직 최대 · Jptp "—"). 1쪽 수직 최대(`zPtp`)는 정속 구간 안 최대 반주기
+  P2P, `zJptp` 는 가감속 구간 최대로 2쪽 수직 차트에만 "Jptp 값milli-G" 로
+  적는다(두 글자 상자는 겹치지 않게 비킨다). 수직 평균(A95)은 운행 구간
+  (0.5 m 제외) 그대로다. 1쪽 수직 두 행이 황색 · 적색이면 서식 라벨 · 값을
+  덮고 OTIS 문구 두 줄을 쓴다 — 평균 "진동측정결과가 {값} 로 / 일관되게 높게
+  측정되었습니다", 최대 "최대의 진동 {값} 가 하부층 정지레벨로부터 / {위치}m
+  에서 측정되었습니다."(`ReportMetric.remarkLines`). 다른 행은 문구가 없다.
+  OTIS 대비 개발폰 3건: ptp −6 · +12 · +33%(하강, 오티스폰 원시데이터도
+  +11%), Jptp +15 · −3 · −12%.
 - 저장 결과 목록은 결과 파일을 읽지 못한 측정(측정 일시가 없거나 깨짐 등)을
   그 한 건만 "읽을 수 없는 결과" 로 보여 주고 지울 수 있게 한다
   (`MeasurementRepository.listEntries()`, 2026-10-15). 측정 일시를 "지금"
@@ -184,6 +197,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
             5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
             6. 운행 구간 (TravelWindow)      출발 · 정지 0.5 m 제외, 운행 1 m 이하면 실패
             7. 반주기 P2P (HalfCycle)        구간 안 최대 P2P · A95, 구간 안 소음 최대 · 평균
+            8. 정속 · 가감속 (MotionZones)   수직 최대 = 정속 구간 최대, Jptp = 가감속 구간 최대
 ```
 
 - **설정 상수**: `CaptureConfig` 의 `conditionedRateHz`(100) ·
@@ -204,13 +218,19 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `travelWindowFailureReason`) 줄을, 그 뒤에 `kinematics` 와
   `motionWindowStart/EndSec`(정지 측정이면 `motionWindow: none`, 여유가 기록
   앞 · 끝에서 잘렸으면 `motionWindowClippedAtStart/End: true`) 줄을 덧붙인다.
+  운행 구간 줄 뒤에는 `zones` 와 `steadyStart/EndSec`(못 정하면
+  `zonesFailureReason`) 줄이 붙는다.
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
   (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+motion(v>0.05,pad500ms)
-  +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+noise(A,fast,+105.2)`,
+  +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms)
+  +noise(A,fast,+105.2)`,
   `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
   `MeasurementAssembler.kinematicsMethodLabel` + `jerkMethodLabel` +
-  `accelChartMethodLabel` + `kNoiseMethodLabel`) 과
-  `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`. `+motion` 이 없는
+  `accelChartMethodLabel` + `MotionZones.methodLabel` + `kNoiseMethodLabel`) 과
+  `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`, `motionZones`
+  (첨자 · 초) 또는 `motionZonesFailure`, `zJptp` · `zPtpPositionM`. `+zones`
+  가 없는 2026-10-21 전 결과의 `zPtp` 는 운행 구간 전체 최대이고 Jptp ·
+  위치가 없다. `+motion` 이 없는
   2026-10-20 전 결과는 기록 전체를 적분한 예전 거리 · 최대 속도다. `+jerk`
   가 없는 2026-10-21 전 결과의 저크는 40Hz 가속도를 그대로 미분해 ±10 ~ 20
   m/s³ 로 크다(그대로 읽고 그린다). `+acc` 가 없는 결과의 `accelSeries` 는
@@ -223,7 +243,9 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `rideVerticalHighpassOrder`(2) · `travelEdgeExclusionM`(0.5) ·
   `minimumTravelM`(1.0) · `motionSpeedThresholdMps`(0.05) ·
   `motionPaddingMs`(500) · `jerkLowpassHz`(1.6) · `jerkLowpassOrder`(4) ·
-  `accelChartLowpassHz`(10) · `accelChartLowpassOrder`(4, 차트 표시용). 저크
+  `accelChartLowpassHz`(10) · `accelChartLowpassOrder`(4, 차트 표시용) ·
+  `zoneRunSpeedMps`(0.05) · `zonePeakRatio`(0.5) · `zoneSteadyAccelMps2`(0.03)
+  · `zoneMinimumSteadyMs`(1000, 정속 · 가감속 구간). 저크
   저역은 OTIS 리포트 저크 차트 4개와 RMSE 0.02 ~ 0.03 m/s³ 로 맞춘 값이다
   (2026-10-21). 저크 필터의 양 끝 덧댐(15행) 때문에 조립은 16행 미만 격자를
   사유와 함께 돌려보낸다. ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,
@@ -331,9 +353,10 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     방식 미확인). 운행 거리는 같은 로우 데이터에서 오티스 앱과 같으므로,
     동시 측정에서 나는 차이(0.4 m 안팎)는 보정 방식이 아니라 두 기기
     센서의 치우침 차이다
-  - `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다. 정속 구간 감지는 넣지
-    않는다(운행 구간은 거리로만 정한다). A95 백분위는 최근접 순위다(표준의
-    보간 방식 미확인)
+  - `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다. 운행 구간(A95 · 수평 ·
+    소음)은 거리로만 정하고, 정속 구간은 수직 최대 · Jptp 에만 쓴다
+    (2026-10-21, 예전 "정속 구간 감지는 넣지 않는다" 를 바꿈). A95 백분위는
+    최근접 순위다(표준의 보간 방식 미확인)
 - 리포트 차트 세로축(2026-10-10 · 10-11, `lib/domain/report/chart_scale.dart`):
   원본 리포트 범위(X ±4 · Y ±10 · Z ±20 · 소음 40~54 · 위치 0~10 · 속도
   0~1 · 가속도 ±0.6 · 저크 ±0.6(눈금 0.2, 2026-10-21))를 최소 범위로 두고, 데이터 양 끝에 10% 씩
@@ -345,6 +368,8 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   최솟값 자리에 흰 테를 두른 굵은 빨간 점을 찍고, 최댓값 점 옆(오른쪽,
   자리가 없으면 왼쪽)에 흰 상자 · 굵은 빨간 글자로 "ptp 값 milli-G"(1쪽
   표와 같은 지표, 원본 표기 `a_x,ptp` 를 따라 소문자, 2026-10-20)를 적는다.
+  수직 차트는 정속 구간 최대 쌍에 "ptp", 가감속 구간 최대 쌍에 "Jptp" 를
+  함께 적는다(2026-10-21).
   소음 최댓값도 같은 방식이다(2026-10-15). 운행 구간 점선(2026-10-20,
   원본과 같은 모양): X · Y · 수직 차트는 ±A95/2 높이에 붉은 가로 점선 두
   줄과 왼쪽 아래 "A95", 소음 차트는 평균 한 줄을 지표를 낸 운행 구간
