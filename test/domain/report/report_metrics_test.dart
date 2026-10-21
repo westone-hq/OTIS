@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/report/noise_slow.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
@@ -12,7 +14,8 @@ import 'package:vibration_checker/model/measurement_result.dart';
 /// 목적: 지표 산출만 보려고 만드는 측정 결과. 산출에 쓰이지 않는 값은
 ///       비워 둔다.
 /// 인자: noiseSeries — 소음 시계열 (dBA). 안 주면 빈 목록
-///       noiseMax — 센서가 본 소음 최대 (dBA). 안 주면 null
+///       noiseMax — 저장된 소음 최대 (dBA). 안 주면 null. 리포트는 이 값이
+///       아니라 소음열에서 다시 센 Slow 최대를 쓴다(2026-10-22)
 ///       xPtp, yPtp, zPtp — 축별 진동 P2P (mg). 안 주면 null
 ///       maxSpeed — 최대 속도 (m/s). 안 주면 null
 ///       distance — 운행 거리 (m). 안 주면 null
@@ -173,38 +176,48 @@ void main() {
   group('소음 통로가 뚫려 있는지', () {
     test('소음이 채워지면 이 계층을 고치지 않고 값이 나온다', () {
       // 수집 계층이 격자에 실어 준 소음이 어셈블러를 거쳐 온 모양으로,
-      // noiseSeries 와 noiseMax 를 채워 넣는다. 산출 계층을 건드리지
-      // 않았는데도 평균과 최대가 나와야 통로가 실제로 열려 있는 것이다
+      // noiseSeries 를 채워 넣는다. 산출 계층을 건드리지 않았는데도 평균과
+      // 최대가 나와야 통로가 실제로 열려 있는 것이다
       final metrics = ReportMetrics.from(
-        _result(noiseSeries: const <double>[44.0, 46.0, 48.0], noiseMax: 48.0),
+        _result(noiseSeries: List<double>.filled(10, 48.0), noiseMax: 48.0),
       ); // 산출된 지표
 
-      expect(metrics.noiseAvg.value, closeTo(46.0, 1e-9));
+      expect(metrics.noiseAvg.value, closeTo(48.0, 1e-9));
       expect(metrics.noiseMax.value, closeTo(48.0, 1e-9));
-      expect(metrics.noiseAvg.display, '46.0dBA');
+      expect(metrics.noiseAvg.display, '48.0dBA');
       expect(metrics.noiseMax.display, '48.0dBA');
     });
 
-    test('최대는 시계열이 아니라 noiseMax 를 읽는다', () {
-      // 최대의 정본은 noiseMax 다. 여기서 시계열로 다시 세면 0 인 표본을
-      // 빼는 규칙이 어셈블러와 갈라져 두 값이 어긋난다
+    test('최대는 저장된 noiseMax 가 아니라 소음열의 Slow 최대다', () {
+      // 2026-10-22: 최대는 Fast 소음열에 1초 평활을 더한 값에서 다시 센다.
+      // 저장된 noiseMax(예전 결과는 Fast 최대)는 읽지 않는다. 평균은 Fast
+      // 열 그대로다
+      const noise = <double>[44.0, 46.0, 48.0]; // Fast 소음열
       final metrics = ReportMetrics.from(
-        _result(noiseSeries: const <double>[44.0, 46.0, 48.0], noiseMax: 65.6),
+        _result(noiseSeries: noise, noiseMax: 65.6),
       ); // 산출된 지표
+      final slow = NoiseSlow.series(noise, 256.0); // 같은 열의 Slow 열
 
-      expect(metrics.noiseMax.value, closeTo(65.6, 1e-9));
+      expect(metrics.noiseMax.value, closeTo(slow.reduce(math.max), 1e-12));
+      expect(metrics.noiseMax.value!, lessThan(48.0), reason: 'Slow 는 늦게 오른다');
+      expect(metrics.noiseMax.value!, greaterThan(44.0));
       expect(metrics.noiseAvg.value, closeTo(46.0, 1e-9));
     });
 
-    test('시계열만 있고 noiseMax 가 없으면 최대는 비어 있다', () {
-      // 최대를 시계열에서 몰래 다시 세지 않는다는 것을 못박는다.
-      // 시계열 최대로 채우는 일은 어셈블러가 맡는다
+    test('noiseMax 가 없는 결과도 소음열에서 최대가 나온다', () {
       final metrics = ReportMetrics.from(
-        _result(noiseSeries: const <double>[44.0, 46.0, 48.0]),
+        _result(noiseSeries: List<double>.filled(5, 50.0)),
+      ); // 산출된 지표
+
+      expect(metrics.noiseMax.value, closeTo(50.0, 1e-9));
+    });
+
+    test('소음열이 0 뿐이면 저장된 noiseMax 가 있어도 최대는 비어 있다', () {
+      final metrics = ReportMetrics.from(
+        _result(noiseSeries: List<double>.filled(5, 0.0), noiseMax: 65.6),
       ); // 산출된 지표
 
       expect(metrics.noiseMax.value, isNull);
-      expect(metrics.noiseAvg.value, closeTo(46.0, 1e-9));
     });
 
     test('시작 직후 0 구간을 빼고 평균을 낸다', () {
@@ -234,15 +247,12 @@ void main() {
     });
 
     test('소음 최대는 72 를 넘으면 황색, 75 를 넘으면 적색이다', () {
-      expect(
-        ReportMetrics.from(_result(noiseMax: 65.6)).noiseMax.verdict,
-        ReportVerdict.green,
-      );
-      expect(
-        ReportMetrics.from(_result(noiseMax: 73.0)).noiseMax.verdict,
-        ReportVerdict.yellow,
-      );
-      final loud = ReportMetrics.from(_result(noiseMax: 76.0)); // 적색 결과
+      // 최대는 소음열에서 센다 — 한 표본짜리 열이면 그 값 그대로다
+      ReportMetrics peak(double level) =>
+          ReportMetrics.from(_result(noiseSeries: <double>[level]));
+      expect(peak(65.6).noiseMax.verdict, ReportVerdict.green);
+      expect(peak(73.0).noiseMax.verdict, ReportVerdict.yellow);
+      final loud = peak(76.0); // 적색 결과
       expect(loud.noiseMax.verdict, ReportVerdict.red);
       expect(loud.noiseMax.yellowDisplay, '72');
       expect(loud.noiseMax.redDisplay, '75');
@@ -267,10 +277,11 @@ void main() {
   });
 
   group('실측 소음 회귀', () {
-    test('평균과 최대가 원본 리포트에 인쇄된 값 그대로 찍힌다', () {
-      // 원본 TUNE 리포트 1쪽은 평균 45.8dBA · 최대 65.6dBA 로 적고 있다.
-      // 기준 측정 기록의 소음 열에서 그대로 나오는 값이라 표기 문자열까지
-      // 고정한다
+    test('기준 기록 전체 소음열의 평균 · Slow 최대', () {
+      // 운행 구간이 없는 결과라 기록 전체에서 센다. 평균 45.8dBA 는 원본 TUNE
+      // 리포트 1쪽 평균과 같다. 최대는 2026-10-22 부터 Slow(1초) 최대라
+      // Fast 최대(65.6)보다 낮다 — 운행 구간 안 비교는 measurement_assembler
+      // 시험이 본다
       final noise = _fixtureNoise(); // 기준 기록의 소음 열 (dBA)
       final metrics = ReportMetrics.from(
         _result(noiseSeries: noise, noiseMax: 65.6),
@@ -279,7 +290,11 @@ void main() {
       expect(noise.length, 11388);
       expect(metrics.noiseAvg.value!, closeTo(45.804380, 1e-6));
       expect(metrics.noiseAvg.display, '45.8dBA');
-      expect(metrics.noiseMax.display, '65.6dBA');
+      expect(
+        metrics.noiseMax.value,
+        closeTo(NoiseSlow.series(noise, 256.0).reduce(math.max), 1e-12),
+      );
+      expect(metrics.noiseMax.value!, lessThan(65.6));
     });
   });
 

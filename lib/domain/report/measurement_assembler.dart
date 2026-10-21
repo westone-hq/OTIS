@@ -6,6 +6,7 @@ import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
 import 'package:vibration_checker/domain/report/motion_zones.dart';
+import 'package:vibration_checker/domain/report/noise_slow.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/model/worker.dart';
@@ -144,11 +145,12 @@ class MotionWindow {
 ///       소음 두 값의 계약
 ///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
 ///         같은 주기로 갱신되므로 표본과 표본 사이에서 봉우리를 잃지
-///         않는다. 다만 수집 계층이 1초 창으로 고른 값을 내보내므로 그
-///         창보다 짧은 소리는 평탄해지는데, 이는 Slow 특성을 쓰기로 한
-///         결과이지 격자가 잃은 것이 아니다.
+///         않는다. 다만 수집 계층이 Fast(0.125초) 평활한 값을 내보내므로
+///         그보다 짧은 소리는 평탄해지는데, 이는 시간가중 특성이지 격자가
+///         잃은 것이 아니다.
 ///         - `noiseSeries` 는 격자에 정렬된 값 그대로이고 차트가 쓴다
-///         - `noiseMax` 는 그 시계열의 운행 구간 안 최대다
+///         - `noiseMax` 는 그 시계열에 1초 평활(Slow, `NoiseSlow`)을 더한
+///           값의 운행 구간 안 최대다(2026-10-22, 그 전은 Fast 최대)
 ///         - 소음 평균은 모든 표본이 있어야 나오므로 시계열에서 낸다.
 ///           `ReportMetrics` 가 같은 운행 구간(`travelWindow`)으로 그
 ///           몫을 맡는다
@@ -345,12 +347,13 @@ class MeasurementAssembler {
         ? null
         // → 로직 이동: MotionZones.transientMaximum()
         : zones?.transientMaximum(zWeighted); // 가감속 구간 수직 최대
-    final resolvedNoiseMax = window == null
-        ? null
-        // → 로직 이동: _peakIgnoringZeros()
-        : _peakIgnoringZeros(
-            noiseSeries.sublist(start, end + 1),
-          ); // 구간 소음 최대 (dBA). 쓸 표본이 없으면 null
+    // → 로직 이동: NoiseSlow.maxOf()
+    final resolvedNoiseMax = NoiseSlow.maxOf(
+      noiseSeries,
+      sampleRate,
+      window: window,
+      windowFailed: window == null,
+    ); // 구간 소음 최대 (dBA, Slow 1초). 쓸 표본이 없으면 null
 
     return MeasurementAssembleResult.success(
       MeasurementResult(
@@ -444,25 +447,6 @@ class MeasurementAssembler {
         ? peak.firstIndex
         : peak.secondIndex; // 큰 봉우리 자리
     return position[at];
-  }
-
-  /// 작성: 2026-09-15 21:38:58 · nada
-  /// 함수: _peakIgnoringZeros
-  /// 목적: 소음 표본 중 가장 큰 값을 찾되 0 인 표본은 빼고 센다. 0 은
-  ///       값이 아니라 미측정 표시라서다 — 클래스 주석의 소음 계약을
-  ///       본다. 평균 쪽에서 같은 규칙을 쓰는 곳은 `ReportMetrics` 의
-  ///       `_withoutWarmupZeros()` 다.
-  /// 인자: series — 살펴볼 소음 표본 목록 (dBA)
-  /// 반환: 0 이 아닌 표본 중 최댓값. 쓸 표본이 하나도 없으면 null — 잴
-  ///       것이 없는데 0 을 돌려주면 실제로 0 이 나온 측정과 구분할 수
-  ///       없고, 기준치와 견줘 "정상" 으로 찍힌다
-  static double? _peakIgnoringZeros(List<double> series) {
-    double? peak; // 여기까지 본 것 중 가장 큰 값. 아직 없으면 null
-    for (final value in series) {
-      if (value == 0) continue;
-      if (peak == null || value > peak) peak = value;
-    }
-    return peak;
   }
 
   /// 작성: 2026-09-15 19:14:22 · nada

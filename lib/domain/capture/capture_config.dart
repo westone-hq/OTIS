@@ -207,6 +207,15 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-22 사용자 지시 "≥ +940 이면 화면 위"
   static const double placementFaceUpMinMg = 940.0;
 
+  /// 작성: 2026-10-22 16:20:00 · nada
+  /// 변수: noiseMaxSlowSec
+  /// 목적: 소음 최대를 낼 때 저장된 Fast 소음열에 더하는 지수평활 시정수
+  ///       (초, 에너지 기준, `NoiseSlow`). 소음 평균에는 쓰지 않는다.
+  /// 근거: 표준 — IEC 61672-1 "Slow" 1초. 측정 — 2026-10-21 동시 측정 3회
+  ///       최대가 OTIS PDF 와 +1.0 / −0.6 / −0.6 dB. 같은 평활로 평균을 내면
+  ///       0.7 ~ 2.6 dB 올라 평균은 Fast 그대로 둔다(2026-10-22 리뷰 결정)
+  static const double noiseMaxSlowSec = 1.0;
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 변수: defaultTargetSampleRateHz
   /// 목적: targetSampleRateHz 기본값이다.

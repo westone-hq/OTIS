@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/report/motion_zones.dart';
+import 'package:vibration_checker/domain/report/noise_slow.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 
@@ -118,8 +119,9 @@ class MeasurementResult {
   /// Z축 진동 A95 (mg). 정의와 null 의 뜻은 `xA95` 와 같다
   final double? zA95;
 
-  /// 소음 최대값 (dBA). 운행 구간(`travelWindow`) 안에서 0(미측정)을 뺀
-  /// 최대다. 운행 구간이 들어가기 전 결과는 측정 전체의 최대다. null 이면
+  /// 소음 최대값 (dBA). 2026-10-22 부터는 Slow(1초) 시계열의 운행 구간 최대로
+  /// 저장한다. 화면 · 리포트는 이 값 대신 `noiseMaxSlow` 로 다시 센다.
+  /// 그 전 결과는 운행 구간(`travelWindow`) 안에서 0(미측정)을 뺀 Fast 최대다. 운행 구간이 들어가기 전 결과는 측정 전체의 최대다. null 이면
   /// 잴 수 있는 표본이 없었거나(마이크 권한 없음) 운행 구간을 정하지 못했다
   final double? noiseMax;
 
@@ -616,14 +618,31 @@ class MeasurementResult {
   /// 목적: 최대 소음이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
   ///       안에서 기준이 적힌 곳을 한 군데로 두기 위해서다.
-  /// 반환: 기준치(`ReportThresholds.noiseMaxRedDba`) 초과 시 true.
-  ///       `noiseMax` 가 null 이면 null — 아직 재지 않은 값을 "정상"으로
-  ///       보고하지 않기 위해서다
+  /// 반환: 기준치(`ReportThresholds.noiseMaxRedDba`) 초과 시 true. 소음
+  ///       최대는 Slow 기준(`noiseMaxSlow`, 2026-10-22)이다. 그 값이 null 이면
+  ///       null — 아직 재지 않은 값을 "정상"으로 보고하지 않기 위해서다
   /// 근거: 인용 — `ReportThresholds` 의 적색 기준(2026-10-15 사용자
   ///       지시, 원본 TUNE 리포트 서식의 적색 값). 리포트 신호등은
   ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get noiseExceeded =>
-      ReportThresholds.exceeds(noiseMax, ReportThresholds.noiseMaxRedDba);
+      ReportThresholds.exceeds(noiseMaxSlow, ReportThresholds.noiseMaxRedDba);
+
+  /// 작성: 2026-10-22 16:20:00 · nada
+  /// 함수: noiseMaxSlow
+  /// 목적: 소음 최대(dBA)를 저장된 소음열에서 다시 낸다 — Slow(1초) 시계열의
+  ///       운행 구간 최대(`NoiseSlow.maxOf()`). 리포트 1쪽 · 결과 화면 · 저장
+  ///       결과 목록이 이 값을 쓴다. 저장된 `noiseMax` 대신 매번 세므로
+  ///       2026-10-22 전 결과도 열면 Slow 기준 최대로 보인다.
+  /// 반환: 소음 최대 (dBA). 잴 수 있는 표본이 없거나 운행 구간을 정하지
+  ///       못했으면 null
+  double? get noiseMaxSlow =>
+      // → 로직 이동: NoiseSlow.maxOf()
+      NoiseSlow.maxOf(
+        noiseSeries,
+        sampleRate,
+        window: travelWindow,
+        windowFailed: travelWindowFailure != null,
+      );
 
   /// 작성: 2026-10-22 09:30:00 · nada
   /// 함수: placementKind

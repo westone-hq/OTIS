@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 
 /**
  * 작성: 2026-09-15 13:20:00 · 박희정
- * 수정: 2026-10-22 12:00:00 · nada
+ * 수정: 2026-10-22 16:20:00 · nada
  * 클래스: NoiseCaptureHandler
  * 목적: 측정하는 동안 마이크로 소음 크기(dBA)를 재서 `latestDba` 에
  *       채운다. 표본마다 A 가중(`A_WEIGHTING_SOS`)을 건 뒤, 최근
@@ -142,20 +142,16 @@ class NoiseCaptureHandler(private val context: Context) {
 
         /**
          * 작성: 2026-10-12 17:20:16 · 박희정
-         * 수정: 2026-10-22 12:00:00 · nada
-         * 변수: TIME_WEIGHT_SEC
+         * 수정: 2026-10-22 16:20:00 · nada
+         * 변수: FAST_TIME_WEIGHT_SEC
          * 목적: 소음 RMS에 적용하는 지수평활의 시간 상수(초). 홉마다 새로
-         *       들어오는 평균 제곱값을 이 상수로 평활해, 소음계의 "Slow"
-         *       응답을 낸다. 2026-10-22 전에는 "Fast"(0.125초)였다.
-         * 근거: 표준 — IEC 61672-1 의 "Slow" 시간가중 시정수(1초).
-         *       측정 — 2026-10-21 동시 측정 3회 소음 열에 1초 평활을 더하면
-         *       최대가 OTIS PDF 와 +1.0 / −0.6 / −0.6 dB(Fast 는 +5.3 / +2.5 /
-         *       +3.6)로 맞는다. 대신 dB 평균은 0.7 ~ 2.6 dB 오른다(에너지로
-         *       평활해 조용한 순간이 앞 큰 소리에 끌려 올라감) — OTIS PDF 평균
-         *       대비 +2.5 / −0.2 / −1.0 → +3.7 / +0.5 / +1.6
-         *       (docs/noise_otis_offset_notes.md)
+         *       들어오는 평균 제곱값을 이 상수로 평활해, 소음계의 "Fast"
+         *       응답과 비슷한 반응 속도를 낸다. 2026-10-22 에 잠시 Slow(1초)로
+         *       바꿨다가 같은 날 되돌렸다 — 소음 평균은 이 Fast 값으로 내고,
+         *       최대만 Dart 가 이 값에 1초 평활을 더해 낸다(`NoiseSlow`).
+         * 근거: 표준 — IEC 61672-1 의 "Fast" 시간가중 시정수(0.125초)
          */
-        private const val TIME_WEIGHT_SEC = 1.0
+        private const val FAST_TIME_WEIGHT_SEC = 0.125
 
         /**
          * 작성: 2026-09-21 17:37:25 · 박희정
@@ -240,7 +236,7 @@ class NoiseCaptureHandler(private val context: Context) {
      *              표본을 넣는다
      *       meanSquare = 창 안 표본 제곱의 합 / windowSamples
      *                    창이 가득 찬 뒤에만 센다. 덜 찼으면 0.0을 내보낸다
-     *       alpha = exp(-(이번 홉 표본 수 / 표본 속도) / TIME_WEIGHT_SEC)
+     *       alpha = exp(-(이번 홉 표본 수 / 표본 속도) / FAST_TIME_WEIGHT_SEC)
      *       weightedMeanSquare = alpha × 이전 weightedMeanSquare
      *                            + (1 - alpha) × meanSquare
      *                            첫 창은 평활 없이 meanSquare 그대로 쓴다
@@ -306,7 +302,7 @@ class NoiseCaptureHandler(private val context: Context) {
                 var lastLogTimeMs = // 마지막으로 진단 기록을 남긴 시각(밀리초)
                     System.currentTimeMillis()
 
-                var smoothedMeanSquare: Double? = // Slow 평활 상태. 첫 창은 null
+                var fastWeightedMeanSquare: Double? = // Fast 평활 상태. 첫 창은 null
                     null
                 while (isRecording) {
                     val read = // 이번에 실제로 읽은 표본 수
@@ -354,15 +350,15 @@ class NoiseCaptureHandler(private val context: Context) {
                         continue
                     }
 
-                    val meanSquare = // 창의 평균 제곱값(Slow 평활 전)
+                    val meanSquare = // 창의 평균 제곱값(Fast 평활 전)
                         sumSquares / windowSamples
                     val alpha = // 이번 홉 길이에 맞춘 지수평활 감쇠율(0~1)
-                        exp(-(read.toDouble() / sampleRate) / TIME_WEIGHT_SEC)
-                    val weightedMeanSquare = // Slow 시간가중을 적용한 평균 제곱값
-                        smoothedMeanSquare?.let { previous ->
+                        exp(-(read.toDouble() / sampleRate) / FAST_TIME_WEIGHT_SEC)
+                    val weightedMeanSquare = // Fast 시간가중을 적용한 평균 제곱값
+                        fastWeightedMeanSquare?.let { previous ->
                             alpha * previous + (1.0 - alpha) * meanSquare
                         } ?: meanSquare
-                    smoothedMeanSquare = weightedMeanSquare
+                    fastWeightedMeanSquare = weightedMeanSquare
 
                     val rms = sqrt(weightedMeanSquare) // 평활된 창의 RMS
                     val clampedRms = // 무음에서 로그가 -무한대가 되지 않게 막은 RMS

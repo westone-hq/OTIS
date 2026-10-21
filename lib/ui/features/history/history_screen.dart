@@ -205,7 +205,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       if (item.yExceeded == true) 'Y ${item.yPtp!.toStringAsFixed(1)}mg',
       if (item.zExceeded == true) 'Z ${item.zPtp!.toStringAsFixed(1)}mg',
       if (item.noiseExceeded == true)
-        '소음 ${item.noiseMax!.toStringAsFixed(1)}dBA',
+        '소음 ${item.noiseMaxSlow!.toStringAsFixed(1)}dBA',
     ]; // 초과한 항목 문구
     if (reasons.isEmpty) {
       return unmeasured == 0 ? '전 지표 정상' : '잰 지표는 정상 (미측정 $unmeasured개)';

@@ -396,8 +396,9 @@ class VibrationFileWriter {
   /// 작성: 2026-10-22 12:00:00 · nada
   /// 함수: encodeNoiseMeta
   /// 목적: 소음 계산 방식(시간가중 · 마이크 표본 속도)을 집계 파일 끝에
-  ///       덧붙일 문자열로 만든다. 2026-10-22 에 Fast → Slow · 44.1 → 48kHz 로
-  ///       바꿔, 예전 측정과 견줄 때 어느 쪽인지 집계 파일만 보고 알게 한다.
+  ///       덧붙일 문자열로 만든다. 2026-10-22 에 44.1 → 48kHz 로 바꾸고 소음
+  ///       최대를 Slow(1초, Dart)로 내게 해, 예전 측정과 견줄 때 어느 쪽인지
+  ///       집계 파일만 보고 알게 한다.
   /// 인자: sampleRateHz — 소음 마이크를 연 표본 속도(Hz). 못 열었으면 null
   /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
   static String encodeNoiseMeta(int? sampleRateHz) {
@@ -407,7 +408,8 @@ class VibrationFileWriter {
       ..write(text)
       ..write(lineEnding);
 
-    line('noiseTimeWeighting: slow (${kNoiseTimeWeightSec}s)');
+    line('noiseTimeWeighting: fast (${kNoiseTimeWeightSec}s)');
+    line('noiseMaxSlowSec: ${CaptureConfig.noiseMaxSlowSec}');
     line('noiseSampleRateHz: ${sampleRateHz ?? 'none'}');
     line('noiseOffsetDb: $kDefaultMicDbfsToDbaOffset');
     if (sampleRateHz == null) {

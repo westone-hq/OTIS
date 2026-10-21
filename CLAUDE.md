@@ -265,12 +265,12 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
   (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)+motion(v>0.05,pad500ms)
   +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)
-  +noise(A,slow,+105.2,48000Hz)`,
+  +noise(A,fast,+105.2,48000Hz)+noisemax(slow1.0s)`,
   `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
   `MeasurementAssembler.verticalLowpassMethodLabel` +
   `MeasurementAssembler.kinematicsMethodLabel` + `jerkMethodLabel` +
   `accelChartMethodLabel` + `MotionZones.methodLabel` +
-  `noiseMethodLabel(마이크 표본 속도)`) 과
+  `noiseMethodLabel(마이크 표본 속도)` + `NoiseSlow.methodLabel`) 과
   `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`, `motionZones`
   (첨자 · 초) 또는 `motionZonesFailure`, `zJptp` · `zPtpPositionM`. `+zones`
   가 없는 2026-10-21 전 결과의 `zPtp` 는 운행 구간 전체 최대이고 Jptp ·
@@ -512,14 +512,24 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   맞고 나머지 둘은 조용한 구간이 ±5 dB 갈린다. 오프셋은 임시값이다 — 두 폰을
   같은 자리 · 같은 방향에 두고 다시 재 확정하고, 폰마다 마이크 감도가 달라
   기기별 보정이 필요할 수 있다(`noise_otis_offset_notes.md`).
-  2026-10-22: 시간가중을 Slow(1초, `kNoiseTimeWeightSec` = 코틀린
-  `TIME_WEIGHT_SEC`)로, 마이크를 48000Hz(못 열면 44100Hz, A 가중 계수 두 벌)로
-  바꿨다. 처리 방식 `+noise(A,slow,+105.2,48000Hz)`, meta.txt
-  `noiseTimeWeighting` · `noiseSampleRateHz` · `noiseOffsetDb`. 2026-10-21 동시
-  측정 3회에서 최대가 OTIS PDF 대비 +5.3 / +2.5 / +3.6 → +1.0 / −0.6 / −0.6 dB
-  (저장된 Fast 열에 1초 평활을 더한 어림)이고, 대신 dB 평균이 0.7 ~ 2.6 dB
-  오른다(에너지 평활). 이미 저장된 소음열은 다시 계산하지 않는다. 계수 ·
-  평활은 `noise_weighting_test` 가 SciPy 픽스처(`--noise`)와 코틀린 소스
+  2026-10-22: 마이크를 48000Hz(못 열면 44100Hz, A 가중 계수 두 벌)로 바꿨다.
+  수집 평활은 Fast(0.125초, `kNoiseTimeWeightSec` = 코틀린
+  `FAST_TIME_WEIGHT_SEC`) 그대로이고(같은 날 Slow 로 바꿨다가 평균이 0.7 ~
+  2.6 dB 올라 되돌림), **소음 최대만** Dart 가 저장된 Fast 열에 1초 에너지
+  지수평활(`NoiseSlow`, `CaptureConfig.noiseMaxSlowSec`)을 더한 Slow 열의 운행
+  구간 최대로 낸다. 평균은 Fast 열 그대로다. 2 쪽 소음 차트 · 최대 표시점도
+  Slow 열이다(평균 점선은 Fast 평균). 처리 방식
+  `+noise(A,fast,+105.2,48000Hz)+noisemax(slow1.0s)`, meta.txt
+  `noiseTimeWeighting` · `noiseMaxSlowSec` · `noiseSampleRateHz` ·
+  `noiseOffsetDb`. 2026-10-21 동시 측정 3회(개발폰) 최대가 OTIS PDF 대비
+  +5.3 / +2.5 / +3.6 → +1.0 / −0.6 / −0.6 dB(60.3 / 56.7 / 59.8,
+  `noise_slow_test`), 평균은 50.7 / 49.6 / 50.0 그대로. 대신 원본 리포트 기록
+  (ride_reference) 최대는 Fast 48.7(원본 48.7) → Slow 47.5 로 낮아진다.
+  **화면 · 리포트 · 판정은 저장된 `noiseMax` 대신 소음열에서 매번 다시
+  센다**(`MeasurementResult.noiseMaxSlow`) — 2026-10-22 전 결과도 열면 소음
+  최대가 Slow 기준으로 바뀐다(대개 2 ~ 5 dB 낮아짐, 평균은 그대로).
+  result.json 의 `noiseMax` 는 저장 시점 값(그 전 결과는 Fast 최대)이다. 계수
+  · 평활은 `noise_weighting_test` 가 SciPy 픽스처(`--noise`)와 코틀린 소스
   상수를 대조한다.
 - 리포트 서식 이미지의 지운 자국: 2 · 3쪽 `tem_2.jpg` 는 예전 차트를 붓으로
   지운 옅은 회색 덩어리(252 ~ 254)가 차트 둘레 그림자처럼 찍혀 2026-10-21
@@ -544,5 +554,5 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   않는다 — 결과 · 메일에는 사번이 남는다.
 - 소음 RMS 창(`WINDOW_SEC`) · 갱신 주기(`HOP_HZ`)는 OTIS 와 맞춰 보는
   실험값이다 (`NoiseCaptureHandler.kt`). 2026-10-12 부터 평균 제곱값을
-  지수평활해 낸다 — 2026-10-22 부터 IEC 61672-1 "Slow" 시정수
-  (`TIME_WEIGHT_SEC`, 1초), 그 전은 "Fast"(0.125초).
+  지수평활해 낸다 — IEC 61672-1 "Fast" 시정수(`FAST_TIME_WEIGHT_SEC`,
+  0.125초). 2026-10-22 에 잠시 "Slow"(1초)였다가 되돌렸다(최대만 Dart Slow).

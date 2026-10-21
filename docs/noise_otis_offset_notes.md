@@ -216,6 +216,13 @@ OTIS 파일은 처음부터 소음 숫자가 있다.
 
 ## 2026-10-22 Slow(1초) 시간가중 · 48 kHz (nada)
 
+> **같은 날 바뀜(리뷰 결정)**: 수집 평활은 Fast(0.125초)로 되돌리고(`FAST_TIME_WEIGHT_SEC`), **소음 최대만**
+> Dart 가 저장된 Fast 열에 1초 에너지 평활을 더한 Slow 열의 운행 구간 최대로 낸다(`NoiseSlow`,
+> `CaptureConfig.noiseMaxSlowSec`). 평균은 Fast 그대로라 아래 "평균이 오른다" 문제는 없다. 처리 방식
+> `noise(A,fast,+105.2,48000Hz)+noisemax(slow1.0s)`. 48 kHz 는 그대로 둔다. 화면 · 리포트는 저장된 최대 대신
+> 소음열에서 다시 세므로 예전 결과도 열면 최대가 아래 표 "Slow 어림 최대" 쪽으로 바뀐다. 아래 표의 개발폰
+> Slow 최대(60.3 / 56.7 / 59.8)가 지금 앱 값이고, 평균은 "지금(Fast) 평균"(50.7 / 49.6 / 50.0)이다.
+
 - 시간가중을 Fast(0.125초) → **Slow(1초)** 로 바꿨다(`NoiseCaptureHandler.TIME_WEIGHT_SEC`,
   Dart `kNoiseTimeWeightSec`). 마이크는 **48000 Hz** 로 먼저 열고 못 열면 44100 Hz(A 가중 계수 두 벌,
   `A_WEIGHTING_SOS_48000` · `A_WEIGHTING_SOS`). 연 속도는 result.json 처리 방식

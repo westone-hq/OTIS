@@ -83,7 +83,7 @@ final List<_Metric> _metrics = <_Metric>[
   _Metric(
     label: '소음 최대',
     unit: 'dBA',
-    read: (r) => r.noiseMax,
+    read: (r) => r.noiseMaxSlow, // 리포트와 같은 Slow(1초) 최대
     redLimit: ReportThresholds.noiseMaxRedDba,
     decimals: 1,
   ),

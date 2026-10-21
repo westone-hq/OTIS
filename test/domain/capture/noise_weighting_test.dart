@@ -3,7 +3,9 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
+import 'package:vibration_checker/domain/report/noise_slow.dart';
 
 /// 작성: 2026-10-22 12:00:00 · nada
 /// 변수: _kotlinPath
@@ -52,13 +54,16 @@ List<List<double>> _sos(String source, String name) {
 }
 
 /// 작성: 2026-10-22 12:00:00 · nada
+/// 수정: 2026-10-22 16:20:00 · nada
 /// 함수: main
 /// 목적: 소음 계산(안드로이드 `NoiseCaptureHandler`)의 2026-10-22 설정을
 ///       SciPy 정본(`noise_weighting_cases.json`, `--noise` 모드)과 견준다.
 ///       - 48000 · 44100Hz A 가중 계수
-///       - Slow(1초) 지수평활 — 앱과 같은 식(홉마다 a = exp(−홉/fs/τ), 첫 값은
-///         그대로)으로 계산한 응답이 SciPy `lfilter` 와 같은지
+///       - Fast(0.125초) 지수평활 — 앱과 같은 식(홉마다 a = exp(−홉/fs/τ), 첫
+///         값은 그대로)으로 계산한 응답이 SciPy `lfilter` 와 같은지
 ///       - Dart 쪽 시정수(`kNoiseTimeWeightSec`)가 코틀린과 같은지
+///       - 소음 최대에 쓰는 Dart Slow(1초) 평활(`NoiseSlow.series()`)이 SciPy
+///         정본과 같은지
 void main() {
   final source = File(_kotlinPath).readAsStringSync(); // 코틀린 소스
   final cases =
@@ -96,16 +101,16 @@ void main() {
     }
   });
 
-  test('Slow 평활 시정수는 1초이고 Dart · 코틀린이 같다', () {
-    expect(_constant(source, 'TIME_WEIGHT_SEC'), 1.0);
-    expect(kNoiseTimeWeightSec, _constant(source, 'TIME_WEIGHT_SEC'));
+  test('수집 평활은 Fast 0.125초이고 Dart · 코틀린이 같다', () {
+    expect(_constant(source, 'FAST_TIME_WEIGHT_SEC'), 0.125);
+    expect(kNoiseTimeWeightSec, _constant(source, 'FAST_TIME_WEIGHT_SEC'));
     expect(cases['timeWeightSec'], kNoiseTimeWeightSec);
-    expect(source, isNot(contains('FAST_TIME_WEIGHT_SEC')));
+    expect(source, isNot(contains(' TIME_WEIGHT_SEC')));
   });
 
-  test('앱 식의 Slow 평활 응답이 SciPy lfilter 와 같다', () {
+  test('앱 식의 Fast 평활 응답이 SciPy lfilter 와 같다', () {
     final hopHz = _constant(source, 'HOP_HZ').toInt(); // 홉 빈도
-    final tau = _constant(source, 'TIME_WEIGHT_SEC'); // 시정수 (초)
+    final tau = _constant(source, 'FAST_TIME_WEIGHT_SEC'); // 시정수 (초)
     for (final rate in <int>[44100, 48000]) {
       final c = cases['$rate'] as Map<String, dynamic>; // 이 속도 픽스처
       final hop = rate ~/ hopHz; // 홉 표본 수 (코틀린 `sampleRate / HOP_HZ`)
@@ -116,7 +121,7 @@ void main() {
       final expected = [
         for (final v in c['smoothed'] as List) (v as num).toDouble(),
       ];
-      double? state; // 코틀린 `smoothedMeanSquare`
+      double? state; // 코틀린 `fastWeightedMeanSquare`
       for (var i = 0; i < input.length; i++) {
         final previous = state; // 앞 홉 평활값
         state = previous == null
@@ -127,9 +132,29 @@ void main() {
     }
   });
 
-  test('처리 방식 표시에 Slow · 표본 속도를 남긴다', () {
-    expect(noiseMethodLabel(48000), 'noise(A,slow,+105.2,48000Hz)');
-    expect(noiseMethodLabel(44100), 'noise(A,slow,+105.2,44100Hz)');
-    expect(noiseMethodLabel(null), 'noise(A,slow,+105.2)');
+  test('처리 방식 표시에 Fast · 표본 속도 · 최대 Slow 를 남긴다', () {
+    expect(noiseMethodLabel(48000), 'noise(A,fast,+105.2,48000Hz)');
+    expect(noiseMethodLabel(44100), 'noise(A,fast,+105.2,44100Hz)');
+    expect(noiseMethodLabel(null), 'noise(A,fast,+105.2)');
+    expect(NoiseSlow.methodLabel, 'noisemax(slow1.0s)');
+  });
+
+  test('소음 최대용 Slow(1초) 평활이 SciPy 정본과 같다', () {
+    expect(cases['slowTimeWeightSec'], CaptureConfig.noiseMaxSlowSec);
+    final c = cases['slow'] as Map<String, dynamic>; // Slow 픽스처
+    final input = [for (final v in c['input'] as List) (v as num).toDouble()];
+    final expected = [for (final v in c['slow'] as List) (v as num).toDouble()];
+    final slow = NoiseSlow.series(
+      input,
+      (c['fs'] as num).toDouble(),
+    ); // 앱 Slow 열
+    expect(slow.length, expected.length);
+    for (var i = 0; i < expected.length; i++) {
+      expect(slow[i], closeTo(expected[i], 1e-9), reason: '$i');
+    }
+    // 0(미측정)은 0 그대로, 첫 측정 표본은 평활 없이 그대로다
+    expect(slow.first, 0);
+    expect(slow[20], 50.0);
+    expect(slow[320], 0);
   });
 }
