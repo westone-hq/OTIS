@@ -99,6 +99,13 @@ class PlacementMonitor {
   /// 목적: 판정 결과. 창이 다 차기 전(측정이 1초보다 짧음)이면 null.
   PlacementReading? get reading => _reading;
 
+  /// 작성: 2026-10-22 17:10:00 · nada
+  /// 함수: startUs
+  /// 목적: 판정 창을 시작한 첫 중력 이벤트 시각 (마이크로초). 거치 경고 시각
+  ///       (`CaptureConfig.placementAlertDelayMs`)을 여기서 잰다. 아직 중력
+  ///       이벤트가 없으면 null.
+  int? get startUs => _startUs;
+
   /// 작성: 2026-10-22 09:30:00 · nada
   /// 함수: onEvent
   /// 목적: 이벤트 한 건을 받는다. 중력 이벤트만 모으고, 세 축이 모두 0 인
