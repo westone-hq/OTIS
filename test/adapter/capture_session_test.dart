@@ -108,9 +108,8 @@ void main() {
 
   test('측정 중 속도를 어림해 250ms 마다 한 번씩 내보낸다', () async {
     final sensors = _FakeSensors(); // 요청을 기록하는 센서 통로
-    // 4ms 간격으로 정지 1.2초 → 100 mg 로 1초 가속. motion Z 는
-    // -(raw - gravity) 라 raw Z 를 -100 으로 준다. 세 축이 모두 0 인 raw 는
-    // 버려지므로 X 에 1 mg 를 둔다
+    // 4ms 간격으로 정지 1.2초 → 100 mg 로 1초 가속. 화면을 아래로 놓아
+    // 중력 Z 가 −1000 이고, 위로 가속하면 raw Z 가 −1000 − 100 이다
     NativeEvent raw(int i, double zMg) => NativeEvent(
       type: NativeEventType.accel,
       tsUs: i * 4000,
@@ -125,11 +124,11 @@ void main() {
         tsUs: 0,
         xMg: 0,
         yMg: 0,
-        zMg: 0,
+        zMg: -1000,
         dtUs: 0,
       ),
-      for (var i = 1; i <= 300; i++) raw(i, 0),
-      for (var i = 301; i <= 550; i++) raw(i, -100),
+      for (var i = 1; i <= 300; i++) raw(i, -1000),
+      for (var i = 301; i <= 550; i++) raw(i, -1100),
     ];
     final session = CaptureSession(sensorManager: sensors); // 시험할 수집
     final published = <double?>[]; // 내보낸 속도

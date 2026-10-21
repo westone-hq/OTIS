@@ -289,6 +289,16 @@ class SiteInfo {
     );
   }
 
+  /// 작성: 2026-10-21 15:20:00 · nada
+  /// 함수: isDownward
+  /// 목적: 저장된 운전 방향이 하강인지 본다. 예전 표기("상부 → 하부")도
+  ///       하강으로 읽는다(`_knownDirection()` 과 같은 규칙).
+  /// 인자: direction — 저장된 운전 방향
+  /// 반환: 하강이면 true
+  static bool isDownward(String direction) =>
+      // → 로직 이동: _knownDirection()
+      _knownDirection(direction) == directionDown;
+
   /// 작성: 2026-10-04 18:15:24 · nada
   /// 함수: _knownDirection
   /// 목적: 저장돼 있던 운전 방향을 지금 선택지로 맞춘다. 예전 표기

@@ -28,13 +28,25 @@ const Map<String, String> otis1021Records = <String, String>{
 /// 목적: 원본 리포트(H6N1AP65)를 만든 레퍼런스폰 기록 경로.
 const String rideReferencePath = 'test/fixtures/ride_reference.txt';
 
+/// 작성: 2026-10-21 15:20:00 · nada
+/// 변수: faceUpRecords
+/// 목적: 화면을 위로 놓고 2026-10-21 전 격자 환산 식(Z = −(raw − gravity))
+///       으로 기록돼 수직 부호가 뒤집힌 기록. 지금 식(중력 방향 투영,
+///       `GridResampler.motionOf()`)으로 다시 환산했다면 Z 부호만 반대다.
+///       같은 폰 상승 기록은 정지 Z 가 +0.1 mg 인데 이 기록만 −13.6 mg 이고
+///       같은 운행의 오티스폰과 가속 부호가 반대라 그렇게 본다
+///       (작업메모_20261021.md 묶음 4).
+const Set<String> faceUpRecords = <String>{'dev_down3'};
+
 /// 작성: 2026-10-21 10:05:00 · nada
+/// 수정: 2026-10-21 15:20:00 · nada
 /// 함수: readEvimpGrid
 /// 목적: EVIMP1 파일(머리 2줄 뒤 "X Y Z 소음" 행)을 256Hz 격자로 읽는다.
 ///       앱이 저장 절차에서 만드는 격자와 같은 모양이다.
 /// 인자: path — 저장소 루트 기준 파일 경로
+///       flipVertical — true 면 Z 부호를 뒤집는다(`faceUpRecords`)
 /// 반환: 256Hz 격자 환산 결과
-GridResampleResult readEvimpGrid(String path) {
+GridResampleResult readEvimpGrid(String path, {bool flipVertical = false}) {
   final lines = File(path)
       .readAsLinesSync()
       .map((line) => line.trim())
@@ -47,7 +59,7 @@ GridResampleResult readEvimpGrid(String path) {
         return GridSample(
           xMg: double.parse(f[0]),
           yMg: double.parse(f[1]),
-          zMg: double.parse(f[2]),
+          zMg: flipVertical ? -double.parse(f[2]) : double.parse(f[2]),
           noiseDba: f.length > 3 ? double.parse(f[3]) : 0.0,
         );
       }(),
@@ -70,17 +82,23 @@ GridResampleResult readEvimpGrid(String path) {
 }
 
 /// 작성: 2026-10-21 10:05:00 · nada
+/// 수정: 2026-10-21 15:20:00 · nada
 /// 함수: assembleRecord
 /// 목적: 원시데이터 한 건을 앱 저장 절차와 같은 길(신호 처리 → 조립)로
 ///       측정 결과로 바꾼다.
 /// 인자: path — 저장소 루트 기준 EVIMP1 파일 경로
 ///       site — 현장 정보. 안 주면 상승 1 → 8층 시험용 현장
+///       flipVertical — true 면 Z 부호를 뒤집어 읽는다(`faceUpRecords`)
 /// 반환: 조립 결과(측정 결과와 움직인 구간)
-MeasurementAssembleResult assembleRecord(String path, {SiteInfo? site}) {
+MeasurementAssembleResult assembleRecord(
+  String path, {
+  SiteInfo? site,
+  bool flipVertical = false,
+}) {
   return MeasurementAssembler.assemble(
     grid: const SignalConditioner(
       config: CaptureConfig(),
-    ).condition(readEvimpGrid(path)).grid,
+    ).condition(readEvimpGrid(path, flipVertical: flipVertical)).grid,
     site:
         site ??
         const SiteInfo(

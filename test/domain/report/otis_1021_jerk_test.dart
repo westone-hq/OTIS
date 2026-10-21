@@ -56,7 +56,7 @@ void _expectSections(List<SosSection> actual, List<dynamic> expected) {
 ///       - 2026-10-21 동시 측정 · ride_reference 의 저크 봉우리가 OTIS
 ///         리포트 차트와 같은 값(±0.08)인지
 ///       - 정지 측정 구간 저크 차트에 축 밖 표본이 없는지
-///       하강(dev_down3) 봉우리는 물리 부호를 바로잡는 묶음 4 에서 본다.
+///       하강(dev_down3) 봉우리는 `otis_1021_descent_test.dart` 가 본다.
 void main() {
   test('1.6Hz 4차 저역 계수 · 양방향 출력이 SciPy 와 같다', () {
     final cases = _cases(); // SciPy 픽스처

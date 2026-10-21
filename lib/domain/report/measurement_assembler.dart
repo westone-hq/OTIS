@@ -303,7 +303,7 @@ class MeasurementAssembler {
     // 가중 지표 기준이라 견줄 수 없다
     final travel = canWeight
         // → 로직 이동: TravelWindow.of()
-        ? TravelWindow.of(motion.position, sampleRate)
+        ? TravelWindow.of(motion.travelled, sampleRate)
         : TravelWindowResult.failure(
             '가중을 걸 수 없는 격자다: ${xSeries.length}행, '
             '${sampleRate.toStringAsFixed(1)}Hz',
@@ -490,7 +490,7 @@ class MeasurementAssembler {
       'bw${CaptureConfig.accelChartLowpassOrder}zp)';
 
   /// 작성: 2026-09-15 14:32:07 · nada
-  /// 수정: 2026-10-21 10:05:00 · nada
+  /// 수정: 2026-10-21 15:20:00 · nada
   /// 함수: _deriveKinematics
   /// 목적: 수직 진동 시계열에서 가속도 · 속도 · 누적 이동량 · 저크와
   ///       최대 속도 · 운행 거리를 만든다. 순서대로 한다.
@@ -502,8 +502,12 @@ class MeasurementAssembler {
   ///       3. 그 구간 가속도 평균을 치우침으로 보고 전체에서 뺀다
   ///       4. 구간 안만 적분해 속도를 만든다. 구간 밖 속도는 0 이다.
   ///          3단계로 구간 끝 속도가 정확히 0 이 된다
-  ///       5. 속도의 절댓값을 더해 나가 누적 이동량을 만든다. 구간 밖에서는
-  ///          변하지 않는다
+  ///       5. 속도의 절댓값을 더해 나가 누적 이동량(`travelled`)을 만든다.
+  ///          구간 밖에서는 변하지 않는다. 운행 거리와 운행 구간
+  ///          (`TravelWindow`)이 이것을 쓴다. 속도를 부호 그대로 더한 변위에서
+  ///          그 최솟값을 빼 하부층 정지레벨 기준 위치(`position`)도 만든다 —
+  ///          상승은 0 → 운행 거리, 하강은 운행 거리 → 0 이다(2026-10-21,
+  ///          OTIS 리포트 3쪽 위치 차트와 같다)
   ///       6. 가속도에 `CaptureConfig.jerkLowpassHz` 저역을 양방향으로 걸고
   ///          (`accelSmooth`), 그 변화율로 저크를 만든다. 같은 저역
   ///          가속도를 정속 구간 판정에도 쓴다
@@ -532,7 +536,8 @@ class MeasurementAssembler {
   /// 반환: 파생 물리량과 최대 속도 · 운행 거리, 움직인 구간을 담은 묶음
   /// 식: accel(i) = zSeries(i) x 9.80665e-3 - 구간 평균
   ///     speed(i) = (누적합 accel(s..i)) x dt   (s ≤ i ≤ e, 밖은 0)
-  ///     position(i) = (누적합 |speed(0..i)|) x dt
+  ///     travelled(i) = (누적합 |speed(0..i)|) x dt
+  ///     position(i) = d(i) - min(d),  d(i) = (누적합 speed(0..i)) x dt
   ///     smooth = filtfilt(버터워스 저역 1.6Hz 4차, accel)
   ///     jerk(i) = (smooth(i+1) - smooth(i-1)) / (2 x dt)
   /// 근거: 측정 — 2026-10-20 같은 승강기 같은 구간 기록 6건(오티스폰 ·
@@ -587,15 +592,24 @@ class MeasurementAssembler {
       }
     }
 
-    final position = List<double>.filled(n, 0.0); // 누적 이동량 시계열 (m)
-    var travelled = 0.0; // 여기까지 더한 속도 절댓값 누적합
+    final travelled = List<double>.filled(n, 0.0); // 누적 이동량 시계열 (m)
+    final displacement = List<double>.filled(n, 0.0); // 출발점 기준 변위 (m)
+    var sumMagnitude = 0.0; // 여기까지 더한 속도 절댓값 누적합
+    var sumSigned = 0.0; // 여기까지 더한 속도 누적합 (부호 그대로)
+    var lowest = 0.0; // 변위의 최솟값 (m). 하부층 정지레벨이다
     var maxSpeed = 0.0; // 속도 절댓값의 최대 (m/s)
     for (var i = 0; i < n; i++) {
       final magnitude = speed[i].abs(); // 방향을 뺀 속도 크기
-      travelled += magnitude;
-      position[i] = travelled * dt;
+      sumMagnitude += magnitude;
+      sumSigned += speed[i];
+      travelled[i] = sumMagnitude * dt;
+      displacement[i] = sumSigned * dt;
+      if (displacement[i] < lowest) lowest = displacement[i];
       if (magnitude > maxSpeed) maxSpeed = magnitude;
     }
+    final position = <double>[
+      for (final d in displacement) d - lowest,
+    ]; // 하부층 정지레벨 기준 위치 (m)
 
     // → 로직 이동: Butterworth.filtfilt()
     final accelSmooth = Butterworth.filtfilt(
@@ -629,10 +643,11 @@ class MeasurementAssembler {
       accelSmooth: accelSmooth,
       accelChart: accelChart,
       speed: speed,
+      travelled: travelled,
       position: position,
       jerk: jerk,
       maxSpeed: maxSpeed,
-      distance: position[n - 1],
+      distance: travelled[n - 1],
       motion: motion,
     );
   }
@@ -690,7 +705,7 @@ class MeasurementAssembler {
 }
 
 /// 작성: 2026-09-15 14:32:07 · nada
-/// 수정: 2026-10-21 10:05:00 · nada
+/// 수정: 2026-10-21 15:20:00 · nada
 /// 클래스: _Kinematics
 /// 목적: 수직 진동에서 뽑아낸 파생 물리량과 거기서 나온 두 지표를 한
 ///       묶음으로 담는다. `_deriveKinematics()` 가 만들어 돌려준다.
@@ -709,7 +724,13 @@ class _Kinematics {
   /// 속도 시계열 (m/s). 움직인 구간 안만 적분한 값이고 밖은 0
   final List<double> speed;
 
-  /// 누적 이동량 시계열 (m). 방향과 무관하게 움직인 거리
+  /// 누적 이동량 시계열 (m). 방향과 무관하게 움직인 거리. 운행 거리 ·
+  /// 운행 구간이 쓴다
+  final List<double> travelled;
+
+  /// 하부층 정지레벨 기준 위치 시계열 (m). 상승은 0 에서 오르고 하강은
+  /// 운행 거리에서 0 으로 내려온다. 리포트 3쪽 위치 차트와 수직 최대 위치가
+  /// 쓴다
   final List<double> position;
 
   /// 저크 시계열 (m/s³)
@@ -731,7 +752,8 @@ class _Kinematics {
   ///       accelSmooth — 저크 저역을 건 가속도 (m/s²)
   ///       accelChart — 차트 저역을 건 가속도 (m/s²)
   ///       speed — 속도 시계열 (m/s)
-  ///       position — 누적 이동량 시계열 (m)
+  ///       travelled — 누적 이동량 시계열 (m)
+  ///       position — 하부층 기준 위치 시계열 (m)
   ///       jerk — 저크 시계열 (m/s³)
   ///       maxSpeed — 최대 속도 (m/s)
   ///       distance — 운행 거리 (m)
@@ -741,6 +763,7 @@ class _Kinematics {
     required this.accelSmooth,
     required this.accelChart,
     required this.speed,
+    required this.travelled,
     required this.position,
     required this.jerk,
     required this.maxSpeed,

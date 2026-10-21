@@ -84,12 +84,14 @@ class LiveSpeedEstimator {
   double? get speedMps => velocityMps?.abs();
 
   /// 작성: 2026-10-10 11:54:43 · nada
+  /// 수정: 2026-10-21 15:20:00 · nada
   /// 함수: onEvent
   /// 목적: 센서 이벤트 한 건을 받아 속도 어림을 한 걸음 진행한다. 쓰지
   ///       못하는 이벤트는 조용히 건너뛴다 — 저장용 격자
   ///       (`GridResampler.onEvent()`)가 같은 이벤트를 따로 집계한다.
   ///       - `linear` 는 격자처럼 쓰지 않는다
-  ///       - `gravity` 는 다음 raw 에서 뺄 값으로 담아 둔다
+  ///       - `gravity` 는 다음 raw 에서 뺄 값으로 담아 둔다. 세 축이 모두 0
+  ///         이면 버린다(센서 버퍼가 차기 전 값, 격자와 같은 기준)
   ///       - `accel`(raw) 은 gravity 를 받은 뒤부터 쓴다. 세 축이 모두 0
   ///         이거나 시각이 앞 이벤트보다 늦지 않으면 버린다 — 격자가 버리는
   ///         것과 같은 기준이다
@@ -104,6 +106,10 @@ class LiveSpeedEstimator {
       case NativeEventType.linear:
         return;
       case NativeEventType.gravity:
+        // 세 축 0 인 gravity 는 센서 버퍼가 차기 전 값이라 버린다
+        // (`GridResampler._accept()` 와 같은 규칙). 크기 0 인 중력에는
+        // 수직을 투영할 수 없다(`GridResampler.motionOf()`)
+        if (event.xMg == 0.0 && event.yMg == 0.0 && event.zMg == 0.0) return;
         _gravity = event;
         return;
       case NativeEventType.accel:

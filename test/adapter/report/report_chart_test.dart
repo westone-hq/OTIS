@@ -162,15 +162,16 @@ void main() {
       expect(range.max, closeTo(2.0, 1e-9));
     });
 
-    test('속도 차트는 부호와 상관없이 크기를 그린다', () {
+    test('속도 차트는 부호 그대로 그리고 하강은 0 아래로 넓어진다', () {
       final result = _result().copyWith(
         speedSeries: const <double>[0.0, -0.5, -1.2, 0.3],
-      ); // 운행 방향 한쪽이 음수로 나온 속도
+      ); // 하강이라 음수인 속도
       final drawn = ReportChartAxes.seriesOf(ReportChartAxes.speed, result);
 
-      expect(drawn, const <double>[0.0, 0.5, 1.2, 0.3]);
-      expect(result.speedSeries[1], -0.5, reason: '저장된 속도는 그대로');
-      expect(ReportChartAxes.speed.rangeFor(drawn).min, 0.0);
+      expect(drawn, const <double>[0.0, -0.5, -1.2, 0.3]);
+      final range = ReportChartAxes.speed.rangeFor(drawn); // 고른 세로축
+      expect(range.contains(-1.2, 0.3), isTrue);
+      expect(range.min, lessThan(-1.2));
     });
 
     test('앱 실측 소음은 0 을 빼고 40 ~ 65 dBA 로 넓어진다', () {

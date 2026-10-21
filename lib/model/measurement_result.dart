@@ -143,10 +143,14 @@ class MeasurementResult {
   /// 소음 시계열 (dBA)
   final List<double> noiseSeries;
 
-  /// 누적 이동량 시계열 (m). 방향과 무관하게 움직인 거리를 더해 나간 값
+  /// 위치 시계열 (m). 2026-10-21 부터는 하부층 정지레벨 기준이라 상승은
+  /// 0 → 운행 거리, 하강은 운행 거리 → 0 이다(OTIS 리포트 3쪽과 같다). 그
+  /// 전 결과는 방향과 무관하게 움직인 거리를 더해 나간 값(늘 0 에서 오름)
+  /// 이다. 운행 거리는 `distance` 가 따로 갖는다
   final List<double> positionSeries;
 
-  /// 속도 시계열 (m/s)
+  /// 속도 시계열 (m/s). 부호 그대로다 — 위로 움직이면 양수, 아래로
+  /// 움직이면 음수
   final List<double> speedSeries;
 
   /// 수직 가속도 시계열 (m/s²). 리포트 3쪽 차트에 그리는 값이다 — 움직인

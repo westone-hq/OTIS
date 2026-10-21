@@ -12,8 +12,8 @@ const int _rateHz = 400;
 /// 작성: 2026-10-10 11:54:43 · nada
 /// 변수: _gravityMg
 /// 목적: 합성 이벤트의 중력 성분 Z (mg). 화면을 아래로 놓은 거치를 흉내
-///       낸다.
-const double _gravityMg = 1000.0;
+///       낸다 — 가속도계는 위쪽으로 1g 를 읽어 화면이 바닥을 보면 −1000 이다.
+const double _gravityMg = -1000.0;
 
 /// 작성: 2026-10-10 11:54:43 · nada
 /// 변수: _mgPerMps2
@@ -26,7 +26,8 @@ const double _mgPerMps2 = 1000 / 9.80665;
 /// 함수: _feed
 /// 목적: 수직 가속도 시계열을 gravity · raw 이벤트 쌍으로 바꿔 넣고, 넣을
 ///       때마다 어림 속도를 모은다. raw 는 `GridResampler.motionOf()` 의 Z
-///       부호를 거꾸로 풀어 만든다 — motion_z = -(raw_z - gravity_z).
+///       를 거꾸로 풀어 만든다 — 화면을 아래로 놓으면
+///       motion_z = -(raw_z - gravity_z).
 /// 인자: estimator — 시험할 추정기
 ///       motionMg — 표본마다의 수직 가속도 (mg). `_rateHz` 간격
 /// 반환: 표본마다의 어림 속도 크기 (m/s). 기준선 전이면 null

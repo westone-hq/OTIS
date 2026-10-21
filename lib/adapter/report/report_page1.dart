@@ -376,7 +376,7 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-21 15:20:00 · nada
   /// 함수: headerValues
   /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
   ///       자리 표시 문구(`ReportPage1.placeholder`, "미입력")를 찍는다.
@@ -393,7 +393,11 @@ class ReportPage1Renderer {
   ///       - 측정 종류 → 해석 종류. 없으면 기본값 "층간 시험"
   ///       - 주소 → "주소, 우편번호". 하나만 있으면 그것만
   ///       - 층 정보 → "Start Floor : 최하층, Stop Floor : 최상층"
-  ///         (2026-10-15 사용자 지시, 예전 "시작층 · 도착층")
+  ///         (2026-10-15 사용자 지시, 예전 "시작층 · 도착층"). 하강이면
+  ///         "Start Floor : 최상층, Stop Floor : 최하층" 이다 — 홈 화면은
+  ///         최하층 · 최상층을 받고(최상층 > 최하층 검사), 출발 · 도착은
+  ///         운전 방향이 정한다(2026-10-21, OTIS 하강 리포트 "Start Floor :
+  ///         11, Stop Floor : 4")
   ///       - 측정 일시 → 한국 시간(`KoreaTime.of()`). 기기 시간대 설정과
   ///         상관없이 같은 글자가 나온다
   ///       - 품질성능기준은 고정 문구
@@ -433,9 +437,12 @@ class ReportPage1Renderer {
       'standard': 'Standard',
       'test_type': result.analysisType ?? SiteInfo.defaultAnalysisType,
       'direction': result.direction,
-      'floors':
-          'Start Floor : ${result.bottomFloor}, '
-          'Stop Floor : ${result.topFloor}',
+      // → 로직 이동: SiteInfo.isDownward()
+      'floors': SiteInfo.isDownward(result.direction)
+          ? 'Start Floor : ${result.topFloor}, '
+                'Stop Floor : ${result.bottomFloor}'
+          : 'Start Floor : ${result.bottomFloor}, '
+                'Stop Floor : ${result.topFloor}',
       'building_name': result.siteName,
       'address': addressParts.isEmpty ? placeholder : addressParts.join(', '),
     };
