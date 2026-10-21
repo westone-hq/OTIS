@@ -7,9 +7,11 @@ import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
@@ -247,7 +249,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-22 12:00:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -261,7 +263,8 @@ class MeasurementRecorder {
   ///          — 실패한 측정의 파일이 앱 저장 공간 맨 위에 쌓이지 않게
   ///          한다. 옮기지 못해도 멈추지 않는다
   ///       4. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다.
-  ///          측정값 파일은 처리 전 격자 그대로다
+  ///          측정값 파일은 처리 전 격자에서 축별 전체 평균만 뺀 값이다
+  ///          (OTIS EVIMP1 관례, `VibrationFileWriter.encode()`)
   ///       5. 지표 계산 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)를
   ///          하고 결과를 집계 파일에 덧붙인다(`_condition()`). 실패하면
   ///          멈추되 측정값 파일은 지우지 않는다
@@ -269,8 +272,12 @@ class MeasurementRecorder {
   ///          지표, `MeasurementAssembler`), 가중 · 운행 구간을 집계 파일에
   ///          덧붙인 뒤(운동을 적분한 움직인 구간도 함께) 처리 방식
   ///          (`SignalConditioner.methodLabel` + `RideWeighting.methodLabel`
+  ///          + `MeasurementAssembler.verticalLowpassMethodLabel`
   ///          + `MeasurementAssembler.kinematicsMethodLabel` +
-  ///          `kNoiseMethodLabel`)을 실어
+  ///          `MeasurementAssembler.jerkMethodLabel` +
+  ///          `MeasurementAssembler.accelChartMethodLabel` +
+  ///          `MotionZones.methodLabel` + `noiseMethodLabel()`)
+  ///          과 거치 방향을 실어
   ///          저장소에 저장한다. 로그인한
   ///          작업자(성명 · 사번 · 업체명 · 관리팀)도 이 시점 값을 함께 싣는다
   ///       7. 리포트 PDF 를 미리 만든다. 메일을 보낼 때 만들면 그때
@@ -287,6 +294,10 @@ class MeasurementRecorder {
   ///       noiseAudioPath — 안드로이드가 닫은 현장 소음 녹음(M4A) 경로,
   ///       녹음하지 못했으면 null
   ///       measuredAt — 측정 시각. 측정 ID 와 파일 이름의 기준이다
+  ///       placement — 수집 처음 1초로 판정한 거치 방향
+  ///       (`CaptureSession.placement`). 판정 전에 끝났으면 null
+  ///       noiseSampleRateHz — 소음 마이크를 연 표본 속도
+  ///       (`CaptureSession.noiseSampleRateHz`). 못 열었으면 null
   /// 반환: 저장 결과. 파일을 쓰다 난 예외는 `RecordFailure.ioError` 로
   ///       바꿔 돌려준다
   static Future<RecordOutcome> record({
@@ -295,6 +306,8 @@ class MeasurementRecorder {
     required String? nativeRecordPath,
     required String? noiseAudioPath,
     required DateTime measuredAt,
+    PlacementReading? placement,
+    int? noiseSampleRateHz,
   }) async {
     if (site == null || site.validate().isNotEmpty) {
       return const RecordOutcome.failure(RecordFailure.siteMissing);
@@ -399,13 +412,32 @@ class MeasurementRecorder {
         // → 로직 이동: VibrationFileWriter.encodeMotionMeta()
         VibrationFileWriter.encodeMotionMeta(assembled.motion),
       );
+      // → 로직 이동: _appendMeta()
+      await _appendMeta(
+        metaPath,
+        // → 로직 이동: VibrationFileWriter.encodePlacementMeta()
+        VibrationFileWriter.encodePlacementMeta(placement),
+      );
+      // → 로직 이동: _appendMeta()
+      await _appendMeta(
+        metaPath,
+        // → 로직 이동: VibrationFileWriter.encodeNoiseMeta()
+        VibrationFileWriter.encodeNoiseMeta(noiseSampleRateHz),
+      );
       // → 로직 이동: MeasurementRepository.save()
       await repo.save(
         assembled.result!.copyWith(
+          placement: placement?.placement.name,
+          placementGravityZMg: placement?.gravityZMg,
           signalConditioning:
               '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
+              '+${MeasurementAssembler.verticalLowpassMethodLabel}'
               '+${MeasurementAssembler.kinematicsMethodLabel}'
-              '+$kNoiseMethodLabel',
+              '+${MeasurementAssembler.jerkMethodLabel}'
+              '+${MeasurementAssembler.accelChartMethodLabel}'
+              '+${MotionZones.methodLabel}'
+              // → 로직 이동: noiseMethodLabel()
+              '+${noiseMethodLabel(noiseSampleRateHz)}',
         ),
       );
 

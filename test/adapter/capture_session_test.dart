@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/capture_session.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
+import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 
 /// 작성: 2026-10-05 10:00:11 · nada
 /// 클래스: _FakeSensors
@@ -67,6 +69,12 @@ class _FakeSensors extends SensorChannelManager {
     volumeKeyOn = enabled;
   }
 
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: playPlacementAlert
+  /// 목적: 거치 경고 요청을 기록한다.
+  @override
+  Future<void> playPlacementAlert() async => calls.add('alert');
+
   /// 수집 중 흘려보낼 이벤트. 비어 있으면 값이 오지 않는다
   List<NativeEvent> events = const <NativeEvent>[];
 
@@ -108,9 +116,8 @@ void main() {
 
   test('측정 중 속도를 어림해 250ms 마다 한 번씩 내보낸다', () async {
     final sensors = _FakeSensors(); // 요청을 기록하는 센서 통로
-    // 4ms 간격으로 정지 1.2초 → 100 mg 로 1초 가속. motion Z 는
-    // -(raw - gravity) 라 raw Z 를 -100 으로 준다. 세 축이 모두 0 인 raw 는
-    // 버려지므로 X 에 1 mg 를 둔다
+    // 4ms 간격으로 정지 1.2초 → 100 mg 로 1초 가속. 화면을 아래로 놓아
+    // 중력 Z 가 −1000 이고, 위로 가속하면 raw Z 가 −1000 − 100 이다
     NativeEvent raw(int i, double zMg) => NativeEvent(
       type: NativeEventType.accel,
       tsUs: i * 4000,
@@ -125,11 +132,11 @@ void main() {
         tsUs: 0,
         xMg: 0,
         yMg: 0,
-        zMg: 0,
+        zMg: -1000,
         dtUs: 0,
       ),
-      for (var i = 1; i <= 300; i++) raw(i, 0),
-      for (var i = 301; i <= 550; i++) raw(i, -100),
+      for (var i = 1; i <= 300; i++) raw(i, -1000),
+      for (var i = 301; i <= 550; i++) raw(i, -1100),
     ];
     final session = CaptureSession(sensorManager: sensors); // 시험할 수집
     final published = <double?>[]; // 내보낸 속도
@@ -147,6 +154,108 @@ void main() {
     // 마지막으로 내보낸 2.0초는 가속 0.8초 째다. 0.98 m/s² × 0.8초 =
     // 0.78 m/s 에서 저역 지연(0.25초)만큼 덜 오른다
     expect(session.liveSpeedMps.value, inInclusiveRange(0.45, 0.78));
+  });
+
+  group('거치 방향 (2026-10-22)', () {
+    // 4ms 간격 중력 · 가속도 2.4초. 중력 Z 가 거치 방향을 정한다. 경고는 첫
+    // 중력 이벤트부터 1.7초 뒤라(`CaptureConfig.placementAlertDelayMs`) 그보다
+    // 길게 흘린다. accelFromIndex 부터는 가속도 Z 에 100 mg 를 더해 운행을
+    // 흉내 낸다(안 주면 정지)
+    List<NativeEvent> placed(double gravityZ, {int? accelFromIndex}) =>
+        <NativeEvent>[
+          for (var i = 1; i <= 600; i++) ...[
+            NativeEvent(
+              type: NativeEventType.gravity,
+              tsUs: i * 4000,
+              xMg: 0,
+              yMg: 0,
+              zMg: gravityZ,
+              dtUs: 4000,
+            ),
+            NativeEvent(
+              type: NativeEventType.accel,
+              tsUs: i * 4000 + 1,
+              xMg: 1,
+              yMg: 0,
+              zMg: accelFromIndex != null && i >= accelFromIndex
+                  ? gravityZ + 100
+                  : gravityZ,
+              dtUs: 4000,
+            ),
+          ],
+        ];
+
+    Future<(_FakeSensors, CaptureSession)> run(
+      double gravityZ, {
+      int? accelFromIndex,
+    }) async {
+      final sensors = _FakeSensors()
+        ..events = placed(gravityZ, accelFromIndex: accelFromIndex);
+      final session = CaptureSession(sensorManager: sensors); // 시험할 수집
+      sensors.availableReply.complete(true);
+      await session.start(onVolumeKey: () {}, onNoResponse: () {});
+      await Future<void>.delayed(Duration.zero);
+      await session.stop();
+      return (sensors, session);
+    }
+
+    test('화면 위면 경고음 · 진동을 한 번 요청하고 측정은 계속한다', () async {
+      final (sensors, session) = await run(1000);
+      expect(sensors.calls.where((c) => c == 'alert').length, 1);
+      expect(session.placement!.placement, Placement.faceUp);
+      expect(session.placement!.gravityZMg, closeTo(1000, 1e-9));
+      expect(sensors.calls, contains('stop'), reason: '측정을 끊지 않았다');
+    });
+
+    test('기울어짐도 경고한다', () async {
+      final (sensors, session) = await run(-700);
+      expect(sensors.calls, contains('alert'));
+      expect(session.placement!.placement, Placement.tilted);
+    });
+
+    test('화면 아래면 경고하지 않는다', () async {
+      final (sensors, session) = await run(-998);
+      expect(sensors.calls, isNot(contains('alert')));
+      expect(session.placement!.placement, Placement.faceDown);
+    });
+
+    test('경고는 신호 처리 기준선 구간이 끝난 뒤에 울린다', () async {
+      // 기준선 구간 = 격자 앞 0.5초를 버린 뒤 1초 = 수집 0.5 ~ 1.5초.
+      // 판정 창(1초) · 측정 중 속도 기준선(1초)도 그 안에 끝난다
+      final (sensors, session) = await run(1000);
+      const baselineEndMs =
+          CaptureConfig.defaultEdgeTrimMs +
+          CaptureConfig.defaultBaselineWindowMs; // 기준선 구간 끝 (1.5초)
+      expect(sensors.calls, contains('alert'));
+      expect(session.placementAlertOffsetMs!, greaterThan(baselineEndMs));
+      expect(
+        session.placementAlertOffsetMs!,
+        closeTo(CaptureConfig.placementAlertDelayMs, 4.1),
+        reason: '경고 시각 뒤 첫 이벤트(4ms 간격)',
+      );
+      expect(CaptureConfig.placementAlertDelayMs, 1700);
+    });
+
+    test('경고 시각에 이미 운행 중이면 울리지 않고 판정만 남긴다', () async {
+      // 1.1초부터 100 mg 가속 — 1.7초에 측정 중 속도가 0.05 m/s 를 넘는다
+      final (sensors, session) = await run(1000, accelFromIndex: 275);
+      expect(sensors.calls, isNot(contains('alert')));
+      expect(session.placementAlertSkipped, isTrue);
+      expect(session.placementAlertOffsetMs, isNull);
+      expect(session.placement!.placement, Placement.faceUp, reason: '결과 경고용');
+    });
+
+    test('판정 창보다 길고 경고 시각보다 짧은 측정은 판정만 하고 울리지 않는다', () async {
+      final sensors = _FakeSensors()
+        ..events = placed(1000).take(2 * 350).toList();
+      final session = CaptureSession(sensorManager: sensors); // 1.4초 수집
+      sensors.availableReply.complete(true);
+      await session.start(onVolumeKey: () {}, onNoResponse: () {});
+      await Future<void>.delayed(Duration.zero);
+      await session.stop();
+      expect(session.placement!.placement, Placement.faceUp);
+      expect(sensors.calls, isNot(contains('alert')));
+    });
   });
 
   test('정상으로 켠 수집은 정지 때 한 번씩만 되돌린다', () async {

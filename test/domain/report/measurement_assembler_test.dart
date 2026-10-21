@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
@@ -140,14 +141,15 @@ const _site = SiteInfo(
 );
 
 /// 작성: 2026-09-15 19:14:22 · nada
-/// 변수: _threeRows
-/// 목적: 최소 행 수 조건을 넘기려고 두는, 값 자체는 뜻이 없는 격자 행
-///       세 개. 행 수 말고 다른 것을 보는 시험에서 쓴다.
-const _threeRows = <GridSample>[
-  GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
-  GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
-  GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
-];
+/// 수정: 2026-10-21 10:05:00 · nada
+/// 변수: _shortRows
+/// 목적: 최소 행 수 조건(16행, 저크 저역 필터의 양 끝 덧댐 15행 + 1)을
+///       넘기려고 두는, 값 자체는 뜻이 없는 격자 행 16개. 행 수 말고 다른
+///       것을 보는 시험에서 쓴다.
+final _shortRows = List<GridSample>.filled(
+  16,
+  const GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
+);
 
 /// 작성: 2026-10-15 16:50:04 · nada
 /// 함수: _rideWithNoise
@@ -219,12 +221,16 @@ void main() {
   group('MeasurementAssembler.assemble', () {
     final measuredAt = DateTime(2026, 9, 15, 13, 8, 37); // 시험용 측정 시각
 
-    test('격자 행이 시계열로 그대로 옮겨진다', () {
+    test('격자 행을 가중해 시계열로 싣고 현장 정보를 옮긴다', () {
+      // 최소 16행이면 가중을 걸 수 있는 길이라 시계열은 격자 값에 가중을
+      // 건 값이다(지표를 낸 그 값, CLAUDE.md "result.json")
+      final xs = [for (var i = 0; i < 16; i++) i + 1.0]; // X (mg)
+      final ys = [for (var i = 0; i < 16; i++) -(i + 2.0)]; // Y (mg)
+      final zs = [for (var i = 0; i < 16; i++) (i % 3).toDouble()]; // Z (mg)
       final result = MeasurementAssembler.assemble(
-        grid: _grid(const [
-          GridSample(xMg: 1.0, yMg: -2.0, zMg: 3.0),
-          GridSample(xMg: 4.0, yMg: -5.0, zMg: 6.0),
-          GridSample(xMg: 7.0, yMg: -8.0, zMg: 9.0),
+        grid: _grid(<GridSample>[
+          for (var i = 0; i < 16; i++)
+            GridSample(xMg: xs[i], yMg: ys[i], zMg: zs[i]),
         ]),
         site: _site,
         id: '20260915-130837',
@@ -233,20 +239,31 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       final model = result.result!; // 변환된 측정 결과
-      expect(model.xSeries, [1.0, 4.0, 7.0]);
-      expect(model.ySeries, [-2.0, -5.0, -8.0]);
-      expect(model.zSeries, [3.0, 6.0, 9.0]);
+      expect(model.xSeries, RideWeighting.horizontal(xs, 256.0));
+      expect(model.ySeries, RideWeighting.horizontal(ys, 256.0));
+      // 수직은 가중 뒤 20Hz 저역을 양방향으로 더 건 값이다(2026-10-21 2차)
+      expect(
+        model.zSeries,
+        Butterworth.filtfilt(
+          Butterworth.lowpass(
+            order: CaptureConfig.rideVerticalLowpassOrder,
+            cutoffHz: CaptureConfig.rideVerticalLowpassHz,
+            sampleRateHz: 256.0,
+          ),
+          RideWeighting.vertical(zs, 256.0),
+        ),
+      );
       expect(model.id, '20260915-130837');
       expect(model.jobNo, 'T-1001');
       expect(model.bottomFloor, 1);
       expect(model.topFloor, 8);
       expect(model.dateTime, measuredAt);
-      expect(model.zSeries, hasLength(3));
+      expect(model.zSeries, hasLength(16));
     });
 
     test('샘플레이트를 격자 간격에서 구한다', () {
       final result = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows, gridIntervalNs: 3906250),
+        grid: _grid(_shortRows, gridIntervalNs: 3906250),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
@@ -257,7 +274,7 @@ void main() {
 
     test('소음은 0 이 아니라 비어 있다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
@@ -271,10 +288,14 @@ void main() {
       // 반주기 P2P · A95 의 정의 자체는 half_cycle_test 가 본다. 여기서는
       // 움직이지 않은 측정에서 0 이나 지어낸 값을 싣지 않는지 본다
       final model = MeasurementAssembler.assemble(
-        grid: _grid(const [
-          GridSample(xMg: 1.0, yMg: 4.0, zMg: 0.5, noiseDba: 45.0),
-          GridSample(xMg: -2.0, yMg: -2.0, zMg: 0.5, noiseDba: 48.0),
-          GridSample(xMg: 3.0, yMg: 1.0, zMg: 0.5, noiseDba: 46.0),
+        grid: _grid(<GridSample>[
+          for (var i = 0; i < 16; i++)
+            GridSample(
+              xMg: i.isEven ? 1.0 : -2.0,
+              yMg: i.isEven ? 4.0 : -2.0,
+              zMg: 0.5,
+              noiseDba: 45.0 + i % 3,
+            ),
         ]),
         site: _site,
         id: 'id',
@@ -298,23 +319,22 @@ void main() {
 
     test('소음 말고 시계열 일곱 개가 채워진다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(const [
-          GridSample(xMg: 1.0, yMg: 2.0, zMg: 3.0),
-          GridSample(xMg: 4.0, yMg: 5.0, zMg: 6.0),
-          GridSample(xMg: 7.0, yMg: 8.0, zMg: 9.0),
+        grid: _grid(<GridSample>[
+          for (var i = 0; i < 16; i++)
+            GridSample(xMg: i + 1.0, yMg: i + 2.0, zMg: i + 3.0),
         ]),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.xSeries.length, 3);
-      expect(model.ySeries.length, 3);
-      expect(model.zSeries.length, 3);
-      expect(model.positionSeries.length, 3);
-      expect(model.speedSeries.length, 3);
-      expect(model.accelSeries.length, 3);
-      expect(model.jerkSeries.length, 3);
+      expect(model.xSeries.length, 16);
+      expect(model.ySeries.length, 16);
+      expect(model.zSeries.length, 16);
+      expect(model.positionSeries.length, 16);
+      expect(model.speedSeries.length, 16);
+      expect(model.accelSeries.length, 16);
+      expect(model.jerkSeries.length, 16);
       expect(model.noiseSeries, everyElement(0.0));
       expect(model.maxSpeed, isNotNull);
       expect(model.distance, isNotNull);
@@ -322,7 +342,7 @@ void main() {
 
     test('재지 않은 소음의 판정은 정상이 아니라 null 이다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
@@ -333,7 +353,7 @@ void main() {
 
     test('기종을 버리지 않고 함께 옮긴다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
@@ -344,7 +364,7 @@ void main() {
 
     test('기종이 비어 있으면 빈 문자열이 아니라 null 이다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: const SiteInfo(
           jobNo: 'T-1001',
           siteName: '서울 본사',
@@ -362,7 +382,7 @@ void main() {
 
     test('현장 정보 새 항목을 공백을 지워 옮기고 하중은 숫자로 바꾼다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: const SiteInfo(
           jobNo: 'T-1001',
           siteName: '서울 본사',
@@ -390,7 +410,7 @@ void main() {
 
     test('비어 있는 하중 · 우편번호 · 참고사항은 빈 문자열이 아니라 null 이다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: const SiteInfo(
           jobNo: 'T-1001',
           siteName: '서울 본사',
@@ -438,7 +458,7 @@ void main() {
         ); // 하중만 바꾼 현장 정보
         final passes = site.validate().isEmpty; // 홈 화면 검사 통과 여부
         final assembled = MeasurementAssembler.assemble(
-          grid: _grid(_threeRows),
+          grid: _grid(_shortRows),
           site: site,
           id: 'id',
           measuredAt: measuredAt,
@@ -454,7 +474,7 @@ void main() {
     test('하중을 0 보다 큰 숫자로 바꿀 수 없으면 사유를 올린다', () {
       for (final load in <String>['abc', '0', '-5', 'Infinity', 'NaN']) {
         final result = MeasurementAssembler.assemble(
-          grid: _grid(_threeRows),
+          grid: _grid(_shortRows),
           site: SiteInfo(
             jobNo: 'T-1001',
             siteName: '서울 본사',
@@ -496,7 +516,7 @@ void main() {
 
     test('층수를 숫자로 바꿀 수 없으면 사유를 올린다', () {
       final result = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: const SiteInfo(
           jobNo: 'T-1001',
           siteName: '서울 본사',
@@ -515,7 +535,7 @@ void main() {
 
     test('소음을 안 주면 시계열도 최대도 비어 있다', () {
       final model = MeasurementAssembler.assemble(
-        grid: _grid(_threeRows),
+        grid: _grid(_shortRows),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
@@ -547,11 +567,12 @@ void main() {
       // 기준치 아래라 초록 신호등이 찍혀, 재지도 않은 소음을 정상이라고
       // 보고하게 된다
       final model = MeasurementAssembler.assemble(
-        grid: _grid(const <GridSample>[
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
-          GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
-        ]),
+        grid: _grid(
+          List<GridSample>.filled(
+            16,
+            const GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: 0.0),
+          ),
+        ),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
@@ -574,13 +595,13 @@ void main() {
       expect(model.noiseMax, closeTo(41.5, 1e-9));
     });
 
-    test('격자 행이 세 개보다 적으면 0 을 지어내지 않고 사유를 올린다', () {
-      // 행이 두 개 이하면 저크를 가운데 차분으로 구할 수 없어 파생
-      // 물리량이 전부 0 이 된다. 그 0 을 결과로 내보내면 재서 0 이 나온
-      // 측정과 구분되지 않으므로 아예 변환하지 않는다
-      for (final rowCount in [0, 1, 2]) {
+    test('격자 행이 16개보다 적으면 0 을 지어내지 않고 사유를 올린다', () {
+      // 저크 저역 필터는 양 끝을 15행 덧대 거르므로 그보다 짧으면 거를 수
+      // 없다. 거르지 않은 값이나 0 을 결과로 내보내면 재서 나온 측정과
+      // 구분되지 않으므로 아예 변환하지 않는다
+      for (final rowCount in [0, 1, 2, 15]) {
         final result = MeasurementAssembler.assemble(
-          grid: _grid(_threeRows.sublist(0, rowCount)),
+          grid: _grid(_shortRows.sublist(0, rowCount)),
           site: _site,
           id: 'id',
           measuredAt: measuredAt,
@@ -588,28 +609,36 @@ void main() {
 
         expect(result.isSuccess, isFalse, reason: '$rowCount행');
         expect(result.result, isNull, reason: '$rowCount행');
-        expect(result.failureReason, contains('격자 행이 3개보다 적어'));
+        expect(result.failureReason, contains('격자 행이 16개보다 적어'));
         expect(result.failureReason, contains('$rowCount행'));
       }
     });
 
-    test('가속도는 mg 를 m/s² 로 바꾸고 전체 평균을 뺀 값이다', () {
-      // 0 · 2000 · 1000mg 의 평균은 1000mg(= 9.80665 m/s²)이고,
-      // 평균을 뺀 가속도는 -9.80665 · +9.80665 · 0 이 된다
+    test('차트 가속도는 m/s² 로 바꿔 평균을 빼고 10Hz 저역을 양방향으로 건 값이다', () {
+      // 0 · 2 mg 를 번갈아 두고 1 Hz 로 천천히 오르내리는 성분을 더한다.
+      // 움직인 구간이 없어 전체 평균을 뺀다. 번갈아 바뀌는 128Hz 성분은
+      // 10Hz 저역에 걸러지고 느린 성분만 남는다
+      final zs = <double>[
+        for (var i = 0; i < 64; i++)
+          (i.isEven ? 0.0 : 2.0) + math.sin(2 * math.pi * i / 256),
+      ]; // 수직 진동 (mg)
       final model = MeasurementAssembler.assemble(
-        grid: _grid(const [
-          GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
-          GridSample(xMg: 0.0, yMg: 0.0, zMg: 2000.0),
-          GridSample(xMg: 0.0, yMg: 0.0, zMg: 1000.0),
+        grid: _grid(<GridSample>[
+          for (final z in zs) GridSample(xMg: 0.0, yMg: 0.0, zMg: z),
         ]),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.accelSeries[0], closeTo(-9.80665, 1e-9));
-      expect(model.accelSeries[1], closeTo(9.80665, 1e-9));
-      expect(model.accelSeries[2], closeTo(0.0, 1e-9));
+      final mean = zs.reduce((a, b) => a + b) / zs.length; // 평균 (mg)
+      final expected = Butterworth.filtfilt(
+        Butterworth.lowpass(order: 4, cutoffHz: 10, sampleRateHz: 256),
+        <double>[for (final z in zs) (z - mean) * 9.80665e-3],
+      ); // 기대하는 차트 가속도 (m/s²)
+      for (var i = 0; i < zs.length; i++) {
+        expect(model.accelSeries[i], closeTo(expected[i], 1e-12), reason: '$i');
+      }
     });
 
     group('움직인 구간만 적분한다', () {
@@ -753,10 +782,16 @@ void main() {
         expect(model.sampleRate, 100.0);
         expect(model.travelWindow!.startIndex, expected['startIndex']);
         expect(model.travelWindow!.endIndex, expected['endIndex']);
+        expect(
+          model.motionZones!.steadyStartIndex,
+          expected['steadyStartIndex'],
+        );
+        expect(model.motionZones!.steadyEndIndex, expected['steadyEndIndex']);
         for (final entry in <String, double?>{
           'xPtp': model.xPtp,
           'yPtp': model.yPtp,
           'zPtp': model.zPtp,
+          'zJptp': model.zJptp,
           'xA95': model.xA95,
           'yA95': model.yA95,
           'zA95': model.zA95,
@@ -781,9 +816,11 @@ void main() {
         // 그 리포트를 만든 측정이다. 진동 ±15%, 소음 ±1.5 dBA, 속도 · 거리
         // ±1% (2026-10-15 점검 지시)
         final metrics = ReportMetrics.from(_conditionedReference()); // 앱 리포트 지표
+        // 수직 최대는 20Hz 저역(2026-10-21 2차) 뒤 원본 대비 −14% 로 경계에
+        // 붙어 있어 여기서 걸지 않는다. 지금 값은 motion_zones_test 가 ±2%
+        // 로 고정한다
         const vibration = <String, double>{
           'vert_avg': 3.6,
-          'vert_max': 6.1,
           'horiz_avg': 4.8,
           'horiz_max': 11.3,
         }; // 원본 진동 (milli-G)

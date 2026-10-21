@@ -4,6 +4,13 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.os.Build
 import android.hardware.Sensor
 import android.hardware.SensorManager
@@ -66,6 +73,23 @@ class MainActivity : FlutterActivity() {
 
         /** 고속 샘플링 권한 요청 코드. 응답을 마이크 권한과 구분하는 임의 값 */
         private const val REQ_HIGH_RATE_PERMISSION = 1002
+
+        /**
+         * 작성: 2026-10-22 09:30:00 · nada
+         * 변수: PLACEMENT_BEEP_MS
+         * 목적: 거치 경고음 길이 (밀리초). 짧게 한 번 울린다.
+         * 근거: 미정 — 엎어 둔 휴대폰에서 알아들을 만한 길이로 골랐다.
+         *       경고는 수집 시작 약 1초 뒤라 지표 구간 밖이다
+         */
+        private const val PLACEMENT_BEEP_MS = 200
+
+        /**
+         * 작성: 2026-10-22 09:30:00 · nada
+         * 변수: PLACEMENT_VIBRATE_MS
+         * 목적: 거치 경고 진동 길이 (밀리초).
+         * 근거: 미정 — `PLACEMENT_BEEP_MS` 와 같은 이유
+         */
+        private const val PLACEMENT_VIBRATE_MS = 300L
     }
 
     /** 소음(마이크) 원본 캡처 담당. startCapture/stopCapture·onDestroy에서 시작·정지한다 */
@@ -239,7 +263,7 @@ class MainActivity : FlutterActivity() {
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-10-18 10:12:30 · nada
+                     * 수정: 2026-10-22 12:00:00 · nada
                      * 함수: stopCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "stopCapture" 요청에 응답한다. 센서·소음
@@ -249,6 +273,8 @@ class MainActivity : FlutterActivity() {
                      *       - "recordPath" — 원본 기록 경로, 못 했으면 null
                      *       - "audioPath" — 현장 소음 녹음(M4A) 경로,
                      *         녹음하지 않았거나 실패했으면 null
+                     *       - "noiseSampleRate" — 소음 마이크를 연 표본
+                     *         속도(Hz, 48000 또는 44100). 열지 못했으면 null
                      */
                     "stopCapture" -> {
                         // → 로직 이동: SensorStreamHandler.stop()
@@ -257,8 +283,14 @@ class MainActivity : FlutterActivity() {
                         // → 로직 이동: NoiseCaptureHandler.stop()
                         val audioPath = // 닫은 소음 녹음 경로, 없으면 null
                             noiseCaptureHandler.stop()
+                        val noiseRate = // 소음 마이크를 연 표본 속도, 못 열었으면 0
+                            noiseCaptureHandler.activeSampleRate
                         result.success(
-                            mapOf("recordPath" to recordPath, "audioPath" to audioPath),
+                            mapOf(
+                                "recordPath" to recordPath,
+                                "audioPath" to audioPath,
+                                "noiseSampleRate" to noiseRate.takeIf { it > 0 },
+                            ),
                         )
                     }
                     /**
@@ -272,6 +304,17 @@ class MainActivity : FlutterActivity() {
                     "setVolumeKeyCaptureEnabled" -> {
                         volumeKeyCaptureEnabled =
                             call.argument<Boolean>("enabled") ?: false
+                        result.success(null)
+                    }
+                    /**
+                     * 작성: 2026-10-22 09:30:00 · nada
+                     * 함수: playPlacementAlert
+                     * 목적: 거치가 화면 아래가 아닐 때 경고음 한 번과 진동을
+                     *       울린다(`playPlacementAlert()`). 측정은 계속한다.
+                     */
+                    "playPlacementAlert" -> {
+                        // → 로직 이동: playPlacementAlert()
+                        playPlacementAlert()
                         result.success(null)
                     }
                     /**
@@ -405,6 +448,52 @@ class MainActivity : FlutterActivity() {
         if (::updateInstaller.isInitialized) {
             // → 로직 이동: UpdateInstaller.dispose()
             updateInstaller.dispose()
+        }
+    }
+
+    /**
+     * 작성: 2026-10-22 09:30:00 · nada
+     * 함수: playPlacementAlert
+     * 목적: 경고음(`ToneGenerator`, 알람 소리 통로)을 `PLACEMENT_BEEP_MS` 울리고
+     *       진동을 `PLACEMENT_VIBRATE_MS` 준다. 휴대폰이 엎어져 있어 화면
+     *       안내를 볼 수 없을 때 쓰는 신호다. 소리 · 진동 장치를 못 열어도
+     *       기록만 남기고 넘어간다 — 경고 때문에 측정이 멈추면 안 된다.
+     *       경고음은 소음 마이크와 녹음(noise.m4a)에, 진동은 가속도계에 들어
+     *       가지만 수집 시작 약 1초 뒤(운행 전 정지 구간)라 지표 구간 밖이다.
+     */
+    private fun playPlacementAlert() {
+        try {
+            val tone = // 경고음 발생기. 울린 뒤 놓는다
+                ToneGenerator(AudioManager.STREAM_ALARM, ToneGenerator.MAX_VOLUME)
+            tone.startTone(ToneGenerator.TONE_PROP_BEEP, PLACEMENT_BEEP_MS)
+            Handler(Looper.getMainLooper()).postDelayed(
+                { tone.release() },
+                PLACEMENT_BEEP_MS + 100L,
+            )
+        } catch (e: RuntimeException) {
+            android.util.Log.w("MainActivity", "거치 경고음 실패: $e")
+        }
+        try {
+            val vibrator = // 기기 진동 장치
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    getSystemService(VibratorManager::class.java).defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(
+                    VibrationEffect.createOneShot(
+                        PLACEMENT_VIBRATE_MS,
+                        VibrationEffect.DEFAULT_AMPLITUDE,
+                    ),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(PLACEMENT_VIBRATE_MS)
+            }
+        } catch (e: RuntimeException) {
+            android.util.Log.w("MainActivity", "거치 경고 진동 실패: $e")
         }
     }
 }

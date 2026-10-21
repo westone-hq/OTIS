@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/model/worker.dart';
@@ -105,7 +107,7 @@ class MotionWindow {
 }
 
 /// 작성: 2026-09-15 13:08:37 · nada
-/// 수정: 2026-10-20 14:05:12 · nada
+/// 수정: 2026-10-21 22:40:00 · nada
 /// 클래스: MeasurementAssembler
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과와 현장
 ///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 진동 시계열은
@@ -125,20 +127,26 @@ class MotionWindow {
 ///          가중 전 수직 진동에서 움직인 구간만 적분해 낸다(2026-10-20,
 ///          `_deriveKinematics()`)
 ///       2. 진동에 주파수 가중(`RideWeighting`)을 건다 — 수평 Wd, 수직
-///          1Hz 고역 + Wk. 가감속이 빠져 Z 가 늘 적색을 넘던 문제가 없다
+///          1Hz 고역 + Wk. 가감속이 빠져 Z 가 늘 적색을 넘던 문제가 없다.
+///          수직은 그 뒤 20Hz 저역을 더 건다(`_verticalLowpass()`, 2026-10-21
+///          2차 — 개발폰 센서 고주파 잡음)
 ///       3. 위치에서 운행 구간(`TravelWindow`, 출발 · 정지 0.5 m 제외)을
 ///          정한다
 ///       4. 구간 안 가중 시계열의 반주기 P2P(`HalfCycle`)에서 최대 P2P 와
 ///          A95 를, 구간 안 소음에서 최대를 낸다
+///       5. 수직 최대(`zPtp`)는 정속 구간, 가감속 최대(`zJptp`)는 그 밖
+///          운행에서 낸다(`MotionZones`, 2026-10-21). 수직 A95 는 4 그대로
 ///       운행 구간을 정하지 못하면(운행 1 m 이하 등) 진동 · 소음 지표를
-///       비우고 사유(`travelWindowFailure`)를 남긴다
+///       비우고 사유(`travelWindowFailure`)를 남긴다. 정속 구간을 정하지
+///       못하면 수직 최대 · 가감속 최대만 비우고 사유(`motionZonesFailure`)를
+///       남긴다
 ///
 ///       소음 두 값의 계약
 ///         소음은 격자 행마다 `GridSample.noiseDba` 에 실려 온다. 격자와
 ///         같은 주기로 갱신되므로 표본과 표본 사이에서 봉우리를 잃지
-///         않는다. 다만 수집 계층이 1초 창으로 고른 값을 내보내므로 그
-///         창보다 짧은 소리는 평탄해지는데, 이는 Slow 특성을 쓰기로 한
-///         결과이지 격자가 잃은 것이 아니다.
+///         않는다. 다만 수집 계층이 Fast(0.125초) 평활한 값을 내보내므로
+///         그보다 짧은 소리는 평탄해지는데, 이는 시간가중 특성이지 격자가
+///         잃은 것이 아니다.
 ///         - `noiseSeries` 는 격자에 정렬된 값 그대로이고 차트가 쓴다
 ///         - `noiseMax` 는 그 시계열의 운행 구간 안 최대다
 ///         - 소음 평균은 모든 표본이 있어야 나오므로 시계열에서 낸다.
@@ -157,7 +165,7 @@ class MotionWindow {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-21 22:40:00 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -173,12 +181,15 @@ class MeasurementAssembler {
   ///         거리를 만든다. `_deriveKinematics()` 참고. 적분한 움직인
   ///         구간은 결과와 함께 돌려줘 저장 절차가 집계 파일에 적게 한다
   ///       - 진동 세 축에 가중을 걸어(`RideWeighting`) 그 값을 시계열로
-  ///         싣는다. 가중을 걸 수 없는 격자(`RideWeighting.canApply()`,
+  ///         싣는다. 수직은 가중 뒤 20Hz 저역을 더 건다(`_verticalLowpass()`). 가중을 걸 수 없는 격자(`RideWeighting.canApply()`,
   ///         아주 짧거나 성김)는 가중 없이 싣고 지표는 비운 채 사유를
   ///         남긴다
   ///       - 운행 구간(`TravelWindow.of()`)을 정해 그 안에서 진동 최대
   ///         P2P · A95(`HalfCycle`)와 소음 최대를 낸다. 못 정하면 그 일곱
   ///         지표를 null 로 두고 사유를 싣는다
+  ///       - 수직 최대 P2P 는 정속 구간(`MotionZones.of()`) 안에서, 가감속
+  ///         최대(`zJptp`)는 그 밖 운행에서 내고, 수직 최대가 나온 위치를
+  ///         함께 싣는다. 정속을 못 정하면 그 셋을 null 로 두고 사유를 싣는다
   ///       - `site.model`(기종)도 함께 옮긴다. 비어 있으면 null 로 둔다.
   ///         이걸 실어 두면 리포트가 측정 결과 하나만 받으면 되고
   ///         현장 정보를 따로 들고 다니지 않아도 된다
@@ -221,6 +232,20 @@ class MeasurementAssembler {
     if (grid.gridIntervalNs <= 0) {
       return MeasurementAssembleResult.failure(
         '격자 간격이 0 이하라 샘플레이트를 구할 수 없다: ${grid.gridIntervalNs}ns',
+      );
+    }
+    final gridRate = 1000000000 / grid.gridIntervalNs; // 격자 표본 속도 (Hz)
+    // 차트용 가속도 저역(10Hz) · 수직 저역(20Hz)은 표본 속도의 절반보다
+    // 낮아야 설계된다. 실제 격자(100Hz)는 늘 맞고, 어긋난 시험 격자를
+    // 예외로 죽이지 않고 사유와 함께 돌려보낸다
+    final highestCutoff = math.max(
+      CaptureConfig.accelChartLowpassHz,
+      CaptureConfig.rideVerticalLowpassHz,
+    ); // 이 함수가 설계하는 저역 가운데 가장 높은 차단 (Hz)
+    if (gridRate <= 2 * highestCutoff) {
+      return MeasurementAssembleResult.failure(
+        '표본 속도가 저역 차단 ${highestCutoff}Hz 의 두 배 이하다: '
+        '${gridRate.toStringAsFixed(1)}Hz',
       );
     }
 
@@ -275,15 +300,19 @@ class MeasurementAssembler {
         ? RideWeighting.horizontal(ySeries, sampleRate)
         : ySeries; // 지표 · 차트에 쓸 Y (mg)
     final zWeighted = canWeight
-        // → 로직 이동: RideWeighting.vertical()
-        ? RideWeighting.vertical(zSeries, sampleRate)
-        : zSeries; // 지표 · 차트에 쓸 Z (mg)
+        // → 로직 이동: _verticalLowpass()
+        ? _verticalLowpass(
+            // → 로직 이동: RideWeighting.vertical()
+            RideWeighting.vertical(zSeries, sampleRate),
+            sampleRate,
+          )
+        : zSeries; // 지표 · 차트에 쓸 Z (mg). 가중 뒤 20Hz 저역
 
     // 가중하지 못한 시계열로 지표를 내지 않는다 — 기준이 원본 리포트의
     // 가중 지표 기준이라 견줄 수 없다
     final travel = canWeight
         // → 로직 이동: TravelWindow.of()
-        ? TravelWindow.of(motion.position, sampleRate)
+        ? TravelWindow.of(motion.travelled, sampleRate)
         : TravelWindowResult.failure(
             '가중을 걸 수 없는 격자다: ${xSeries.length}행, '
             '${sampleRate.toStringAsFixed(1)}Hz',
@@ -298,6 +327,24 @@ class MeasurementAssembler {
     // → 로직 이동: HalfCycle.a95()
     double? a95Of(List<double> series) =>
         window == null ? null : HalfCycle.a95(series, start: start, end: end);
+    // 수직 최대는 정속 구간, 가감속 최대는 그 밖 운행에서 낸다(OTIS 리포트
+    // `a_z,ptp` · `a_z,Jptp`). 운행 구간을 못 정한 결과는 다른 지표처럼
+    // 비운다
+    final zoning = canWeight
+        // → 로직 이동: MotionZones.of()
+        ? MotionZones.of(motion.speed, motion.accelSmooth, sampleRate)
+        : MotionZonesResult.failure(
+            travel.failureReason ?? '가중을 걸 수 없는 격자다',
+          ); // 정속 · 가감속 구간
+    final zones = zoning.zones; // 정한 구간, 못 정했으면 null
+    final steadyPeak = window == null
+        ? null
+        // → 로직 이동: MotionZones.steadyMaximum()
+        : zones?.steadyMaximum(zWeighted); // 정속 구간 수직 최대
+    final transientPeak = window == null
+        ? null
+        // → 로직 이동: MotionZones.transientMaximum()
+        : zones?.transientMaximum(zWeighted); // 가감속 구간 수직 최대
     final resolvedNoiseMax = window == null
         ? null
         // → 로직 이동: _peakIgnoringZeros()
@@ -332,11 +379,22 @@ class MeasurementAssembler {
         noiseMax: resolvedNoiseMax,
         positionSeries: motion.position,
         speedSeries: motion.speed,
-        accelSeries: motion.accel,
+        accelSeries: motion.accelChart,
         jerkSeries: motion.jerk,
         xPtp: maxOf(xWeighted),
         yPtp: maxOf(yWeighted),
-        zPtp: maxOf(zWeighted),
+        zPtp: steadyPeak?.value,
+        zJptp: transientPeak?.value,
+        zPtpPositionM: steadyPeak == null
+            ? null
+            // → 로직 이동: _positionAtPeak()
+            : _positionAtPeak(steadyPeak, zWeighted, motion.position),
+        motionZones: zones,
+        motionZonesFailure: zoning.failureReason,
+        // → 로직 이동: _steadySpeed()
+        steadySpeedMps: zones == null
+            ? null
+            : _steadySpeed(zones, motion.speed),
         xA95: a95Of(xWeighted),
         yA95: a95Of(yWeighted),
         zA95: a95Of(zWeighted),
@@ -348,6 +406,44 @@ class MeasurementAssembler {
       ),
       motion: motion.motion,
     );
+  }
+
+  /// 작성: 2026-10-22 15:00:00 · nada
+  /// 함수: _steadySpeed
+  /// 목적: 정속 구간 평균 속도 크기를 낸다. 표시하지 않고 결과 파일에만 남겨
+  ///       다른 현장에서 OTIS 최대 속도 표시 규칙을 견줄 때 쓴다.
+  /// 인자: zones — 정속 · 가감속 구간
+  ///       speed — 속도 시계열 (m/s, 부호 그대로)
+  /// 반환: 평균 속도 크기 (m/s)
+  /// 식: mean(|speed(i)|),  i = 정속 시작 .. 정속 끝
+  /// 근거: 측정 — 2026-10-21 비교 7건에서 이 값을 0.05 단위로 반올림하면
+  ///       OTIS 표시값(1.50 · 1.75)과 모두 같았다. 다만 OTIS 값이 두 가지뿐이고
+  ///       경계 여유가 0.003 이라 근거가 약하다(docs/pending_checks.md)
+  static double _steadySpeed(MotionZones zones, List<double> speed) {
+    var sum = 0.0; // 정속 구간 속도 크기 합
+    for (var i = zones.steadyStartIndex; i <= zones.steadyEndIndex; i++) {
+      sum += speed[i].abs();
+    }
+    return sum / (zones.steadyEndIndex - zones.steadyStartIndex + 1);
+  }
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: _positionAtPeak
+  /// 목적: 반주기 P2P 가 나온 순간의 위치를 고른다. 두 봉우리 가운데 크기가
+  ///       큰 쪽 자리의 위치다 — 차트 빨간 점 옆 글자가 붙는 자리와 같다.
+  /// 인자: peak — 반주기 P2P
+  ///       series — 그 P2P 를 낸 진동 시계열 (mg)
+  ///       position — 위치 시계열 (m)
+  /// 반환: 위치 (m)
+  static double _positionAtPeak(
+    HalfCyclePeakToPeak peak,
+    List<double> series,
+    List<double> position,
+  ) {
+    final at = series[peak.firstIndex].abs() >= series[peak.secondIndex].abs()
+        ? peak.firstIndex
+        : peak.secondIndex; // 큰 봉우리 자리
+    return position[at];
   }
 
   /// 작성: 2026-09-15 21:38:58 · nada
@@ -370,16 +466,21 @@ class MeasurementAssembler {
   }
 
   /// 작성: 2026-09-15 19:14:22 · nada
+  /// 수정: 2026-10-21 10:05:00 · nada
   /// 변수: _minimumRows
   /// 목적: 변환에 필요한 최소 격자 행 수. 이보다 적으면 변환하지 않고
   ///       사유를 올린다.
-  ///       3 인 이유는 저크를 가운데 차분(앞뒤 값의 차이를 그 사이
-  ///       간격으로 나누는 계산)으로 구하기 때문이다. 가운데 점 하나를
-  ///       구하려면 앞뒤가 있어야 해서 최소 세 점이 필요하다.
-  ///       행이 그보다 적으면 파생 물리량이 전부 0 으로 나오는데, 그러면
-  ///       재서 0 이 나온 측정과 잴 것이 없어서 0 인 측정을 구분할 수
-  ///       없게 된다.
-  static const int _minimumRows = 3;
+  ///       저크 전에 거는 양방향 저역 필터(`CaptureConfig.jerkLowpassOrder`
+  ///       차)는 양 끝을 덧대 늘려 거르므로(`Butterworth.filtfilt()`) 입력이
+  ///       덧댐 길이보다 길어야 한다. 그보다 짧은 격자로 저크 · 가속도를
+  ///       0 이나 거르지 않은 값으로 채우면 재서 나온 값과 구분할 수 없어,
+  ///       변환하지 않고 사유를 올린다. 실제 측정은 신호 처리가 2초 미만을
+  ///       먼저 돌려보내 늘 이보다 길다.
+  /// 식: 덧댐 = 3 x (2 x 구간 수 + 1),  구간 수 = 차수 / 2
+  ///     최소 행 = 덧댐 + 1 = 3 x (차수 + 1) + 1   (4차 → 16)
+  /// 근거: 표준 — SciPy `sosfiltfilt()` 의 `padlen` 기본값
+  ///       (`Butterworth.padLength()`)
+  static const int _minimumRows = 3 * (CaptureConfig.jerkLowpassOrder + 1) + 1;
 
   /// 작성: 2026-09-15 14:32:07 · nada
   /// 변수: _mgToMetersPerSecondSquared
@@ -399,8 +500,65 @@ class MeasurementAssembler {
       'motion(v>${CaptureConfig.motionSpeedThresholdMps},'
       'pad${CaptureConfig.motionPaddingMs}ms)';
 
+  /// 작성: 2026-10-21 10:05:00 · nada
+  /// 함수: jerkMethodLabel
+  /// 목적: 저크를 낸 방식을 결과 파일(result.json `signalConditioning`)에
+  ///       남길 문자열. 이 표시가 없는 2026-10-21 전 결과의 저크는 40Hz
+  ///       저역 가속도를 그대로 미분한 값이라 수십 배 크다(±10 ~ 20 m/s³).
+  ///       - `jerk(lp차단bw차수zp)` — 가속도에 버터워스 저역을 양방향(영위상)
+  ///         으로 건 뒤 중앙 차분했다
+  static String get jerkMethodLabel =>
+      'jerk(lp${CaptureConfig.jerkLowpassHz}'
+      'bw${CaptureConfig.jerkLowpassOrder}zp)';
+
+  /// 작성: 2026-10-21 22:40:00 · nada
+  /// 함수: verticalLowpassMethodLabel
+  /// 목적: 수직 진동 경로 끝 저역을 결과 파일(`signalConditioning`)에 남길
+  ///       문자열. 가중 표시(`RideWeighting.methodLabel`) 바로 뒤에 붙인다.
+  ///       이 표시가 없는 2026-10-21 2차 전 결과의 수직 시계열 · 지표는 이
+  ///       저역을 걸지 않은 값이다(그대로 읽는다).
+  ///       - `zlp(차단bw차수zp)` — 가중한 Z 에 버터워스 저역을 양방향으로 걸었다
+  static String get verticalLowpassMethodLabel =>
+      'zlp(${CaptureConfig.rideVerticalLowpassHz}'
+      'bw${CaptureConfig.rideVerticalLowpassOrder}zp)';
+
+  /// 작성: 2026-10-21 22:40:00 · nada
+  /// 함수: _verticalLowpass
+  /// 목적: 가중한 수직 진동에 `CaptureConfig.rideVerticalLowpassHz` 저역을
+  ///       양방향으로 건다. 표의 수직 최대 · Jptp · A95 와 2쪽 수직 차트 ·
+  ///       표시점이 모두 이 시계열에서 나온다.
+  /// 인자: series — 가중한 Z (mg). `_minimumRows` 개 이상이다
+  ///       sampleRate — 표본 속도 (Hz). 차단의 두 배보다 크다(`assemble()`
+  ///       이 먼저 본다)
+  /// 반환: 거른 Z (mg, 같은 길이)
+  /// 근거: `CaptureConfig.rideVerticalLowpassHz` 를 본다
+  static List<double> _verticalLowpass(
+    List<double> series,
+    double sampleRate,
+  ) =>
+      // → 로직 이동: Butterworth.filtfilt()
+      Butterworth.filtfilt(
+        // → 로직 이동: Butterworth.lowpass()
+        Butterworth.lowpass(
+          order: CaptureConfig.rideVerticalLowpassOrder,
+          cutoffHz: CaptureConfig.rideVerticalLowpassHz,
+          sampleRateHz: sampleRate,
+        ),
+        series,
+      );
+
+  /// 작성: 2026-10-21 11:20:00 · nada
+  /// 함수: accelChartMethodLabel
+  /// 목적: 차트용 가속도(`accelSeries`)를 만든 방식을 결과 파일
+  ///       (`signalConditioning`)에 남길 문자열. 이 표시가 없는 2026-10-21 전
+  ///       결과의 `accelSeries` 는 거르지 않은 가속도다.
+  ///       - `acc(lp차단bw차수zp)` — 버터워스 저역을 양방향으로 걸었다
+  static String get accelChartMethodLabel =>
+      'acc(lp${CaptureConfig.accelChartLowpassHz}'
+      'bw${CaptureConfig.accelChartLowpassOrder}zp)';
+
   /// 작성: 2026-09-15 14:32:07 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-21 15:20:00 · nada
   /// 함수: _deriveKinematics
   /// 목적: 수직 진동 시계열에서 가속도 · 속도 · 누적 이동량 · 저크와
   ///       최대 속도 · 운행 거리를 만든다. 순서대로 한다.
@@ -412,9 +570,18 @@ class MeasurementAssembler {
   ///       3. 그 구간 가속도 평균을 치우침으로 보고 전체에서 뺀다
   ///       4. 구간 안만 적분해 속도를 만든다. 구간 밖 속도는 0 이다.
   ///          3단계로 구간 끝 속도가 정확히 0 이 된다
-  ///       5. 속도의 절댓값을 더해 나가 누적 이동량을 만든다. 구간 밖에서는
-  ///          변하지 않는다
-  ///       6. 가속도의 변화율로 저크를 만든다
+  ///       5. 속도의 절댓값을 더해 나가 누적 이동량(`travelled`)을 만든다.
+  ///          구간 밖에서는 변하지 않는다. 운행 거리와 운행 구간
+  ///          (`TravelWindow`)이 이것을 쓴다. 속도를 부호 그대로 더한 변위에서
+  ///          그 최솟값을 빼 하부층 정지레벨 기준 위치(`position`)도 만든다 —
+  ///          상승은 0 → 운행 거리, 하강은 운행 거리 → 0 이다(2026-10-21,
+  ///          OTIS 리포트 3쪽 위치 차트와 같다)
+  ///       6. 가속도에 `CaptureConfig.jerkLowpassHz` 저역을 양방향으로 걸고
+  ///          (`accelSmooth`), 그 변화율로 저크를 만든다. 같은 저역
+  ///          가속도를 정속 구간 판정에도 쓴다
+  ///       7. 차트에 그릴 가속도(`accelChart`)는 `CaptureConfig.accelChartLowpassHz`
+  ///          저역을 양방향으로 건 값이다. 표시용이라 1 ~ 5 단계(속도 ·
+  ///          거리)에는 쓰지 않는다
   ///       움직인 구간이 없으면(정지 측정) 속도 · 이동량은 모두 0 이고,
   ///       치우침은 전체 평균으로 뺀다. 0 은 재지 않은 값이 아니라 "움직이지
   ///       않았다" 는 측정값이다.
@@ -437,8 +604,10 @@ class MeasurementAssembler {
   /// 반환: 파생 물리량과 최대 속도 · 운행 거리, 움직인 구간을 담은 묶음
   /// 식: accel(i) = zSeries(i) x 9.80665e-3 - 구간 평균
   ///     speed(i) = (누적합 accel(s..i)) x dt   (s ≤ i ≤ e, 밖은 0)
-  ///     position(i) = (누적합 |speed(0..i)|) x dt
-  ///     jerk(i) = (accel(i+1) - accel(i-1)) / (2 x dt)
+  ///     travelled(i) = (누적합 |speed(0..i)|) x dt
+  ///     position(i) = d(i) - min(d),  d(i) = (누적합 speed(0..i)) x dt
+  ///     smooth = filtfilt(버터워스 저역 1.6Hz 4차, accel)
+  ///     jerk(i) = (smooth(i+1) - smooth(i-1)) / (2 x dt)
   /// 근거: 측정 — 2026-10-20 같은 승강기 같은 구간 기록 6건(오티스폰 ·
   ///       테스트폰, 원본은 분석 뒤 삭제)에서 기록 사이 거리 표준편차가
   ///       0.204 → 0.067 m, 동시 측정 두 폰 차이가 0.30 · 0.38 → 0.16 ·
@@ -448,13 +617,7 @@ class MeasurementAssembler {
   ///       57.09 · 지금 56.84 m 다. 오티스 앱도 정지 구간까지 적분하는
   ///       것으로 보이나 확인하지 못했다. 층고 도면을 아는 운행으로 확인한다
   ///       (docs/pending_checks.md)
-  /// 미구현: 저크를 가속도에서 바로 미분한다. 받는 `zSeries` 는 지표 계산
-  ///       전 신호 처리(`SignalConditioner`)에서 40Hz 저역(낮은 주파수만
-  ///       통과시키고 빠른 흔들림을 걸러내는 처리)을 거친 값이라, 미분하면
-  ///       수 Hz 이상 흔들림이 그대로 남은 곡선이 나온다. 원본 리포트의
-  ///       저크 곡선은 훨씬 매끈하다. 저크만 더 낮게 거르는 처리가 정해질
-  ///       때 바꾼다. 그때까지 저크 차트는 형태만 참고한다.
-  ///       미확인: 원본 리포트가 저크를 어떤 차단 주파수로 걸렀는지
+  ///       저크 저역의 근거는 `CaptureConfig.jerkLowpassHz` 를 본다
   static _Kinematics _deriveKinematics(
     List<double> zSeries,
     double sampleRate,
@@ -497,30 +660,62 @@ class MeasurementAssembler {
       }
     }
 
-    final position = List<double>.filled(n, 0.0); // 누적 이동량 시계열 (m)
-    var travelled = 0.0; // 여기까지 더한 속도 절댓값 누적합
+    final travelled = List<double>.filled(n, 0.0); // 누적 이동량 시계열 (m)
+    final displacement = List<double>.filled(n, 0.0); // 출발점 기준 변위 (m)
+    var sumMagnitude = 0.0; // 여기까지 더한 속도 절댓값 누적합
+    var sumSigned = 0.0; // 여기까지 더한 속도 누적합 (부호 그대로)
+    var lowest = 0.0; // 변위의 최솟값 (m). 하부층 정지레벨이다
     var maxSpeed = 0.0; // 속도 절댓값의 최대 (m/s)
     for (var i = 0; i < n; i++) {
       final magnitude = speed[i].abs(); // 방향을 뺀 속도 크기
-      travelled += magnitude;
-      position[i] = travelled * dt;
+      sumMagnitude += magnitude;
+      sumSigned += speed[i];
+      travelled[i] = sumMagnitude * dt;
+      displacement[i] = sumSigned * dt;
+      if (displacement[i] < lowest) lowest = displacement[i];
       if (magnitude > maxSpeed) maxSpeed = magnitude;
     }
+    final position = <double>[
+      for (final d in displacement) d - lowest,
+    ]; // 하부층 정지레벨 기준 위치 (m)
 
+    // → 로직 이동: Butterworth.filtfilt()
+    final accelSmooth = Butterworth.filtfilt(
+      // → 로직 이동: Butterworth.lowpass()
+      Butterworth.lowpass(
+        order: CaptureConfig.jerkLowpassOrder,
+        cutoffHz: CaptureConfig.jerkLowpassHz,
+        sampleRateHz: sampleRate,
+      ),
+      accel,
+    ); // 저크 저역을 건 가속도 (m/s²)
+    // → 로직 이동: Butterworth.filtfilt()
+    final accelChart = Butterworth.filtfilt(
+      // → 로직 이동: Butterworth.lowpass()
+      Butterworth.lowpass(
+        order: CaptureConfig.accelChartLowpassOrder,
+        cutoffHz: CaptureConfig.accelChartLowpassHz,
+        sampleRateHz: sampleRate,
+      ),
+      accel,
+    ); // 차트에 그릴 가속도 (m/s²)
     final jerk = List<double>.filled(n, 0.0); // 저크 시계열 (m/s³)
-    jerk[0] = (accel[1] - accel[0]) / dt;
-    jerk[n - 1] = (accel[n - 1] - accel[n - 2]) / dt;
+    jerk[0] = (accelSmooth[1] - accelSmooth[0]) / dt;
+    jerk[n - 1] = (accelSmooth[n - 1] - accelSmooth[n - 2]) / dt;
     for (var i = 1; i < n - 1; i++) {
-      jerk[i] = (accel[i + 1] - accel[i - 1]) / (2 * dt);
+      jerk[i] = (accelSmooth[i + 1] - accelSmooth[i - 1]) / (2 * dt);
     }
 
     return _Kinematics(
       accel: accel,
+      accelSmooth: accelSmooth,
+      accelChart: accelChart,
       speed: speed,
+      travelled: travelled,
       position: position,
       jerk: jerk,
       maxSpeed: maxSpeed,
-      distance: position[n - 1],
+      distance: travelled[n - 1],
       motion: motion,
     );
   }
@@ -578,7 +773,7 @@ class MeasurementAssembler {
 }
 
 /// 작성: 2026-09-15 14:32:07 · nada
-/// 수정: 2026-10-20 14:05:12 · nada
+/// 수정: 2026-10-21 15:20:00 · nada
 /// 클래스: _Kinematics
 /// 목적: 수직 진동에서 뽑아낸 파생 물리량과 거기서 나온 두 지표를 한
 ///       묶음으로 담는다. `_deriveKinematics()` 가 만들어 돌려준다.
@@ -586,10 +781,24 @@ class _Kinematics {
   /// 가속도 시계열 (m/s²). 움직인 구간 평균(치우침)을 뺀 값
   final List<double> accel;
 
+  /// `accel` 에 저크 저역(`CaptureConfig.jerkLowpassHz`)을 양방향으로 건
+  /// 가속도 (m/s²). 저크와 정속 구간 판정이 함께 쓴다
+  final List<double> accelSmooth;
+
+  /// `accel` 에 차트 저역(`CaptureConfig.accelChartLowpassHz`)을 양방향으로
+  /// 건 가속도 (m/s²). 리포트 3쪽 가속도 차트에만 쓴다
+  final List<double> accelChart;
+
   /// 속도 시계열 (m/s). 움직인 구간 안만 적분한 값이고 밖은 0
   final List<double> speed;
 
-  /// 누적 이동량 시계열 (m). 방향과 무관하게 움직인 거리
+  /// 누적 이동량 시계열 (m). 방향과 무관하게 움직인 거리. 운행 거리 ·
+  /// 운행 구간이 쓴다
+  final List<double> travelled;
+
+  /// 하부층 정지레벨 기준 위치 시계열 (m). 상승은 0 에서 오르고 하강은
+  /// 운행 거리에서 0 으로 내려온다. 리포트 3쪽 위치 차트와 수직 최대 위치가
+  /// 쓴다
   final List<double> position;
 
   /// 저크 시계열 (m/s³)
@@ -608,15 +817,21 @@ class _Kinematics {
   /// 함수: _Kinematics
   /// 목적: 파생 물리량과 두 지표를 그대로 담는 생성자.
   /// 인자: accel — 가속도 시계열 (m/s²)
+  ///       accelSmooth — 저크 저역을 건 가속도 (m/s²)
+  ///       accelChart — 차트 저역을 건 가속도 (m/s²)
   ///       speed — 속도 시계열 (m/s)
-  ///       position — 누적 이동량 시계열 (m)
+  ///       travelled — 누적 이동량 시계열 (m)
+  ///       position — 하부층 기준 위치 시계열 (m)
   ///       jerk — 저크 시계열 (m/s³)
   ///       maxSpeed — 최대 속도 (m/s)
   ///       distance — 운행 거리 (m)
   ///       motion — 움직인 구간. 정지 측정이면 null
   const _Kinematics({
     required this.accel,
+    required this.accelSmooth,
+    required this.accelChart,
     required this.speed,
+    required this.travelled,
     required this.position,
     required this.jerk,
     required this.maxSpeed,

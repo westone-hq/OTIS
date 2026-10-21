@@ -130,3 +130,26 @@ List<({double left, double y, double right})> guideLines(String stream) {
         ),
   ];
 }
+
+/// 작성: 2026-10-21 13:10:00 · nada
+/// 함수: labelBoxes
+/// 목적: 쪽 하나에서 표시점 옆 글자 상자(흰 바탕 · 빨간 테두리로 채우고
+///       긋는 네모)의 자리를 뽑는다. 두 상자가 겹치는지 보는 데 쓴다.
+/// 인자: stream — 쪽 하나의 내용 스트림
+/// 반환: 상자마다 (왼쪽, 아래, 가로, 세로) 포인트
+List<({double left, double bottom, double width, double height})> labelBoxes(
+  String stream,
+) {
+  final box = RegExp(
+    r'([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re\s+B ',
+  ); // 채우고 긋는 네모
+  return <({double left, double bottom, double width, double height})>[
+    for (final m in box.allMatches(stream))
+      (
+        left: double.parse(m.group(1)!),
+        bottom: double.parse(m.group(2)!),
+        width: double.parse(m.group(3)!),
+        height: double.parse(m.group(4)!),
+      ),
+  ];
+}

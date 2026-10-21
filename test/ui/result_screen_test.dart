@@ -135,7 +135,7 @@ void main() {
       expect(find.text(label), findsOneWidget, reason: label);
     }
     expect(find.text('26.0'), findsOneWidget);
-    expect(find.text('1.74'), findsOneWidget);
+    expect(find.text('1.74'), findsOneWidget, reason: '리포트와 같은 둘째 자리');
     expect(
       find.byIcon(Icons.error_outline),
       findsNWidgets(2),
@@ -148,6 +148,72 @@ void main() {
     );
     expect(find.text('30mg 초과 시 적색'), findsOneWidget);
     expect(find.text('테스트 재실행'), findsOneWidget);
+  });
+
+  testWidgets('머리 카드 층은 출발 → 도착이라 하강이면 최상층부터다', (tester) async {
+    await tester.runAsync(() async {
+      await MeasurementRepository.instance.save(
+        _result(
+          '20260114-110359',
+          DateTime(2026, 1, 14, 11, 3, 59),
+          8.0,
+        ).copyWith(direction: '하강'),
+      );
+      await MeasurementRepository.instance.save(
+        _result('20260113-090000', DateTime(2026, 1, 13, 9), 8.0),
+      );
+    });
+
+    await tester.pumpWidget(
+      const MaterialApp(home: ResultScreen(id: '20260114-110359')),
+    );
+    await _settle(tester);
+    expect(find.text('하강 · 8층 → 1층 · Gen2'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+      const MaterialApp(home: ResultScreen(id: '20260113-090000')),
+    );
+    await _settle(tester);
+    expect(find.text('상승 · 1층 → 8층 · Gen2'), findsOneWidget);
+  });
+
+  testWidgets('화면 위 · 기울어진 거치 결과에만 재측정 권고 경고를 띄운다', (tester) async {
+    const tail = ' 거치로 측정됨 — 소음 · 수평 값이 달라질 수 있습니다. 재측정을 권합니다';
+    final cases = <String?, String?>{
+      'faceUp': '화면 위$tail',
+      'tilted': '기울어진$tail',
+      'faceDown': null,
+      null: null,
+    }; // 저장한 거치 → 보일 경고
+    var minute = 0; // 측정 ID 를 가르는 분
+    for (final entry in cases.entries) {
+      minute++;
+      final id = '20260114-11${minute.toString().padLeft(2, '0')}00';
+      await tester.runAsync(
+        () => MeasurementRepository.instance.save(
+          _result(
+            id,
+            DateTime(2026, 1, 14, 11, minute),
+            8.0,
+          ).copyWith(placement: entry.key, placementGravityZMg: 0.0),
+        ),
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(MaterialApp(home: ResultScreen(id: id)));
+      await _settle(tester);
+      final warning = entry.value; // 기대 경고, 없으면 null
+      if (warning == null) {
+        expect(
+          find.textContaining('거치로 측정됨'),
+          findsNothing,
+          reason: '${entry.key}',
+        );
+      } else {
+        expect(find.text(warning), findsOneWidget, reason: '${entry.key}');
+      }
+      expect(find.text('테스트 재실행'), findsOneWidget);
+    }
   });
 
   testWidgets('다른 저장 결과를 골라 비교 값과 차이를 보여준다', (tester) async {

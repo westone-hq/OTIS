@@ -287,20 +287,35 @@ class GridResampler {
   }
 
   /// 작성: 2026-10-10 11:54:43 · nada
+  /// 수정: 2026-10-21 15:20:00 · nada
   /// 함수: motionOf
   /// 목적: 같은 시각의 raw 와 gravity 로 중력을 뺀 세 축 가속도(motion)를
-  ///       만든다. 화면을 아래로 놓은 거치에서는 Y · Z 부호가 OTIS 장비
-  ///       기준과 반대로 나와 두 축은 부호를 뒤집는다. 이 기준은 위쪽 끝을
-  ///       문 기준 오른쪽에 두던 때 정했고, 2026-10-07 개발폰과 오티스폰을
-  ///       함께 위쪽 왼쪽으로 돌렸으므로 그대로 쓴다(`PlacementSheet`
-  ///       참고). 격자(`resample()`)와 측정 중 속도 추정
-  ///       (`LiveSpeedEstimator`)이 같은 부호를 쓰도록 한 곳에 둔다.
+  ///       만든다.
+  ///       - 수평(X · Y): 화면을 아래로 놓은 거치에서는 Y 부호가 OTIS 장비
+  ///         기준과 반대로 나와 Y 부호를 뒤집는다. 이 기준은 위쪽 끝을 문
+  ///         기준 오른쪽에 두던 때 정했고, 2026-10-07 개발폰과 오티스폰을
+  ///         함께 위쪽 왼쪽으로 돌렸으므로 그대로 쓴다(`PlacementSheet` 참고)
+  ///       - 수직(Z): 중력을 뺀 가속도를 "위" 방향(gravity 가 가리키는 쪽 —
+  ///         가속도계는 가만히 있을 때 위로 1g 를 읽는다)에 투영한다. 위로
+  ///         가속하면 양수다. 화면을 아래로 바르게 놓으면 예전 식
+  ///         −(raw_z − gravity_z) 와 같고, 화면을 위로 놓거나 기울여 놓아도
+  ///         물리 부호가 그대로 나온다(2026-10-21). 예전 식은 화면을 위로
+  ///         놓으면 부호가 뒤집혀 하강이 상승처럼 기록됐다(2026-10-21 개발폰
+  ///         하강 기록 — CLAUDE.md "거치" 항목)
+  ///       격자(`resample()`)와 측정 중 속도 추정(`LiveSpeedEstimator`)이
+  ///       같은 부호를 쓰도록 한 곳에 둔다.
   /// 인자: rawX, rawY, rawZ — 중력이 섞인 가속도 원본 (mg)
-  ///       gravityX, gravityY, gravityZ — 같은 시각의 중력 성분 (mg)
+  ///       gravityX, gravityY, gravityZ — 같은 시각의 중력 성분 (mg). 세
+  ///       축이 모두 0 인 이벤트는 `_accept()` 가 먼저 버린다
   /// 반환: 세 축 motion (mg)
   /// 식: motion_x = raw_x - gravity_x
   ///     motion_y = -(raw_y - gravity_y)
-  ///     motion_z = -(raw_z - gravity_z)
+  ///     motion_z = (raw - gravity) · gravity / |gravity|
+  /// 근거: 측정 — 2026-10-21 개발폰 상승 2회는 정지 Z 가 +0.1 mg 인데 같은
+  ///       폰 하강 1회만 −13.6 mg 이고 첫 가속 부호가 반대다. 같은 운행의
+  ///       오티스폰 기록은 하강 부호가 맞다. 가속도계 영점 · 배율 오차는
+  ///       화면을 뒤집으면 부호가 바뀌어 정지 값이 달라지므로, 하강 때
+  ///       화면을 위로 놓았던 것으로 본다
   static ({double x, double y, double z}) motionOf({
     required double rawX,
     required double rawY,
@@ -308,7 +323,22 @@ class GridResampler {
     required double gravityX,
     required double gravityY,
     required double gravityZ,
-  }) => (x: rawX - gravityX, y: -(rawY - gravityY), z: -(rawZ - gravityZ));
+  }) {
+    final norm = math.sqrt(
+      gravityX * gravityX + gravityY * gravityY + gravityZ * gravityZ,
+    ); // 중력 크기 (mg)
+    // 세 축 0 인 gravity 는 `_accept()` 가 버리고, 격자 값은 그 이웃 두
+    // 값의 보간이라 0 이 될 수 없다. 방어 분기 대신 확인만 둔다
+    assert(norm > 0, '중력 크기가 0 이다');
+    final dx = rawX - gravityX; // 중력을 뺀 X (mg)
+    final dy = rawY - gravityY; // 중력을 뺀 Y (mg)
+    final dz = rawZ - gravityZ; // 중력을 뺀 Z (mg)
+    return (
+      x: dx,
+      y: -dy,
+      z: (dx * gravityX + dy * gravityY + dz * gravityZ) / norm,
+    );
+  }
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 수정: 2026-10-10 11:54:43 · nada

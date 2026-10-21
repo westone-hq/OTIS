@@ -2,9 +2,12 @@ import 'dart:io';
 
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/noise_offset.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-08-18 23:43:06 · 박건준
@@ -48,15 +51,28 @@ class VibrationFileWriter {
   static const String lineEnding = '\r\n';
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
-  /// 수정: 2026-09-15 13:30:00 · 박희정
+  /// 수정: 2026-10-21 23:20:00 · nada
   /// 함수: encode
   /// 목적: 격자 환산 결과를 참조 파일과 같은 구조의 문자열로 만든다.
   ///       1줄에 포맷 식별자, 2줄에 초당 행 수를 쓰고, 그 뒤로 격자
   ///       행마다 진동·소음 값(X Y Z 소음)을 한 줄씩 이어붙인다.
+  ///       진동 세 축은 축마다 내보내는 행 전체의 평균(`axisMeans()`)을 빼고
+  ///       쓴다(2026-10-21). OTIS EVIMP1 내보내기와 같은 관례다. 정지 →
+  ///       운행 → 정지 기록은 가속도 전체 평균이 물리적으로 0 이라, 빼는
+  ///       것은 가속도계 영점 오차뿐이다. 손대지 않은 원본은 안드로이드
+  ///       원본(`native_raw.txt`)에 따로 남고, 뺀 평균은 집계 파일
+  ///       (`encodeMeta()`)에 적는다. 소음 열은 그대로다.
   /// 인자: result — 격자 환산 결과. `result.samples`에 격자 행마다
   ///       하나씩, 원본 가속도에서 중력 성분을 뺀 진동 값과 소음이 들어있다
   /// 반환: 머리말 2줄과 값 행들이 `lineEnding`으로 이어진 문자열
+  /// 식: 값_축(i) = 격자_축(i) - 평균_축(격자_축(0..n-1))
+  /// 근거: 측정 — 2026-10-21 오티스폰 EVIMP1 내보내기(otis_* 3건)와 원본
+  ///       리포트 기록(ride_reference)의 축별 평균이 X · Y 0.0000, Z −0.002
+  ///       ~ −0.012 mg 다. 개발폰 하강 기록은 영점 오차로 정지 Z 가
+  ///       −13.6 mg 였다
   static String encode(GridResampleResult result) {
+    // → 로직 이동: axisMeans()
+    final mean = axisMeans(result); // 축마다 뺄 평균 (mg)
     final rateHz = 1000000000 ~/ result.gridIntervalNs; // 1초(10억 나노초)를 격자
     // 간격(나노초)으로 나눈 값 — 1초에 몇 행이 들어가는지
     final buffer = StringBuffer(); // 완성할 문자열을 쌓아갈 버퍼
@@ -67,16 +83,38 @@ class VibrationFileWriter {
     for (final s in result.samples) {
       // s: 격자 행 하나의 진동 값(X Y Z, mg)과 소음(dBA)
       // → 로직 이동: formatValue()
-      buffer.write(formatValue(s.xMg));
+      buffer.write(formatValue(s.xMg - mean.x));
       buffer.write(' ');
-      buffer.write(formatValue(s.yMg));
+      buffer.write(formatValue(s.yMg - mean.y));
       buffer.write(' ');
-      buffer.write(formatValue(s.zMg));
+      buffer.write(formatValue(s.zMg - mean.z));
       buffer.write(' ');
       buffer.write(formatValue(s.noiseDba));
       buffer.write(lineEnding);
     }
     return buffer.toString();
+  }
+
+  /// 작성: 2026-10-21 23:20:00 · nada
+  /// 함수: axisMeans
+  /// 목적: 값 파일에서 뺄 축별 평균을 낸다. 내보내는 격자 행 전체의
+  ///       평균이다. 행이 없으면(환산 실패) 0 을 돌려준다 — 그때는 값 파일을
+  ///       쓰지 않고(`write()`), 집계 파일에도 적지 않는다(`encodeMeta()`).
+  /// 인자: result — 격자 환산 결과
+  /// 반환: X · Y · Z 평균 (mg)
+  static ({double x, double y, double z}) axisMeans(GridResampleResult result) {
+    final rows = result.samples; // 격자 행
+    if (rows.isEmpty) return (x: 0.0, y: 0.0, z: 0.0);
+    var sx = 0.0; // X 합
+    var sy = 0.0; // Y 합
+    var sz = 0.0; // Z 합
+    for (final s in rows) {
+      sx += s.xMg;
+      sy += s.yMg;
+      sz += s.zMg;
+    }
+    final n = rows.length; // 행 수
+    return (x: sx / n, y: sy / n, z: sz / n);
   }
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
@@ -121,7 +159,7 @@ class VibrationFileWriter {
   }
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
-  /// 수정: 2026-10-05 10:00:11 · nada
+  /// 수정: 2026-10-21 23:20:00 · nada
   /// 함수: encodeMeta
   /// 목적: 환산 과정에서 폐기되거나 특이하게 처리된 표본 수를 모아
   ///       사람이 읽을 수 있는 집계 문자열로 만든다. 값 파일(`encode()`
@@ -177,6 +215,16 @@ class VibrationFileWriter {
     line('# 어긋난 만큼 격자를 만들지 않은 행 수다. 직전 값 복사는 하지 않는다.');
     line('# edgeTrimmedRows 는 시작 · 종료 입력 충격을 빼려고 앞뒤에서 버린');
     line('# 행 수의 합이다. native_raw.txt 는 자르지 않는다.');
+    if (result.samples.isNotEmpty) {
+      // → 로직 이동: axisMeans()
+      final mean = axisMeans(result); // raw.txt 에서 뺀 평균 (mg)
+      line('');
+      line('rawExportMeanXmg: ${mean.x.toStringAsFixed(decimalDigits)}');
+      line('rawExportMeanYmg: ${mean.y.toStringAsFixed(decimalDigits)}');
+      line('rawExportMeanZmg: ${mean.z.toStringAsFixed(decimalDigits)}');
+      line('# raw.txt 는 OTIS EVIMP1 관례대로 축별 위 평균을 뺀 값이다.');
+      line('# 손대지 않은 원본은 native_raw.txt 다.');
+    }
     return buffer.toString();
   }
 
@@ -206,11 +254,12 @@ class VibrationFileWriter {
   }
 
   /// 작성: 2026-10-07 02:10:57 · nada
+  /// 수정: 2026-10-21 23:20:00 · nada
   /// 함수: encodeConditioningMeta
   /// 목적: 지표 계산 전 신호 처리(`SignalConditioner.condition()`)를 어떻게
   ///       했는지 집계 파일 끝에 덧붙일 문자열로 만든다. 값 파일(`raw.txt`)은
-  ///       처리 전 격자이고 지표는 처리 후 격자로 내므로, 두 값이 왜 다른지
-  ///       집계 파일만 보고 알 수 있어야 한다.
+  ///       처리 전 격자(축별 전체 평균만 뺌)이고 지표는 처리 후 격자로
+  ///       내므로, 두 값이 왜 다른지 집계 파일만 보고 알 수 있어야 한다.
   ///       - 처리 방식 한 줄 — 수치는 실제로 쓴 설정에서 옮긴다
   ///       - 축별 기준선과 기준선 구간 표준편차 (mg). 표준편차는 기준선 구간에
   ///         손 움직임이 섞였는지 나중에 보려는 값이고 판정하지 않는다
@@ -251,7 +300,8 @@ class VibrationFileWriter {
     line('conditionedRowCount: ${conditioned.rowCount}');
     line(
       '# raw.txt 는 필터 · 기준선 보정 전 ${config.targetSampleRateHz}Hz '
-      '격자다. 지표 · 리포트는 위 처리 후 값으로 낸다.',
+      '격자에서 축별 전체 평균만 뺀 값이다. 지표 · 리포트는 위 처리 후 '
+      '값으로 낸다.',
     );
     line(
       '# baselineStd 는 기준선 구간(처음 ${config.baselineWindowMs}ms)의 '
@@ -310,13 +360,71 @@ class VibrationFileWriter {
     return buffer.toString();
   }
 
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: encodePlacementMeta
+  /// 목적: 거치 방향 판정을 집계 파일 끝에 덧붙일 문자열로 만든다.
+  /// 인자: placement — 판정 결과. 측정이 1초보다 짧아 판정하지 못했으면 null
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
+  static String encodePlacementMeta(PlacementReading? placement) {
+    final buffer = StringBuffer(lineEnding); // 앞 집계와 빈 줄로 나눈다
+    // 한 줄을 쓰고 줄바꿈 문자를 붙인다
+    void line(String text) => buffer
+      ..write(text)
+      ..write(lineEnding);
+
+    if (placement == null) {
+      line('placement: unknown');
+      line(
+        '# 수집 처음 ${CaptureConfig.placementWindowMs}ms 의 중력 이벤트가 '
+        '모이기 전에 끝나 판정하지 못했다.',
+      );
+      return buffer.toString();
+    }
+    line('placement: ${placement.placement.name}');
+    line(
+      'placementGravityZmg: '
+      '${placement.gravityZMg.toStringAsFixed(decimalDigits)}',
+    );
+    line(
+      '# 수집 처음 ${CaptureConfig.placementWindowMs}ms 중력 Z 평균으로 판정 '
+      '(≤ ${CaptureConfig.placementFaceDownMaxMg} faceDown, '
+      '≥ ${CaptureConfig.placementFaceUpMinMg} faceUp, 그 밖 tilted).',
+    );
+    return buffer.toString();
+  }
+
+  /// 작성: 2026-10-22 12:00:00 · nada
+  /// 함수: encodeNoiseMeta
+  /// 목적: 소음 계산 방식(시간가중 · 마이크 표본 속도)을 집계 파일 끝에
+  ///       덧붙일 문자열로 만든다. 2026-10-22 에 44.1 → 48kHz 로 바꿔, 예전
+  ///       측정과 견줄 때 어느 쪽인지 집계 파일만 보고 알게 한다.
+  /// 인자: sampleRateHz — 소음 마이크를 연 표본 속도(Hz). 못 열었으면 null
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
+  static String encodeNoiseMeta(int? sampleRateHz) {
+    final buffer = StringBuffer(lineEnding); // 앞 집계와 빈 줄로 나눈다
+    // 한 줄을 쓰고 줄바꿈 문자를 붙인다
+    void line(String text) => buffer
+      ..write(text)
+      ..write(lineEnding);
+
+    line('noiseTimeWeighting: fast (${kNoiseTimeWeightSec}s)');
+    line('noiseSampleRateHz: ${sampleRateHz ?? 'none'}');
+    line('noiseOffsetDb: $kDefaultMicDbfsToDbaOffset');
+    if (sampleRateHz == null) {
+      line('# 소음 마이크를 열지 못했다(권한 없음 등). 소음 값은 0(미측정)이다.');
+    }
+    return buffer.toString();
+  }
+
   /// 작성: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: encodeTravelMeta
   /// 목적: 주파수 가중과 운행 구간을 집계 파일 끝에 덧붙일 문자열로 만든다.
   ///       지표는 가중한 시계열의 운행 구간 안에서 내므로, 리포트 값이
   ///       어느 구간에서 나왔는지 집계 파일만 보고 알 수 있어야 한다.
   ///       - 가중 방식 한 줄 — 수치는 실제로 쓴 상수에서 옮긴다
   ///       - 운행 구간 시작 · 끝 (초, m). 정하지 못했으면 그 사유 한 줄
+  ///       - 정속 구간 판정 방식과 시작 · 끝 (초). 정하지 못했으면 그 사유
   /// 인자: result — 지표를 낸 측정 결과
   /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
   static String encodeTravelMeta(MeasurementResult result) {
@@ -347,6 +455,18 @@ class VibrationFileWriter {
       '# 진동 · 소음 지표는 위 가중 뒤 시계열의 운행 구간(출발 · 정지 '
       '${CaptureConfig.travelEdgeExclusionM}m 제외) 안에서 낸다.',
     );
+    final zones = result.motionZones; // 정속 · 가감속 구간, 못 정했으면 null
+    line('zones: ${MotionZones.methodLabel}');
+    if (zones == null) {
+      line('zonesFailureReason: ${result.motionZonesFailure}');
+    } else {
+      line('steadyStartSec: ${fixed(zones.steadyStartSec)}');
+      line('steadyEndSec: ${fixed(zones.steadyEndSec)}');
+      line(
+        '# 수직 최대(zPtp)는 정속 구간, 가감속 최대(zJptp)는 그 밖 운행에서 '
+        '낸다.',
+      );
+    }
     return buffer.toString();
   }
 

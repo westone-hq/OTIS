@@ -4,6 +4,12 @@
     python pdf_report_dev/gen_conditioning_fixtures.py \
         test/fixtures/conditioning_input_dev_256hz.txt test/fixtures
 
+    # 2026-10-21 저크 · 가속도 차트 저역 픽스처 1개만 만든다
+    python pdf_report_dev/gen_conditioning_fixtures.py --jerk test/fixtures
+
+    # 2026-10-22 소음 A 가중(44.1 · 48kHz) · Slow 평활 픽스처 1개만 만든다
+    python pdf_report_dev/gen_conditioning_fixtures.py --noise test/fixtures
+
     # 2026-10-15 가중 · 운행 구간 픽스처 2개만 만든다(아래 3개는 건드리지 않는다)
     python pdf_report_dev/gen_conditioning_fixtures.py --weighting \
         test/fixtures/ride_reference.txt \
@@ -18,8 +24,9 @@
     weighting_unit_cases.json        100Hz 합성 신호 400표본에 건 ISO 8041 가중
                                      (수평 Wd, 수직 1Hz 고역 양방향 + Wk)과 계수
     weighting_expected_metrics.json  두 실측 기록(ride_reference, 개발폰)을 앱과
-                                     같은 길(신호 처리 → 운동 → 가중 → 운행 구간
-                                     → 반주기 P2P)로 계산한 지표
+                                     같은 길(신호 처리 → 운동 → 가중(수직은 뒤에
+                                     20Hz 저역) → 운행 구간 → 반주기 P2P, 수직
+                                     최대 · Jptp 는 정속 · 가감속 구간)로 계산한 지표
 주의: unit_cases 의 값은 소수 12자리로 반올림해 저장한다.
       그래서 다시 만든 값과 6.7e-13 정도 차이가 날 수 있다(시험 기준 1e-9).
 """
@@ -120,6 +127,40 @@ def weight_vertical(z, fs=FS):
     return sosfilt(_sos(WK, fs), sosfiltfilt(_hp1(fs), z))
 
 
+Z_LP_HZ, Z_LP_ORDER = 20.0, 4  # CaptureConfig.rideVerticalLowpassHz · Order (2026-10-21 2차)
+ZONE_V, ZONE_PEAK, ZONE_A, ZONE_MIN_S = 0.05, 0.5, 0.03, 1.0  # CaptureConfig.zone* (2026-10-21)
+ZONE_JPAD_S = 0.4  # CaptureConfig.zoneTransientPaddingMs (2026-10-22)
+
+
+def vertical_path(z, fs=FS):
+    """앱 수직 경로: 가중(1Hz 고역 양방향 + Wk) 뒤 20Hz 4차 저역 양방향."""
+    return sosfiltfilt(butter(Z_LP_ORDER, Z_LP_HZ, fs=fs, output='sos'), weight_vertical(z, fs))
+
+
+def _zones(v, smooth):
+    """MotionZones.of() 와 같다. 정하지 못하면 None."""
+    run = np.where(np.abs(v) > ZONE_V)[0]
+    if not len(run):
+        return None
+    rs, re = run[0], run[-1]
+    a = np.abs(smooth)
+    over = np.where(a[rs:re + 1] > a[rs:re + 1].max() * ZONE_PEAK)[0] + rs
+    ap, dp = over[0], over[-1]
+    cs = next((i for i in range(ap, dp + 1) if a[i] < ZONE_A), None)
+    ce = next((i for i in range(dp, ap - 1, -1) if a[i] < ZONE_A), None)
+    if cs is None or ce is None or ce - cs + 1 < round(ZONE_MIN_S * FS):
+        return None
+    return int(rs), int(re), int(cs), int(ce)
+
+
+def _max_p2p(series, lo, hi):
+    p = _half_cycle_p2p(series[lo:hi + 1]) if hi > lo else []
+    if not p:
+        return None
+    best = max(p, key=lambda t: t[0])
+    return float(best[0]), [best[1] + lo, best[2] + lo]
+
+
 def _half_cycle_p2p(series):
     peaks, idx = [], []
     cur, cur_i, sign = 0.0, -1, 0
@@ -169,7 +210,7 @@ def _pipeline(src):
            'distance': float(pos[-1]),
            'startIndex': start, 'endIndex': end}
     series = {'x': weight_horizontal(c[:, 0]), 'y': weight_horizontal(c[:, 1]),
-              'z': weight_vertical(c[:, 2])}
+              'z': vertical_path(c[:, 2])}
     for k, s in series.items():
         p2p = _half_cycle_p2p(s[w])
         vals = sorted(p for p, _, _ in p2p)
@@ -177,6 +218,19 @@ def _pipeline(src):
         out[k + 'Ptp'] = float(best[0])
         out[k + 'PtpIndices'] = [best[1] + start, best[2] + start]
         out[k + 'A95'] = float(vals[int(np.ceil(0.95 * len(vals))) - 1])
+    # 수직 최대 = 정속 구간 최대, Jptp = 가감속 구간 최대 (2026-10-21, 앱 MotionZones)
+    smooth = sosfiltfilt(butter(4, 1.6, fs=FS, output='sos'), acc)
+    zones = _zones(v, smooth)
+    if zones is None:
+        out['zPtp'] = out['zPtpIndices'] = out['zJptp'] = None
+    else:
+        rs, re, cs, ce = zones
+        out['steadyStartIndex'], out['steadyEndIndex'] = cs, ce
+        out['zPtp'], out['zPtpIndices'] = _max_p2p(series['z'], cs, ce)
+        jp = round(ZONE_JPAD_S * FS)  # Jptp 구간을 운행 앞뒤로 넓힐 행 수
+        js = [j for j in (_max_p2p(series['z'], max(0, rs - jp), cs - 1),
+                          _max_p2p(series['z'], ce + 1, min(n - 1, re + jp))) if j]
+        out['zJptp'] = max(j[0] for j in js) if js else None
     wn = noise100[w]
     wn = wn[wn != 0]
     out['noiseAvg'] = float(wn.mean()) if len(wn) else None
@@ -209,8 +263,96 @@ def weighting(ride_src: str, dev_src: str, out_dir: str) -> None:
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
 
+JERK_HZ, JERK_ORDER = 1.6, 4      # CaptureConfig.jerkLowpassHz · jerkLowpassOrder
+ACC_CHART_HZ, ACC_CHART_ORDER = 10.0, 4  # 3쪽 가속도 차트 저역 (2026-10-21)
+
+
+def jerk(out_dir: str) -> None:
+    """2026-10-21 저크 · 가속도 차트 저역 픽스처(jerk_unit_cases.json)를 만든다.
+
+    100Hz 합성 가속도(m/s²) 600표본: 사다리꼴 가감속 + 7Hz · 23Hz 흔들림.
+    1.6Hz · 10Hz 4차 버터워스 계수와 sosfiltfilt 출력, 1.6Hz 출력의 중앙 차분.
+    """
+    out = Path(out_dir)
+    t = np.arange(600) / FS
+    ramp = np.clip(t - 1.0, 0, 1) - np.clip(t - 4.0, 0, 1)  # 1~2초 올라 4~5초 내려감
+    x = (0.5 * ramp + 0.05 * np.sin(2 * np.pi * 7 * t)
+         + 0.02 * np.sin(2 * np.pi * 23 * t)).round(12)
+    sos_j = butter(JERK_ORDER, JERK_HZ, fs=FS, output='sos')
+    sos_a = butter(ACC_CHART_ORDER, ACC_CHART_HZ, fs=FS, output='sos')
+    smooth = sosfiltfilt(sos_j, x)
+    j = np.empty_like(smooth)
+    j[1:-1] = (smooth[2:] - smooth[:-2]) * FS / 2
+    j[0] = (smooth[1] - smooth[0]) * FS
+    j[-1] = (smooth[-1] - smooth[-2]) * FS
+    cases = {
+        'scipy': scipy.__version__,
+        'fs': FS,
+        'input': x.tolist(),
+        'sos_jerk': sos_j.tolist(),
+        'smooth_jerk': smooth.round(12).tolist(),
+        'jerk': j.round(12).tolist(),
+        'sos_acc_chart': sos_a.tolist(),
+        'acc_chart': sosfiltfilt(sos_a, x).round(12).tolist(),
+    }
+    (out / 'jerk_unit_cases.json').write_text(json.dumps(cases))
+    print('jerk_unit_cases.json', len(x), 'samples')
+
+
+NOISE_RATES = (44100, 48000)  # NoiseCaptureHandler FALLBACK · PREFERRED_SAMPLE_RATE
+NOISE_HOP_HZ = 512             # NoiseCaptureHandler.HOP_HZ
+NOISE_TIME_WEIGHT_SEC = 0.125  # NoiseCaptureHandler.FAST_TIME_WEIGHT_SEC (Fast)
+
+
+def _a_weighting_sos(fs):
+    """IEC 61672-1 A 가중 아날로그 극을 쌍일차 변환으로 fs 에 옮기고 1kHz 0 dB 로 맞춘다."""
+    from scipy.signal import bilinear_zpk, sosfreqz, zpk2sos
+    f1, f2, f3, f4 = 20.598997, 107.65265, 737.86223, 12194.217
+    z = [0, 0, 0, 0]
+    p = [-2 * np.pi * f for f in (f1, f1, f4, f4, f2, f3)]
+    k = (2 * np.pi * f4) ** 2 * 10 ** (1.9997 / 20)
+    zd, pd, kd = bilinear_zpk(z, p, k, fs)
+    sos = zpk2sos(zd, pd, kd)
+    _, h = sosfreqz(sos, worN=[1000], fs=fs)
+    sos[0, :3] /= abs(h[0])
+    return sos
+
+
+def noise(out_dir: str) -> None:
+    """2026-10-22 소음 픽스처(noise_weighting_cases.json)를 만든다.
+
+    - 표본 속도마다 A 가중 계수(앱 NoiseCaptureHandler 와 같은 설계)
+    - Fast(0.125초) 지수평활: 홉(표본 속도 // 512 표본)마다 평균 제곱값을
+      y = a·y + (1 − a)·x, a = exp(−홉/fs/τ) 로 평활한 응답. 첫 값은 평활 없이
+      그대로(앱과 같다). 입력은 1 이 50 홉, 100 이 200 홉, 다시 1 이 200 홉
+    """
+    from scipy.signal import lfilter
+    out = Path(out_dir)
+    cases = {'scipy': scipy.__version__, 'timeWeightSec': NOISE_TIME_WEIGHT_SEC}
+    x = np.concatenate([np.ones(50), np.full(200, 100.0), np.ones(200)])
+    for fs in NOISE_RATES:
+        hop = fs // NOISE_HOP_HZ
+        a = np.exp(-(hop / fs) / NOISE_TIME_WEIGHT_SEC)
+        y = np.empty_like(x)
+        y[0] = x[0]
+        y[1:], _ = lfilter([1 - a], [1, -a], x[1:], zi=[a * x[0]])
+        cases[str(fs)] = {
+            'sos': _a_weighting_sos(fs).tolist(),
+            'hop': hop,
+            'alpha': a,
+            'input': x.tolist(),
+            'smoothed': y.tolist(),
+        }
+    (out / 'noise_weighting_cases.json').write_text(json.dumps(cases, indent=1))
+    print('noise_weighting_cases.json', NOISE_RATES)
+
+
 if __name__ == '__main__':
     if sys.argv[1] == '--weighting':
         weighting(sys.argv[2], sys.argv[3], sys.argv[4])
+    elif sys.argv[1] == '--jerk':
+        jerk(sys.argv[2])
+    elif sys.argv[1] == '--noise':
+        noise(sys.argv[2])
     else:
         main(sys.argv[1], sys.argv[2])

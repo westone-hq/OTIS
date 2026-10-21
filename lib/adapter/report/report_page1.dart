@@ -138,7 +138,7 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: _drawMetricsTable
   /// 목적: Performance Metrics 여덟 행을 찍는다. 행마다 이렇게 한다.
   ///       1. 신호등 자리를 그 행의 줄무늬 색으로 덮는다. 서식 1행에
@@ -147,7 +147,9 @@ class ReportPage1Renderer {
   ///          빨강, 값이 없으면 회색)을 그린다. 소음 2행과 진동 4행이
   ///          해당하고, 최대 속도 · 운행 거리는 원이 없다
   ///       3. 값을 찍는다. 설명 라벨이 서식에 박힌 행은 라벨이 끝나는
-  ///          자리 뒤에서, 라벨이 없는 마지막 두 행은 더 왼쪽에서 시작한다
+  ///          자리 뒤에서, 라벨이 없는 마지막 두 행은 더 왼쪽에서 시작한다.
+  ///          황색 · 적색 문구가 있는 행(`ReportMetric.remarkLines`)은 라벨 ·
+  ///          값 대신 문구를 적는다(`_drawRemark()`)
   ///       4. 서식에 인쇄된 황색 칸과 적색 칸을 덮은 뒤 지표의 황색 · 적색
   ///          기준을 다시 찍는다 — 서식 값과 판정 기준이 어긋나지 않게
   ///          `ReportThresholds` 의 값을 쓴다
@@ -187,20 +189,26 @@ class ReportPage1Renderer {
         );
       }
 
-      _text(
-        canvas,
-        xPx: row.hasLabel
-            ? ReportPage1.colValueX
-            : ReportPage1.colValueNoLabelX,
-        yPx: row.y,
-        text: metric.display,
-        sizePx: ReportPage1.valueSize,
-        align: ReportPage1.colValueAlign,
-        weight: LayoutWeight.regular,
-        color: ReportColors.text,
-        key: row.key,
-        debug: debug,
-      );
+      final remark = metric.remarkLines; // 황색 · 적색 문구, 없으면 null
+      if (remark == null) {
+        _text(
+          canvas,
+          xPx: row.hasLabel
+              ? ReportPage1.colValueX
+              : ReportPage1.colValueNoLabelX,
+          yPx: row.y,
+          text: metric.display,
+          sizePx: ReportPage1.valueSize,
+          align: ReportPage1.colValueAlign,
+          weight: LayoutWeight.regular,
+          color: ReportColors.text,
+          key: row.key,
+          debug: debug,
+        );
+      } else {
+        // → 로직 이동: _drawRemark()
+        _drawRemark(canvas, row.y, remark, stripe, row.key, debug: debug);
+      }
 
       for (final columnX in [ReportPage1.colYellowX, ReportPage1.colRedX]) {
         _erase(
@@ -235,6 +243,55 @@ class ReportPage1Renderer {
         color: ReportColors.text,
         key: '${row.key}.red',
         debug: debug,
+      );
+    }
+  }
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: _drawRemark
+  /// 목적: 황색 · 적색 행의 설명 칸에 OTIS 문구를 적는다. 서식에 박힌 설명
+  ///       라벨과 값 자리를 줄무늬 색으로 덮은 뒤, 행 가운데를 사이에 두고
+  ///       줄을 위아래로 놓는다. 줄이 덮은 폭을 넘으면 글자를 줄인다.
+  /// 인자: canvas — 그리기 도구
+  ///       rowY — 행 가운데 세로 좌표 (픽셀)
+  ///       lines — 적을 줄
+  ///       stripe — 이 행의 줄무늬 색
+  ///       key — 디버그 표식에 쓸 행 이름
+  ///       debug — 표식을 함께 찍을지
+  void _drawRemark(
+    PdfGraphics canvas,
+    int rowY,
+    List<String> lines,
+    int stripe,
+    String key, {
+    required bool debug,
+  }) {
+    _erase(
+      canvas,
+      xPx: ReportPage1.remarkEraseX,
+      yPx: rowY - ReportPage1.remarkEraseHeight / 2,
+      widthPx: ReportPage1.remarkEraseWidth,
+      heightPx: ReportPage1.remarkEraseHeight,
+      color: stripe,
+    );
+    final firstY =
+        rowY - ReportPage1.remarkLineGap * (lines.length - 1) / 2; // 첫 줄 자리
+    for (var i = 0; i < lines.length; i++) {
+      _text(
+        canvas,
+        xPx: ReportPage1.remarkX,
+        yPx: firstY + ReportPage1.remarkLineGap * i,
+        text: lines[i],
+        sizePx: ReportPage1.remarkSize,
+        align: ReportPage1.colValueAlign,
+        weight: LayoutWeight.regular,
+        color: ReportColors.text,
+        key: '$key.remark$i',
+        debug: debug,
+        maxWidthPx:
+            ReportPage1.remarkEraseX +
+            ReportPage1.remarkEraseWidth -
+            ReportPage1.remarkX,
       );
     }
   }
@@ -319,7 +376,7 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-21 23:20:00 · nada
   /// 함수: headerValues
   /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
   ///       자리 표시 문구(`ReportPage1.placeholder`, "미입력")를 찍는다.
@@ -336,7 +393,11 @@ class ReportPage1Renderer {
   ///       - 측정 종류 → 해석 종류. 없으면 기본값 "층간 시험"
   ///       - 주소 → "주소, 우편번호". 하나만 있으면 그것만
   ///       - 층 정보 → "Start Floor : 최하층, Stop Floor : 최상층"
-  ///         (2026-10-15 사용자 지시, 예전 "시작층 · 도착층")
+  ///         (2026-10-15 사용자 지시, 예전 "시작층 · 도착층"). 하강이면
+  ///         "Start Floor : 최상층, Stop Floor : 최하층" 이다 — 홈 화면은
+  ///         최하층 · 최상층을 받고(최상층 > 최하층 검사), 출발 · 도착은
+  ///         운전 방향이 정한다(2026-10-21, OTIS 하강 리포트 "Start Floor :
+  ///         11, Stop Floor : 4")
   ///       - 측정 일시 → 한국 시간(`KoreaTime.of()`). 기기 시간대 설정과
   ///         상관없이 같은 글자가 나온다
   ///       - 품질성능기준은 고정 문구
@@ -362,6 +423,12 @@ class ReportPage1Renderer {
       if (result.postalCode case final code? when code.isNotEmpty) code,
     ]; // 주소 칸에 이어 쓸 조각
     const placeholder = ReportPage1.placeholder; // 값이 없을 때 찍는 문구
+    // → 로직 이동: SiteInfo.startStopFloors()
+    final floors = SiteInfo.startStopFloors(
+      result.direction,
+      result.bottomFloor,
+      result.topFloor,
+    ); // (출발층, 도착층)
 
     return <String, String>{
       'measurement_id': result.jobNo,
@@ -376,9 +443,7 @@ class ReportPage1Renderer {
       'standard': 'Standard',
       'test_type': result.analysisType ?? SiteInfo.defaultAnalysisType,
       'direction': result.direction,
-      'floors':
-          'Start Floor : ${result.bottomFloor}, '
-          'Stop Floor : ${result.topFloor}',
+      'floors': 'Start Floor : ${floors.$1}, Stop Floor : ${floors.$2}',
       'building_name': result.siteName,
       'address': addressParts.isEmpty ? placeholder : addressParts.join(', '),
     };

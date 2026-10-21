@@ -10,6 +10,7 @@ import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/worker.dart';
@@ -198,6 +199,71 @@ void main() {
       );
     });
 
+    test('거치 방향과 그 중력 Z 평균을 결과 · 집계 파일에 남긴다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+        placement: const PlacementReading(Placement.faceUp, 997.25),
+      ); // 저장 결과
+      expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
+      final saved = await MeasurementRepository.instance.load(outcome.id!);
+      expect(saved!.placement, 'faceUp');
+      expect(saved.placementGravityZMg, 997.25);
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('placement: faceUp'));
+      expect(meta, contains('placementGravityZmg: 997.25'));
+    });
+
+    test('소음 마이크 표본 속도 · 시간가중을 처리 방식과 집계 파일에 남긴다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+        noiseSampleRateHz: 48000,
+      ); // 저장 결과
+      final saved = await MeasurementRepository.instance.load(outcome.id!);
+      expect(
+        saved!.signalConditioning,
+        endsWith('+noise(A,fast,+105.2,48000Hz)'),
+      );
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('noiseTimeWeighting: fast (0.125s)'));
+      expect(meta, isNot(contains('noiseMaxSlowSec')));
+      expect(meta, contains('noiseSampleRateHz: 48000'));
+      expect(meta, contains('noiseOffsetDb: 105.2'));
+    });
+
+    test('판정 전에 끝난 측정은 거치를 비우고 집계에 unknown 으로 적는다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+      final saved = await MeasurementRepository.instance.load(outcome.id!);
+      expect(saved!.placement, isNull);
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('placement: unknown'));
+    });
+
     test('안드로이드 원본이 없으면 그 사실을 집계 파일에 남긴다', () async {
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(),
@@ -234,7 +300,23 @@ void main() {
       expect(
         await File(outcome.savedPaths.last).readAsString(),
         'accel 1 0 0 1000 3906\n',
+        reason: '안드로이드 원본은 손대지 않는다',
       );
+      // raw.txt 는 OTIS EVIMP1 관례대로 축별 전체 평균을 뺀 값이다
+      final raw = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.rawFileName),
+        ),
+      ).readAsLines(); // 값 파일 줄
+      final rows = <List<double>>[
+        for (final line in raw.skip(2).where((l) => l.isNotEmpty))
+          line.split(' ').map(double.parse).toList(),
+      ]; // 값 행
+      for (var axis = 0; axis < 3; axis++) {
+        final mean =
+            rows.map((r) => r[axis]).reduce((a, b) => a + b) / rows.length;
+        expect(mean.abs(), lessThan(0.01), reason: '축 $axis');
+      }
     });
 
     test('원본을 옮긴 뒤 안드로이드 쪽 원본은 지운다', () async {
@@ -419,8 +501,9 @@ void main() {
       expect(saved?.sampleRate, 100.0);
       expect(
         saved?.signalConditioning,
-        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)'
-        '+motion(v>0.05,pad500ms)+noise(A,fast,+105.2)',
+        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)'
+        '+motion(v>0.05,pad500ms)+jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)'
+        '+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)+noise(A,fast,+105.2)',
       );
 
       final meta = await metaText(); // 집계 파일 내용
@@ -458,6 +541,15 @@ void main() {
       expect(saved.travelWindow, isNull);
       expect(saved.travelWindowFailure, isNotNull);
       expect(saved.zPtp, isNull);
+      // 정속 구간도 같은 이유로 정하지 못하고 사유를 남긴다
+      expect(
+        meta,
+        contains('zones: zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)'),
+      );
+      expect(meta, contains('zonesFailureReason: '));
+      expect(saved.motionZones, isNull);
+      expect(saved.motionZonesFailure, isNotNull);
+      expect(saved.zJptp, isNull);
     });
 
     test('처리 설정이 잘못되면 컨디셔닝 실패로 돌려주고 값 파일은 남긴다', () async {

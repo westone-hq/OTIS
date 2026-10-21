@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 
 /**
  * 작성: 2026-09-15 13:20:00 · 박희정
- * 수정: 2026-10-20 17:10:22 · nada
+ * 수정: 2026-10-22 16:20:00 · nada
  * 클래스: NoiseCaptureHandler
  * 목적: 측정하는 동안 마이크로 소음 크기(dBA)를 재서 `latestDba` 에
  *       채운다. 표본마다 A 가중(`A_WEIGHTING_SOS`)을 건 뒤, 최근
@@ -43,8 +43,26 @@ class NoiseCaptureHandler(private val context: Context) {
         /** 로그 태그 (Log.e 호출 시 출처를 이 이름으로 남긴다) */
         private const val TAG = "NoiseCaptureHandler"
 
-        /** 1초에 소리를 몇 번 샘플링할지(Hz). 44100은 CD 음질과 같다 */
-        private const val SAMPLE_RATE = 44100
+        /**
+         * 작성: 2026-10-22 12:00:00 · nada
+         * 변수: PREFERRED_SAMPLE_RATE
+         * 목적: 마이크를 먼저 열어 보는 표본 속도(Hz). 이 기기에서 열리지
+         *       않으면 `FALLBACK_SAMPLE_RATE` 로 연다(`openRecord()`).
+         * 근거: 인용 — 2026-10-22 사용자 지시 "48000hz 로 변경". 많은 폰이
+         *       마이크를 48kHz 로 돌려 안드로이드 안 변환을 한 번 덜 거치고,
+         *       A 가중 쌍일차 변환의 높은 대역 오차가 줄어든다(8kHz −0.66 →
+         *       −0.54, 16kHz −8.52 → −6.43 dB)
+         */
+        private const val PREFERRED_SAMPLE_RATE = 48000
+
+        /**
+         * 작성: 2026-10-22 12:00:00 · nada
+         * 변수: FALLBACK_SAMPLE_RATE
+         * 목적: 48kHz 를 열지 못할 때 쓰는 표본 속도(Hz).
+         * 근거: 표준 — 안드로이드가 모든 기기에서 보장하는 녹음 표본 속도는
+         *       44100Hz 뿐이다(AudioRecord 문서)
+         */
+        private const val FALLBACK_SAMPLE_RATE = 44100
 
         /** 한 채널(모노)만 받는다 */
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
@@ -71,8 +89,8 @@ class NoiseCaptureHandler(private val context: Context) {
          * 목적: A 가중(사람 귀가 소리 높이마다 다르게 느끼는 만큼 깎는 보정)
          *       필터 계수. 2차 필터 세 단을 이어 건다. 한 단은
          *       [b0, b1, b2, a0, a1, a2] 이고 a0 는 1 이다. 1kHz 에서 0 dB 다.
-         *       `SAMPLE_RATE`(44100Hz) 전용이다 — 표본 속도를 바꾸면 다시
-         *       계산해야 한다.
+         *       44100Hz(`FALLBACK_SAMPLE_RATE`) 전용이다. 48kHz 는
+         *       `A_WEIGHTING_SOS_48000` 을 쓴다(`weightingFor()`).
          * 근거: 표준 — IEC 61672-1 A 가중의 아날로그 극(20.6 · 107.7 ·
          *       737.9 · 12194 Hz)을 쌍일차 변환으로 44100Hz 에 옮겼다(SciPy
          *       `bilinear_zpk` → `zpk2sos`). 표준 표와 31.5Hz ~ 4kHz 에서
@@ -92,6 +110,26 @@ class NoiseCaptureHandler(private val context: Context) {
         )
 
         /**
+         * 작성: 2026-10-22 12:00:00 · nada
+         * 변수: A_WEIGHTING_SOS_48000
+         * 목적: `A_WEIGHTING_SOS` 와 같은 A 가중을 48000Hz
+         *       (`PREFERRED_SAMPLE_RATE`)에 옮긴 계수.
+         * 근거: 표준 — `A_WEIGHTING_SOS` 와 같은 방법(SciPy 1.16.3
+         *       `bilinear_zpk` → `zpk2sos`, 1kHz 0 dB 맞춤). 같은 방법으로
+         *       44100Hz 계수를 다시 만들면 위 값과 모든 자리가 같다. 시험
+         *       `test/domain/capture/noise_weighting_test.dart` 가 SciPy 픽스처와
+         *       대조한다
+         */
+        private val A_WEIGHTING_SOS_48000 = arrayOf(
+            doubleArrayOf(
+                0.23418304260356063, 0.46836608520712125, 0.23418304260356063,
+                1.0, -0.22455845805977914, 0.012606625271546396,
+            ),
+            doubleArrayOf(1.0, -2.0, 1.0, 1.0, -1.8938704947230707, 0.8951597690946617),
+            doubleArrayOf(1.0, -2.0, 1.0, 1.0, -1.9946144559930215, 0.9946217070140843),
+        )
+
+        /**
          * 작성: 2026-09-21 17:37:25 · 박희정
          * 수정: 2026-10-04 13:50:15 · nada
          * 변수: WINDOW_SEC
@@ -104,11 +142,13 @@ class NoiseCaptureHandler(private val context: Context) {
 
         /**
          * 작성: 2026-10-12 17:20:16 · 박희정
-         * 수정: 2026-10-14 13:19:55 · 박건준
+         * 수정: 2026-10-22 16:20:00 · nada
          * 변수: FAST_TIME_WEIGHT_SEC
          * 목적: 소음 RMS에 적용하는 지수평활의 시간 상수(초). 홉마다 새로
          *       들어오는 평균 제곱값을 이 상수로 평활해, 소음계의 "Fast"
-         *       응답과 비슷한 반응 속도를 낸다.
+         *       응답과 비슷한 반응 속도를 낸다. 2026-10-22 에 잠시 Slow(1초)로
+         *       바꿨다가 같은 날 되돌렸다 — 소음 평균은 이 Fast 값으로 내고,
+         *       최대만 Dart 가 이 값에 1초 평활을 더해 낸다(`NoiseSlow`).
          * 근거: 표준 — IEC 61672-1 의 "Fast" 시간가중 시정수(0.125초)
          */
         private const val FAST_TIME_WEIGHT_SEC = 0.125
@@ -148,6 +188,15 @@ class NoiseCaptureHandler(private val context: Context) {
     private var captureThread: Thread? = null
 
     /**
+     * 이번 측정에서 실제로 연 마이크 표본 속도(Hz). 48000 을 못 열면 44100.
+     * 열지 못했거나 측정 전이면 0. `stop()` 뒤에도 다음 `start()` 까지 남겨
+     * Flutter 가 정지 응답으로 받아 가게 한다
+     */
+    @Volatile
+    var activeSampleRate: Int = 0
+        private set
+
+    /**
      * 현장 소음 녹음기. `start()` 가 만들고, 녹음 스레드가 표본을 넣으며,
      * `stop()` 이 스레드가 끝난 뒤 파일을 닫는다. 녹음 중이 아니거나 녹음이
      * 실패해 포기했으면 null
@@ -156,7 +205,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-20 17:10:22 · nada
+     * 수정: 2026-10-22 12:00:00 · nada
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다
      *       — 그때 닫힌 앞 녹음은 받아 갈 곳이 없어 지운다.
@@ -179,12 +228,15 @@ class NoiseCaptureHandler(private val context: Context) {
      * 인자: calibrationOffsetDba — 현장·기기별 추가 보정(dBA)
      *       micDbfsToDbaOffset — dBFS→dBA 기본 오프셋. 기본은
      *       `DEFAULT_MIC_DBFS_TO_DBA_OFFSET`
-     * 식:   windowSamples = SAMPLE_RATE × WINDOW_SEC  (창에 담는 표본 수)
+     *       마이크는 48000Hz 로 먼저 열고, 못 열면 44100Hz 로 연다
+     *       (`openRecord()`). 연 속도는 `activeSampleRate` 에 남기고, A 가중
+     *       계수도 그 속도의 것을 쓴다(`weightingFor()`).
+     * 식:   windowSamples = 표본 속도 × WINDOW_SEC  (창에 담는 표본 수)
      *       표본 = A 가중(`aWeight()`)을 건 표본. 녹음 파일에는 가중 전
      *              표본을 넣는다
      *       meanSquare = 창 안 표본 제곱의 합 / windowSamples
      *                    창이 가득 찬 뒤에만 센다. 덜 찼으면 0.0을 내보낸다
-     *       alpha = exp(-(이번 홉 표본 수 / SAMPLE_RATE) / FAST_TIME_WEIGHT_SEC)
+     *       alpha = exp(-(이번 홉 표본 수 / 표본 속도) / FAST_TIME_WEIGHT_SEC)
      *       weightedMeanSquare = alpha × 이전 weightedMeanSquare
      *                            + (1 - alpha) × meanSquare
      *                            첫 창은 평활 없이 meanSquare 그대로 쓴다
@@ -206,51 +258,41 @@ class NoiseCaptureHandler(private val context: Context) {
                 TAG,
                 "RECORD_AUDIO permission not granted. Noise capture disabled (fallback to 0.0 dBA).",
             )
+            activeSampleRate = 0
             latestDba = 0.0
             return
         }
-
-        val minBufSize = // 이 기기가 요구하는 최소 녹음 버퍼 크기(바이트)
-            AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
-        if (minBufSize == AudioRecord.ERROR || minBufSize == AudioRecord.ERROR_BAD_VALUE) {
-            Log.e(TAG, "Invalid buffer size for AudioRecord.")
-            latestDba = 0.0
-            return
-        }
-
-        val windowSamples = // RMS 창 하나에 담는 표본 수
-            (SAMPLE_RATE * WINDOW_SEC).toInt().coerceAtLeast(1)
-        val hopSamples = // 창을 한 번 밀 때 새로 읽는 표본 수
-            (SAMPLE_RATE / HOP_HZ).coerceAtLeast(1)
-        val bufferSize = // 녹음 버퍼 크기. 창 두 개는 담을 만큼 잡는다
-            maxOf(minBufSize, windowSamples * 2)
 
         try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT,
-                bufferSize,
-            )
-
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e(TAG, "AudioRecord failed to initialize.")
-                audioRecord?.release()
-                audioRecord = null
+            // → 로직 이동: openRecord()
+            val opened = // 연 녹음기와 표본 속도, 둘 다 못 열면 null
+                openRecord(PREFERRED_SAMPLE_RATE) ?: openRecord(FALLBACK_SAMPLE_RATE)
+            if (opened == null) {
+                Log.e(TAG, "AudioRecord failed to initialize at 48000 and 44100 Hz.")
+                activeSampleRate = 0
                 latestDba = 0.0
                 return
             }
+            audioRecord = opened.first
+            val sampleRate = opened.second // 이번 측정의 표본 속도(Hz)
+            activeSampleRate = sampleRate
+            // → 로직 이동: weightingFor()
+            val weighting = weightingFor(sampleRate) // 이 속도의 A 가중 계수
+            val windowSamples = // RMS 창 하나에 담는 표본 수
+                (sampleRate * WINDOW_SEC).toInt().coerceAtLeast(1)
+            val hopSamples = // 창을 한 번 밀 때 새로 읽는 표본 수
+                (sampleRate / HOP_HZ).coerceAtLeast(1)
 
             isRecording = true
             audioRecord?.startRecording()
-            audioEncoder = openAudioEncoder() // → 로직 이동: openAudioEncoder()
+            // → 로직 이동: openAudioEncoder()
+            audioEncoder = openAudioEncoder(sampleRate)
 
             captureThread = Thread {
                 val hopBuffer = ShortArray(hopSamples) // 한 번에 읽어 올 표본
                 // A 가중 필터 세 단의 상태(단마다 지연 값 두 개). 측정마다 0 에서
                 // 시작한다
-                val aState = Array(A_WEIGHTING_SOS.size) { DoubleArray(2) }
+                val aState = Array(weighting.size) { DoubleArray(2) }
                 // 표본 제곱값을 돌려 쓰는 고리 모양 저장소. 창을 밀 때 빠지는
                 // 값만 빼고 들어온 값만 더해, 창 전체를 매번 다시 세지 않는다
                 val ringSquares = DoubleArray(windowSamples) // 창 안 표본 제곱값
@@ -288,7 +330,8 @@ class NoiseCaptureHandler(private val context: Context) {
                     for (i in 0 until read) {
                         val norm = hopBuffer[i] / 32768.0 // -1~1 로 맞춘 표본
                         // → 로직 이동: aWeight()
-                        val weighted = aWeight(norm, aState) // A 가중한 표본
+                        val weighted = // A 가중한 표본
+                            aWeight(norm, weighting, aState)
                         val sq = weighted * weighted // 가중한 표본 제곱값
                         if (filled >= windowSamples) {
                             sumSquares -= ringSquares[ringPos]
@@ -310,7 +353,7 @@ class NoiseCaptureHandler(private val context: Context) {
                     val meanSquare = // 창의 평균 제곱값(Fast 평활 전)
                         sumSquares / windowSamples
                     val alpha = // 이번 홉 길이에 맞춘 지수평활 감쇠율(0~1)
-                        exp(-(read.toDouble() / SAMPLE_RATE) / FAST_TIME_WEIGHT_SEC)
+                        exp(-(read.toDouble() / sampleRate) / FAST_TIME_WEIGHT_SEC)
                     val weightedMeanSquare = // Fast 시간가중을 적용한 평균 제곱값
                         fastWeightedMeanSquare?.let { previous ->
                             alpha * previous + (1.0 - alpha) * meanSquare
@@ -333,7 +376,7 @@ class NoiseCaptureHandler(private val context: Context) {
                             TAG,
                             "[Device: ${android.os.Build.MODEL}] Audio 1s Stats -> " +
                                 "dBFS: ${"%.1f".format(dbfs)}, dBA: $latestDba, " +
-                                "Offset: $micDbfsToDbaOffset",
+                                "Offset: $micDbfsToDbaOffset, Rate: $sampleRate",
                         )
                         lastLogTimeMs = nowMs
                     }
@@ -354,20 +397,71 @@ class NoiseCaptureHandler(private val context: Context) {
     }
 
     /**
+     * 작성: 2026-10-22 12:00:00 · nada
+     * 함수: openRecord
+     * 목적: 주어진 표본 속도로 마이크 녹음기를 연다.
+     * 인자: sampleRate — 표본 속도(Hz)
+     * 반환: (녹음기, 표본 속도). 이 기기가 그 속도를 지원하지 않거나 초기화에
+     *       실패하면 null — 부르는 쪽이 다음 속도를 시도한다
+     */
+    private fun openRecord(sampleRate: Int): Pair<AudioRecord, Int>? {
+        val minBufSize = // 이 기기가 요구하는 최소 녹음 버퍼 크기(바이트)
+            AudioRecord.getMinBufferSize(sampleRate, CHANNEL_CONFIG, AUDIO_FORMAT)
+        if (minBufSize == AudioRecord.ERROR || minBufSize == AudioRecord.ERROR_BAD_VALUE) {
+            Log.w(TAG, "AudioRecord does not support $sampleRate Hz")
+            return null
+        }
+        val windowSamples = // RMS 창 하나에 담는 표본 수
+            (sampleRate * WINDOW_SEC).toInt().coerceAtLeast(1)
+        val bufferSize = // 녹음 버퍼 크기. 창 두 개는 담을 만큼 잡는다
+            maxOf(minBufSize, windowSamples * 2)
+        val record = AudioRecord( // 연 녹음기
+            MediaRecorder.AudioSource.MIC,
+            sampleRate,
+            CHANNEL_CONFIG,
+            AUDIO_FORMAT,
+            bufferSize,
+        )
+        if (record.state != AudioRecord.STATE_INITIALIZED) {
+            Log.w(TAG, "AudioRecord failed to initialize at $sampleRate Hz")
+            record.release()
+            return null
+        }
+        return record to sampleRate
+    }
+
+    /**
+     * 작성: 2026-10-22 12:00:00 · nada
+     * 함수: weightingFor
+     * 목적: 표본 속도에 맞는 A 가중 계수를 고른다.
+     * 인자: sampleRate — 연 표본 속도(Hz). `PREFERRED_SAMPLE_RATE` 나
+     *       `FALLBACK_SAMPLE_RATE` 만 온다(`openRecord()` 가 그 둘만 연다)
+     * 반환: A 가중 2차 필터 세 단의 계수
+     */
+    private fun weightingFor(sampleRate: Int): Array<DoubleArray> =
+        if (sampleRate == PREFERRED_SAMPLE_RATE) A_WEIGHTING_SOS_48000 else A_WEIGHTING_SOS
+
+    /**
      * 작성: 2026-10-20 17:10:22 · nada
+     * 수정: 2026-10-22 12:00:00 · nada
      * 함수: aWeight
-     * 목적: 표본 하나에 A 가중 필터(`A_WEIGHTING_SOS`) 세 단을 차례로
-     *       건다. 녹음 스레드가 표본마다 부른다.
+     * 목적: 표본 하나에 A 가중 필터 세 단을 차례로 건다. 녹음 스레드가
+     *       표본마다 부른다.
      * 인자: x — 가중 전 표본 (-1 ~ 1)
+     *       weighting — 표본 속도에 맞는 계수(`weightingFor()`)
      *       state — 단마다 지연 값 두 개. 부를 때마다 갱신한다
      * 반환: 가중한 표본
      * 식:   단마다 (전치 직접형 II)
      *       y = b0·x + s0,  s0 = b1·x − a1·y + s1,  s1 = b2·x − a2·y
      */
-    private fun aWeight(x: Double, state: Array<DoubleArray>): Double {
+    private fun aWeight(
+        x: Double,
+        weighting: Array<DoubleArray>,
+        state: Array<DoubleArray>,
+    ): Double {
         var value = x // 이 단에 들어가는 값
-        for (k in A_WEIGHTING_SOS.indices) {
-            val c = A_WEIGHTING_SOS[k] // 이 단의 계수
+        for (k in weighting.indices) {
+            val c = weighting[k] // 이 단의 계수
             val s = state[k] // 이 단의 지연 값
             val y = c[0] * value + s[0] // 이 단의 출력
             s[0] = c[1] * value - c[4] * y + s[1]
@@ -383,16 +477,17 @@ class NoiseCaptureHandler(private val context: Context) {
      * 목적: 현장 소음 녹음 파일을 앱 저장 공간 맨 위에 만들고 녹음기를
      *       준비한다. 측정 폴더는 Flutter 가 저장할 때 정하므로, 원본 기록
      *       (`SensorStreamHandler`)과 같이 여기 두었다가 Flutter 가 옮긴다.
+     * 인자: sampleRate — 마이크를 연 표본 속도(Hz). 녹음 파일도 같은 속도다
      * 반환: 녹음기. 이 기기에서 AAC 압축기를 열지 못하면 null — 녹음 없이
      *       dBA 만 잰다
      */
-    private fun openAudioEncoder(): NoiseAudioEncoder? {
+    private fun openAudioEncoder(sampleRate: Int): NoiseAudioEncoder? {
         val dir = // 녹음 파일을 둘 앱 저장 공간
             context.getExternalFilesDir(null) ?: context.filesDir
         val file = // 이번 측정의 녹음 파일
             File(dir, "noise_native_${System.currentTimeMillis()}.m4a")
         return try {
-            NoiseAudioEncoder(file, SAMPLE_RATE)
+            NoiseAudioEncoder(file, sampleRate)
         } catch (e: Exception) {
             Log.e(TAG, "noise audio encoder unavailable", e)
             if (file.exists()) file.delete()

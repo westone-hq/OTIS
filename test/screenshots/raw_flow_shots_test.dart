@@ -25,6 +25,7 @@ import 'package:vibration_checker/domain/capture/noise_offset.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
@@ -168,8 +169,9 @@ GridResampleResult _readGrid(String text) {
 /// 함수: _eventsFromRaw
 /// 목적: 로우 데이터 앞 `seconds` 초를 안드로이드 이벤트처럼 바꾼다. 측정
 ///       화면의 현재 속도(`CaptureSession.liveSpeedMps`)를 그 자료로 내게
-///       한다. 중력은 0 으로 두고, 격자의 Y · Z 가 `-(raw - gravity)` 이므로
-///       raw Y · Z 는 부호를 뒤집어 준다.
+///       한다. 화면을 아래로 놓은 거치(중력 Z −1000 mg)로 두고, 격자의
+///       Y · Z 가 `-(raw - gravity)` 이므로 raw Y 는 부호를 뒤집고 raw Z 는
+///       −1000 − Z 로 준다.
 /// 인자: grid — 로우 데이터 격자
 ///       seconds — 앞에서부터 쓸 길이 (초)
 /// 반환: 중력 한 건 + 256Hz raw 이벤트
@@ -182,7 +184,7 @@ List<NativeEvent> _eventsFromRaw(GridResampleResult grid, double seconds) {
       tsUs: 0,
       xMg: 0,
       yMg: 0,
-      zMg: 0,
+      zMg: -1000,
       dtUs: 0,
     ),
     for (var i = 0; i < count; i++)
@@ -191,7 +193,7 @@ List<NativeEvent> _eventsFromRaw(GridResampleResult grid, double seconds) {
         tsUs: (i + 1) * stepUs,
         xMg: grid.samples[i].xMg,
         yMg: -grid.samples[i].yMg,
-        zMg: -grid.samples[i].zMg,
+        zMg: -1000 - grid.samples[i].zMg,
         dtUs: stepUs,
       ),
   ];
@@ -227,8 +229,12 @@ Future<MeasurementResult> _recordFromRaw(
   final result = assembled.result!.copyWith(
     signalConditioning:
         '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
+        '+${MeasurementAssembler.verticalLowpassMethodLabel}'
         '+${MeasurementAssembler.kinematicsMethodLabel}'
-        '+$kNoiseMethodLabel',
+        '+${MeasurementAssembler.jerkMethodLabel}'
+        '+${MeasurementAssembler.accelChartMethodLabel}'
+        '+${MotionZones.methodLabel}'
+        '+${noiseMethodLabel(48000)}',
   ); // 저장 절차와 같이 처리 방식을 실은 측정 결과
   final repo = MeasurementRepository.instance; // 저장소
   final dir = await repo.save(result); // 측정 폴더

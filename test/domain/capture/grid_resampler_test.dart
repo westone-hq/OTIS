@@ -15,12 +15,21 @@ const int _stepUs = 3906;
 const int _gravityLagUs = 100;
 
 /// 작성: 2026-10-05 10:03:35 · nada
+/// 수정: 2026-10-21 15:20:00 · nada
 /// 함수: _resampler
-/// 목적: 가속도 (1, 2, 1003) · 중력 (0, 0, 1000) 을 일정 간격으로 넣은
-///       환산기를 만든다. 진동은 (1, 2, 3) mg 이 된다.
+/// 목적: 가속도 · 중력을 일정 간격으로 넣은 환산기를 만든다. 기본은 화면을
+///       아래로 놓은 거치다 — 안드로이드 가속도계는 가만히 있을 때 위쪽으로
+///       1g 를 읽으므로 화면(Z 축)이 바닥을 보면 중력 Z 가 −1000 mg 다.
+///       가속도 (1, 2, −997) 에서 중력을 빼면 (1, 2, 3) mg 이다.
 /// 인자: count — 센서마다 넣을 이벤트 수
+///       raw — 가속도 원본 세 축 (mg). 기본 (1, 2, −997)
+///       gravity — 중력 세 축 (mg). 기본 (0, 0, −1000)
 /// 반환: 이벤트가 쌓인 환산기
-GridResampler _resampler(int count) {
+GridResampler _resampler(
+  int count, {
+  (double, double, double) raw = (1.0, 2.0, -997.0),
+  (double, double, double) gravity = (0.0, 0.0, -1000.0),
+}) {
   final resampler = GridResampler(config: const CaptureConfig()); // 채울 환산기
   for (var i = 0; i < count; i++) {
     final tsUs = 1000000 + i * _stepUs; // 이 가속도 이벤트의 시각 (마이크로초)
@@ -28,9 +37,9 @@ GridResampler _resampler(int count) {
       NativeEvent(
         type: NativeEventType.accel,
         tsUs: tsUs,
-        xMg: 1.0,
-        yMg: 2.0,
-        zMg: 1003.0,
+        xMg: raw.$1,
+        yMg: raw.$2,
+        zMg: raw.$3,
         dtUs: _stepUs,
       ),
     );
@@ -38,9 +47,9 @@ GridResampler _resampler(int count) {
       NativeEvent(
         type: NativeEventType.gravity,
         tsUs: tsUs + _gravityLagUs,
-        xMg: 0.0,
-        yMg: 0.0,
-        zMg: 1000.0,
+        xMg: gravity.$1,
+        yMg: gravity.$2,
+        zMg: gravity.$3,
         dtUs: _stepUs,
       ),
     );
@@ -51,8 +60,9 @@ GridResampler _resampler(int count) {
 /// 작성: 2026-10-05 10:03:35 · nada
 /// 함수: main
 /// 목적: 격자 환산이 시작 · 종료 입력 충격을 빼려고 앞뒤 0.5초씩 버리는지,
-///       너무 짧은 측정은 사유와 함께 실패하는지, 뒤집어 놓은 거치에 맞춰
-///       Y · Z 부호만 뒤집는지 시험한다.
+///       너무 짧은 측정은 사유와 함께 실패하는지, 화면을 아래로 놓은 거치에
+///       맞춰 Y · Z 부호를 뒤집는지, 수직이 거치 방향과 상관없이 물리
+///       부호인지 시험한다.
 void main() {
   test('두 센서가 겹친 구간의 앞뒤 0.5초씩을 버린다', () {
     final result = _resampler(1024).resample(); // 4초 남짓 측정의 환산 결과
@@ -74,12 +84,61 @@ void main() {
     expect(result.samples, isEmpty, reason: '0 으로 채운 행을 만들지 않는다');
   });
 
-  test('뒤집어 놓은 거치에 맞춰 Y · Z 부호만 뒤집는다', () {
+  test('화면을 아래로 놓은 거치는 Y · Z 부호를 뒤집는다(예전 식과 같다)', () {
     final result = _resampler(1024).resample(); // 환산 결과
     final row = result.samples[result.samples.length ~/ 2]; // 가운데 행
 
     expect(row.xMg, closeTo(1.0, 1e-9));
     expect(row.yMg, closeTo(-2.0, 1e-9));
     expect(row.zMg, closeTo(-3.0, 1e-9));
+  });
+
+  group('수직은 중력 방향 투영이라 거치 방향과 상관없이 물리 부호다', () {
+    // 위로 50 mg 가속하는 순간. 가속도계는 위쪽으로 1g + 50 mg 를 읽는다
+    test('화면을 아래로 놓으면 +50', () {
+      final motion = GridResampler.motionOf(
+        rawX: 0,
+        rawY: 0,
+        rawZ: -1050,
+        gravityX: 0,
+        gravityY: 0,
+        gravityZ: -1000,
+      );
+      expect(motion.z, closeTo(50, 1e-9));
+    });
+
+    test('화면을 위로 놓아도 +50 (예전 식은 −50 이었다)', () {
+      final motion = GridResampler.motionOf(
+        rawX: 0,
+        rawY: 0,
+        rawZ: 1050,
+        gravityX: 0,
+        gravityY: 0,
+        gravityZ: 1000,
+      );
+      expect(motion.z, closeTo(50, 1e-9));
+    });
+
+    test('45도 기울여 놓아도 +50', () {
+      const c = 0.7071067811865476; // cos 45°
+      final motion = GridResampler.motionOf(
+        rawX: 0,
+        rawY: 1050 * c,
+        rawZ: -1050 * c,
+        gravityX: 0,
+        gravityY: 1000 * c,
+        gravityZ: -1000 * c,
+      );
+      expect(motion.z, closeTo(50, 1e-9));
+    });
+
+    test('화면을 위로 놓은 격자도 물리 부호다', () {
+      final row = _resampler(
+        1024,
+        raw: (1.0, 2.0, 1003.0),
+        gravity: (0.0, 0.0, 1000.0),
+      ).resample().samples[500]; // 가운데쯤 행
+      expect(row.zMg, closeTo(3.0, 1e-9));
+    });
   });
 }

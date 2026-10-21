@@ -4,7 +4,7 @@ import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-15 21:14:33 · nada
-/// 수정: 2026-10-15 15:53:26 · nada
+/// 수정: 2026-10-21 13:10:00 · nada
 /// 클래스: ReportMetric
 /// 목적: Performance Metrics 표의 한 행에 들어갈 지표 하나를 담는다. 값과
 ///       단위뿐 아니라, 그 값을 표에 어떻게 찍을지(`display`)와 신호등을
@@ -46,8 +46,12 @@ class ReportMetric {
   /// 신호등 색. `ReportThresholds` 가 정한다
   final ReportVerdict verdict;
 
+  /// 황색 · 적색일 때 설명 칸에 라벨 · 값 대신 적는 OTIS 문구 (줄마다 한
+  /// 항목). 문구를 쓰지 않는 행 · 초록 · 값 없음이면 null
+  final List<String>? remarkLines;
+
   /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-21 13:10:00 · nada
   /// 함수: ReportMetric
   /// 목적: 지표 한 행의 값과 표시 정보를 그대로 담는 생성자.
   /// 인자: key — 서식 행 이름
@@ -57,6 +61,7 @@ class ReportMetric {
   ///       suffix — 꼬리표. 기본 빈 문자열
   ///       yellowLimit, redLimit — 황색 · 적색 칸 기준치. 칸을 비우면
   ///       null
+  ///       remarkLines — 황색 · 적색 문구. 없으면 null
   const ReportMetric({
     required this.key,
     required this.value,
@@ -65,6 +70,7 @@ class ReportMetric {
     this.suffix = '',
     this.yellowLimit,
     this.redLimit,
+    this.remarkLines,
   });
 
   /// 작성: 2026-10-15 16:50:04 · nada
@@ -77,13 +83,28 @@ class ReportMetric {
   ///       "6.1milli-G"(첫째 자리). 2026-10-15 점검 지시
   static const Map<String, int> _decimalsByUnit = <String, int>{'m/s': 2};
 
+  /// 작성: 2026-10-22 15:00:00 · nada
+  /// 함수: decimalsFor
+  /// 목적: 단위의 값 칸 소수 자리 수를 알려 준다. 리포트 1쪽 표(`display`)와
+  ///       결과 화면이 같은 자리로 보이게 같이 쓴다. 최대 속도(m/s)는 반올림
+  ///       없이 둘째 자리다(2026-10-22 0.05 단위 반올림을 되돌림).
+  /// 인자: unit — 단위 표기
+  /// 반환: 소수 자리 수
+  /// 근거: 측정 — 2026-10-21 비교 7건에서 0.05 단위 반올림은 5건만 OTIS
+  ///       표시값과 같았다(1.529 · 1.532 → 1.55, OTIS 1.50). 정속 구간 평균
+  ///       속도(`MeasurementResult.steadySpeedMps`)를 0.05 단위로 반올림하면
+  ///       7건 모두 맞지만 OTIS 값이 1.50 · 1.75 두 가지뿐이고 경계 여유가
+  ///       0.003 이라 근거가 약해 표시에 쓰지 않는다(docs/pending_checks.md)
+  static int decimalsFor(String unit) =>
+      _decimalsByUnit[unit] ?? _defaultDecimals;
+
   /// 작성: 2026-10-15 16:50:04 · nada
   /// 변수: _defaultDecimals
   /// 목적: `_decimalsByUnit` 에 없는 단위의 소수 자리 수.
   static const int _defaultDecimals = 1;
 
   /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-22 15:00:00 · nada
   /// 함수: display
   /// 목적: 표의 값 칸에 그대로 찍을 문자열을 만든다. 값이 100 이상이면
   ///       소수점을 떼고, 그보다 작으면 단위별 자리(`_decimalsByUnit`,
@@ -94,8 +115,8 @@ class ReportMetric {
   String get display {
     final amount = value; // 지역으로 옮겨야 null 검사가 이어진다
     if (amount == null) return '—';
-    final decimals = // 이 단위의 소수 자리 수
-        _decimalsByUnit[unit] ?? _defaultDecimals;
+    // → 로직 이동: decimalsFor()
+    final decimals = decimalsFor(unit); // 이 단위의 소수 자리 수
     final digits = amount.abs() >= 100
         ? amount.toStringAsFixed(0)
         : amount.toStringAsFixed(decimals); // 자릿수를 맞춘 숫자 부분
@@ -141,7 +162,11 @@ class ReportMetric {
 ///         - 수직 · 수평 진동 최대: 신호 처리 후 100Hz 시계열의 P2P
 ///         - 수직 · 수평 진동 평균: 같은 시계열의 A95
 ///           (둘 다 `MeasurementAssembler` 참고. 처리 전 예전 측정은 원시
-///           256Hz 시계열에서 낸 값이다)
+///           256Hz 시계열에서 낸 값이다). 수직 최대는 2026-10-21 부터
+///           정속 구간 안 최대다
+///
+///       수직 두 행이 황색 · 적색이면 설명 칸에 OTIS 문구를 적는다
+///       (`remarkLines`, `_verticalRemark()`). 다른 행은 문구가 없다
 ///
 ///       값이 비는 것은 그 값을 계산하지 않은 예전 측정뿐이다
 ///
@@ -290,33 +315,39 @@ class ReportMetrics {
           ReportThresholds.noiseMaxRedDba,
         ),
       ),
-      vertAvg: ReportMetric(
-        key: 'vert_avg',
-        value: result.zA95,
-        unit: vibration,
-        suffix: 'A95',
-        yellowLimit: ReportThresholds.zA95YellowMg,
-        redLimit: ReportThresholds.zA95RedMg,
-        // → 로직 이동: ReportThresholds.judge()
-        verdict: ReportThresholds.judge(
-          result.zA95,
-          ReportThresholds.zA95YellowMg,
-          ReportThresholds.zA95RedMg,
+      vertAvg: _verticalRemark(
+        ReportMetric(
+          key: 'vert_avg',
+          value: result.zA95,
+          unit: vibration,
+          suffix: 'A95',
+          yellowLimit: ReportThresholds.zA95YellowMg,
+          redLimit: ReportThresholds.zA95RedMg,
+          // → 로직 이동: ReportThresholds.judge()
+          verdict: ReportThresholds.judge(
+            result.zA95,
+            ReportThresholds.zA95YellowMg,
+            ReportThresholds.zA95RedMg,
+          ),
         ),
-      ),
-      vertMax: ReportMetric(
-        key: 'vert_max',
-        value: result.zPtp,
-        unit: vibration,
-        yellowLimit: ReportThresholds.zPtpYellowMg,
-        redLimit: ReportThresholds.zPtpRedMg,
-        // → 로직 이동: ReportThresholds.judge()
-        verdict: ReportThresholds.judge(
-          result.zPtp,
-          ReportThresholds.zPtpYellowMg,
-          ReportThresholds.zPtpRedMg,
+        null,
+      ), // → 로직 이동: _verticalRemark()
+      vertMax: _verticalRemark(
+        ReportMetric(
+          key: 'vert_max',
+          value: result.zPtp,
+          unit: vibration,
+          yellowLimit: ReportThresholds.zPtpYellowMg,
+          redLimit: ReportThresholds.zPtpRedMg,
+          // → 로직 이동: ReportThresholds.judge()
+          verdict: ReportThresholds.judge(
+            result.zPtp,
+            ReportThresholds.zPtpYellowMg,
+            ReportThresholds.zPtpRedMg,
+          ),
         ),
-      ),
+        result.zPtpPositionM,
+      ), // → 로직 이동: _verticalRemark()
       horizAvg: ReportMetric(
         key: 'horiz_avg',
         value: horizontalA95,
@@ -362,6 +393,50 @@ class ReportMetrics {
         redLimit: unjudged,
         verdict: ReportVerdict.none,
       ),
+    );
+  }
+
+  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 함수: _verticalRemark
+  /// 목적: 수직 행이 황색 · 적색이면 OTIS 문구를 붙인 지표로 바꾼다. 초록 ·
+  ///       회색이면 그대로 돌려준다(서식 라벨 · 값을 그대로 찍는다).
+  ///       - 평균 행: "진동측정결과가 {값} 로" / "일관되게 높게
+  ///         측정되었습니다" ({값}은 표 값 그대로, 예 "14.8milli-G A95")
+  ///       - 최대 행: "최대의 진동 {값} 가 하부층 정지레벨로부터" / "{위치}m
+  ///         에서 측정되었습니다." 위치는 소수 첫째 자리. 위치가 없는
+  ///         2026-10-21 전 결과는 "최대의 진동 {값} 가" / "측정되었습니다."
+  ///       두 줄로 나눠 두는 것은 한 행 높이에 글자 크기를 지키며 넣기
+  ///       위해서다.
+  /// 인자: metric — 수직 행 지표
+  ///       positionM — 최대가 나온 위치 (m, 하부층 기준). 평균 행 · 없으면 null
+  /// 반환: 문구를 붙인 지표, 또는 받은 지표 그대로
+  /// 근거: 인용 — 2026-10-21 점검 지시. OTIS 리포트 1쪽 황색 · 적색 행 문구
+  static ReportMetric _verticalRemark(ReportMetric metric, double? positionM) {
+    if (metric.verdict != ReportVerdict.yellow &&
+        metric.verdict != ReportVerdict.red) {
+      return metric;
+    }
+    final value = metric.display; // 표 값 그대로 (단위 · 꼬리표 포함)
+    final List<String> lines; // 적을 문구
+    if (metric.key == 'vert_avg') {
+      lines = <String>['진동측정결과가 $value 로', '일관되게 높게 측정되었습니다'];
+    } else if (positionM == null) {
+      lines = <String>['최대의 진동 $value 가', '측정되었습니다.'];
+    } else {
+      lines = <String>[
+        '최대의 진동 $value 가 하부층 정지레벨로부터',
+        '${positionM.toStringAsFixed(1)}m 에서 측정되었습니다.',
+      ];
+    }
+    return ReportMetric(
+      key: metric.key,
+      value: metric.value,
+      unit: metric.unit,
+      verdict: metric.verdict,
+      suffix: metric.suffix,
+      yellowLimit: metric.yellowLimit,
+      redLimit: metric.redLimit,
+      remarkLines: lines,
     );
   }
 

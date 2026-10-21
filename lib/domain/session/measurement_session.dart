@@ -289,6 +289,34 @@ class SiteInfo {
     );
   }
 
+  /// 작성: 2026-10-21 15:20:00 · nada
+  /// 함수: isDownward
+  /// 목적: 저장된 운전 방향이 하강인지 본다. 예전 표기("상부 → 하부")도
+  ///       하강으로 읽는다(`_knownDirection()` 과 같은 규칙).
+  /// 인자: direction — 저장된 운전 방향
+  /// 반환: 하강이면 true
+  static bool isDownward(String direction) =>
+      // → 로직 이동: _knownDirection()
+      _knownDirection(direction) == directionDown;
+
+  /// 작성: 2026-10-21 23:20:00 · nada
+  /// 함수: startStopFloors
+  /// 목적: 최하층 · 최상층과 운전 방향으로 출발층 · 도착층을 정한다. 홈은
+  ///       최하층 · 최상층을 받으므로(최상층 > 최하층 검사) 하강이면 최상층에서
+  ///       출발한다. 리포트 1쪽 층 정보와 결과 화면 머리 카드가 함께 쓴다.
+  /// 인자: direction — 저장된 운전 방향
+  ///       bottomFloor, topFloor — 최하층 · 최상층
+  /// 반환: (출발층, 도착층)
+  /// 근거: 인용 — OTIS 하강 리포트 "Start Floor : 11, Stop Floor : 4"
+  ///       (2026-10-21 점검)
+  static (int start, int stop) startStopFloors(
+    String direction,
+    int bottomFloor,
+    int topFloor,
+  ) =>
+      // → 로직 이동: isDownward()
+      isDownward(direction) ? (topFloor, bottomFloor) : (bottomFloor, topFloor);
+
   /// 작성: 2026-10-04 18:15:24 · nada
   /// 함수: _knownDirection
   /// 목적: 저장돼 있던 운전 방향을 지금 선택지로 맞춘다. 예전 표기

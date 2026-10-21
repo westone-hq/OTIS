@@ -12,6 +12,7 @@ import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/half_cycle.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
@@ -129,6 +130,14 @@ void main() {
       expect(range.max, 10.0);
     });
 
+    test('위치가 한 값뿐인 정지 측정은 최소 범위에 여백을 둔다', () {
+      final range = ReportChartAxes.position.rangeFor(const <double>[0, 0]);
+
+      expect(range.min, closeTo(-1.0, 1e-9));
+      expect(range.max, closeTo(11.0, 1e-9));
+      expect(range.ticks().first, 0.0);
+    });
+
     test('여유를 더해도 최소 범위 안인 값은 원본 리포트 범위 그대로 보인다', () {
       final x = ReportChartAxes.x.rangeFor(const <double>[0.1]);
       final noise = ReportChartAxes.noise.rangeFor(const <double>[42.0, 52.0]);
@@ -144,32 +153,68 @@ void main() {
       expect(range.max, greaterThanOrEqualTo(999.0));
     });
 
-    test('최소 범위 끝에 닿는 값은 여유를 두고 넓어진다', () {
-      // 2026-10-10 검증에서 정속 1.005 m/s 가 0 ~ 1 축 틀에 눌렸다
-      final range = ReportChartAxes.speed.rangeFor(const <double>[0.0, 1.005]);
+    test('3쪽 위치 · 속도 축은 OTIS 처럼 데이터 폭의 10% 씩 바깥이다', () {
+      // OTIS 리포트 3쪽에서 잰 값(2026-10-21 점검 지시). 오차는 축 폭의 3%
+      void expectRange(
+        ChartAxisSpec spec,
+        List<double> data,
+        (double, double) otis,
+        List<double> ticks,
+      ) {
+        final range = spec.rangeFor(data); // 고른 세로축
+        final tolerance = range.span * 0.03; // 허용 오차
+        expect(range.min, closeTo(otis.$1, tolerance), reason: '$data');
+        expect(range.max, closeTo(otis.$2, tolerance), reason: '$data');
+        final drawn = range.ticks(); // 찍는 눈금
+        expect(drawn.length, ticks.length, reason: '$drawn');
+        for (var i = 0; i < ticks.length; i++) {
+          expect(drawn[i], closeTo(ticks[i], 1e-9), reason: '$drawn');
+        }
+        // 0 눈금이 틀 아래끝 안쪽에 있다(꼭짓점에 붙지 않는다)
+        expect(range.min, lessThan(0));
+      }
 
-      expect(range.max, greaterThan(1.005 * (1 + ChartScale.headroomRatio)));
+      expectRange(
+        ReportChartAxes.position,
+        const <double>[0, 24.9],
+        (-2.4, 27.2),
+        const <double>[0, 5, 10, 15, 20, 25],
+      );
+      expectRange(
+        ReportChartAxes.speed,
+        const <double>[0, 1.50],
+        (-0.18, 1.64),
+        const <double>[0, 0.5, 1.0, 1.5],
+      );
+      expectRange(
+        ReportChartAxes.speed,
+        const <double>[0, 1.75],
+        (-0.18, 1.89),
+        const <double>[0, 0.5, 1.0, 1.5],
+      );
     });
 
-    test('실측 최대 속도는 0 ~ 2 m/s 에 담긴다', () {
-      final range = ReportChartAxes.speed.rangeFor(const <double>[
-        0.0,
-        1.743390961,
-      ]);
+    test('하강(위치 감소 · 속도 음수)도 같은 여백 규칙이다', () {
+      final pos = ReportChartAxes.position.rangeFor(const <double>[24.9, 0]);
+      final vel = ReportChartAxes.speed.rangeFor(const <double>[0, -1.50]);
 
-      expect(range.min, 0.0);
-      expect(range.max, closeTo(2.0, 1e-9));
+      expect(pos.min, closeTo(-2.49, 1e-9));
+      expect(pos.max, closeTo(27.39, 1e-9));
+      expect(vel.min, closeTo(-1.65, 1e-9));
+      expect(vel.max, closeTo(0.15, 1e-9));
+      expect(vel.ticks(), const <double>[-1.5, -1.0, -0.5, 0.0]);
     });
 
-    test('속도 차트는 부호와 상관없이 크기를 그린다', () {
+    test('속도 차트는 부호 그대로 그리고 하강은 0 아래로 넓어진다', () {
       final result = _result().copyWith(
         speedSeries: const <double>[0.0, -0.5, -1.2, 0.3],
-      ); // 운행 방향 한쪽이 음수로 나온 속도
+      ); // 하강이라 음수인 속도
       final drawn = ReportChartAxes.seriesOf(ReportChartAxes.speed, result);
 
-      expect(drawn, const <double>[0.0, 0.5, 1.2, 0.3]);
-      expect(result.speedSeries[1], -0.5, reason: '저장된 속도는 그대로');
-      expect(ReportChartAxes.speed.rangeFor(drawn).min, 0.0);
+      expect(drawn, const <double>[0.0, -0.5, -1.2, 0.3]);
+      final range = ReportChartAxes.speed.rangeFor(drawn); // 고른 세로축
+      expect(range.contains(-1.2, 0.3), isTrue);
+      expect(range.min, lessThan(-1.2));
     });
 
     test('앱 실측 소음은 0 을 빼고 40 ~ 65 dBA 로 넓어진다', () {
@@ -190,19 +235,96 @@ void main() {
         ReportChartAxes.x,
         ReportChartAxes.y,
         ReportChartAxes.z,
+      ]) {
+        expect(spec.scale.kind, ChartScaleKind.symmetric, reason: spec.key);
+      }
+      for (final spec in <ChartAxisSpec>[
         ReportChartAxes.accel,
         ReportChartAxes.jerk,
       ]) {
-        expect(spec.scale.kind, ChartScaleKind.symmetric, reason: spec.key);
+        expect(
+          spec.scale.kind,
+          ChartScaleKind.paddedSymmetric,
+          reason: spec.key,
+        );
       }
       for (final spec in <ChartAxisSpec>[
         ReportChartAxes.position,
         ReportChartAxes.speed,
       ]) {
-        expect(spec.scale.kind, ChartScaleKind.zeroAnchored, reason: spec.key);
+        expect(spec.scale.kind, ChartScaleKind.padded, reason: spec.key);
       }
       expect(ReportChartAxes.noise.scale.kind, ChartScaleKind.free);
       expect(ReportChartAxes.noise.scale.ignoreZeros, isTrue);
+    });
+
+    test('가속도 · 저크 틀은 ±1.2 x 최대 절댓값이고 눈금은 틀 안 0.2 간격이다', () {
+      // OTIS 3쪽 예: 가속도 최대 0.58 → ±0.70, 저크 0.61 → ±0.73
+      for (final (spec, peak) in <(ChartAxisSpec, double)>[
+        (ReportChartAxes.accel, 0.58),
+        (ReportChartAxes.jerk, 0.61),
+      ]) {
+        final range = spec.rangeFor(<double>[-peak * 0.9, 0.1, peak]);
+        expect(range.max, closeTo(peak * 1.2, peak * 1.2 * 0.01));
+        expect(range.min, closeTo(-peak * 1.2, peak * 1.2 * 0.01));
+        expect(
+          range.ticks(),
+          <double>[
+            -0.6,
+            -0.4,
+            -0.2,
+            0.0,
+            0.2,
+            0.4,
+            0.6,
+          ].map((v) => closeTo(v, 1e-9)).toList(),
+        );
+      }
+      // 음수 쪽이 크면 그 절댓값으로 대칭이다
+      final down = ReportChartAxes.accel.rangeFor(const <double>[-0.5, 0.2]);
+      expect(down.max, closeTo(0.6, 1e-9));
+      expect(down.min, closeTo(-0.6, 1e-9));
+      // 모두 0 이면 최소 범위
+      final still = ReportChartAxes.jerk.rangeFor(const <double>[0, 0]);
+      expect(<double>[still.min, still.max], const <double>[-0.6, 0.6]);
+    });
+
+    test('가로축은 2 · 3쪽 모두 양쪽 4% 여백이고 눈금은 30 · 45초 → 5초, 60초 넘으면 10초', () {
+      ({double start, double span, double step}) of(double seconds) =>
+          ReportChartRenderer.timeWindow((seconds * 100).round() + 1, 100);
+      final t31 = of(31.4); // OTIS 예 31.4초
+      expect(t31.start, closeTo(-1.256, 1e-6));
+      expect(t31.start + t31.span, closeTo(32.656, 1e-6));
+      expect(t31.step, 5);
+      expect(of(44.5).step, 5);
+      expect(of(60).step, 5);
+      expect(of(61).step, 10);
+      expect(of(10).step, 1);
+      expect(ReportChartRenderer.timePaddingRatio, 0.04);
+    });
+
+    test('눈금 숫자는 한 축 안에서 소수 자리를 맞춘다', () {
+      String f(double v, double step) =>
+          ReportChartRenderer.formatTick(v, step);
+      expect(
+        <String>[
+          for (final v in <double>[0, 0.5, 1, 1.5]) f(v, 0.5),
+        ],
+        <String>['0.0', '0.5', '1.0', '1.5'],
+      );
+      expect(
+        <String>[
+          for (final v in <double>[0.6, 0.4, 0, -0.2]) f(v, 0.2),
+        ],
+        <String>['0.6', '0.4', '0.0', '-0.2'],
+      );
+      expect(f(25, 5), '25');
+      expect(f(40, 10), '40');
+      expect(f(0.25, 0.25), '0.25');
+      expect(f(-1e-17, 0.2), '0.0', reason: '−0 을 찍지 않는다');
+      expect(ReportChartRenderer.tickDecimals(5), 0);
+      expect(ReportChartRenderer.tickDecimals(0.5), 1);
+      expect(ReportChartRenderer.tickDecimals(0.25), 2);
     });
   });
 
@@ -657,9 +779,11 @@ void main() {
     ); // 축 틀 오른쪽 (포인트)
     // 행 첨자가 축 틀 안 어느 가로 자리인지 렌더러와 같은 식으로 구한다
     double xOfIndex(int index) {
-      const span = (_rideSampleCount - 1) / _sampleRate * 1.02; // 가로축 폭 (초)
+      const length = (_rideSampleCount - 1) / _sampleRate; // 측정 길이 (초)
+      const start = -length * 0.04; // 가로축 왼쪽 끝 (초)
+      const span = length * 1.08; // 가로축 폭 (초)
       return frameLeft +
-          (frameRight - frameLeft) * (index / _sampleRate) / span;
+          (frameRight - frameLeft) * (index / _sampleRate - start) / span;
     }
 
     // 차트 하나를 그려 그 쪽의 운행 구간 점선을 돌려준다
@@ -736,6 +860,174 @@ void main() {
       final full = await drawGuides(ReportChartAxes.noise, legacy);
       expect(full.single.left, closeTo(frameLeft, 0.01));
       expect(full.single.right, closeTo(frameRight, 0.01));
+    });
+  });
+
+  group('수직 ptp · Jptp 표시 (2026-10-21)', () {
+    const zones = MotionZones(
+      runStartIndex: 1000,
+      runEndIndex: 9000,
+      steadyStartIndex: 3000,
+      steadyEndIndex: 7000,
+      sampleRate: _sampleRate,
+    ); // 시험용 정속 · 가감속 구간
+    const window = TravelWindow(
+      startIndex: 1200,
+      endIndex: 8800,
+      startSec: 1200 / _sampleRate,
+      endSec: 8800 / _sampleRate,
+      startM: 0.5,
+      endM: 56.5,
+    ); // 시험용 운행 구간
+
+    // 수직 차트 하나를 그려 그 쪽 내용 스트림을 돌려준다
+    Future<String> drawZ(MeasurementResult result) async {
+      final document = PdfDocument(); // 만들어 낼 PDF 문서
+      final fontBytes = await rootBundle.load(
+        ReportLayout.regularFontAsset,
+      ); // 글꼴 원본
+      final renderer = ReportChartRenderer(
+        font: PdfTtfFont(document, fontBytes),
+      ); // 차트를 그릴 렌더러
+      final page = PdfPage(
+        document,
+        pageFormat: PdfPageFormat(
+          ReportLayout.pageWidthPt,
+          ReportLayout.pageHeightPt,
+        ),
+      ); // 차트를 얹을 쪽
+      renderer.draw(
+        page.getGraphics(),
+        spec: ReportChartAxes.z,
+        box: ReportChartPage.slots[2],
+        result: result,
+      );
+      return pdfChartStreams(await document.save()).join();
+    }
+
+    // 정속 · 가감속 구간에 봉우리를 하나씩 둔 수직 시계열
+    List<double> zWith({required int steadyAt, required int transientAt}) {
+      final values = List<double>.generate(
+        _rideSampleCount,
+        (i) => i.isEven ? 1.0 : -1.0,
+      ); // 잔잔한 진동 (mg)
+      values[steadyAt] = 9.0;
+      values[transientAt] = 12.0;
+      return values;
+    }
+
+    test('Jptp 라벨 문구는 ptp 와 같은 숫자 규칙이다', () {
+      expect(ReportChartRenderer.jptpLabel(17.14), 'Jptp 17.1milli-G');
+      expect(ReportChartRenderer.jptpLabel(123.4), 'Jptp 123milli-G');
+    });
+
+    test('정속 쌍은 정속 구간, Jptp 쌍은 가감속 구간에서 찾는다', () {
+      final values = zWith(steadyAt: 5000, transientAt: 2000);
+      final result = _result().copyWith(motionZones: zones);
+      final pairs = ReportChartAxes.verticalPairs(values, result)!;
+      expect(pairs.steady!.high, 5000);
+      expect(pairs.transient!.high, 2000);
+      expect(ReportChartAxes.verticalPairs(values, _result()), isNull);
+    });
+
+    test('Jptp 가 있으면 글자 상자가 둘이고 서로 겹치지 않는다', () async {
+      // 두 봉우리를 정속 경계 양쪽 바로 옆에 두어 글자가 같은 자리로 간다
+      final values = zWith(steadyAt: 3002, transientAt: 2998);
+      values[2998] = 9.0;
+      final base = _result().copyWith(
+        zSeries: values,
+        travelWindow: window,
+        motionZones: zones,
+        zPtp: 10.0,
+      ); // Jptp 없는 결과
+      final one = labelBoxes(await drawZ(base)); // ptp 상자만
+      final two = labelBoxes(
+        await drawZ(base.copyWith(zJptp: 10.0)),
+      ); // ptp · Jptp 상자
+
+      expect(one.length, 1);
+      expect(two.length, 2);
+      final a = two[0];
+      final b = two[1];
+      final overlaps =
+          a.left < b.left + b.width &&
+          b.left < a.left + a.width &&
+          a.bottom < b.bottom + b.height &&
+          b.bottom < a.bottom + a.height; // 두 상자가 겹치는지
+      expect(overlaps, isFalse, reason: '$a / $b');
+    });
+  });
+
+  group('A95 글자 자리 (2026-10-22, 점선 오른쪽 끝)', () {
+    const frame = (left: 50.0, bottom: 100.0, right: 250.0, top: 200.0);
+    const width = 9.0; // 글자 폭 (포인트)
+    const height = ReportChartRenderer.tickLabelSize; // 글자 세로
+    const gap = ReportChartRenderer.labelGap; // 점선과 띄움
+    ChartRect place({
+      double spanRight = 200,
+      List<ChartRect> avoid = const [],
+    }) => ReportChartRenderer.placeA95Label(
+      frame: frame,
+      spanRight: spanRight,
+      upperY: 160,
+      lowerY: 140,
+      width: width,
+      avoid: avoid,
+    );
+
+    test('빈자리면 점선 오른쪽 끝 바깥, 아래 점선 바로 밑이다', () {
+      final rect = place(); // 고른 자리
+      expect(rect.left, 200 + gap);
+      expect(rect.bottom, 140 - gap - height);
+    });
+
+    test('ptp 상자가 그 자리를 차지하면 위 점선 위로 비킨다', () {
+      final rect = place(
+        avoid: [(left: 195, bottom: 125, width: 40, height: 15)],
+      ); // 고른 자리
+      expect(rect.left, 200 + gap);
+      expect(rect.bottom, 160 + gap);
+    });
+
+    test('바깥 두 자리가 막히면 점선 끝 안쪽으로 들어간다', () {
+      final rect = place(
+        avoid: [(left: 201, bottom: 100, width: 40, height: 100)],
+      ); // 고른 자리
+      expect(rect.left + width, 200, reason: '글자 끝 = 점선 끝');
+      expect(rect.bottom, 140 - gap - height);
+    });
+
+    test('빨간 점도 피한다', () {
+      const ring =
+          ReportChartRenderer.markerRadius +
+          ReportChartRenderer.markerRingWidth; // 점 반지름
+      final rect = place(
+        avoid: [
+          (
+            left: 205 - ring,
+            bottom: 133 - ring,
+            width: ring * 2,
+            height: ring * 2,
+          ),
+        ],
+      ); // 아래 바깥 자리에 점이 있음
+      expect(rect.bottom, 160 + gap);
+    });
+
+    test('운행 구간이 기록 끝까지면 틀 안으로 밀어 넣는다', () {
+      final rect = place(spanRight: 250); // 점선 끝 = 틀 오른쪽
+      expect(
+        rect.left + width,
+        lessThanOrEqualTo(frame.right - ReportChartRenderer.labelInset),
+      );
+    });
+
+    test('모두 막히면 첫 자리를 쓴다', () {
+      final rect = place(
+        avoid: [(left: 0, bottom: 0, width: 400, height: 400)],
+      ); // 틀 전체를 덮음
+      expect(rect.left, 200 + gap);
+      expect(rect.bottom, 140 - gap - height);
     });
   });
 

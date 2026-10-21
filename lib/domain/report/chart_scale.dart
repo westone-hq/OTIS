@@ -49,21 +49,47 @@ class ChartAxisRange {
       min <= dataMin && dataMax <= max;
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-21 16:30:00 · nada
   /// 함수: ticks
-  /// 목적: 눈금 값을 아래끝부터 차례로 만든다. 간격을 거듭 더하지 않고
-  ///       번호에 곱해 더하는 이유는, 0.2 처럼 이진수로 딱 떨어지지 않는
-  ///       간격을 거듭 더하면 오차가 쌓여 마지막 눈금이 위끝에서 벗어나기
-  ///       때문이다.
+  /// 목적: 눈금 값을 아래끝부터 차례로 만든다.
+  ///       - 끝이 눈금 간격의 배수인 범위(넓힌 축 · 최소 범위)는 폭을 칸
+  ///         수로 나눈다. 간격을 거듭 더하거나 번호에 간격을 곱하지 않는
+  ///         이유는, 0.2 처럼 이진수로 딱 떨어지지 않는 간격은 −0.6 + 6 x
+  ///         0.2 처럼 계산해도 0.6000000000000002 가 되어 마지막 눈금이
+  ///         위끝에서 벗어나기 때문이다. 폭을 나누면 마지막 눈금이 위끝
+  ///         그대로다
+  ///       - 끝이 배수가 아닌 범위(`ChartScaleKind.padded`)는 틀 안에 드는
+  ///         간격의 배수만 찍는다. 틀 끝에는 눈금이 없다
   /// 반환: 아래끝부터 위끝까지의 눈금 값 목록
-  /// 식: tick_i = min + i x tickStep,  i = 0 .. round(span / tickStep)
+  /// 식: n = round(span / tickStep)
+  ///     tick_i = min + span x i / n,  i = 0 .. n          (배수인 범위)
+  ///     tick_k = k x tickStep,  ceil(min / step) ≤ k ≤ floor(max / step)
   List<double> ticks() {
+    final first = (min / tickStep - _alignSlack).ceil(); // 첫 눈금 번호
+    final last = (max / tickStep + _alignSlack).floor(); // 끝 눈금 번호
+    final aligned =
+        (first * tickStep - min).abs() <= _alignSlack * tickStep &&
+        (last * tickStep - max).abs() <= _alignSlack * tickStep; // 끝이 배수
+    if (!aligned) {
+      return <double>[for (var k = first; k <= last; k++) k * tickStep];
+    }
     final count = (span / tickStep).round(); // 눈금이 나누는 칸 수
-    return List<double>.generate(count + 1, (i) => min + i * tickStep);
+    return List<double>.generate(
+      count + 1,
+      (i) => i == count ? max : min + span * i / count,
+    );
   }
+
+  /// 작성: 2026-10-21 16:30:00 · nada
+  /// 변수: _alignSlack
+  /// 목적: 끝이 눈금 간격의 배수인지 볼 때 봐주는 차이 (간격에 대한 비).
+  /// 근거: 표준 — 배정도 실수의 상대 오차는 1e-16 수준이라 1e-9 는 오차보다
+  ///       충분히 크고 실제 값 차이보다 충분히 작다
+  static const double _alignSlack = 1e-9;
 }
 
 /// 작성: 2026-10-10 11:38:05 · nada
-/// 수정: 2026-10-11 19:20:58 · nada
+/// 수정: 2026-10-22 10:30:00 · nada
 /// 클래스: ChartScaleKind
 /// 목적: 데이터에 맞춰 넓힐 때 축을 어떤 모양으로 넓히는지.
 ///       - `symmetric` — 0 을 가운데 둔다. 위아래로 흔들리는 진동 ·
@@ -75,7 +101,17 @@ class ChartAxisRange {
 ///         파형이 위쪽 띠에 납작하게 붙는다. 넓힐 때 최소 범위의 자리가
 ///         아니라 폭만 지킨다 — 70 ~ 90 dBA 현장이 40 dBA 까지 끌려 내려가
 ///         파형이 위쪽에 납작해지지 않게 한다(2026-10-11 사용자 결정)
-enum ChartScaleKind { symmetric, zeroAnchored, free }
+///       - `padded` — 데이터 최소 · 최대에서 폭의 `headroomRatio` 씩 바깥을
+///         틀 끝으로 둔다. 틀 끝을 눈금에 맞춰 반올림하지 않고, 눈금은 틀
+///         안의 깔끔한 값만 찍는다. 최소 범위는 데이터가 한 값뿐일 때만
+///         쓴다. 위치 · 속도(2026-10-21) — 0 이 틀 꼭짓점에 붙지 않고,
+///         하강(위치 감소 · 속도 음수)도 같은 규칙이다. OTIS 리포트 3쪽과
+///         같다. 2026-10-08 "위치 · 속도는 0 에서 시작, 끝을 눈금에 맞춰
+///         바깥으로 반올림" 을 바꾼다
+///       - `paddedSymmetric` — `padded` 를 0 대칭으로 쓴 것. 틀 = ±(데이터
+///         최대 절댓값 x 1.2), 반올림 없음. 가속도 · 저크(2026-10-22, OTIS
+///         3쪽 실측 1.20 ~ 1.22). 데이터가 모두 0 이면 최소 범위를 쓴다
+enum ChartScaleKind { symmetric, zeroAnchored, free, padded, paddedSymmetric }
 
 /// 작성: 2026-10-10 11:38:05 · nada
 /// 수정: 2026-10-11 19:20:58 · nada
@@ -130,6 +166,15 @@ class ChartScale {
   /// 근거: 인용 — 2026-10-10 사용자 지시 "1 · 2 · 2.5 · 5 × 10^n"
   static const List<double> stepMantissas = <double>[1.0, 2.0, 2.5, 5.0];
 
+  /// 작성: 2026-10-21 16:30:00 · nada
+  /// 변수: paddedStepMantissas
+  /// 목적: `padded` 축의 눈금 간격 후보. 2.5 를 빼 위치는 5 m, 속도는
+  ///       0.5 m/s 같은 간격이 나온다. 작은 것부터 늘어놓는다.
+  /// 근거: 인용 — 2026-10-21 점검 지시. OTIS 리포트 3쪽 눈금이 위치 5 m ·
+  ///       속도 0.5 m/s 단위다(운행 25 m · 1.5 m/s). 2.5 가 있으면 속도가
+  ///       0.25 간격이 된다
+  static const List<double> paddedStepMantissas = <double>[1.0, 2.0, 5.0];
+
   /// 작성: 2026-10-10 11:38:05 · nada
   /// 변수: _roundingSlack
   /// 목적: 값을 눈금 간격으로 나눈 몫을 올림 · 내림할 때 봐주는 차이.
@@ -152,9 +197,13 @@ class ChartScale {
   });
 
   /// 작성: 2026-10-10 11:38:05 · nada
-  /// 수정: 2026-10-11 19:20:58 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 함수: rangeFor
   /// 목적: 그릴 값에 맞는 세로축 범위를 정한다. 순서는 클래스 주석과 같다.
+  ///       `padded` 축은 최소 범위와 견주지 않고 데이터로만 정한다
+  ///       (`_paddedRange()`). 데이터가 한 값뿐이면(정지 측정) 최소 범위를
+  ///       데이터로 보고 정한다. `paddedSymmetric` 은 0 을 가운데 두고 큰 쪽
+  ///       절댓값으로 같은 규칙을 쓴다.
   /// 인자: values — 그릴 값 목록. 단위는 그 축의 단위를 따른다
   /// 반환: 모든 값이 들어가는 범위. 값이 없으면 최소 범위
   ChartAxisRange rangeFor(List<double> values) {
@@ -166,6 +215,19 @@ class ChartScale {
       if (high == null || value > high) high = value;
     }
     if (low == null || high == null) return minimum;
+    if (kind == ChartScaleKind.paddedSymmetric) {
+      final peak = math.max(low.abs(), high.abs()); // 데이터 최대 절댓값
+      // 모두 0 이면(정지 측정 등) 틀 폭이 0 이 되지 않게 최소 범위를 쓴다
+      if (peak == 0) return minimum;
+      // → 로직 이동: _paddedRange()
+      return _paddedRange(-peak, peak);
+    }
+    if (kind == ChartScaleKind.padded) {
+      // → 로직 이동: _paddedRange()
+      return high > low
+          ? _paddedRange(low, high)
+          : _paddedRange(minimum.min, minimum.max);
+    }
 
     // → 로직 이동: _paddedBounds()
     final padded = _paddedBounds(low, high); // 여유를 더한 아래끝 · 위끝
@@ -188,8 +250,43 @@ class ChartScale {
     );
   }
 
+  /// 작성: 2026-10-21 16:30:00 · nada
+  /// 함수: _paddedRange
+  /// 목적: `padded` 축의 범위를 정한다. 틀 끝은 데이터 양 끝에서 폭의
+  ///       `headroomRatio` 씩 바깥이고 반올림하지 않는다. 눈금 간격은
+  ///       `paddedStepMantissas` x 10ⁿ 가운데 틀 안 눈금 칸이
+  ///       `maxTickCells` 이하가 되는 가장 작은 것이다.
+  /// 인자: low, high — 데이터 최솟값 · 최댓값. `low` < `high`
+  /// 반환: 끝이 데이터에 맞춘 범위
+  /// 식: pad = (high - low) x headroomRatio
+  ///     min = low - pad,  max = high + pad
+  ///     칸 수 = floor(max / step) - ceil(min / step)
+  /// 근거: 측정 — 2026-10-21 OTIS 리포트 3쪽에서 잰 값. 위치 0 ~ 24.9 m →
+  ///       약 −2.4 ~ 27.2, 속도 0 ~ 1.50 m/s → 약 −0.18 ~ 1.64
+  ChartAxisRange _paddedRange(double low, double high) {
+    assert(low < high, '데이터 폭이 0 이하다: $low ~ $high');
+    final pad = (high - low) * headroomRatio; // 한쪽 끝에 더할 여유
+    final bottom = low - pad; // 틀 아래끝
+    final top = high + pad; // 틀 위끝
+    var magnitude = math
+        .pow(10, (math.log((top - bottom) / maxTickCells) / math.ln10).floor())
+        .toDouble(); // 칸을 다 썼을 때 간격과 자릿수가 같은 10의 거듭제곱
+    while (true) {
+      for (final mantissa in paddedStepMantissas) {
+        final step = magnitude * mantissa; // 대 볼 눈금 간격
+        final cells =
+            (top / step + _roundingSlack).floor() -
+            (bottom / step - _roundingSlack).ceil(); // 틀 안 눈금 칸 수
+        if (cells <= maxTickCells) {
+          return ChartAxisRange(min: bottom, max: top, tickStep: step);
+        }
+      }
+      magnitude *= 10;
+    }
+  }
+
   /// 작성: 2026-10-10 11:38:05 · nada
-  /// 수정: 2026-10-11 15:34:38 · nada
+  /// 수정: 2026-10-22 10:30:00 · nada
   /// 함수: _paddedBounds
   /// 목적: 축의 양 끝을 모양에 맞춰 잡고 여유를 더한다.
   ///       - `symmetric` — 큰 쪽 절댓값으로 위아래를 같게 잡는다
@@ -212,6 +309,11 @@ class ChartScale {
         final pad = (top - bottom) * headroomRatio; // 한쪽 끝에 더할 여유
         return (low: bottom < 0.0 ? bottom - pad : 0.0, high: top + pad);
       case ChartScaleKind.free:
+      // `padded` · `paddedSymmetric` 은 `rangeFor()` 가 먼저
+      // `_paddedRange()` 로 보내 여기 오지 않는다. 와도 같은 여유라 `free`
+      // 와 함께 둔다
+      case ChartScaleKind.padded:
+      case ChartScaleKind.paddedSymmetric:
         final pad = (high - low) * headroomRatio; // 한쪽 끝에 더할 여유
         return (low: low - pad, high: high + pad);
     }

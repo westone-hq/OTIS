@@ -296,7 +296,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: _finishMeasurement
   /// 목적: "테스트 완료" 버튼이나 볼륨키로 측정을 마무리한다. 순서대로
   ///       진행한다.
@@ -304,7 +304,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   ///          (중복 탭 방지)
   ///       2. 마무리 중 상태로 표시하고 `_cleanup()`으로 타이머와 센서
   ///          수집을 멈춘다
-  ///       3. `MeasurementRecorder.record()` 로 저장한다
+  ///       3. `MeasurementRecorder.record()` 로 저장한다. 수집 처음 1초로
+  ///          판정한 거치 방향(`CaptureSession.placement`)을 함께 넘긴다
   ///       4. 실패면 사유를 담은 실패 안내를 띄우고, 성공이면 이 화면을
   ///          결과 화면으로 바꾼다. 결과 화면에서 뒤로 가면 측정을 시작한
   ///          화면(시작 화면 또는 저장 결과 목록)이다
@@ -327,6 +328,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       nativeRecordPath: _capture.nativeRecordPath,
       noiseAudioPath: _capture.noiseAudioPath,
       measuredAt: DateTime.now(),
+      placement: _capture.placement,
+      noiseSampleRateHz: _capture.noiseSampleRateHz,
     ); // 저장 결과
     if (!outcome.isSuccess) {
       // → 로직 이동: recordFailureMessage()

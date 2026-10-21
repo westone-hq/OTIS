@@ -155,6 +155,28 @@ void main() {
       );
     });
 
+    test('하강이면 최상층에서 출발해 최하층에 선다', () {
+      final down = _siteResult().copyWith(
+        bottomFloor: 4,
+        topFloor: 11,
+        direction: SiteInfo.directionDown,
+      ); // 하강 결과
+      expect(
+        ReportPage1Renderer.headerValues(down)['floors'],
+        'Start Floor : 11, Stop Floor : 4',
+      );
+      final legacy = down.copyWith(direction: '상부 → 하부'); // 예전 표기
+      expect(
+        ReportPage1Renderer.headerValues(legacy)['floors'],
+        'Start Floor : 11, Stop Floor : 4',
+      );
+      final up = down.copyWith(direction: SiteInfo.directionUp); // 상승
+      expect(
+        ReportPage1Renderer.headerValues(up)['floors'],
+        'Start Floor : 4, Stop Floor : 11',
+      );
+    });
+
     test('측정 일시는 기기 시간대와 상관없이 한국 시간이다', () {
       final utc = _siteResult().copyWith(
         dateTime: DateTime.utc(2026, 1, 14, 2, 3, 59),

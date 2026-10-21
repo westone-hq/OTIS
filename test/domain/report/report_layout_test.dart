@@ -20,7 +20,10 @@ const _layoutJsonPath = 'docs/report_layout.json';
 ///       고치며 정본과 `report_layout.dart` 를 함께 바꾸고 값을 갱신했다.
 ///       2026-10-15 분석 자료 구분 이름 바꿔 찍기(`relabel` 등)를 더하며
 ///       다시 갱신했다.
-const _layoutJsonMd5 = '8a809c829bbf66a942a3dc475ba41bde';
+///       2026-10-21 수직 행 황색 · 적색 문구 자리(`remark`)를 더하며 다시
+///       갱신했다. 2026-10-22 그 글자 크기 · 줄 간격(28 · 36)을 바꾸며 다시
+///       갱신했다.
+const _layoutJsonMd5 = 'c6e6d6981e94f6003bda5196dae43945';
 
 /// 작성: 2026-09-15 19:43:50 · nada
 /// 함수: _layout
@@ -179,6 +182,14 @@ void main() {
         ReportPage1.eraseRedHeight,
         (table['erase_red'] as Map<String, dynamic>)['h'],
       );
+
+      final remark = table['remark'] as Map<String, dynamic>; // 문구 자리
+      expect(ReportPage1.remarkX, remark['x']);
+      expect(ReportPage1.remarkEraseX, remark['erase_x']);
+      expect(ReportPage1.remarkEraseWidth, remark['erase_w']);
+      expect(ReportPage1.remarkEraseHeight, remark['erase_h']);
+      expect(ReportPage1.remarkSize, remark['size']);
+      expect(ReportPage1.remarkLineGap, remark['line_gap']);
 
       final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
       expect(ReportPage1.colCategoryAlign.name, align['category']);
