@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/capture_session.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 
 /// 작성: 2026-10-05 10:00:11 · nada
 /// 클래스: _FakeSensors
@@ -66,6 +67,12 @@ class _FakeSensors extends SensorChannelManager {
     calls.add('volume:$enabled');
     volumeKeyOn = enabled;
   }
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: playPlacementAlert
+  /// 목적: 거치 경고 요청을 기록한다.
+  @override
+  Future<void> playPlacementAlert() async => calls.add('alert');
 
   /// 수집 중 흘려보낼 이벤트. 비어 있으면 값이 오지 않는다
   List<NativeEvent> events = const <NativeEvent>[];
@@ -146,6 +153,60 @@ void main() {
     // 마지막으로 내보낸 2.0초는 가속 0.8초 째다. 0.98 m/s² × 0.8초 =
     // 0.78 m/s 에서 저역 지연(0.25초)만큼 덜 오른다
     expect(session.liveSpeedMps.value, inInclusiveRange(0.45, 0.78));
+  });
+
+  group('거치 방향 (2026-10-22)', () {
+    // 4ms 간격 중력 · 가속도 1.6초. 중력 Z 가 거치 방향을 정한다
+    List<NativeEvent> placed(double gravityZ) => <NativeEvent>[
+      for (var i = 1; i <= 400; i++) ...[
+        NativeEvent(
+          type: NativeEventType.gravity,
+          tsUs: i * 4000,
+          xMg: 0,
+          yMg: 0,
+          zMg: gravityZ,
+          dtUs: 4000,
+        ),
+        NativeEvent(
+          type: NativeEventType.accel,
+          tsUs: i * 4000 + 1,
+          xMg: 1,
+          yMg: 0,
+          zMg: gravityZ,
+          dtUs: 4000,
+        ),
+      ],
+    ];
+
+    Future<(_FakeSensors, CaptureSession)> run(double gravityZ) async {
+      final sensors = _FakeSensors()..events = placed(gravityZ);
+      final session = CaptureSession(sensorManager: sensors); // 시험할 수집
+      sensors.availableReply.complete(true);
+      await session.start(onVolumeKey: () {}, onNoResponse: () {});
+      await Future<void>.delayed(Duration.zero);
+      await session.stop();
+      return (sensors, session);
+    }
+
+    test('화면 위면 경고음 · 진동을 한 번 요청하고 측정은 계속한다', () async {
+      final (sensors, session) = await run(1000);
+      expect(sensors.calls.where((c) => c == 'alert').length, 1);
+      expect(session.placement!.placement, Placement.faceUp);
+      expect(session.placement!.gravityZMg, closeTo(1000, 1e-9));
+      expect(sensors.calls, contains('stop'), reason: '측정을 끊지 않았다');
+    });
+
+    test('기울어짐도 경고한다', () async {
+      final (sensors, session) = await run(-700);
+      expect(sensors.calls, contains('alert'));
+      expect(session.placement!.placement, Placement.tilted);
+    });
+
+    test('화면 아래면 경고하지 않는다', () async {
+      final (sensors, session) = await run(-998);
+      expect(sensors.calls, isNot(contains('alert')));
+      expect(session.placement!.placement, Placement.faceDown);
+    });
   });
 
   test('정상으로 켠 수집은 정지 때 한 번씩만 되돌린다', () async {

@@ -83,23 +83,47 @@ class ReportMetric {
   ///       "6.1milli-G"(첫째 자리). 2026-10-15 점검 지시
   static const Map<String, int> _decimalsByUnit = <String, int>{'m/s': 2};
 
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 변수: speedDisplayStepMps
+  /// 목적: 최대 속도를 표시할 때 반올림하는 단위 (m/s). 리포트 1쪽 표와
+  ///       결과 화면이 같이 쓴다(`roundSpeed()`). result.json 에는 반올림
+  ///       전 값을 그대로 둔다.
+  /// 근거: 측정 — 2026-10-21 비교 7건(오티스폰 3 · 개발폰 3 · ride_reference)
+  ///       의 앱 최대 속도(1.500 ~ 1.532 · 1.737)를 0.05 단위로 반올림하면
+  ///       OTIS 표시값(1.50 · 1.75)과 모두 같다. 원본은 앱보다 큰 쪽(1.737 →
+  ///       1.75)이라 깎는 보정으로는 설명되지 않는다
+  static const double speedDisplayStepMps = 0.05;
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: roundSpeed
+  /// 목적: 최대 속도를 `speedDisplayStepMps` 단위의 가장 가까운 값으로
+  ///       반올림한다. 정확히 가운데면 위로 간다(`double.round()`).
+  /// 인자: speed — 최대 속도 (m/s)
+  /// 반환: 반올림한 속도 (m/s). 1.518 → 1.50, 1.737 → 1.75
+  /// 식: round(speed / step) x step
+  static double roundSpeed(double speed) =>
+      (speed / speedDisplayStepMps).round() * speedDisplayStepMps;
+
   /// 작성: 2026-10-15 16:50:04 · nada
   /// 변수: _defaultDecimals
   /// 목적: `_decimalsByUnit` 에 없는 단위의 소수 자리 수.
   static const int _defaultDecimals = 1;
 
   /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: display
-  /// 목적: 표의 값 칸에 그대로 찍을 문자열을 만든다. 값이 100 이상이면
+  /// 목적: 표의 값 칸에 그대로 찍을 문자열을 만든다. 최대 속도(m/s)는 먼저
+  ///       0.05 단위로 반올림한다(`roundSpeed()`). 값이 100 이상이면
   ///       소수점을 떼고, 그보다 작으면 단위별 자리(`_decimalsByUnit`,
   ///       최대 속도 둘째 자리 · 나머지 첫째 자리)만 남긴다. 꼬리표가
   ///       있으면 뒤에 붙인다. 수평 행에 X · Y 내역을 덧붙이지 않는다
   ///       (2026-10-15 사용자 지시) — 원본 리포트도 큰 쪽 값 하나만 적는다.
   /// 반환: 값 칸 문자열. 값이 없으면 `—`
   String get display {
-    final amount = value; // 지역으로 옮겨야 null 검사가 이어진다
-    if (amount == null) return '—';
+    final raw = value; // 지역으로 옮겨야 null 검사가 이어진다
+    if (raw == null) return '—';
+    // → 로직 이동: roundSpeed()
+    final amount = unit == 'm/s' ? roundSpeed(raw) : raw; // 찍을 값
     final decimals = // 이 단위의 소수 자리 수
         _decimalsByUnit[unit] ?? _defaultDecimals;
     final digits = amount.abs() >= 100

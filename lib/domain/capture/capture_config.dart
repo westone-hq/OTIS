@@ -184,6 +184,29 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-10 사용자 지시 "초당 4~5번"
   static const int livePublishMs = 250;
 
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 변수: placementWindowMs
+  /// 목적: 거치 방향을 판정할 때 중력 Z 를 평균 내는 길이 (밀리초). 수집을
+  ///       시작한 뒤 첫 중력 이벤트부터 센다(`PlacementMonitor`).
+  /// 근거: 인용 — 2026-10-22 사용자 지시 "수집 시작 후 처음 1초의 중력 Z
+  ///       평균으로 거치 방향을 판정"
+  static const int placementWindowMs = 1000;
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 변수: placementFaceDownMaxMg
+  /// 목적: 중력 Z 평균이 이 값 이하면 "화면 아래" 거치다 (mg). 화면이 바닥을
+  ///       보면 약 −1000 mg 이다.
+  /// 근거: 인용 — 2026-10-22 사용자 지시 "≤ −940 mg 이면 화면 아래".
+  ///       −940 mg 는 약 20° 기울기(cos 20° = 0.94)다
+  static const double placementFaceDownMaxMg = -940.0;
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 변수: placementFaceUpMinMg
+  /// 목적: 중력 Z 평균이 이 값 이상이면 "화면 위" 거치다 (mg). 그 사이는
+  ///       기울어짐이다.
+  /// 근거: 인용 — 2026-10-22 사용자 지시 "≥ +940 이면 화면 위"
+  static const double placementFaceUpMinMg = 940.0;
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 변수: defaultTargetSampleRateHz
   /// 목적: targetSampleRateHz 기본값이다.

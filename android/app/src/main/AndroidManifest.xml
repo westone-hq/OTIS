@@ -3,6 +3,8 @@
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 거치 경고(화면 아래가 아니면 측정 중 진동 한 번, MainActivity.playPlacementAlert) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 앱 안 업데이트: 받은 새 APK 를 설치 화면으로 넘긴다(UpdateInstaller) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />

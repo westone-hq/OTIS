@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
@@ -355,6 +356,39 @@ class VibrationFileWriter {
       line('motionWindowClippedAtEnd: true');
       line('# 승강기가 서기 전에 측정을 끝냈을 수 있다. 거리가 작게 나올 수 있다.');
     }
+    return buffer.toString();
+  }
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: encodePlacementMeta
+  /// 목적: 거치 방향 판정을 집계 파일 끝에 덧붙일 문자열로 만든다.
+  /// 인자: placement — 판정 결과. 측정이 1초보다 짧아 판정하지 못했으면 null
+  /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
+  static String encodePlacementMeta(PlacementReading? placement) {
+    final buffer = StringBuffer(lineEnding); // 앞 집계와 빈 줄로 나눈다
+    // 한 줄을 쓰고 줄바꿈 문자를 붙인다
+    void line(String text) => buffer
+      ..write(text)
+      ..write(lineEnding);
+
+    if (placement == null) {
+      line('placement: unknown');
+      line(
+        '# 수집 처음 ${CaptureConfig.placementWindowMs}ms 의 중력 이벤트가 '
+        '모이기 전에 끝나 판정하지 못했다.',
+      );
+      return buffer.toString();
+    }
+    line('placement: ${placement.placement.name}');
+    line(
+      'placementGravityZmg: '
+      '${placement.gravityZMg.toStringAsFixed(decimalDigits)}',
+    );
+    line(
+      '# 수집 처음 ${CaptureConfig.placementWindowMs}ms 중력 Z 평균으로 판정 '
+      '(≤ ${CaptureConfig.placementFaceDownMaxMg} faceDown, '
+      '≥ ${CaptureConfig.placementFaceUpMinMg} faceUp, 그 밖 tilted).',
+    );
     return buffer.toString();
   }
 

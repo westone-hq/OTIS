@@ -78,8 +78,9 @@ class _RecordingEmailSender extends FlutterEmailSenderPlatform {
 /// 목적: 메일로 보낼 측정 결과를 꾸민다.
 /// 인자: notes — 추가 참고사항. 없으면 null
 ///       worker — 결과에 실을 저장 시점 작업자. 없으면 작업자 칸이 null
+///       placement — 거치 방향 이름. 없으면 판정 전 예전 결과
 /// 반환: 측정 결과
-MeasurementResult _result({String? notes, Worker? worker}) {
+MeasurementResult _result({String? notes, Worker? worker, String? placement}) {
   return MeasurementResult(
     id: _jobId,
     jobNo: 'J-1',
@@ -92,6 +93,7 @@ MeasurementResult _result({String? notes, Worker? worker}) {
     employeeId: worker?.employeeId,
     company: worker?.company,
     team: worker?.team,
+    placement: placement,
     dateTime: DateTime(2026, 1, 14, 11, 3, 59),
     xSeries: const <double>[],
     ySeries: const <double>[],
@@ -116,15 +118,19 @@ MeasurementResult _result({String? notes, Worker? worker}) {
 ///       않는다(녹음 기능 전 측정과 같다)
 ///       notes — 결과에 실을 추가 참고사항. 없으면 null
 ///       worker — 결과에 실을 저장 시점 작업자. 없으면 null
+///       placement — 거치 방향 이름. 없으면 null
 Future<void> _saveJob({
   required bool withRaw,
   bool withAudio = false,
   String? notes,
   Worker? worker,
+  String? placement,
 }) async {
   final repo = MeasurementRepository.instance; // 시험할 저장소
   // 이 측정의 폴더
-  final dir = await repo.save(_result(notes: notes, worker: worker));
+  final dir = await repo.save(
+    _result(notes: notes, worker: worker, placement: placement),
+  );
   await File(
     '${dir.path}/${MeasurementRepository.reportFileName}',
   ).writeAsString('%PDF-1.4');
@@ -337,7 +343,7 @@ void main() {
     ]);
     expect(
       email.body,
-      contains('- RAW_J-1_$_jobId.txt: 256Hz 원시값(EVIMP1, 필터 · 기준선 보정 없음)'),
+      contains('- RAW_J-1_$_jobId.txt: 256Hz 원시값(EVIMP1, 축별 평균 제거 · 필터 없음)'),
     );
     expect(email.body, contains('- NOISE_J-1_$_jobId.m4a: 측정 중 현장 소음 녹음(AAC)'));
     expect(email.body, contains('※ 첨부 3개'));
@@ -440,6 +446,34 @@ void main() {
         '작업자: 홍길동 (T00001) · (주)시험승강기 · 설치1팀\n- TUNE_',
       ),
     );
+  });
+
+  testWidgets('거치 방향을 판정한 결과는 작업자 아래에 거치 줄을 적는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(
+      () => _saveJob(
+        withRaw: true,
+        worker: const Worker(employeeId: '200001', name: '김철수'),
+        placement: 'faceUp',
+      ),
+    );
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(email.body, contains('\n작업자: 김철수 (200001)\n거치: 화면 위\n'));
+  });
+
+  testWidgets('판정하지 않은 예전 결과는 거치 줄을 뺀다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(() => _saveJob(withRaw: true));
+    await _openSheet(tester);
+    final legacy = await _sendAndCapture(tester, sender);
+    expect(legacy.body, isNot(contains('거치:')));
   });
 
   testWidgets('업체 · 팀이 빈 작업자는 성명과 사번만 적는다', (tester) async {

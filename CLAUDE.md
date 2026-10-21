@@ -125,7 +125,10 @@ flutter test --tags screenshot --run-skipped test/screenshots
   (`MeasurementRepository.listEntries()`, 2026-10-15). 측정 일시를 "지금"
   으로 채워 읽지 않는다(`MeasurementResult.fromMap` 은 `FormatException`).
 - 리포트 값 칸 소수 자리: 최대 속도 둘째 자리(1.74m/s), 나머지 첫째 자리,
-  100 이상은 정수(`ReportMetric._decimalsByUnit`).
+  100 이상은 정수(`ReportMetric._decimalsByUnit`). 최대 속도는 그 전에
+  0.05 m/s 단위로 반올림한다(2026-10-22, `ReportMetric.roundSpeed()`, 1.518 →
+  1.50 · 1.737 → 1.75) — 2026-10-21 비교 7건이 모두 이 규칙으로 OTIS 표시값과
+  같다. 결과 화면도 같은 함수를 쓰고, result.json 은 반올림 전 값이다.
 - 사람이 읽는 시각(리포트 머리말 · 측정 ID · 저장 결과 목록 · 결과 화면 ·
   메일 제목)은 기기 시간대와 상관없이 한국 시간이다(`KoreaTime.of()`,
   2026-10-15). 저장 값(`dateTime`)은 그대로 둔다.
@@ -134,6 +137,21 @@ flutter test --tags screenshot --run-skipped test/screenshots
   측정을 시작한 화면으로 돌아간다(`pop`).
 - 마이크 권한은 측정 화면에 들어가기 전에 `ensureMicPermission()` 이 받는다.
   측정 중에는 휴대폰이 뒤집혀 있어 권한 창을 누를 수 없다.
+- 거치 방향(2026-10-22, 막지 않고 알림 + 기록): 수집 시작 뒤 첫 중력
+  이벤트부터 1초의 중력 Z 평균으로 판정한다(`PlacementMonitor`,
+  `CaptureConfig.placementWindowMs` · `placementFaceDownMaxMg` −940 ·
+  `placementFaceUpMinMg` +940 — 화면 아래 / 화면 위 / 기울어짐). 화면 아래가
+  아니면 측정 중에 경고음 200ms + 진동 300ms 를 한 번 울린다
+  (`MainActivity.playPlacementAlert`, `VIBRATE` 권한, 측정은 계속). result.json
+  `placement` · `placementGravityZMg`, meta.txt `placement` ·
+  `placementGravityZmg`(판정 전에 끝나면 `placement: unknown`)에 남기고,
+  결과 화면은 화면 위 · 기울어진 결과에 재측정 권고 경고를, 메일 본문은
+  "거치: 화면 아래" 한 줄을 넣는다. 리포트 PDF 에는 넣지 않는다. 경고음 ·
+  진동은 수집 시작 약 1 ~ 1.3초(격자 0.5 ~ 0.8초, 신호 처리 기준선 창 안)라
+  지표 구간(운행 · 정속) 밖이다. 진동 모터(약 150 ~ 250Hz)는 40Hz 저역에서
+  빠지고 raw.txt · native_raw.txt · noise.m4a 에는 남는다. 이 판정이
+  생기기 전에는 거치 검사가 없었다(2026-10-04 에 계획한 notFaceDown 저장
+  실패는 저장소에 들어간 적이 없다).
 - 바텀 시트는 `showAppSheet()` 로만 띄운다. 아래쪽 시스템 막대를 비켜 준다.
 - 소음 진단 기능(new/dB 의 마이크 원본 PCM · 계산 CSV 기록
   `NoiseDiagnostics`, 오프라인 재계산 도구 `tool/compare_noise_pcm.py`,
@@ -172,7 +190,9 @@ flutter test --tags screenshot --run-skipped test/screenshots
   측정은 본문에 "누락:" 줄로 밝힌다. 소음 진단 산출물 항목("데시벨 산출물" ·
   "마이크 원본")은 기능과 함께 뺐다(2026-10-15). 본문 첫 줄 아래에 결과에
   실린 작업자를 "작업자: 성명 (사번) · 업체 · 팀" 으로 적는다(없는 값은
-  뺀다, 성명이 없으면 줄째 뺀다). 추가 참고사항이 있으면 본문 첨부 목록 앞에
+  뺀다, 성명이 없으면 줄째 뺀다). 그 아래 거치 방향 "거치: 화면 아래"
+  (판정 전 예전 결과는 뺀다). raw.txt 첨부 설명은 "256Hz 원시값(EVIMP1,
+  축별 평균 제거 · 필터 없음)" 이다. 추가 참고사항이 있으면 본문 첨부 목록 앞에
   "[참고사항]" 머리줄과 함께 넣는다. 안드로이드 원본(`native_raw.txt`)은 기기의
   측정 폴더에만 남기고 보내지 않는다(2026-10-08). 안드로이드 원본은
   측정이 실패해도 그 측정 폴더로 옮기고, 저장하지 않는 중단(뒤로가기 · 앱

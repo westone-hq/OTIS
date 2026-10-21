@@ -1,11 +1,12 @@
 import 'dart:convert';
 
+import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-21 13:10:00 · nada
+/// 수정: 2026-10-22 09:30:00 · nada
 /// 클래스: MeasurementResult
 /// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
 ///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
@@ -190,8 +191,16 @@ class MeasurementResult {
   /// null 이다. 정했거나 예전 결과면 null
   final String? motionZonesFailure;
 
+  /// 측정할 때의 거치 방향(`Placement.name`, 예: "faceDown"). 수집 처음
+  /// 1초의 중력 Z 평균으로 판정한다(`PlacementMonitor`). null 이면 판정하기
+  /// 전(2026-10-22 전) 결과이거나 측정이 1초보다 짧았다
+  final String? placement;
+
+  /// 거치 방향 판정에 쓴 중력 Z 평균 (mg). null 의 뜻은 `placement` 와 같다
+  final double? placementGravityZMg;
+
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -229,6 +238,8 @@ class MeasurementResult {
   ///       zPtpPositionM — 수직 최대가 나온 위치 (m). 없으면 null
   ///       motionZones — 정속 · 가감속 구간. 없으면 null
   ///       motionZonesFailure — 그 구간을 정하지 못한 사유. 없으면 null
+  ///       placement — 거치 방향 이름. 없으면 null
+  ///       placementGravityZMg — 판정에 쓴 중력 Z 평균 (mg). 없으면 null
   const MeasurementResult({
     required this.id,
     required this.jobNo,
@@ -273,10 +284,12 @@ class MeasurementResult {
     this.zPtpPositionM,
     this.motionZones,
     this.motionZonesFailure,
+    this.placement,
+    this.placementGravityZMg,
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -327,6 +340,8 @@ class MeasurementResult {
     double? zPtpPositionM,
     MotionZones? motionZones,
     String? motionZonesFailure,
+    String? placement,
+    double? placementGravityZMg,
   }) {
     return MeasurementResult(
       id: id ?? this.id,
@@ -372,11 +387,13 @@ class MeasurementResult {
       zPtpPositionM: zPtpPositionM ?? this.zPtpPositionM,
       motionZones: motionZones ?? this.motionZones,
       motionZonesFailure: motionZonesFailure ?? this.motionZonesFailure,
+      placement: placement ?? this.placement,
+      placementGravityZMg: placementGravityZMg ?? this.placementGravityZMg,
     );
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -419,6 +436,8 @@ class MeasurementResult {
       'zPtpPositionM': zPtpPositionM,
       'motionZones': motionZones?.toMap(),
       'motionZonesFailure': motionZonesFailure,
+      'placement': placement,
+      'placementGravityZMg': placementGravityZMg,
       'xSeries': xSeries,
       'ySeries': ySeries,
       'zSeries': zSeries,
@@ -431,7 +450,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -446,7 +465,8 @@ class MeasurementResult {
   ///       사번 · 업체명 · 관리팀도 같다. 2026-10-18 이전 파일에는 없다.
   ///       운행 구간 · 그 실패 사유도 같다. 2026-10-15 이전 파일에는 없다.
   ///       수직 가감속 최대 · 최대 위치 · 정속 구간 · 그 실패 사유도 같다.
-  ///       2026-10-21 이전 파일에는 없다.
+  ///       2026-10-21 이전 파일에는 없다. 거치 방향 · 그 중력 Z 평균도 같다.
+  ///       2026-10-22 이전 파일에는 없다.
   ///       측정 일시는 채우지 않는다 — 없거나 읽을 수 없으면 "지금" 으로
   ///       대신하지 않고 실패를 올린다. 대신 넣으면 예전 결과가 방금 잰
   ///       것처럼 보이고 목록 차례도 틀어진다(관통 원칙 1 · 4).
@@ -502,6 +522,8 @@ class MeasurementResult {
           ? MotionZones.fromMap(map['motionZones'] as Map<String, dynamic>)
           : null,
       motionZonesFailure: map['motionZonesFailure'] as String?,
+      placement: map['placement'] as String?,
+      placementGravityZMg: (map['placementGravityZMg'] as num?)?.toDouble(),
       xSeries: toDoubleList(map['xSeries']),
       ySeries: toDoubleList(map['ySeries']),
       zSeries: toDoubleList(map['zSeries']),
@@ -591,4 +613,12 @@ class MeasurementResult {
   ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get noiseExceeded =>
       ReportThresholds.exceeds(noiseMax, ReportThresholds.noiseMaxRedDba);
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: placementKind
+  /// 목적: 저장된 거치 방향 이름을 `Placement` 로 바꾼다.
+  /// 반환: 거치 방향. 판정하지 않은 예전 결과면 null
+  Placement? get placementKind =>
+      // → 로직 이동: Placement.fromName()
+      Placement.fromName(placement);
 }

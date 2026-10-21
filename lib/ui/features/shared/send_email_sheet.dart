@@ -52,13 +52,14 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-18 10:12:30 · nada
+/// 수정: 2026-10-22 09:30:00 · nada
 /// 클래스: _SendEmailSheetState
 /// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신 이메일
 ///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
 ///       발송을 실행한다. 보낸 주소는 기억해 다음에 미리 골라 둔다.
 ///       보낼 수 있는 항목은 PDF 리포트, 로우 데이터(`raw.txt`, 256Hz
-///       격자에 맞춘 필터 · 기준선 보정 전 값), 현장 소음 녹음
+///       격자에 맞춘 필터 · 기준선 보정 전 값에서 축별 평균만 뺀 값),
+///       현장 소음 녹음
 ///       (`noise.m4a`, 2026-10-18 사용자 결정) 셋이다. 안드로이드 센서
 ///       원본 이벤트 기록(`native_raw.txt`)은 기기 측정 폴더에만 남기고
 ///       보내지 않는다 (2026-10-08 결정. 2026-10-07 에는 두 원본 파일을
@@ -184,7 +185,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -205,7 +206,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       홈에서 적은 추가 참고사항이 있으면 첨부 목록 앞에 "[참고사항]"
   ///       머리줄과 함께 적은 그대로 넣는다. 없으면 그 덩어리를 통째로
   ///       뺀다. 참고사항은 리포트에 칸이 없어 메일 본문으로만 전한다.
-  ///       첫 줄 아래에 그 측정을 저장한 작업자(`_workerLine()`)를 적는다.
+  ///       첫 줄 아래에 그 측정을 저장한 작업자(`_workerLine()`)를 적고,
+  ///       거치 방향을 판정한 결과면 "거치: 화면 아래" 처럼 한 줄 더 적는다
+  ///       (2026-10-22). 판정 전 예전 결과는 그 줄을 뺀다.
   ///       지금 로그인한 사람이 아니라 결과에 실린 사람이다 — 다른 사람이
   ///       예전 결과를 보내도 측정한 사람이 남는다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
@@ -260,7 +263,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
         final copy = await repo.mailAttachmentCopy(rawFile, name); // 사본
         attachments.add(copy.path);
         attachmentDescriptions.add(
-          '- $name: 256Hz 원시값(EVIMP1, 필터 · 기준선 보정 없음)',
+          '- $name: 256Hz 원시값(EVIMP1, 축별 평균 제거 · 필터 없음)',
         );
       } else {
         missing.add(
@@ -299,9 +302,11 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
     final notes = result.notes; // 추가 참고사항, 없으면 null
     final worker = _workerLine(result); // 작업자 줄, 이름이 없으면 null
+    final placement = result.placementKind; // 거치 방향, 예전 결과면 null
     final bodyLines = <String>[
       'OTIS 승강기 진동 측정 리포트입니다.',
       ?worker,
+      if (placement != null) '거치: ${placement.label}',
       if (notes != null) ...['', '[참고사항]', notes, ''],
       ...attachmentDescriptions,
       '',

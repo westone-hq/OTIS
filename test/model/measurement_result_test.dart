@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
@@ -184,6 +185,27 @@ void main() {
     expect(old.zPtpPositionM, isNull);
     expect(old.motionZones, isNull);
     expect(old.motionZonesFailure, isNull);
+  });
+
+  test('거치 방향과 그 중력 Z 가 JSON 왕복에서 남고 예전 파일은 null 이다', () {
+    final back = MeasurementResult.fromJson(
+      jsonEncode(
+        _result()
+            .copyWith(placement: 'faceUp', placementGravityZMg: 998.5)
+            .toMap(),
+      ),
+    ); // 왕복한 결과
+    expect(back.placement, 'faceUp');
+    expect(back.placementKind, Placement.faceUp);
+    expect(back.placementGravityZMg, 998.5);
+
+    final legacy = _result().toMap()
+      ..remove('placement')
+      ..remove('placementGravityZMg'); // 2026-10-22 이전 형태
+    final old = MeasurementResult.fromJson(jsonEncode(legacy)); // 예전 결과
+    expect(old.placement, isNull);
+    expect(old.placementKind, isNull);
+    expect(old.placementGravityZMg, isNull);
   });
 
   test('측정 일시가 없거나 깨졌으면 지금 시각으로 채우지 않고 실패한다', () {

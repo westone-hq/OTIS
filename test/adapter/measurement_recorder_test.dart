@@ -10,6 +10,7 @@ import 'package:vibration_checker/domain/session/login_session.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/model/worker.dart';
@@ -196,6 +197,46 @@ void main() {
         isNotNull,
         reason: '목록과 메일이 읽는 측정 결과도 저장돼야 한다',
       );
+    });
+
+    test('거치 방향과 그 중력 Z 평균을 결과 · 집계 파일에 남긴다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+        placement: const PlacementReading(Placement.faceUp, 997.25),
+      ); // 저장 결과
+      expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
+      final saved = await MeasurementRepository.instance.load(outcome.id!);
+      expect(saved!.placement, 'faceUp');
+      expect(saved.placementGravityZMg, 997.25);
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('placement: faceUp'));
+      expect(meta, contains('placementGravityZmg: 997.25'));
+    });
+
+    test('판정 전에 끝난 측정은 거치를 비우고 집계에 unknown 으로 적는다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+      final saved = await MeasurementRepository.instance.load(outcome.id!);
+      expect(saved!.placement, isNull);
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('placement: unknown'));
     });
 
     test('안드로이드 원본이 없으면 그 사실을 집계 파일에 남긴다', () async {

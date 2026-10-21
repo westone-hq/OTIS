@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
+import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
@@ -86,7 +88,17 @@ final List<_Metric> _metrics = <_Metric>[
     decimals: 1,
   ),
   _Metric(label: '운행 거리', unit: 'm', read: (r) => r.distance, decimals: 1),
-  _Metric(label: '최대 속도', unit: 'm/s', read: (r) => r.maxSpeed, decimals: 2),
+  _Metric(
+    label: '최대 속도',
+    unit: 'm/s',
+    // 리포트 1쪽과 같은 0.05 단위 반올림으로 보인다(저장 값은 그대로)
+    read: (r) => switch (r.maxSpeed) {
+      // → 로직 이동: ReportMetric.roundSpeed()
+      final speed? => ReportMetric.roundSpeed(speed),
+      null => null,
+    },
+    decimals: 2,
+  ),
 ];
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
@@ -499,7 +511,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-11 19:28:11 · nada
+  /// 수정: 2026-10-22 09:30:00 · nada
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스
@@ -533,6 +545,15 @@ class _ResultScreenState extends State<ResultScreen> {
               children: [
                 _buildHeader(result), // → 로직 이동: _buildHeader()
                 const SizedBox(height: AppDims.gap2),
+                // → 로직 이동: placementWarning()
+                if (placementWarning(result) case final warning?) ...[
+                  AppNotice(
+                    icon: Icons.warning_amber_rounded,
+                    message: warning,
+                    tone: NoticeTone.caution,
+                  ),
+                  const SizedBox(height: AppDims.gap2),
+                ],
                 if (compare != null) ...[
                   // → 로직 이동: _buildCompareBanner()
                   _buildCompareBanner(compare),
@@ -585,6 +606,24 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
     );
   }
+}
+
+/// 작성: 2026-10-22 09:30:00 · nada
+/// 함수: placementWarning
+/// 목적: 결과 화면에 띄울 거치 경고 문구를 고른다. 화면 아래가 아니게
+///       놓고 잰 결과에만 띄운다. 재측정은 아래 "테스트 재실행" 버튼을 쓴다.
+/// 인자: result — 측정 결과
+/// 반환: 경고 문구. 화면 아래로 잰 결과이거나 판정하지 않은 예전 결과면 null
+/// 근거: 인용 — 2026-10-22 사용자 지시 문구
+String? placementWarning(MeasurementResult result) {
+  final kind = switch (result.placementKind) {
+    Placement.faceUp => '화면 위',
+    Placement.tilted => '기울어진',
+    Placement.faceDown || null => null,
+  }; // 경고에 넣을 거치 이름, 경고하지 않으면 null
+  if (kind == null) return null;
+  return '$kind 거치로 측정됨 — 소음 · 수평 값이 달라질 수 있습니다. '
+      '재측정을 권합니다';
 }
 
 /// 작성: 2026-10-04 18:15:24 · nada

@@ -11,7 +11,7 @@ import 'package:vibration_checker/domain/session/measurement_session.dart';
 /// 목적: 2026-10-21 서일대 동시 측정 원시데이터(EVIMP1 256Hz) 6건의 이름과
 ///       경로. 파일 이름이 헷갈리기 쉬워("(1)" 붙은 것이 하강) 시험은 이
 ///       이름으로만 부른다. 짝은 첫 데이터 행과 소음 · 진동 곡선 상관(0.98 ~
-///       0.99)으로 맞췄다(작업메모_20261021.md).
+///       0.99)으로 맞췄다(2026-10-21 점검).
 ///       - dev_* — 개발폰 앱 raw 내보내기, otis_* — 오티스폰 EVIMP1 내보내기
 ///       - up1 · up2 는 상승, down3 은 하강
 const Map<String, String> otis1021Records = <String, String>{
@@ -35,7 +35,7 @@ const String rideReferencePath = 'test/fixtures/ride_reference.txt';
 ///       `GridResampler.motionOf()`)으로 다시 환산했다면 Z 부호만 반대다.
 ///       같은 폰 상승 기록은 정지 Z 가 +0.1 mg 인데 이 기록만 −13.6 mg 이고
 ///       같은 운행의 오티스폰과 가속 부호가 반대라 그렇게 본다
-///       (작업메모_20261021.md 묶음 4).
+///       (CLAUDE.md "거치" 항목).
 const Set<String> faceUpRecords = <String>{'dev_down3'};
 
 /// 작성: 2026-10-21 10:05:00 · nada

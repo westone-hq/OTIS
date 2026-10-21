@@ -272,6 +272,27 @@ class SensorChannelManager {
     _parsedStream = null; // 다음 측정을 위해 이전 스트림 캐시를 비운다
   }
 
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: playPlacementAlert
+  /// 목적: 거치가 "화면 아래" 가 아닐 때 측정 중에 경고음 한 번과 진동을
+  ///       울려 달라고 안드로이드에 요청한다. 휴대폰이 엎어져 있어 화면
+  ///       안내를 볼 수 없어서다. 측정은 멈추지 않는다.
+  /// 반환: 없음. 요청이 실패하면 원인을 기록만 하고 오류를 올리지 않는다 —
+  ///       경고를 못 울려도 측정과 결과 화면 경고는 그대로다
+  Future<void> playPlacementAlert() async {
+    try {
+      // → 로직 이동: MainActivity.playPlacementAlert
+      await _methodChannel.invokeMethod('playPlacementAlert');
+    } catch (error, stack) {
+      developer.log(
+        'playPlacementAlert 실패',
+        name: 'SensorChannel',
+        error: error,
+        stackTrace: stack,
+      );
+    }
+  }
+
   /// 작성: 2026-10-01 13:04:31 · 박희정
   /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: setVolumeKeyCaptureEnabled

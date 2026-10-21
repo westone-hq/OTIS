@@ -10,9 +10,10 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/live_speed_estimator.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
 
 /// 작성: 2026-10-04 13:29:41 · nada
-/// 수정: 2026-10-18 10:12:30 · nada
+/// 수정: 2026-10-22 09:30:00 · nada
 /// 클래스: CaptureSession
 /// 목적: 측정 한 번의 센서 수집을 켜고 끄는 절차를 맡는다. 측정 화면
 ///       (measuring_screen.dart)이 화면 모양과 상관없이 같은 순서로
@@ -22,6 +23,8 @@ import 'package:vibration_checker/domain/capture/noise_offset.dart';
 ///       - `stop()` — 건 것을 거꾸로 푼다. 여러 번 불러도 안전하다
 ///       - `discard()` — 저장하지 않는 중단이면 멈춘 뒤 안드로이드 원본
 ///         기록 파일과 현장 소음 녹음까지 지운다
+///       수집 처음 1초의 중력으로 거치 방향을 판정해(`placement`) 화면
+///       아래가 아니면 경고음 · 진동을 울린다(2026-10-22).
 ///       수집한 이벤트는 `resampler` 에 쌓이고, 저장은
 ///       `MeasurementRecorder`(measurement_recorder.dart)가 한다.
 class CaptureSession {
@@ -102,6 +105,15 @@ class CaptureSession {
   /// 마지막으로 `liveSpeedMps` 를 바꾼 이벤트 시각 (마이크로초). 아직
   /// 바꾸지 않았으면 null
   int? _lastSpeedPublishUs;
+
+  /// 수집 처음 1초의 중력 Z 로 거치 방향을 판정하는 감시기
+  final PlacementMonitor _placementMonitor = PlacementMonitor();
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: placement
+  /// 목적: 거치 방향 판정 결과. 저장 절차(`MeasurementRecorder.record()`)가
+  ///       결과 파일에 싣는다. 수집 처음 1초가 지나기 전이면 null.
+  PlacementReading? get placement => _placementMonitor.reading;
 
   /// 센서 이벤트 구독. `start()` 가 센서가 있을 때만 만들고 `stop()` 이
   /// 끊는다. 구독 중이 아니면 null
@@ -196,6 +208,7 @@ class CaptureSession {
         _receivedSample = true;
         resampler.onEvent(event); // → 로직 이동: GridResampler.onEvent()
         _publishSpeed(event); // → 로직 이동: _publishSpeed()
+        _watchPlacement(event); // → 로직 이동: _watchPlacement()
       });
       _volumeKeyEnabled = true;
       // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
@@ -226,6 +239,22 @@ class CaptureSession {
     }
     _lastSpeedPublishUs = event.tsUs;
     liveSpeedMps.value = _speedEstimator.speedMps;
+  }
+
+  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 함수: _watchPlacement
+  /// 목적: 이벤트 한 건을 거치 감시기에 넣고, 판정한 순간 "화면 아래" 가
+  ///       아니면 경고음 · 진동을 한 번 울린다. 측정은 계속한다 — 막으면
+  ///       엎어 둔 휴대폰에서 안내를 볼 수 없고 다 잰 운행을 버리게 된다.
+  ///       경고는 수집 시작 약 1초 뒤에 울려, 운행 전 정지 구간(지표 구간
+  ///       밖)에 들어간다.
+  /// 인자: event — 안드로이드에서 도착한 원본 이벤트
+  void _watchPlacement(NativeEvent event) {
+    // → 로직 이동: PlacementMonitor.onEvent()
+    final judged = _placementMonitor.onEvent(event); // 이번에 판정했으면 결과
+    if (judged == null || judged.placement == Placement.faceDown) return;
+    // → 로직 이동: SensorChannelManager.playPlacementAlert()
+    unawaited(_sensorManager.playPlacementAlert());
   }
 
   /// 작성: 2026-10-04 13:29:41 · nada
