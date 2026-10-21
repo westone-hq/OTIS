@@ -36,6 +36,11 @@ class ChartAxisSpec {
   /// 않는 축은 null
   final String? peakKey;
 
+  /// 가로축(시간) 양쪽에 측정 길이의 `ReportChartRenderer.timePaddingRatio`
+  /// 씩 여백을 둘지. 리포트 3쪽 네 차트가 쓴다(2026-10-21). false 면 0 초에서
+  /// 시작한다
+  final bool padTime;
+
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 수정: 2026-10-10 11:48:41 · nada
   /// 함수: ChartAxisSpec
@@ -45,12 +50,14 @@ class ChartAxisSpec {
   ///       scale — 세로축 범위 규칙
   ///       meanKey — 평균 기준선 값을 가져올 지표 행 이름. 기본 null
   ///       peakKey — 최댓값 표시점 값을 가져올 지표 행 이름. 기본 null
+  ///       padTime — 가로축 양쪽에 여백을 둘지. 기본 false
   const ChartAxisSpec({
     required this.key,
     required this.label,
     required this.scale,
     this.meanKey,
     this.peakKey,
+    this.padTime = false,
   });
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -159,10 +166,12 @@ class ReportChartAxes {
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-21 15:20:00 · nada
+  /// 수정: 2026-10-21 16:30:00 · nada
   /// 변수: position
-  /// 목적: 위치(하부층 정지레벨 기준) 차트의 세로축. 0 을 한쪽 끝으로
-  ///       둔다. 운행 거리가 현장마다 크게 달라 대부분 넓어진다.
+  /// 목적: 위치(하부층 정지레벨 기준) 차트의 세로축. 데이터 양 끝에서 폭의
+  ///       10% 씩 바깥을 틀 끝으로 두고(`ChartScaleKind.padded`), 가로축도
+  ///       양쪽에 여백을 둔다. 0 이 틀 꼭짓점에 붙지 않는다(OTIS 3쪽과
+  ///       같다). 최소 범위는 정지 측정(위치가 한 값)에만 쓴다.
   /// 근거: 인용 — 최소 범위는 파이썬 프로토타입 `charts.py` 의 `AXES` 위치
   ///       축 첫 단계와 같다
   static const ChartAxisSpec position = ChartAxisSpec(
@@ -170,15 +179,17 @@ class ReportChartAxes {
     label: 'pos (m)',
     scale: ChartScale(
       minimum: ChartAxisRange(min: 0.0, max: 10.0, tickStep: 2.0),
-      kind: ChartScaleKind.zeroAnchored,
+      kind: ChartScaleKind.padded,
     ),
+    padTime: true,
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
-  /// 수정: 2026-10-21 15:20:00 · nada
+  /// 수정: 2026-10-21 16:30:00 · nada
   /// 변수: speed
-  /// 목적: 속도 차트의 세로축. 0 을 한쪽 끝으로 둔다. 하강이면 속도가
-  ///       음수라 0 아래로 넓어진다(`seriesOf()` 참고).
+  /// 목적: 속도 차트의 세로축. 위치와 같은 여백 규칙이다
+  ///       (`ChartScaleKind.padded`). 하강이면 속도가 음수라 틀이 0 아래에
+  ///       놓인다(`seriesOf()` 참고).
   /// 근거: 인용 — 최소 범위는 프로토타입 `charts.py` 의 `AXES` 속도 축 첫
   ///       단계와 같다
   static const ChartAxisSpec speed = ChartAxisSpec(
@@ -186,8 +197,9 @@ class ReportChartAxes {
     label: 'vel (m/s)',
     scale: ChartScale(
       minimum: ChartAxisRange(min: 0.0, max: 1.0, tickStep: 0.2),
-      kind: ChartScaleKind.zeroAnchored,
+      kind: ChartScaleKind.padded,
     ),
+    padTime: true,
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -203,6 +215,7 @@ class ReportChartAxes {
       minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.3),
       kind: ChartScaleKind.symmetric,
     ),
+    padTime: true,
   );
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -220,6 +233,7 @@ class ReportChartAxes {
       minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.2),
       kind: ChartScaleKind.symmetric,
     ),
+    padTime: true,
   );
 
   /// 작성: 2026-09-26 14:10:00 · nada
@@ -573,13 +587,18 @@ class _ChartFrame {
   /// 가로축이 담는 시간 폭 (초)
   final double timeSpanSec;
 
+  /// 가로축 왼쪽 끝 시각 (초). 여백이 없으면 0, 있으면 음수
+  final double timeStartSec;
+
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-21 16:30:00 · nada
   /// 함수: _ChartFrame
   /// 목적: 축 틀의 네 끝과 두 축의 범위를 그대로 담는 생성자.
   /// 인자: left, right — 축 틀 좌우 끝 (포인트)
   ///       top, bottom — 축 틀 위아래 끝 (포인트)
   ///       range — 세로축 범위
   ///       timeSpanSec — 가로축이 담는 시간 폭 (초)
+  ///       timeStartSec — 가로축 왼쪽 끝 시각 (초). 기본 0
   const _ChartFrame({
     required this.left,
     required this.right,
@@ -587,6 +606,7 @@ class _ChartFrame {
     required this.bottom,
     required this.range,
     required this.timeSpanSec,
+    this.timeStartSec = 0.0,
   });
 
   /// 작성: 2026-09-17 10:05:00 · nada
@@ -600,13 +620,14 @@ class _ChartFrame {
   double get centerY => (top + bottom) / 2;
 
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-21 16:30:00 · nada
   /// 함수: xOfTime
   /// 목적: 시각을 축 틀 안의 가로 자리로 옮긴다.
   /// 인자: seconds — 측정 시작부터의 시각 (초)
   /// 반환: PDF 가로 자리 (포인트)
-  /// 식: x = left + (right - left) x (seconds / timeSpanSec)
+  /// 식: x = left + (right - left) x ((seconds - timeStartSec) / timeSpanSec)
   double xOfTime(double seconds) =>
-      left + (right - left) * (seconds / timeSpanSec);
+      left + (right - left) * ((seconds - timeStartSec) / timeSpanSec);
 
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 함수: yOfValue
@@ -747,6 +768,14 @@ class ReportChartRenderer {
   /// 근거: 인용 — 프로토타입 `charts.py` 가 쓰는 값과 같다
   static const double timeHeadroom = 1.02;
 
+  /// 작성: 2026-10-21 16:30:00 · nada
+  /// 변수: timePaddingRatio
+  /// 목적: 여백을 두는 가로축(`ChartAxisSpec.padTime`)의 양쪽 여백을 측정
+  ///       길이에 대한 비로 둔 것.
+  /// 근거: 측정 — 2026-10-21 OTIS 리포트 3쪽 가로축. 31.4초 → −1.26 ~ 32.6초,
+  ///       44.5초 → −1.79 ~ 46.3초 (양쪽 4%)
+  static const double timePaddingRatio = 0.04;
+
   /// 작성: 2026-09-17 10:05:00 · nada
   /// 변수: timeTickTarget
   /// 목적: 가로축 눈금이 나눌 칸 수의 목표.
@@ -807,20 +836,28 @@ class ReportChartRenderer {
     final values = ReportChartAxes.seriesOf(spec, result); // 이 차트가 그릴 값
     // → 로직 이동: ChartAxisSpec.rangeFor()
     final range = spec.rangeFor(values); // 값에 맞춰 고른 세로축 범위
+    // → 로직 이동: _timeWindow()
+    final time = _timeWindow(
+      // → 로직 이동: ReportChartAxes.longestSeriesLength()
+      ReportChartAxes.longestSeriesLength(result),
+      result.sampleRate,
+      padded: spec.padTime,
+    ); // 가로축 왼쪽 끝 · 폭 (초)
     final frame = _ChartFrame(
       left: ReportLayout.xToPoints(box.x),
       right: ReportLayout.xToPoints(box.x + box.width),
       top: ReportLayout.yToPoints(box.y),
       bottom: ReportLayout.yToPoints(box.y + box.height),
       range: range,
-      timeSpanSec: _timeSpan(
-        // → 로직 이동: ReportChartAxes.longestSeriesLength()
-        ReportChartAxes.longestSeriesLength(result),
-        result.sampleRate,
-      ),
+      timeSpanSec: time.span,
+      timeStartSec: time.start,
     ); // 이 차트의 축 틀과 값 옮기기
     final valueTicks = range.ticks(); // 세로축 눈금 값
-    final timeTicks = _timeTicks(frame.timeSpanSec); // 가로축 눈금 시각 (초)
+    // → 로직 이동: _timeTicks()
+    final timeTicks = _timeTicks(
+      frame.timeStartSec,
+      frame.timeSpanSec,
+    ); // 가로축 눈금 시각 (초)
 
     _drawGrid(canvas, frame, valueTicks, timeTicks);
     _drawFrame(canvas, frame);
@@ -1308,18 +1345,53 @@ class ReportChartRenderer {
     return math.max(minTimeSpanSec, lastSecond * timeHeadroom);
   }
 
+  /// 작성: 2026-10-21 16:30:00 · nada
+  /// 함수: _timeWindow
+  /// 목적: 가로축 왼쪽 끝과 폭을 정한다.
+  ///       - 여백 없음: 0 초부터 `_timeSpan()` 폭(오른쪽에만 2% 여유)
+  ///       - 여백 있음: 측정 길이 T 의 `timePaddingRatio` 씩 양쪽 — 왼쪽 끝
+  ///         −4% T, 오른쪽 끝 104% T. 리포트 3쪽 네 차트가 같은 값을 받아
+  ///         위아래 시간이 맞는다
+  /// 인자: sampleCount — 측정 전체에서 가장 긴 시계열의 표본 개수
+  ///       sampleRate — 표본 주기 (Hz)
+  ///       padded — 양쪽 여백을 둘지
+  /// 반환: (왼쪽 끝, 폭) 초
+  /// 식: T = max(minTimeSpanSec, (sampleCount - 1) / sampleRate)
+  ///     start = -T x ratio,  span = T x (1 + 2 x ratio)
+  ({double start, double span}) _timeWindow(
+    int sampleCount,
+    double sampleRate, {
+    required bool padded,
+  }) {
+    if (!padded) {
+      // → 로직 이동: _timeSpan()
+      return (start: 0.0, span: _timeSpan(sampleCount, sampleRate));
+    }
+    final length = math.max(
+      minTimeSpanSec,
+      sampleCount < 2 ? 0.0 : (sampleCount - 1) / sampleRate,
+    ); // 측정 길이 (초)
+    return (
+      start: -length * timePaddingRatio,
+      span: length * (1 + 2 * timePaddingRatio),
+    );
+  }
+
   /// 작성: 2026-09-17 10:05:00 · nada
+  /// 수정: 2026-10-21 16:30:00 · nada
   /// 함수: _timeTicks
   /// 목적: 가로축 눈금 시각을 0 부터 만든다. 측정 길이가 현장마다 달라
   ///       간격을 고정할 수 없으므로, 목표 칸 수로 나눈 값을 1 · 2 · 5 와
   ///       10의 거듭제곱을 곱한 수 중 그보다 크거나 같은 가장 작은 것으로
   ///       올린다. 이렇게 하면 어떤 길이에서도 눈금이 읽기 좋은 수로
-  ///       떨어진다.
-  /// 인자: span — 가로축이 담는 시간 폭 (초)
-  /// 반환: 0 부터 `span` 을 넘지 않는 마지막 눈금까지의 시각 목록 (초)
+  ///       떨어진다. 왼쪽 여백(음수 시각)에는 눈금을 찍지 않는다 — 0 초가
+  ///       첫 눈금이다(OTIS 3쪽과 같다).
+  /// 인자: start — 가로축 왼쪽 끝 시각 (초). 0 이거나 음수
+  ///       span — 가로축이 담는 시간 폭 (초)
+  /// 반환: 0 부터 오른쪽 끝을 넘지 않는 마지막 눈금까지의 시각 목록 (초)
   /// 식: rough = span / timeTickTarget
   ///     step  = 10^floor(log10(rough)) x {1, 2, 5, 10} 중 rough 이상인 최솟값
-  List<double> _timeTicks(double span) {
+  List<double> _timeTicks(double start, double span) {
     final rough = span / timeTickTarget; // 목표대로 나눴을 때의 거친 간격
     final magnitude = math
         .pow(10, (math.log(rough) / math.ln10).floor())
@@ -1335,7 +1407,7 @@ class ReportChartRenderer {
     }
 
     final step = magnitude * multiplier; // 눈금 사이 간격 (초)
-    final count = span ~/ step; // 축 안에 들어가는 눈금 칸 수
+    final count = (start + span) ~/ step; // 0 초부터 오른쪽 끝까지 눈금 칸 수
     return List<double>.generate(count + 1, (i) => i * step);
   }
 

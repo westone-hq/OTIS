@@ -130,6 +130,14 @@ void main() {
       expect(range.max, 10.0);
     });
 
+    test('위치가 한 값뿐인 정지 측정은 최소 범위에 여백을 둔다', () {
+      final range = ReportChartAxes.position.rangeFor(const <double>[0, 0]);
+
+      expect(range.min, closeTo(-1.0, 1e-9));
+      expect(range.max, closeTo(11.0, 1e-9));
+      expect(range.ticks().first, 0.0);
+    });
+
     test('여유를 더해도 최소 범위 안인 값은 원본 리포트 범위 그대로 보인다', () {
       final x = ReportChartAxes.x.rangeFor(const <double>[0.1]);
       final noise = ReportChartAxes.noise.rangeFor(const <double>[42.0, 52.0]);
@@ -145,21 +153,56 @@ void main() {
       expect(range.max, greaterThanOrEqualTo(999.0));
     });
 
-    test('최소 범위 끝에 닿는 값은 여유를 두고 넓어진다', () {
-      // 2026-10-10 검증에서 정속 1.005 m/s 가 0 ~ 1 축 틀에 눌렸다
-      final range = ReportChartAxes.speed.rangeFor(const <double>[0.0, 1.005]);
+    test('3쪽 위치 · 속도 축은 OTIS 처럼 데이터 폭의 10% 씩 바깥이다', () {
+      // OTIS 리포트 3쪽에서 잰 값(2026-10-21 점검 지시). 오차는 축 폭의 3%
+      void expectRange(
+        ChartAxisSpec spec,
+        List<double> data,
+        (double, double) otis,
+        List<double> ticks,
+      ) {
+        final range = spec.rangeFor(data); // 고른 세로축
+        final tolerance = range.span * 0.03; // 허용 오차
+        expect(range.min, closeTo(otis.$1, tolerance), reason: '$data');
+        expect(range.max, closeTo(otis.$2, tolerance), reason: '$data');
+        final drawn = range.ticks(); // 찍는 눈금
+        expect(drawn.length, ticks.length, reason: '$drawn');
+        for (var i = 0; i < ticks.length; i++) {
+          expect(drawn[i], closeTo(ticks[i], 1e-9), reason: '$drawn');
+        }
+        // 0 눈금이 틀 아래끝 안쪽에 있다(꼭짓점에 붙지 않는다)
+        expect(range.min, lessThan(0));
+      }
 
-      expect(range.max, greaterThan(1.005 * (1 + ChartScale.headroomRatio)));
+      expectRange(
+        ReportChartAxes.position,
+        const <double>[0, 24.9],
+        (-2.4, 27.2),
+        const <double>[0, 5, 10, 15, 20, 25],
+      );
+      expectRange(
+        ReportChartAxes.speed,
+        const <double>[0, 1.50],
+        (-0.18, 1.64),
+        const <double>[0, 0.5, 1.0, 1.5],
+      );
+      expectRange(
+        ReportChartAxes.speed,
+        const <double>[0, 1.75],
+        (-0.18, 1.89),
+        const <double>[0, 0.5, 1.0, 1.5],
+      );
     });
 
-    test('실측 최대 속도는 0 ~ 2 m/s 에 담긴다', () {
-      final range = ReportChartAxes.speed.rangeFor(const <double>[
-        0.0,
-        1.743390961,
-      ]);
+    test('하강(위치 감소 · 속도 음수)도 같은 여백 규칙이다', () {
+      final pos = ReportChartAxes.position.rangeFor(const <double>[24.9, 0]);
+      final vel = ReportChartAxes.speed.rangeFor(const <double>[0, -1.50]);
 
-      expect(range.min, 0.0);
-      expect(range.max, closeTo(2.0, 1e-9));
+      expect(pos.min, closeTo(-2.49, 1e-9));
+      expect(pos.max, closeTo(27.39, 1e-9));
+      expect(vel.min, closeTo(-1.65, 1e-9));
+      expect(vel.max, closeTo(0.15, 1e-9));
+      expect(vel.ticks(), const <double>[-1.5, -1.0, -0.5, 0.0]);
     });
 
     test('속도 차트는 부호 그대로 그리고 하강은 0 아래로 넓어진다', () {
@@ -201,10 +244,30 @@ void main() {
         ReportChartAxes.position,
         ReportChartAxes.speed,
       ]) {
-        expect(spec.scale.kind, ChartScaleKind.zeroAnchored, reason: spec.key);
+        expect(spec.scale.kind, ChartScaleKind.padded, reason: spec.key);
       }
       expect(ReportChartAxes.noise.scale.kind, ChartScaleKind.free);
       expect(ReportChartAxes.noise.scale.ignoreZeros, isTrue);
+    });
+
+    test('가로축 여백은 3쪽 네 차트만 둔다', () {
+      for (final spec in <ChartAxisSpec>[
+        ReportChartAxes.position,
+        ReportChartAxes.speed,
+        ReportChartAxes.accel,
+        ReportChartAxes.jerk,
+      ]) {
+        expect(spec.padTime, isTrue, reason: spec.key);
+      }
+      for (final spec in <ChartAxisSpec>[
+        ReportChartAxes.x,
+        ReportChartAxes.y,
+        ReportChartAxes.z,
+        ReportChartAxes.noise,
+      ]) {
+        expect(spec.padTime, isFalse, reason: spec.key);
+      }
+      expect(ReportChartRenderer.timePaddingRatio, 0.04);
     });
   });
 

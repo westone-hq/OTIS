@@ -244,6 +244,27 @@ void main() {
       }
     });
 
+    test('3쪽 네 차트는 시간축 양쪽 4% 여백을 같이 두고 0 초 눈금이 틀 안이다', () async {
+      final bytes = await renderReportChartPages(result: _result()); // 만든 PDF
+      final page3 = pdfChartStreams(bytes)[1]; // 3쪽 내용 스트림
+      final lines = verticalGridLines(page3); // 차트별 세로 격자선 자리
+      final frames = axisFrames(
+        page3,
+        pageWidthPt: ReportLayout.pageWidthPt,
+      ); // 축 틀 자리
+
+      expect(lines.length, 4, reason: '차트 넷');
+      for (var i = 1; i < lines.length; i++) {
+        expect(lines[i], lines.first, reason: '${i + 1}번째 차트');
+      }
+      final frame = frames.first; // 첫 축 틀 [왼쪽, 아래, 가로, 세로]
+      // 0 초는 틀 왼쪽에서 폭의 0.04 / 1.08 자리다
+      expect(
+        double.parse(lines.first.first),
+        closeTo(frame[0] + frame[2] * 0.04 / 1.08, 0.01),
+      );
+    });
+
     test('소음 시계열이 비어도 2쪽은 그려진다', () async {
       // 2쪽 넷째 자리가 소음이고 지금 값이 없다. 빈 축 하나 때문에 쪽
       // 전체가 실패하면 안 된다
