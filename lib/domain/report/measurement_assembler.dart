@@ -224,6 +224,17 @@ class MeasurementAssembler {
         '격자 간격이 0 이하라 샘플레이트를 구할 수 없다: ${grid.gridIntervalNs}ns',
       );
     }
+    final gridRate = 1000000000 / grid.gridIntervalNs; // 격자 표본 속도 (Hz)
+    // 차트용 가속도 저역(10Hz)은 표본 속도의 절반보다 낮아야 설계된다.
+    // 실제 격자(100Hz)는 늘 맞고, 어긋난 시험 격자를 예외로 죽이지 않고
+    // 사유와 함께 돌려보낸다
+    if (gridRate <= 2 * CaptureConfig.accelChartLowpassHz) {
+      return MeasurementAssembleResult.failure(
+        '표본 속도가 차트 가속도 저역 '
+        '${CaptureConfig.accelChartLowpassHz}Hz 의 두 배 이하다: '
+        '${gridRate.toStringAsFixed(1)}Hz',
+      );
+    }
 
     final bottomFloor = int.tryParse(site.bottomFloor.trim()); // 숫자가 아니면 null
     final topFloor = int.tryParse(site.topFloor.trim()); // 숫자가 아니면 null
@@ -333,7 +344,7 @@ class MeasurementAssembler {
         noiseMax: resolvedNoiseMax,
         positionSeries: motion.position,
         speedSeries: motion.speed,
-        accelSeries: motion.accel,
+        accelSeries: motion.accelChart,
         jerkSeries: motion.jerk,
         xPtp: maxOf(xWeighted),
         yPtp: maxOf(yWeighted),
@@ -416,6 +427,16 @@ class MeasurementAssembler {
       'jerk(lp${CaptureConfig.jerkLowpassHz}'
       'bw${CaptureConfig.jerkLowpassOrder}zp)';
 
+  /// 작성: 2026-10-21 11:20:00 · nada
+  /// 함수: accelChartMethodLabel
+  /// 목적: 차트용 가속도(`accelSeries`)를 만든 방식을 결과 파일
+  ///       (`signalConditioning`)에 남길 문자열. 이 표시가 없는 2026-10-21 전
+  ///       결과의 `accelSeries` 는 거르지 않은 가속도다.
+  ///       - `acc(lp차단bw차수zp)` — 버터워스 저역을 양방향으로 걸었다
+  static String get accelChartMethodLabel =>
+      'acc(lp${CaptureConfig.accelChartLowpassHz}'
+      'bw${CaptureConfig.accelChartLowpassOrder}zp)';
+
   /// 작성: 2026-09-15 14:32:07 · nada
   /// 수정: 2026-10-21 10:05:00 · nada
   /// 함수: _deriveKinematics
@@ -434,6 +455,9 @@ class MeasurementAssembler {
   ///       6. 가속도에 `CaptureConfig.jerkLowpassHz` 저역을 양방향으로 걸고
   ///          (`accelSmooth`), 그 변화율로 저크를 만든다. 같은 저역
   ///          가속도를 정속 구간 판정에도 쓴다
+  ///       7. 차트에 그릴 가속도(`accelChart`)는 `CaptureConfig.accelChartLowpassHz`
+  ///          저역을 양방향으로 건 값이다. 표시용이라 1 ~ 5 단계(속도 ·
+  ///          거리)에는 쓰지 않는다
   ///       움직인 구간이 없으면(정지 측정) 속도 · 이동량은 모두 0 이고,
   ///       치우침은 전체 평균으로 뺀다. 0 은 재지 않은 값이 아니라 "움직이지
   ///       않았다" 는 측정값이다.
@@ -531,6 +555,16 @@ class MeasurementAssembler {
       ),
       accel,
     ); // 저크 저역을 건 가속도 (m/s²)
+    // → 로직 이동: Butterworth.filtfilt()
+    final accelChart = Butterworth.filtfilt(
+      // → 로직 이동: Butterworth.lowpass()
+      Butterworth.lowpass(
+        order: CaptureConfig.accelChartLowpassOrder,
+        cutoffHz: CaptureConfig.accelChartLowpassHz,
+        sampleRateHz: sampleRate,
+      ),
+      accel,
+    ); // 차트에 그릴 가속도 (m/s²)
     final jerk = List<double>.filled(n, 0.0); // 저크 시계열 (m/s³)
     jerk[0] = (accelSmooth[1] - accelSmooth[0]) / dt;
     jerk[n - 1] = (accelSmooth[n - 1] - accelSmooth[n - 2]) / dt;
@@ -541,6 +575,7 @@ class MeasurementAssembler {
     return _Kinematics(
       accel: accel,
       accelSmooth: accelSmooth,
+      accelChart: accelChart,
       speed: speed,
       position: position,
       jerk: jerk,
@@ -615,6 +650,10 @@ class _Kinematics {
   /// 가속도 (m/s²). 저크와 정속 구간 판정이 함께 쓴다
   final List<double> accelSmooth;
 
+  /// `accel` 에 차트 저역(`CaptureConfig.accelChartLowpassHz`)을 양방향으로
+  /// 건 가속도 (m/s²). 리포트 3쪽 가속도 차트에만 쓴다
+  final List<double> accelChart;
+
   /// 속도 시계열 (m/s). 움직인 구간 안만 적분한 값이고 밖은 0
   final List<double> speed;
 
@@ -638,6 +677,7 @@ class _Kinematics {
   /// 목적: 파생 물리량과 두 지표를 그대로 담는 생성자.
   /// 인자: accel — 가속도 시계열 (m/s²)
   ///       accelSmooth — 저크 저역을 건 가속도 (m/s²)
+  ///       accelChart — 차트 저역을 건 가속도 (m/s²)
   ///       speed — 속도 시계열 (m/s)
   ///       position — 누적 이동량 시계열 (m)
   ///       jerk — 저크 시계열 (m/s³)
@@ -647,6 +687,7 @@ class _Kinematics {
   const _Kinematics({
     required this.accel,
     required this.accelSmooth,
+    required this.accelChart,
     required this.speed,
     required this.position,
     required this.jerk,

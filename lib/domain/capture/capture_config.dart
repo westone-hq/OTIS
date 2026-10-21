@@ -276,6 +276,24 @@ class CaptureConfig {
   /// 근거: 측정 — `jerkLowpassHz` 와 같은 비교에서 4차가 가장 맞았다
   static const int jerkLowpassOrder = 4;
 
+  /// 작성: 2026-10-21 11:20:00 · nada
+  /// 변수: accelChartLowpassHz
+  /// 목적: 리포트 3쪽 가속도 차트에 그릴 가속도에 거는 저역 필터의 차단
+  ///       주파수 (Hz). 양방향(영위상)으로 건다. 차트 표시용이다 — 최대
+  ///       속도 · 운행 거리 · 진동 지표의 입력은 거르지 않은 가속도 그대로다.
+  /// 근거: 측정 — 2026-10-21 OTIS 리포트 3쪽 가속도 차트를 픽셀로 읽어
+  ///       견주니 10Hz 저역이 RMSE 0.01 m/s² 로 맞았다(ISO 18738 가속도
+  ///       평가 대역도 10Hz 저역이다). 정속 구간 고주파 잡음이 차트에서
+  ///       빠진다
+  static const double accelChartLowpassHz = 10.0;
+
+  /// 작성: 2026-10-21 11:20:00 · nada
+  /// 변수: accelChartLowpassOrder
+  /// 목적: `accelChartLowpassHz` 저역 필터의 차수. 버터워스이고 양방향으로
+  ///       건다.
+  /// 근거: 인용 — 2026-10-21 점검 지시 "4차 버터워스 저역 10 Hz 양방향"
+  static const int accelChartLowpassOrder = 4;
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 함수: idealIntervalNs
   /// 목적: 격자 한 칸의 간격을 나노초로 반환한다. `GridResampler`가

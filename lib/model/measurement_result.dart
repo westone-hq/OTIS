@@ -134,10 +134,15 @@ class MeasurementResult {
   /// 속도 시계열 (m/s)
   final List<double> speedSeries;
 
-  /// 수직 가속도 시계열 (m/s²). 전체 평균을 뺀 값
+  /// 수직 가속도 시계열 (m/s²). 리포트 3쪽 차트에 그리는 값이다 — 움직인
+  /// 구간 평균(치우침)을 빼고 10Hz 저역을 양방향으로 건 값이다
+  /// (`CaptureConfig.accelChartLowpassHz`). 처리 방식에 `+acc(` 가 없는
+  /// 2026-10-21 전 결과는 거르지 않은 가속도다
   final List<double> accelSeries;
 
-  /// 저크(가속도가 얼마나 빠르게 변하는지) 시계열 (m/s³)
+  /// 저크(가속도가 얼마나 빠르게 변하는지) 시계열 (m/s³). 처리 방식에
+  /// `+jerk(` 가 있으면 1.6Hz 저역 가속도를 미분한 값이고, 없는 2026-10-21 전
+  /// 결과는 거르지 않은 가속도를 미분해 수십 배 크다
   final List<double> jerkSeries;
 
   /// 실측 샘플레이트 (Hz)

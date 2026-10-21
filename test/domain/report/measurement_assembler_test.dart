@@ -603,23 +603,31 @@ void main() {
       }
     });
 
-    test('가속도는 mg 를 m/s² 로 바꾸고 전체 평균을 뺀 값이다', () {
-      // 0 · 2 mg 를 번갈아 16행 둔다. 평균은 1 mg(= 0.00980665 m/s²)이고
-      // 움직인 구간이 없어 전체 평균을 뺀다. 평균을 뺀 가속도는
-      // -0.00980665 · +0.00980665 가 번갈아 나온다
+    test('차트 가속도는 m/s² 로 바꿔 평균을 빼고 10Hz 저역을 양방향으로 건 값이다', () {
+      // 0 · 2 mg 를 번갈아 두고 1 Hz 로 천천히 오르내리는 성분을 더한다.
+      // 움직인 구간이 없어 전체 평균을 뺀다. 번갈아 바뀌는 128Hz 성분은
+      // 10Hz 저역에 걸러지고 느린 성분만 남는다
+      final zs = <double>[
+        for (var i = 0; i < 64; i++)
+          (i.isEven ? 0.0 : 2.0) + math.sin(2 * math.pi * i / 256),
+      ]; // 수직 진동 (mg)
       final model = MeasurementAssembler.assemble(
         grid: _grid(<GridSample>[
-          for (var i = 0; i < 16; i++)
-            GridSample(xMg: 0.0, yMg: 0.0, zMg: i.isEven ? 0.0 : 2.0),
+          for (final z in zs) GridSample(xMg: 0.0, yMg: 0.0, zMg: z),
         ]),
         site: _site,
         id: 'id',
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.accelSeries[0], closeTo(-0.00980665, 1e-12));
-      expect(model.accelSeries[1], closeTo(0.00980665, 1e-12));
-      expect(model.accelSeries[15], closeTo(0.00980665, 1e-12));
+      final mean = zs.reduce((a, b) => a + b) / zs.length; // 평균 (mg)
+      final expected = Butterworth.filtfilt(
+        Butterworth.lowpass(order: 4, cutoffHz: 10, sampleRateHz: 256),
+        <double>[for (final z in zs) (z - mean) * 9.80665e-3],
+      ); // 기대하는 차트 가속도 (m/s²)
+      for (var i = 0; i < zs.length; i++) {
+        expect(model.accelSeries[i], closeTo(expected[i], 1e-12), reason: '$i');
+      }
     });
 
     group('움직인 구간만 적분한다', () {

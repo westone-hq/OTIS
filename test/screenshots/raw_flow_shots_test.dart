@@ -229,6 +229,7 @@ Future<MeasurementResult> _recordFromRaw(
         '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
         '+${MeasurementAssembler.kinematicsMethodLabel}'
         '+${MeasurementAssembler.jerkMethodLabel}'
+        '+${MeasurementAssembler.accelChartMethodLabel}'
         '+$kNoiseMethodLabel',
   ); // 저장 절차와 같이 처리 방식을 실은 측정 결과
   final repo = MeasurementRepository.instance; // 저장소

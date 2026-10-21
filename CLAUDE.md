@@ -180,6 +180,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
       ─▶ MeasurementAssembler.assemble()   지표 · 리포트 · result.json
             4. 운동 · 최대 속도 · 운행 거리   가중 전 Z 의 움직인 구간만 적분 (`_deriveKinematics`)
                저크                           가속도 → 1.6Hz 4차 버터워스 양방향 → 중앙 차분
+               가속도 차트(표시용)             가속도 → 10Hz 4차 버터워스 양방향
             5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
             6. 운행 구간 (TravelWindow)      출발 · 정지 0.5 m 제외, 운행 1 m 이하면 실패
             7. 반주기 P2P (HalfCycle)        구간 안 최대 P2P · A95, 구간 안 소음 최대 · 평균
@@ -205,13 +206,15 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   앞 · 끝에서 잘렸으면 `motionWindowClippedAtStart/End: true`) 줄을 덧붙인다.
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
   (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+motion(v>0.05,pad500ms)
-  +jerk(lp1.6bw4zp)+noise(A,fast,+105.2)`, `SignalConditioner.methodLabel` +
-  `RideWeighting.methodLabel` + `MeasurementAssembler.kinematicsMethodLabel` +
-  `MeasurementAssembler.jerkMethodLabel` + `kNoiseMethodLabel`) 과
+  +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+noise(A,fast,+105.2)`,
+  `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
+  `MeasurementAssembler.kinematicsMethodLabel` + `jerkMethodLabel` +
+  `accelChartMethodLabel` + `kNoiseMethodLabel`) 과
   `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`. `+motion` 이 없는
   2026-10-20 전 결과는 기록 전체를 적분한 예전 거리 · 최대 속도다. `+jerk`
   가 없는 2026-10-21 전 결과의 저크는 40Hz 가속도를 그대로 미분해 ±10 ~ 20
-  m/s³ 로 크다(그대로 읽고 그린다). `+iso18738` 이
+  m/s³ 로 크다(그대로 읽고 그린다). `+acc` 가 없는 결과의 `accelSeries` 는
+  거르지 않은 가속도다(지금은 10Hz 저역을 건 차트 표시용). `+iso18738` 이
   없는 2026-10-15 전 결과는 가중 없이 전체 구간에서 낸 지표이고(그대로 읽고
   차트 점도 그때 정의로 찍는다), `signalConditioning` 이 null 인 더 예전
   결과는 원시 256Hz 기준이다. 시계열 `x/y/zSeries` 는 지표를 낸 그 값(가중
@@ -219,7 +222,8 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - **가중 · 구간 상수**: `CaptureConfig.rideVerticalHighpassHz`(1.0) ·
   `rideVerticalHighpassOrder`(2) · `travelEdgeExclusionM`(0.5) ·
   `minimumTravelM`(1.0) · `motionSpeedThresholdMps`(0.05) ·
-  `motionPaddingMs`(500) · `jerkLowpassHz`(1.6) · `jerkLowpassOrder`(4). 저크
+  `motionPaddingMs`(500) · `jerkLowpassHz`(1.6) · `jerkLowpassOrder`(4) ·
+  `accelChartLowpassHz`(10) · `accelChartLowpassOrder`(4, 차트 표시용). 저크
   저역은 OTIS 리포트 저크 차트 4개와 RMSE 0.02 ~ 0.03 m/s³ 로 맞춘 값이다
   (2026-10-21). 저크 필터의 양 끝 덧댐(15행) 때문에 조립은 16행 미만 격자를
   사유와 함께 돌려보낸다. ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,

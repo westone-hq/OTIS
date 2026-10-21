@@ -50,7 +50,8 @@ void _expectSections(List<SosSection> actual, List<dynamic> expected) {
 
 /// 작성: 2026-10-21 10:05:00 · nada
 /// 함수: main
-/// 목적: 저크 처리(1.6Hz 4차 버터워스 양방향 → 중앙 차분)를 시험한다.
+/// 목적: 저크 처리(1.6Hz 4차 버터워스 양방향 → 중앙 차분)와 차트 가속도
+///       (10Hz 4차 양방향)를 시험한다.
 ///       - 필터 계수 · 출력이 SciPy 정본과 같은지
 ///       - 2026-10-21 동시 측정 · ride_reference 의 저크 봉우리가 OTIS
 ///         리포트 차트와 같은 값(±0.08)인지
@@ -74,6 +75,21 @@ void main() {
     final expected = _doubles(cases['smooth_jerk']); // SciPy 출력
     for (var i = 0; i < smooth.length; i++) {
       expect(smooth[i], closeTo(expected[i], 1e-9), reason: '$i');
+    }
+  });
+
+  test('차트 가속도 10Hz 4차 저역 계수 · 양방향 출력이 SciPy 와 같다', () {
+    final cases = _cases(); // SciPy 픽스처
+    final sections = Butterworth.lowpass(
+      order: CaptureConfig.accelChartLowpassOrder,
+      cutoffHz: CaptureConfig.accelChartLowpassHz,
+      sampleRateHz: (cases['fs'] as num).toDouble(),
+    ); // Dart 가 설계한 구간
+    _expectSections(sections, cases['sos_acc_chart'] as List<dynamic>);
+    final out = Butterworth.filtfilt(sections, _doubles(cases['input']));
+    final expected = _doubles(cases['acc_chart']); // SciPy 출력
+    for (var i = 0; i < out.length; i++) {
+      expect(out[i], closeTo(expected[i], 1e-9), reason: '$i');
     }
   });
 
@@ -102,12 +118,21 @@ void main() {
     });
   });
 
-  test('저크 차트에 축 밖 표본이 없다', () {
+  test('저크 · 가속도 차트에 축 밖 표본이 없다', () {
     for (final path in <String>[...otis1021Records.values, rideReferencePath]) {
       final result = assembleRecord(path).result!;
-      final values = ReportChartAxes.seriesOf(ReportChartAxes.jerk, result);
-      final range = ReportChartAxes.jerk.rangeFor(values); // 고른 세로축
-      expect(values.where((v) => !range.contains(v, v)), isEmpty, reason: path);
+      for (final spec in <ChartAxisSpec>[
+        ReportChartAxes.jerk,
+        ReportChartAxes.accel,
+      ]) {
+        final values = ReportChartAxes.seriesOf(spec, result); // 그릴 값
+        final range = spec.rangeFor(values); // 고른 세로축
+        expect(
+          values.where((v) => !range.contains(v, v)),
+          isEmpty,
+          reason: '$path ${spec.key}',
+        );
+      }
     }
   });
 }
