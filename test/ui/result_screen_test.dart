@@ -150,6 +150,34 @@ void main() {
     expect(find.text('테스트 재실행'), findsOneWidget);
   });
 
+  testWidgets('머리 카드 층은 출발 → 도착이라 하강이면 최상층부터다', (tester) async {
+    await tester.runAsync(() async {
+      await MeasurementRepository.instance.save(
+        _result(
+          '20260114-110359',
+          DateTime(2026, 1, 14, 11, 3, 59),
+          8.0,
+        ).copyWith(direction: '하강'),
+      );
+      await MeasurementRepository.instance.save(
+        _result('20260113-090000', DateTime(2026, 1, 13, 9), 8.0),
+      );
+    });
+
+    await tester.pumpWidget(
+      const MaterialApp(home: ResultScreen(id: '20260114-110359')),
+    );
+    await _settle(tester);
+    expect(find.text('하강 · 8층 → 1층 · Gen2'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(
+      const MaterialApp(home: ResultScreen(id: '20260113-090000')),
+    );
+    await _settle(tester);
+    expect(find.text('상승 · 1층 → 8층 · Gen2'), findsOneWidget);
+  });
+
   testWidgets('다른 저장 결과를 골라 비교 값과 차이를 보여준다', (tester) async {
     await tester.runAsync(() async {
       await MeasurementRepository.instance.save(

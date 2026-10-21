@@ -376,7 +376,7 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-21 15:20:00 · nada
+  /// 수정: 2026-10-21 23:20:00 · nada
   /// 함수: headerValues
   /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
   ///       자리 표시 문구(`ReportPage1.placeholder`, "미입력")를 찍는다.
@@ -423,6 +423,12 @@ class ReportPage1Renderer {
       if (result.postalCode case final code? when code.isNotEmpty) code,
     ]; // 주소 칸에 이어 쓸 조각
     const placeholder = ReportPage1.placeholder; // 값이 없을 때 찍는 문구
+    // → 로직 이동: SiteInfo.startStopFloors()
+    final floors = SiteInfo.startStopFloors(
+      result.direction,
+      result.bottomFloor,
+      result.topFloor,
+    ); // (출발층, 도착층)
 
     return <String, String>{
       'measurement_id': result.jobNo,
@@ -437,12 +443,7 @@ class ReportPage1Renderer {
       'standard': 'Standard',
       'test_type': result.analysisType ?? SiteInfo.defaultAnalysisType,
       'direction': result.direction,
-      // → 로직 이동: SiteInfo.isDownward()
-      'floors': SiteInfo.isDownward(result.direction)
-          ? 'Start Floor : ${result.topFloor}, '
-                'Stop Floor : ${result.bottomFloor}'
-          : 'Start Floor : ${result.bottomFloor}, '
-                'Stop Floor : ${result.topFloor}',
+      'floors': 'Start Floor : ${floors.$1}, Stop Floor : ${floors.$2}',
       'building_name': result.siteName,
       'address': addressParts.isEmpty ? placeholder : addressParts.join(', '),
     };

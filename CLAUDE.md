@@ -95,7 +95,8 @@ flutter test --tags screenshot --run-skipped test/screenshots
   엔지니어 = 저장 시점 이름(2 · 3쪽 엔지니어 칸도 같다), 층 정보
   "Start Floor : 1, Stop Floor : 8"(하강이면 "Start Floor : 8, Stop Floor :
   1" — 홈은 최하층 · 최상층을 받고 출발 · 도착은 운전 방향이 정한다,
-  `SiteInfo.isDownward()`, 2026-10-21). 값이 없는 칸은
+  `SiteInfo.startStopFloors()` — 결과 화면 머리 카드 "하강 · 8층 → 1층" 도
+  같은 함수, 2026-10-21). 값이 없는 칸은
   "미입력"(`ReportPage1.placeholder`).
   넘칠 수 있는 칸은 오른쪽 여백을 넘으면 글자를 줄여 한 줄을 지킨다.
 - 리포트 1쪽 Performance Metrics(2026-10-15): 진동 값 단위는 "milli-G"
@@ -166,7 +167,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
   있다(2026-10-15 로우 데이터 2건: 어림 최대 1.48 · 1.58, 저장 1.53 · 1.51).
   측정 중 휴대폰은 화면을 아래로 두므로 보이는 것은 화면을 볼 수 있을 때다
 - 메일은 PDF 리포트, 로우 데이터(`raw.txt`, 256Hz 격자 · 필터 · 기준선
-  보정 전), 현장 소음(`noise.m4a`, 첨부 이름 `NOISE_제번_측정ID.m4a`)을
+  보정 전, 축별 전체 평균만 뺌 — 2026-10-21), 현장 소음(`noise.m4a`, 첨부 이름 `NOISE_제번_측정ID.m4a`)을
   고른 만큼 붙인다. 셋 다 기본 체크이고, `raw.txt` · `noise.m4a` 가 없는
   측정은 본문에 "누락:" 줄로 밝힌다. 소음 진단 산출물 항목("데시벨 산출물" ·
   "마이크 원본")은 기능과 함께 뺐다(2026-10-15). 본문 첫 줄 아래에 결과에
@@ -193,7 +194,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
 
 ```
 GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤 0.5초 버림
-  ├─▶ raw.txt (EVIMP1, 256Hz)    필터 · 기준선 보정 없음. 원시 보존용
+  ├─▶ raw.txt (EVIMP1, 256Hz)    필터 · 기준선 보정 없음, 축별 전체 평균만 뺌(OTIS 관례). 원본은 native_raw.txt
   └─▶ SignalConditioner.condition()
         1. 기준선 0 맞춤          첫 1초 평균을 X · Y · Z 마다 뺀다
         2. 40Hz 저역              4차 버터워스, 양방향(영위상)
@@ -379,7 +380,15 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     ptp 차이(+6 ~ +13%)는 어느 차단에서도 줄지 않아 잡음이 아니다. 한
     현장 3회 비교로 정한 값이라 다른 현장 동시 측정으로 다시 확인한다
     (`docs/pending_checks.md`)
-  - `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다. 운행 구간(A95 · 수평 ·
+  - 2026-10-21 2차: `raw.txt`(EVIMP1 내보내기)는 축별로 내보내는 행 전체의
+    평균을 빼고 쓴다(`VibrationFileWriter.encode()`, 뺀 값은 meta.txt
+    `rawExportMeanX/Y/Zmg`). 오티스폰 EVIMP1 내보내기(otis_* · ride_reference)
+    축별 평균이 X · Y 0.0000, Z −0.002 ~ −0.012 mg 라 OTIS 관례로 본다. 정지
+    → 운행 → 정지 기록은 가속도 전체 평균이 물리적으로 0 이라 영점 오차만
+    빠진다(개발폰 하강 기록 −13.6 mg). 지표는 격자(평균 빼기 전)에서 따로
+    내므로 바뀌지 않는다. 손대지 않은 원본은 `native_raw.txt` 다. 예전
+    "raw.txt = 보정 전 원시 보존" 을 바꾼다
+  - `raw.txt` 와 `native_raw.txt` 는 처리 전 값이다(`raw.txt` 는 축별 평균만 뺌). 운행 구간(A95 · 수평 ·
     소음)은 거리로만 정하고, 정속 구간은 수직 최대 · Jptp 에만 쓴다
     (2026-10-21, 예전 "정속 구간 감지는 넣지 않는다" 를 바꿈). A95 백분위는
     최근접 순위다(표준의 보간 방식 미확인)

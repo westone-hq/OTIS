@@ -333,10 +333,12 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-21 23:20:00 · nada
   /// 함수: _buildHeader
   /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 제번 · 현장명,
   ///       측정 일시, 운전 방향 · 층 · 기종, 주소(있을 때만)를 보여준다.
+  ///       층은 출발층 → 도착층이다(하강이면 최상층 → 최하층, 리포트 1쪽
+  ///       층 정보와 같은 `SiteInfo.startStopFloors()`).
   /// 인자: result — 보여줄 측정 결과
   /// 반환: 머리 카드 위젯
   Widget _buildHeader(MeasurementResult result) {
@@ -344,6 +346,12 @@ class _ResultScreenState extends State<ResultScreen> {
       'yyyy-MM-dd HH:mm',
     ).format(KoreaTime.of(result.dateTime)); // 측정 일시 문구 (한국 시간)
     final model = result.model; // 기종, 없으면 null
+    // → 로직 이동: SiteInfo.startStopFloors()
+    final (start, stop) = SiteInfo.startStopFloors(
+      result.direction,
+      result.bottomFloor,
+      result.topFloor,
+    ); // 출발층 · 도착층. 하강이면 최상층에서 출발한다
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,8 +360,8 @@ class _ResultScreenState extends State<ResultScreen> {
           const SizedBox(height: AppDims.gapHalf),
           Text(when, style: AppText.caption),
           Text(
-            '${result.direction} · ${result.bottomFloor}층 → '
-            '${result.topFloor}층${model == null ? '' : ' · $model'}',
+            '${result.direction} · $start층 → '
+            '$stop층${model == null ? '' : ' · $model'}',
             style: AppText.caption,
           ),
           if (result.address.isNotEmpty)

@@ -234,7 +234,23 @@ void main() {
       expect(
         await File(outcome.savedPaths.last).readAsString(),
         'accel 1 0 0 1000 3906\n',
+        reason: '안드로이드 원본은 손대지 않는다',
       );
+      // raw.txt 는 OTIS EVIMP1 관례대로 축별 전체 평균을 뺀 값이다
+      final raw = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.rawFileName),
+        ),
+      ).readAsLines(); // 값 파일 줄
+      final rows = <List<double>>[
+        for (final line in raw.skip(2).where((l) => l.isNotEmpty))
+          line.split(' ').map(double.parse).toList(),
+      ]; // 값 행
+      for (var axis = 0; axis < 3; axis++) {
+        final mean =
+            rows.map((r) => r[axis]).reduce((a, b) => a + b) / rows.length;
+        expect(mean.abs(), lessThan(0.01), reason: '축 $axis');
+      }
     });
 
     test('원본을 옮긴 뒤 안드로이드 쪽 원본은 지운다', () async {
