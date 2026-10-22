@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/adapter/storage/vibration_file_writer.dart';
+import 'package:vibration_checker/adapter/storage/evimp_writer.dart';
+import 'package:vibration_checker/adapter/storage/meta_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 
 /// 작성: 2026-10-21 23:20:00 · nada
@@ -43,9 +44,9 @@ GridResampleResult _grid() {
 void main() {
   test('raw.txt 의 진동 세 축은 평균이 0 이고 소음은 그대로다', () {
     final grid = _grid(); // 치우친 격자
-    final lines = VibrationFileWriter.encode(
+    final lines = EvimpWriter.encode(
       grid,
-    ).split(VibrationFileWriter.lineEnding).where((l) => l.isNotEmpty).toList();
+    ).split(EvimpWriter.lineEnding).where((l) => l.isNotEmpty).toList();
     expect(lines.sublist(0, 2), <String>['EVIMP1', '256']);
 
     final rows = <List<double>>[
@@ -58,7 +59,7 @@ void main() {
       expect(mean.abs(), lessThan(0.01), reason: '축 $axis');
     }
     // 평균만 빠지고 모양은 그대로다
-    final mean = VibrationFileWriter.axisMeans(grid); // 뺀 평균
+    final mean = EvimpWriter.axisMeans(grid); // 뺀 평균
     expect(rows[10][2], closeTo(grid.samples[10].zMg - mean.z, 0.0005));
     for (var i = 0; i < rows.length; i++) {
       expect(rows[i][3], grid.samples[i].noiseDba, reason: '소음 $i');
@@ -66,8 +67,8 @@ void main() {
   });
 
   test('뺀 평균을 집계 파일에 적는다', () {
-    final meta = VibrationFileWriter.encodeMeta(_grid()); // 집계 문자열
-    final mean = VibrationFileWriter.axisMeans(_grid()); // 뺀 평균
+    final meta = MetaWriter.encodeMeta(_grid()); // 집계 문자열
+    final mean = EvimpWriter.axisMeans(_grid()); // 뺀 평균
     expect(mean.z, closeTo(-13.6, 0.1));
     expect(meta, contains('rawExportMeanZmg: ${mean.z.toStringAsFixed(3)}'));
     expect(meta, contains('rawExportMeanXmg: '));

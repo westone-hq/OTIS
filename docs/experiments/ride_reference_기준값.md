@@ -21,7 +21,7 @@ EVIMP1          형식 태그
 ```
 
 4열이고 **소음 열이 있다.** 앱이 저장하는 `raw.txt` 도 같은 `EVIMP1` 4열 형식이다
-(`lib/adapter/storage/vibration_file_writer.dart`).
+(`lib/adapter/storage/evimp_writer.dart`).
 
 - 데이터 행 11,388개, 44.48초
 - 줄바꿈이 CRLF 다. 파서가 `\r` 를 남기지 않는지 확인할 것

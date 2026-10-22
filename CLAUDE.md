@@ -511,7 +511,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   - OTIS PDF 대비 수직 ±15% 는 계산 방식 조정으로 줄지 않음(2026-10-22 실험)
     — 내부 신호 차이 추정(`docs/experiments/otis_parity_experiment.md`, pending 21)
   - 2026-10-21 2차: `raw.txt`(EVIMP1 내보내기)는 축별로 내보내는 행 전체의
-    평균을 빼고 쓴다(`VibrationFileWriter.encode()`, 뺀 값은 meta.txt
+    평균을 빼고 쓴다(`EvimpWriter.encode()`, 뺀 값은 meta.txt
     `rawExportMeanX/Y/Zmg`). 오티스폰 EVIMP1 내보내기(otis_* · ride_reference)
     축별 평균이 X · Y 0.0000, Z −0.002 ~ −0.012 mg 라 OTIS 관례로 본다. 정지
     → 운행 → 정지 기록은 가속도 전체 평균이 물리적으로 0 이라 영점 오차만

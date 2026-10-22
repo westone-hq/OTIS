@@ -1,8 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:vibration_checker/adapter/storage/evimp_writer.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
-import 'package:vibration_checker/adapter/storage/vibration_file_writer.dart';
+import 'package:vibration_checker/adapter/storage/meta_writer.dart';
 import 'package:vibration_checker/domain/analysis/device_response.dart';
 import 'package:vibration_checker/domain/analysis/kinematics.dart';
 import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
@@ -202,10 +203,7 @@ class MeasurementRecorder {
       conditioned = conditioner.condition(grid);
     } on ArgumentError catch (e) {
       // → 로직 이동: _appendMeta()
-      await _appendMeta(
-        metaPath,
-        VibrationFileWriter.encodeConditioningFailure('$e'),
-      );
+      await _appendMeta(metaPath, MetaWriter.encodeConditioningFailure('$e'));
       return (
         grid: null,
         cause: ConditioningFailure.invalidConfig,
@@ -216,10 +214,7 @@ class MeasurementRecorder {
     // → 로직 이동: _appendMeta()
     await _appendMeta(
       metaPath,
-      VibrationFileWriter.encodeConditioningMeta(
-        conditioned,
-        conditioner.config,
-      ),
+      MetaWriter.encodeConditioningMeta(conditioned, conditioner.config),
     );
     return conditioned.isSuccess
         ? (
@@ -244,8 +239,8 @@ class MeasurementRecorder {
   ///       text — 덧붙일 문자열
   static Future<void> _appendMeta(String metaPath, String text) async {
     try {
-      // → 로직 이동: VibrationFileWriter.appendMeta()
-      await VibrationFileWriter.appendMeta(metaPath, text);
+      // → 로직 이동: MetaWriter.appendMeta()
+      await MetaWriter.appendMeta(metaPath, text);
     } catch (e, st) {
       debugPrint('집계 파일 덧붙이기 실패: $e\n$st');
     }
@@ -259,7 +254,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-22 23:50:00 · nada
+  /// 수정: 2026-10-23 00:50:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -274,7 +269,7 @@ class MeasurementRecorder {
   ///          한다. 옮기지 못해도 멈추지 않는다
   ///       4. 환산이 실패했으면 멈춘다. 성공이면 측정값 파일을 쓴다.
   ///          측정값 파일은 처리 전 격자에서 축별 전체 평균만 뺀 값이다
-  ///          (OTIS EVIMP1 관례, `VibrationFileWriter.encode()`)
+  ///          (OTIS EVIMP1 관례, `EvimpWriter.encode()`)
   ///       5. 지표 계산 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)를
   ///          하고 결과를 집계 파일에 덧붙인다(`_condition()`). 실패하면
   ///          멈추되 측정값 파일은 지우지 않는다
@@ -343,8 +338,8 @@ class MeasurementRecorder {
       final metaPath =
           '${jobDir.path}/${MeasurementRepository.metaFileName}'; // 집계 파일
       try {
-        // → 로직 이동: VibrationFileWriter.writeMeta()
-        await VibrationFileWriter.writeMeta(metaPath, grid);
+        // → 로직 이동: MetaWriter.writeMeta()
+        await MetaWriter.writeMeta(metaPath, grid);
       } catch (e, st) {
         debugPrint('집계 파일 기록 실패: $e\n$st');
       }
@@ -374,8 +369,8 @@ class MeasurementRecorder {
       }
       final valuePath =
           '${jobDir.path}/${MeasurementRepository.rawFileName}'; // 측정값 파일
-      // → 로직 이동: VibrationFileWriter.write()
-      await VibrationFileWriter.write(valuePath, grid);
+      // → 로직 이동: EvimpWriter.write()
+      await EvimpWriter.write(valuePath, grid);
 
       final conditioner = SignalConditioner(
         config: resampler.config,
@@ -419,26 +414,26 @@ class MeasurementRecorder {
       // → 로직 이동: _appendMeta()
       await _appendMeta(
         metaPath,
-        // → 로직 이동: VibrationFileWriter.encodeTravelMeta()
-        VibrationFileWriter.encodeTravelMeta(assembled.result!),
+        // → 로직 이동: MetaWriter.encodeTravelMeta()
+        MetaWriter.encodeTravelMeta(assembled.result!),
       );
       // → 로직 이동: _appendMeta()
       await _appendMeta(
         metaPath,
-        // → 로직 이동: VibrationFileWriter.encodeMotionMeta()
-        VibrationFileWriter.encodeMotionMeta(assembled.motion),
+        // → 로직 이동: MetaWriter.encodeMotionMeta()
+        MetaWriter.encodeMotionMeta(assembled.motion),
       );
       // → 로직 이동: _appendMeta()
       await _appendMeta(
         metaPath,
-        // → 로직 이동: VibrationFileWriter.encodePlacementMeta()
-        VibrationFileWriter.encodePlacementMeta(placement),
+        // → 로직 이동: MetaWriter.encodePlacementMeta()
+        MetaWriter.encodePlacementMeta(placement),
       );
       // → 로직 이동: _appendMeta()
       await _appendMeta(
         metaPath,
-        // → 로직 이동: VibrationFileWriter.encodeNoiseMeta()
-        VibrationFileWriter.encodeNoiseMeta(noiseSampleRateHz),
+        // → 로직 이동: MetaWriter.encodeNoiseMeta()
+        MetaWriter.encodeNoiseMeta(noiseSampleRateHz),
       );
       // → 로직 이동: MeasurementRepository.save()
       await repo.save(
