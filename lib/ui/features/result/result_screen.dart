@@ -20,9 +20,12 @@ import 'package:vibration_checker/ui/features/result/compare_sheet.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
 /// 작성: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-23 00:10:00 · nada
 /// 클래스: _Metric
 /// 목적: 결과 화면에 한 줄로 보여줄 지표 하나의 정의. 이름 · 단위 · 값을
-///       꺼내는 방법 · 적색 기준 · 소수 자리를 묶는다.
+///       꺼내는 방법 · 적색 판정 · 적색 기준 글자 · 소수 자리를 묶는다.
+///       적색 판정은 결과 모델 게터(`MeasurementResult.xExceeded` 등)를
+///       그대로 써서 저장 결과 목록과 판정이 갈라지지 않는다.
 class _Metric {
   /// 화면에 보여줄 지표 이름
   final String label;
@@ -33,21 +36,28 @@ class _Metric {
   /// 측정 결과에서 이 지표 값을 꺼내는 함수. 값이 없으면 null 을 돌려준다
   final double? Function(MeasurementResult) read;
 
-  /// 적색 기준. 이 값을 넘으면 붉게 표시한다. 기준이 없으면 null
+  /// 측정 결과가 적색 기준을 넘었는지 알려 주는 함수(결과 모델 게터).
+  /// 값이 없으면 null 을 돌려준다. 판정하지 않는 지표는 이 함수가 null
+  final bool? Function(MeasurementResult)? exceeded;
+
+  /// 화면에 적는 적색 기준 (`ReportThresholds`). 기준이 없으면 null
   final double? redLimit;
 
   /// 값을 보여줄 소수 자리 수
   final int decimals;
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-23 00:10:00 · nada
   /// 함수: _Metric
   /// 목적: 지표 정의를 받는다.
-  /// 인자: label, unit, read, redLimit, decimals — 위 필드 설명을 따른다
+  /// 인자: label, unit, read, exceeded, redLimit, decimals — 위 필드
+  ///       설명을 따른다
   const _Metric({
     required this.label,
     required this.unit,
     required this.read,
     required this.decimals,
+    this.exceeded,
     this.redLimit,
   });
 }
@@ -62,6 +72,7 @@ final List<_Metric> _metrics = <_Metric>[
     label: 'X축 진동 Peak to Peak',
     unit: 'mg',
     read: (r) => r.xPtp,
+    exceeded: (r) => r.xExceeded,
     redLimit: ReportThresholds.xPtpRedMg,
     decimals: 1,
   ),
@@ -69,6 +80,7 @@ final List<_Metric> _metrics = <_Metric>[
     label: 'Y축 진동 Peak to Peak',
     unit: 'mg',
     read: (r) => r.yPtp,
+    exceeded: (r) => r.yExceeded,
     redLimit: ReportThresholds.yPtpRedMg,
     decimals: 1,
   ),
@@ -76,6 +88,7 @@ final List<_Metric> _metrics = <_Metric>[
     label: 'Z축 진동 Peak to Peak',
     unit: 'mg',
     read: (r) => r.zPtp,
+    exceeded: (r) => r.zExceeded,
     redLimit: ReportThresholds.zPtpRedMg,
     decimals: 1,
   ),
@@ -83,6 +96,7 @@ final List<_Metric> _metrics = <_Metric>[
     label: '소음 최대',
     unit: 'dBA',
     read: (r) => r.noiseMax,
+    exceeded: (r) => r.noiseExceeded,
     redLimit: ReportThresholds.noiseMaxRedDba,
     decimals: 1,
   ),
@@ -328,16 +342,18 @@ class _ResultScreenState extends State<ResultScreen> {
       : limit.toString();
 
   /// 작성: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-23 00:10:00 · nada
   /// 함수: _isRed
-  /// 목적: 지표 값이 적색 기준을 넘었는지 본다.
+  /// 목적: 측정 결과의 이 지표가 적색 기준을 넘었는지 본다. 판정은 결과
+  ///       모델 게터(`_Metric.exceeded`)가 한다.
   /// 인자: metric — 지표 정의
-  ///       value — 지표 값. 없으면 null
-  /// 반환: 넘었으면 true. 기준이 없거나 값이 없거나 안 넘었으면 false
-  bool _isRed(_Metric metric, double? value) {
-    final limit = metric.redLimit; // 적색 기준, 없으면 null
-    if (limit == null) return false;
-    // → 로직 이동: ReportThresholds.exceeds()
-    return ReportThresholds.exceeds(value, limit) ?? false;
+  ///       result — 측정 결과. 없으면(비교 안 함) null
+  /// 반환: 넘었으면 true. 판정하지 않는 지표거나 값이 없거나 안 넘었으면
+  ///       false
+  bool _isRed(_Metric metric, MeasurementResult? result) {
+    if (result == null) return false;
+    // → 로직 이동: _Metric.exceeded
+    return metric.exceeded?.call(result) ?? false;
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
@@ -410,7 +426,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-23 00:10:00 · nada
   /// 함수: _buildMetricRow
   /// 목적: 지표 한 줄을 만든다. 왼쪽에 이름 · 단위와 적색 기준, 오른쪽에
   ///       값을 둔다. 기준을 넘은 값은 붉은 글자와 경고 아이콘으로 표시해
@@ -421,7 +437,7 @@ class _ResultScreenState extends State<ResultScreen> {
   /// 반환: 지표 한 줄 위젯
   Widget _buildMetricRow(_Metric metric, MeasurementResult result) {
     final value = metric.read(result); // 이번 값
-    final red = _isRed(metric, value); // 이번 값이 기준을 넘었는지
+    final red = _isRed(metric, result); // 이번 값이 기준을 넘었는지
     final compare = _compare; // 비교 대상, 없으면 null
     final other = compare == null ? null : metric.read(compare); // 비교 값
     final limit = metric.redLimit; // 적색 기준, 없으면 null
@@ -473,7 +489,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 Text(
                   '비교 ${_format(other, metric.decimals)}',
                   style: AppText.caption.copyWith(
-                    color: _isRed(metric, other)
+                    color: _isRed(metric, compare)
                         ? AppColors.red
                         : AppColors.textSub,
                   ),
