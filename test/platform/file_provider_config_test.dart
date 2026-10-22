@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 
 /// 작성: 2026-10-11 17:10:57 · nada
 /// 변수: _manifestPath

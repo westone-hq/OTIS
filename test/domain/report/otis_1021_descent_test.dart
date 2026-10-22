@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-import '../../support/otis_1021_records.dart';
+import '../../support/reference_records.dart';
 
 /// 작성: 2026-10-21 15:20:00 · nada
 /// 함수: _firstAccelSign

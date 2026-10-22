@@ -36,11 +36,11 @@ flutter test --tags screenshot --run-skipped test/screenshots
 | `docs/report_layout.json` | 리포트 좌표 정본. `report_layout_test` 가 Dart 상수와 대조한다 |
 | `docs/reference/sample_evimp.pdf` | 원본 TUNE 리포트. 코드 주석의 `근거:` 가 가리킨다 |
 | `docs/reference/H6N1AP65.pdf` | 원본 TUNE 리포트(실제 현장). 머리말 표기(하중 · 제품 · 주소)의 근거. **H6N1AP65.pdf 는 저장소 밖 보관**(`.gitignore`) — 실제 엔지니어명 · 현장명이 들어 있다. 시험 픽스처로 쓰지 않는다 |
-| `docs/noise_otis_offset_notes.md` | 소음 dBA 오프셋 · OTIS 차이 · 남은 과제 |
-| `docs/otis_parity_experiment.md` | 오티스폰 원시데이터 → 앱 경로 vs OTIS PDF 수직 값, 계산 방식을 한 가지씩 바꾼 실험 표(2026-10-22) |
+| `docs/experiments/noise_otis_offset_notes.md` | 소음 dBA 오프셋 · OTIS 차이 · 남은 과제 |
+| `docs/experiments/otis_parity_experiment.md` | 오티스폰 원시데이터 → 앱 경로 vs OTIS PDF 수직 값, 계산 방식을 한 가지씩 바꾼 실험 표(2026-10-22) |
 | `docs/release.md` | 릴리스 서명 키 보관 · `android/key.properties` · 서명 확인(인증서 지문). 키가 없으면 릴리스 빌드가 멈춘다 |
 | `assets/workers/workers.json` | 로그인 작업자 명단(사번 · 성명 · 업체명 · 관리팀). OTIS 명단 엑셀(`설치 업체 List_*.xlsx`, 저장소 밖 · `.gitignore`)에서 `tool/import_workers.py` 로 만든다(아나콘다 파이썬, openpyxl). 실명이 평문으로 공개 저장소 · APK 에 들어간다(2026-10-18 사용자 결정) |
-| `assets/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
+| `design/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
 
 ## 화면 흐름
 
@@ -333,10 +333,10 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   Wk 12.5 Hz/0.63 · 2.37 → 3.35 Hz/0.91)는 `ride_weighting.dart` 에 있다.
   가중 필터는 한 방향(인과), 1 Hz 고역만 양방향이다.
 - **정본과 픽스처**: 처리 결과는 SciPy 1.18.1 과 같아야 한다
-  (`test/domain/capture/signal_conditioner_test.dart`). 픽스처는
-  `test/fixtures/` 에 있고 `pdf_report_dev/gen_conditioning_fixtures.py` 가
-  만든다(저장소 루트에서 `python pdf_report_dev/gen_conditioning_fixtures.py
-  test/fixtures/conditioning_input_dev_256hz.txt test/fixtures`).
+  (`test/domain/analysis/signal_conditioner_test.dart`). 픽스처는
+  `test/fixtures/` 에 있고 `tool/fixtures/gen_conditioning_fixtures.py` 가
+  만든다(저장소 루트에서 `python tool/fixtures/gen_conditioning_fixtures.py
+  test/fixtures/records/conditioning_input_dev_256hz.txt test/fixtures/scipy`).
   - `conditioning_input_dev_256hz.txt` — 2026-10-06 개발폰 실측
     (`RAW_1_20261006-091841`, 앱이 앞뒤 0.5초 버림) EVIMP1 9,439행. 스크립트의
     입력이며 스크립트가 만들지 않는다
@@ -350,9 +350,9 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   - `weighting_unit_cases.json` · `weighting_expected_metrics.json`
     (2026-10-15) — 가중 계수 · 출력과, ride_reference · 개발폰 기록을 앱과
     같은 길로 계산한 구간 · 지표. `--weighting` 모드로 만들고 위 세 파일은
-    건드리지 않는다(`python pdf_report_dev/gen_conditioning_fixtures.py
-    --weighting test/fixtures/ride_reference.txt
-    test/fixtures/conditioning_input_dev_256hz.txt test/fixtures`).
+    건드리지 않는다(`python tool/fixtures/gen_conditioning_fixtures.py
+    --weighting test/fixtures/records/ride_reference.txt
+    test/fixtures/records/conditioning_input_dev_256hz.txt test/fixtures/scipy`).
     `ride_weighting_test` · `measurement_assembler_test` 가 1e-9 · 1e-6 으로
     대조한다. `weighting_expected_metrics.json` 은 2026-10-20 움직인 구간
     적분으로 다시 만들었다 — 이 PC 에 SciPy 1.18.1 이 없어 아나콘다 1.16.3
@@ -416,7 +416,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
    - `flutter analyze` 경고 0, `dart format` 변경 0, `flutter test` 전부
      통과(캡처 태그 제외), `flutter build apk --debug` 성공.
    - 기준 기록 회귀: `docs/reference` 의 7개 기록(dev_* 3, otis_* 3,
-     ride_reference — 이름 · 경로는 `test/support/otis_1021_records.dart`)으로
+     ride_reference — 이름 · 경로는 `test/support/reference_records.dart`)으로
      8개 지표 + Jptp + 저크 봉우리를 계산해, 고정값과 다른 것이 있으면 이유를
      적는다. 이 브랜치에서 의도적으로 바꾼 값은 "바뀜(의도)", 그 밖에 바뀐
      값은 "바뀜(의도 아님)" 으로 나눈다. 의도 아님이 하나라도 있으면 병합하지
@@ -509,7 +509,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     ride_reference 수직 최대는 다시 5.53(원본 6.1 대비 −9%). 근거가 서일대
     한 대라 다른 건물에서 재확인한다(`docs/pending_checks.md`)
   - OTIS PDF 대비 수직 ±15% 는 계산 방식 조정으로 줄지 않음(2026-10-22 실험)
-    — 내부 신호 차이 추정(`docs/otis_parity_experiment.md`, pending 21)
+    — 내부 신호 차이 추정(`docs/experiments/otis_parity_experiment.md`, pending 21)
   - 2026-10-21 2차: `raw.txt`(EVIMP1 내보내기)는 축별로 내보내는 행 전체의
     평균을 빼고 쓴다(`VibrationFileWriter.encode()`, 뺀 값은 meta.txt
     `rawExportMeanX/Y/Zmg`). 오티스폰 EVIMP1 내보내기(otis_* · ride_reference)
@@ -587,7 +587,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   6건에서 거리 표준편차 0.204 → 0.067 m, 오티스폰 · 개발폰 동시 측정 차
   0.30 · 0.38 → 0.16 · 0.17 m. 자료(오티스폰 · 테스트폰 동시 기록 zip 3개)는
   분석 뒤 삭제했다(2026-10-20 사용자 지시) — 수치는 이 항목과
-  `docs/noise_otis_offset_notes.md` 에만 남는다.
+  `docs/experiments/noise_otis_offset_notes.md` 에만 남는다.
   배율 오차 흔적은 없었다(두 폰 최대 속도 비 0.985 · 0.99 · 1.02, 개발폰
   native_raw 정지 크기 996 mg · 기울여 둔 기록 1003 mg 로 ±0.4% 안). 같은
   기록에서 예전 방식보다 0.4 ~ 0.6 m 작다. 오티스 앱과의 관계는 엇갈린다 —

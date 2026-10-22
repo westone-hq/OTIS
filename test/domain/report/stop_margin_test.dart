@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/domain/report/motion_zones.dart';
+import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 
-import '../../support/otis_1021_records.dart';
+import '../../support/reference_records.dart';
 
 /// 작성: 2026-10-22 19:00:00 · nada
 /// 함수: main

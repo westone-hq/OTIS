@@ -5,9 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 클래스: ReportChartPagePlan

@@ -6,13 +6,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
-import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
+import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
+import 'package:vibration_checker/domain/auth/worker.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
-import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
-import 'package:vibration_checker/domain/report/measurement_assembler.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
-import 'package:vibration_checker/model/worker.dart';
 
 import 'shot_harness.dart';
 
@@ -23,7 +23,9 @@ import 'shot_harness.dart';
 /// 반환: 조립한 측정 결과
 MeasurementResult _reference() {
   final lines = const LineSplitter()
-      .convert(File('test/fixtures/ride_reference.txt').readAsStringSync())
+      .convert(
+        File('test/fixtures/records/ride_reference.txt').readAsStringSync(),
+      )
       .where((line) => line.trim().isNotEmpty)
       .toList(); // 파일 줄
   final rows = <GridSample>[

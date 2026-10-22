@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_card.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';

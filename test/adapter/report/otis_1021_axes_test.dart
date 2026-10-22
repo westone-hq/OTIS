@@ -3,8 +3,8 @@ import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_chart_page.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 
-import '../../support/otis_1021_records.dart';
-import 'pdf_probe.dart';
+import '../../support/pdf_probe.dart';
+import '../../support/reference_records.dart';
 
 /// 작성: 2026-10-22 10:30:00 · nada
 /// 함수: main

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vibration_checker/adapter/login_store.dart';
+import 'package:vibration_checker/adapter/storage/login_store.dart';
 import 'package:vibration_checker/ui/core/router.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 

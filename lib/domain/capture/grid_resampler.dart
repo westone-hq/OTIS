@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
 
 /// 작성: 2026-08-19 08:04:05 · 박건준
 /// 클래스: GridSample
@@ -501,7 +501,7 @@ class GridResampler {
   /// 인자: samples — 다 만든 격자 행 목록
   /// 반환: 앞부분 0 을 채운 새 목록. 유효 소음값이 없거나 첫 행부터 값이
   ///       있으면 받은 목록 그대로
-  /// 근거: 인용 — `docs/noise_otis_offset_notes.md` 의 "초반 noise 0
+  /// 근거: 인용 — `docs/experiments/noise_otis_offset_notes.md` 의 "초반 noise 0
   ///       채우기" 절
   static List<GridSample> _backfillLeadingNoiseDba(List<GridSample> samples) {
     final firstValid = samples.indexWhere(

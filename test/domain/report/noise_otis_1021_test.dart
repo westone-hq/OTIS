@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 
-import '../../support/otis_1021_records.dart';
+import '../../support/reference_records.dart';
 
 /// 작성: 2026-10-22 18:30:00 · nada
 /// 함수: main
@@ -10,7 +10,7 @@ import '../../support/otis_1021_records.dart';
 ///       평균 · 최대 · 차트가 모두 저장된 Fast 열에서 나온다.
 ///       OTIS PDF 최대(59.3 / 57.3 / 60.4) 대비 +5.3 / +2.5 / +3.6 dB 는 폰
 ///       위치 오프셋과 개발폰 마이크 차이로 보고 코드로 맞추지 않는다
-///       (docs/noise_otis_offset_notes.md).
+///       (docs/experiments/noise_otis_offset_notes.md).
 void main() {
   const pinned = <String, (double, double)>{
     'dev_up1': (50.7, 64.6),

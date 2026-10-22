@@ -9,8 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 
-import '../adapter/report/pdf_probe.dart';
-import '../support/otis_1021_records.dart';
+import '../support/pdf_probe.dart';
+import '../support/reference_records.dart';
 
 /// 작성: 2026-10-22 21:30:00 · nada
 /// 변수: _hashPath
@@ -53,7 +53,8 @@ void main() {
     ...otis1021Records,
     ...records1022,
     'ride_reference': rideReferencePath,
-    'conditioning_input_dev': 'test/fixtures/conditioning_input_dev_256hz.txt',
+    'conditioning_input_dev':
+        'test/fixtures/records/conditioning_input_dev_256hz.txt',
   }; // 계산할 기록 이름 → 경로
   final update = Platform.environment['GOLDEN_UPDATE'] == '1'; // 갱신 여부
 

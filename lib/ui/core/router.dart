@@ -1,5 +1,5 @@
 import 'package:go_router/go_router.dart';
-import 'package:vibration_checker/domain/session/login_session.dart';
+import 'package:vibration_checker/domain/auth/login_session.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
 import 'package:vibration_checker/ui/features/login/login_screen.dart';

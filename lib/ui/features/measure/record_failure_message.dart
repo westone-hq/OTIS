@@ -1,5 +1,5 @@
-import 'package:vibration_checker/adapter/measurement_recorder.dart';
-import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
+import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
+import 'package:vibration_checker/service/measurement_recorder.dart';
 
 /// 작성: 2026-10-04 13:33:18 · nada
 /// 함수: recordFailureMessage

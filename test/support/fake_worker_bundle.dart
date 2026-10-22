@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
-import 'package:vibration_checker/adapter/login_store.dart';
+import 'package:vibration_checker/adapter/storage/login_store.dart';
 
 /// 작성: 2026-10-18 09:41:12 · nada
 /// 변수: testWorkersJson

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/adapter/login_store.dart';
+import 'package:vibration_checker/adapter/storage/login_store.dart';
 import 'package:vibration_checker/domain/auth/worker_directory.dart';
 
 /// 작성: 2026-10-20 09:12:40 · nada

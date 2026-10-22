@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:vibration_checker/adapter/login_store.dart';
-import 'package:vibration_checker/adapter/prefs_store.dart';
-import 'package:vibration_checker/domain/session/login_session.dart';
+import 'package:vibration_checker/adapter/storage/login_store.dart';
+import 'package:vibration_checker/adapter/storage/prefs_store.dart';
+import 'package:vibration_checker/domain/auth/login_session.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_card.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';

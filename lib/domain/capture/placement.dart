@@ -1,5 +1,5 @@
-import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
 
 /// 작성: 2026-10-22 09:30:00 · nada
 /// 클래스: Placement

@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibration_checker/adapter/capture_session.dart';
-import 'package:vibration_checker/adapter/measurement_recorder.dart';
-import 'package:vibration_checker/adapter/sensor_channel.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/service/capture_session.dart';
+import 'package:vibration_checker/service/measurement_recorder.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';

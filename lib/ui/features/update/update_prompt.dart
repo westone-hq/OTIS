@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:vibration_checker/adapter/update_checker.dart';
-import 'package:vibration_checker/adapter/update_installer.dart';
+import 'package:vibration_checker/adapter/update/update_checker.dart';
+import 'package:vibration_checker/adapter/update/update_installer.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
 import 'package:vibration_checker/ui/core/theme.dart';

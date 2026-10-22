@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibration_checker/adapter/login_store.dart';
+import 'package:vibration_checker/adapter/storage/login_store.dart';
 import 'package:vibration_checker/domain/auth/worker_directory.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';

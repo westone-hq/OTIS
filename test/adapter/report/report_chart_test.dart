@@ -6,20 +6,20 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
-import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/domain/analysis/half_cycle.dart';
+import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
+import 'package:vibration_checker/domain/analysis/motion_zones.dart';
+import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
+import 'package:vibration_checker/domain/analysis/travel_window.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
-import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
-import 'package:vibration_checker/domain/report/half_cycle.dart';
-import 'package:vibration_checker/domain/report/measurement_assembler.dart';
-import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
-import 'package:vibration_checker/domain/report/travel_window.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
-import 'pdf_probe.dart';
+import '../../support/pdf_probe.dart';
 
 /// 작성: 2026-09-17 10:05:00 · nada
 /// 변수: _outputPath
@@ -31,7 +31,7 @@ const _outputPath = 'build/report_chart_test.pdf';
 /// 작성: 2026-09-17 10:05:00 · nada
 /// 변수: _sampleRate
 /// 목적: 시험에 쓰는 표본 주기 (Hz).
-/// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/ride_reference.txt`)이
+/// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/records/ride_reference.txt`)이
 ///       이 주기로 기록돼 있다
 const _sampleRate = 256.0;
 
@@ -1083,7 +1083,9 @@ void main() {
 
     test('가중 · 구간을 거친 기준 데이터도 8개 차트 모두 축 밖 표본이 없다', () {
       final lines = const LineSplitter()
-          .convert(File('test/fixtures/ride_reference.txt').readAsStringSync())
+          .convert(
+            File('test/fixtures/records/ride_reference.txt').readAsStringSync(),
+          )
           .where((line) => line.trim().isNotEmpty)
           .toList(); // 파일 줄
       final rows = <GridSample>[

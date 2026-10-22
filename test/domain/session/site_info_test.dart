@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-10-11 16:58:59 · nada
 /// 수정: 2026-10-13 13:17:56 · nada

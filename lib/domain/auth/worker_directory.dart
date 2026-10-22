@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:vibration_checker/model/worker.dart';
+import 'package:vibration_checker/domain/auth/worker.dart';
 
 /// 작성: 2026-10-18 09:09:47 · nada
 /// 클래스: LoginFailure

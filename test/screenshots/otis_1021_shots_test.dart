@@ -8,14 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
+import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 
-import '../support/otis_1021_records.dart';
+import '../support/reference_records.dart';
 import 'shot_harness.dart';
 
 /// 작성: 2026-10-21 17:40:00 · nada
@@ -69,7 +69,7 @@ MeasurementResult _assemble(String name, String direction, String id) {
 /// 함수: main
 /// 목적: 2026-10-21 변경(수직 최대 정속 구간 · Jptp · 하강 부호 · 3쪽 축 ·
 ///       서식 얼룩)이 닿는 화면과 리포트를 같은 자료로 만든다. 변경 전
-///       커밋에서도 이 파일과 `test/support/otis_1021_records.dart` 를 돌려
+///       커밋에서도 이 파일과 `test/support/reference_records.dart` 를 돌려
 ///       변경 전 그림을 얻는다. 파일 이름 머리는 `SHOT_PREFIX`.
 ///       - 결과 화면(기록마다) · 저장 결과 목록, 두 화면 크기
 ///       - 리포트 PDF: `SHOT_DIR/pdf/머리_기록.pdf`

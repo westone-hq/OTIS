@@ -29,7 +29,7 @@ import kotlin.math.sqrt
  *       권한이 없거나 초기화에 실패해도 앱을 죽이지 않고 0.0으로 대체한다.
  * 근거: 측정 — OTIS 소음계와 동시에 잰 비교에서 피크가 낮고 값이 계단처럼
  *       바뀌어, 창을 짧게 하고 더 자주 미는 실험값을 쓰고 있다
- *       (`docs/noise_otis_offset_notes.md`). 기본 오프셋의 근거는
+ *       (`docs/experiments/noise_otis_offset_notes.md`). 기본 오프셋의 근거는
  *       `DEFAULT_MIC_DBFS_TO_DBA_OFFSET` 을 본다
  */
 class NoiseCaptureHandler(private val context: Context) {
@@ -76,7 +76,7 @@ class NoiseCaptureHandler(private val context: Context) {
          * 변수: DEFAULT_MIC_DBFS_TO_DBA_OFFSET
          * 목적: Flutter 가 오프셋을 넘기지 않았을 때 쓰는 A 가중 dBFS→dBA
          *       기본 오프셋. Flutter 는 늘 `kDefaultMicDbfsToDbaOffset`
-         *       (lib/domain/capture/noise_offset.dart)을 넘기므로, 이 값은
+         *       (lib/domain/config/noise_config.dart)을 넘기므로, 이 값은
          *       그 값과 같게 맞춰 둔다. Dart 와 코틀린은 상수를 함께 쓸 수
          *       없어 두 곳에 있다.
          * 근거: 인용 — `kDefaultMicDbfsToDbaOffset` 의 근거를 본다
@@ -98,7 +98,7 @@ class NoiseCaptureHandler(private val context: Context) {
          *       대역을 눌러 담는 성질). 승강기 소음은 대부분 이보다 낮다.
          *       측정 — 2026-10-20 오티스폰 · 테스트폰 동시 기록 3건에서 이
          *       가중을 넣으니 오티스 소음 곡선과의 상관이 0.88 ~ 0.90 →
-         *       0.96 ~ 0.98 로 올랐다(docs/noise_otis_offset_notes.md)
+         *       0.96 ~ 0.98 로 올랐다(docs/experiments/noise_otis_offset_notes.md)
          */
         private val A_WEIGHTING_SOS = arrayOf(
             doubleArrayOf(
@@ -117,7 +117,7 @@ class NoiseCaptureHandler(private val context: Context) {
          * 근거: 표준 — `A_WEIGHTING_SOS` 와 같은 방법(SciPy 1.16.3
          *       `bilinear_zpk` → `zpk2sos`, 1kHz 0 dB 맞춤). 같은 방법으로
          *       44100Hz 계수를 다시 만들면 위 값과 모든 자리가 같다. 시험
-         *       `test/domain/capture/noise_weighting_test.dart` 가 SciPy 픽스처와
+         *       `test/domain/config/noise_weighting_test.dart` 가 SciPy 픽스처와
          *       대조한다
          */
         private val A_WEIGHTING_SOS_48000 = arrayOf(
@@ -136,7 +136,7 @@ class NoiseCaptureHandler(private val context: Context) {
          * 목적: RMS 창 길이(초). 짧을수록 순간 소리를 덜 평균 내 피크가
          *       살아난다.
          * 근거: 측정 — 0.125초 창에서 OTIS 소음계보다 피크가 눌려 보여
-         *       줄여 보는 실험값이다 (`docs/noise_otis_offset_notes.md`)
+         *       줄여 보는 실험값이다 (`docs/experiments/noise_otis_offset_notes.md`)
          */
         private const val WINDOW_SEC = 0.03125
 

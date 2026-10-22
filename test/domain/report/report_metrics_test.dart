@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/analysis/travel_window.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
-import 'package:vibration_checker/domain/report/travel_window.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
 /// 작성: 2026-09-15 21:14:33 · nada
 /// 함수: _result
@@ -55,7 +55,7 @@ MeasurementResult _result({
 /// 변수: _fixturePath
 /// 목적: 기준 측정 기록의 경로. 원본 TUNE 리포트를 만든 실제 현장
 ///       기록이며, 소음 회귀는 이 파일로 고정한다.
-const _fixturePath = 'test/fixtures/ride_reference.txt';
+const _fixturePath = 'test/fixtures/records/ride_reference.txt';
 
 /// 작성: 2026-09-26 14:10:00 · nada
 /// 변수: _warmupFixturePath
@@ -65,7 +65,7 @@ const _fixturePath = 'test/fixtures/ride_reference.txt';
 ///       것이다. 0 이 43개로 끝나고 그 뒤 약 1.2초가 0 에서 실제 크기로
 ///       올라오는 경사인데, 고친 뒤에는 그 경사가 0 구간에 흡수된다.
 ///       지금 동작의 근거로 쓰면 안 되고, 고치기 전 모습으로만 본다.
-const _warmupFixturePath = 'test/fixtures/noise_warmup.txt';
+const _warmupFixturePath = 'test/fixtures/records/noise_warmup.txt';
 
 /// 작성: 2026-09-25 11:20:00 · nada
 /// 함수: _fixtureNoise

@@ -7,11 +7,11 @@ import 'package:flutter/widgets.dart' show Matrix4;
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
-import 'package:vibration_checker/domain/report/half_cycle.dart';
+import 'package:vibration_checker/domain/analysis/half_cycle.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 /// 작성: 2026-09-17 10:05:00 · nada
 /// 수정: 2026-10-10 11:48:41 · nada
@@ -104,7 +104,7 @@ class ReportChartAxes {
   ///       `x` 와 같이 신호 처리를 거친 값이다.
   /// 근거: 인용 — 최소 범위는 원본 리포트의 Y 진동 차트 범위 ±10 mg, 눈금
   ///       5 mg 이다.
-  ///       측정 — 픽스처(`test/fixtures/conditioning_expected_100hz.txt`,
+  ///       측정 — 픽스처(`test/fixtures/scipy/conditioning_expected_100hz.txt`,
   ///       2026-10-06 개발폰 처리 후)의 Y 는 -4.94 ~ 5.71 mg 이라 최소
   ///       범위 그대로 그려진다
   static const ChartAxisSpec y = ChartAxisSpec(

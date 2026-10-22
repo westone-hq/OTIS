@@ -4,10 +4,10 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_chart_page.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
-import 'pdf_probe.dart';
+import '../../support/pdf_probe.dart';
 
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 변수: _outputPath
@@ -27,7 +27,7 @@ const _framePrecision = 0.001;
 /// 작성: 2026-09-23 09:40:00 · nada
 /// 변수: _sampleRate
 /// 목적: 시험에 쓰는 표본 주기 (Hz).
-/// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/ride_reference.txt`)이
+/// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/records/ride_reference.txt`)이
 ///       이 주기로 기록돼 있다
 const _sampleRate = 256.0;
 

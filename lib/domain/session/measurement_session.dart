@@ -1,4 +1,4 @@
-import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 /// 작성: 2026-10-04 13:31:53 · nada
 /// 수정: 2026-10-11 17:26:58 · nada

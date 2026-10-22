@@ -8,9 +8,9 @@ import 'package:vibration_checker/adapter/report/report_chart_page.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart'
     show renderReportPage1;
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-import 'pdf_probe.dart';
+import '../../support/pdf_probe.dart';
 
 /// 작성: 2026-09-26 09:30:00 · nada
 /// 변수: _outputPath

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vibration_checker/adapter/sensor_channel.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 
 /// 작성: 2026-10-04 18:15:24 · nada

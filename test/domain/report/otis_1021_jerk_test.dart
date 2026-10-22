@@ -4,18 +4,20 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/report_chart.dart';
-import 'package:vibration_checker/domain/capture/capture_config.dart';
-import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
+import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
 
-import '../../support/otis_1021_records.dart';
+import '../../support/reference_records.dart';
 
 /// 작성: 2026-10-21 10:05:00 · nada
 /// 함수: _cases
 /// 목적: SciPy 로 만든 저크 · 가속도 차트 저역 픽스처를 읽는다
-///       (`pdf_report_dev/gen_conditioning_fixtures.py --jerk`).
+///       (`tool/fixtures/gen_conditioning_fixtures.py --jerk`).
 /// 반환: 픽스처 표
 Map<String, dynamic> _cases() =>
-    jsonDecode(File('test/fixtures/jerk_unit_cases.json').readAsStringSync())
+    jsonDecode(
+          File('test/fixtures/scipy/jerk_unit_cases.json').readAsStringSync(),
+        )
         as Map<String, dynamic>;
 
 /// 작성: 2026-10-21 10:05:00 · nada
