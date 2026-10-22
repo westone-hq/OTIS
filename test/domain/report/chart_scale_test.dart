@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 변수: _vibrationX
 /// 목적: 원본 리포트 X 진동 범위(±4 mg, 눈금 2)를 최소로 둔 대칭 축.
 const ChartScale _vibrationX = ChartScale(
@@ -9,7 +9,7 @@ const ChartScale _vibrationX = ChartScale(
   kind: ChartScaleKind.symmetric,
 );
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 변수: _vibrationZ
 /// 목적: 원본 리포트 수직 진동 범위(±20 mg, 눈금 10)를 최소로 둔 대칭 축.
 const ChartScale _vibrationZ = ChartScale(
@@ -17,7 +17,7 @@ const ChartScale _vibrationZ = ChartScale(
   kind: ChartScaleKind.symmetric,
 );
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 변수: _noise
 /// 목적: 원본 리포트 소음 범위(40~54 dBA, 눈금 2)를 최소로 두고 0 을
 ///       미측정으로 보는 자유 축.
@@ -27,7 +27,7 @@ const ChartScale _noise = ChartScale(
   ignoreZeros: true,
 );
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 변수: _position
 /// 목적: 0~10 m(눈금 2)를 최소로 둔, 0 을 한쪽 끝으로 하는 축.
 const ChartScale _position = ChartScale(
@@ -35,7 +35,7 @@ const ChartScale _position = ChartScale(
   kind: ChartScaleKind.zeroAnchored,
 );
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 변수: _speed
 /// 목적: 0~1 m/s(눈금 0.2)를 최소로 둔, 0 을 한쪽 끝으로 하는 축.
 const ChartScale _speed = ChartScale(
@@ -43,7 +43,7 @@ const ChartScale _speed = ChartScale(
   kind: ChartScaleKind.zeroAnchored,
 );
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 함수: _expectRange
 /// 목적: 범위의 아래끝 · 위끝 · 눈금 간격을 한 번에 견준다. 넓힌 범위는
 ///       간격의 배수를 곱해 만들어 1e-12 수준 오차가 있을 수 있다.
@@ -55,7 +55,7 @@ void _expectRange(ChartAxisRange range, double min, double max, double step) {
   expect(range.tickStep, closeTo(step, 1e-9), reason: '눈금 간격');
 }
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 함수: _expectWellFormed
 /// 목적: 넓힌 범위가 지켜야 할 모양을 확인한다.
 ///       - 두 끝이 눈금 간격의 배수다
@@ -71,7 +71,7 @@ void _expectWellFormed(ChartAxisRange range) {
   expect(range.ticks().last, closeTo(range.max, 1e-9));
 }
 
-/// 작성: 2026-10-10 11:38:05 · nada
+/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 함수: main
 /// 목적: 세로축 범위 규칙을 시험한다. 비었을 때와 최소 범위 안일 때 최소
 ///       범위를 그대로 쓰는지, 넘칠 때 모든 값과 여유를 담는지, 대칭 · 0

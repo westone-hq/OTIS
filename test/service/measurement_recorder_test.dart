@@ -15,34 +15,34 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/service/measurement_recorder.dart';
 
-/// 작성: 2026-10-04 13:36:00 · nada
+/// 작성: 2026-10-04 13:36:00 · 박건준
 /// 클래스: _TempPathProvider
 /// 목적: 저장소의 기준 폴더를 시험마다 새로 만든 임시 폴더로 바꿔 끼운다.
 class _TempPathProvider extends PathProviderPlatform {
   /// 임시 폴더 경로
   final String root;
 
-  /// 작성: 2026-10-04 13:36:00 · nada
+  /// 작성: 2026-10-04 13:36:00 · 박건준
   /// 함수: _TempPathProvider
   /// 목적: 돌려줄 임시 폴더 경로를 받는다.
   /// 인자: root — 임시 폴더 경로
   _TempPathProvider(this.root);
 
-  /// 작성: 2026-10-04 13:36:00 · nada
+  /// 작성: 2026-10-04 13:36:00 · 박건준
   /// 함수: getExternalStoragePath
   /// 목적: 외부 저장소 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getExternalStoragePath() async => root;
 
-  /// 작성: 2026-10-04 13:36:00 · nada
+  /// 작성: 2026-10-04 13:36:00 · 박건준
   /// 함수: getApplicationDocumentsPath
   /// 목적: 앱 문서 폴더 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getApplicationDocumentsPath() async => root;
 }
 
-/// 작성: 2026-10-04 13:36:00 · nada
-/// 수정: 2026-10-11 17:28:28 · nada
+/// 작성: 2026-10-04 13:36:00 · 박건준
+/// 수정: 2026-10-11 17:28:28 · 박건준
 /// 변수: _site
 /// 목적: 검사를 통과하는 현장 정보. 2026-10-11 부터 필수인 주소 ·
 ///       우편번호 · 하중까지 채운다.
@@ -58,7 +58,7 @@ const _site = SiteInfo(
   postalCode: '48094',
 );
 
-/// 작성: 2026-10-04 13:36:00 · nada
+/// 작성: 2026-10-04 13:36:00 · 박건준
 /// 함수: _filledResampler
 /// 목적: 가속도 · 중력 이벤트를 4초 동안 256Hz 로 채운 환산기를 만든다.
 ///       앞뒤 0.5초씩 버린 뒤에도 기준선 구간 1초가 남아 신호 처리까지
@@ -412,7 +412,7 @@ void main() {
   });
 
   group('MeasurementRecorder.record 지표 계산 전 신호 처리', () {
-    /// 작성: 2026-10-07 02:10:57 · nada
+    /// 작성: 2026-10-07 02:10:57 · 박건준
     /// 함수: rawFileExists
     /// 목적: 이번 측정 폴더에 값 파일(`raw.txt`)이 남아 있는지 본다.
     /// 반환: 남아 있으면 true
@@ -423,7 +423,7 @@ void main() {
       return File('${dir.path}/${MeasurementRepository.rawFileName}').exists();
     }
 
-    /// 작성: 2026-10-07 02:10:57 · nada
+    /// 작성: 2026-10-07 02:10:57 · 박건준
     /// 함수: metaText
     /// 목적: 이번 측정 폴더의 집계 파일(`meta.txt`) 내용을 읽는다.
     /// 반환: 집계 파일 내용

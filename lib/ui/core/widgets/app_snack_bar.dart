@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 함수: showSuccessSnackBar
 /// 목적: 저장 · 발송 준비처럼 끝났다는 것을 알리는 스낵바(snack bar,
 ///       화면 아래에 잠깐 떴다 사라지는 알림 띠)를 띄운다. 남색 바탕에
@@ -28,7 +28,7 @@ void showSuccessSnackBar(BuildContext context, String message) {
   );
 }
 
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 함수: showErrorSnackBar
 /// 목적: 실패나 제한을 알리는 빨간 스낵바를 띄운다.
 /// 인자: context — 스낵바를 띄울 화면의 위치 정보

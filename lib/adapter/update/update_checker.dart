@@ -9,7 +9,7 @@ import 'package:vibration_checker/domain/update/update_config.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
 
-/// 작성: 2026-10-13 16:27:48 · nada
+/// 작성: 2026-10-13 16:27:48 · 박건준
 /// 클래스: UpdateCheckFailure
 /// 목적: 업데이트를 확인하지 못한 갈래. 설정 화면의 수동 확인이 갈래마다
 ///       다른 문구를 띄운다 — 서버에 파일이 없는데 "인터넷 연결을 확인" 이라
@@ -21,7 +21,7 @@ import 'package:vibration_checker/domain/update/update_info.dart';
 ///         읽지 못했다
 enum UpdateCheckFailure { network, server, invalid }
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 클래스: UpdateCheck
 /// 목적: 업데이트 확인 한 번의 결과. 화면은 `decision` 으로 창을 고르고,
 ///       설정 화면의 수동 확인만 `failure` 를 보고 "확인하지 못함" 을
@@ -40,7 +40,7 @@ class UpdateCheck {
   /// 확인했으면 null
   final String? failureDetail;
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: UpdateCheck
   /// 목적: 결과를 담는다.
   /// 인자: decision, info, failure, failureDetail — 위 필드
@@ -52,7 +52,7 @@ class UpdateCheck {
   });
 }
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 클래스: UpdateChecker
 /// 목적: 배포 서버의 version.json 을 받아 설치된 빌드와 견준다. 앱이 켜질
 ///       때 홈 화면이, 설정 화면의 "업데이트 확인" 이 부른다. 측정 · 결과
@@ -61,7 +61,7 @@ class UpdateCheck {
 ///       앱을 그대로 쓰게 한다 — 기계실처럼 인터넷이 없는 곳에서 측정을
 ///       막으면 안 된다. 사유는 기록(`debugPrint`)에만 남긴다.
 class UpdateChecker {
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: UpdateChecker
   /// 목적: 확인기를 만든다. 시험이 바꿔 끼울 수 있는 것만 인자로 받는다.
   /// 인자: client — 내려받기에 쓸 HTTP 연결. 안 주면 확인할 때마다 새로
@@ -86,7 +86,7 @@ class UpdateChecker {
   /// 지금 시각을 주는 함수. "나중에" 하루 규칙에 쓴다
   final DateTime Function() _now;
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: _installedBuild
   /// 목적: 설치된 앱의 빌드 번호(pubspec `version:` 의 `+` 뒤)를 읽는다.
   /// 반환: 빌드 번호. 숫자가 아니면 null — 0 같은 값으로 채우면 서버의
@@ -96,7 +96,7 @@ class UpdateChecker {
     return int.tryParse(info.buildNumber);
   }
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: check
   /// 목적: 업데이트가 있는지 확인한다. 순서대로 진행한다.
   ///       1. version.json 을 `UpdateConfig.checkTimeout` 안에 받는다.
@@ -161,7 +161,7 @@ class UpdateChecker {
     return UpdateCheck(decision, info: info);
   }
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: snooze
   /// 목적: 선택 업데이트 창에서 "나중에" 를 누른 것을 기록한다. 같은
   ///       최신 번호의 창은 `UpdateConfig.snoozeDuration` 동안 앱 시작
@@ -171,7 +171,7 @@ class UpdateChecker {
       // → 로직 이동: PrefsStore.saveUpdateSnooze()
       PrefsStore.instance.saveUpdateSnooze(info.latest, _now());
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: _failed
   /// 목적: 확인하지 못한 결과를 만들고 사유를 기록에 남긴다.
   /// 인자: failure — 확인하지 못한 갈래

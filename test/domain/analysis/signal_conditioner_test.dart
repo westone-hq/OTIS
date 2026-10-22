@@ -14,7 +14,7 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 
 import '../../support/reference_records.dart';
 
-/// 작성: 2026-10-07 01:44:43 · nada
+/// 작성: 2026-10-07 01:44:43 · 박건준
 /// 변수: _unitCasesPath
 /// 목적: 단위 시험 픽스처 경로. 300표본 입력, 그 입력을 SciPy 1.18.1 로
 ///       거른 결과(`filtfilt`)와 재표본한 결과(`resample_25_64`), 설계한
@@ -22,14 +22,14 @@ import '../../support/reference_records.dart';
 ///       바로 재표본한 값이다.
 const _unitCasesPath = 'test/fixtures/scipy/conditioning_unit_cases.json';
 
-/// 작성: 2026-10-07 01:44:43 · nada
+/// 작성: 2026-10-07 01:44:43 · 박건준
 /// 함수: _unitCases
 /// 목적: 단위 시험 픽스처를 읽는다.
 /// 반환: 열 이름 → 값 목록
 Map<String, dynamic> _unitCases() =>
     jsonDecode(File(_unitCasesPath).readAsStringSync()) as Map<String, dynamic>;
 
-/// 작성: 2026-10-07 01:44:43 · nada
+/// 작성: 2026-10-07 01:44:43 · 박건준
 /// 함수: _doubles
 /// 목적: JSON 숫자 목록을 실수 목록으로 바꾼다. 소수점 없이 적힌 값은
 ///       정수로 읽히므로 실수로 맞춘다.
@@ -39,7 +39,7 @@ List<double> _doubles(Object? values) => [
   for (final v in values! as List<dynamic>) (v as num).toDouble(),
 ];
 
-/// 작성: 2026-10-07 01:44:43 · nada
+/// 작성: 2026-10-07 01:44:43 · 박건준
 /// 함수: _defaultSections
 /// 목적: 기본 설정(256Hz 격자, 40Hz 4차)으로 설계한 필터를 만든다.
 /// 반환: 2차 구간 목록
@@ -52,20 +52,20 @@ List<SosSection> _defaultSections() {
   );
 }
 
-/// 작성: 2026-10-07 02:01:58 · nada
+/// 작성: 2026-10-07 02:01:58 · 박건준
 /// 변수: _inputPath
 /// 목적: 실측 입력 픽스처 경로. 2026-10-06 개발폰 실측을 앱이 앞뒤 0.5초씩
 ///       버리고 256Hz 격자로 만든 EVIMP1 파일이다 (9,439행).
 const _inputPath = 'test/fixtures/records/conditioning_input_dev_256hz.txt';
 
-/// 작성: 2026-10-07 02:01:58 · nada
+/// 작성: 2026-10-07 02:01:58 · 박건준
 /// 변수: _expectedPath
 /// 목적: 실측 입력의 기대 출력 픽스처 경로. 기준선 제거 → `sosfiltfilt()`
 ///       → `resample_poly(25, 64)` 를 SciPy 1.18.1 로 적용한 X · Y · Z 다
 ///       (3,688행). `#` 로 시작하는 머리말 한 줄이 있다.
 const _expectedPath = 'test/fixtures/scipy/conditioning_expected_100hz.txt';
 
-/// 작성: 2026-10-07 02:01:58 · nada
+/// 작성: 2026-10-07 02:01:58 · 박건준
 /// 함수: _readColumns
 /// 목적: 공백으로 나뉜 숫자 열 파일을 행마다 실수 목록으로 읽는다. 줄바꿈이
 ///       CRLF 여도 `LineSplitter` 가 `\r` 까지 잘라 낸다.
@@ -86,7 +86,7 @@ List<List<double>> _readColumns(String path, {required int headerLines}) {
       .toList();
 }
 
-/// 작성: 2026-10-07 02:01:58 · nada
+/// 작성: 2026-10-07 02:01:58 · 박건준
 /// 함수: _grid
 /// 목적: 기본 설정 간격(256Hz)의 시험용 격자를 만든다. 집계값을 모두 서로
 ///       다른 0 아닌 값으로 둬, 처리 결과가 그대로 옮겼는지 볼 수 있게 한다.
@@ -111,7 +111,7 @@ GridResampleResult _grid(List<GridSample> samples) {
   );
 }
 
-/// 작성: 2026-10-07 02:01:58 · nada
+/// 작성: 2026-10-07 02:01:58 · 박건준
 /// 함수: _fixtureGrid
 /// 목적: 실측 입력 픽스처를 격자로 만든다. 소음 열도 싣는다.
 /// 반환: 9,439행 격자
@@ -123,7 +123,7 @@ GridResampleResult _fixtureGrid() {
   ]);
 }
 
-/// 작성: 2026-10-07 02:01:58 · nada
+/// 작성: 2026-10-07 02:01:58 · 박건준
 /// 함수: _noiseGrid
 /// 목적: 진동은 모두 0 이고 소음만 주어진 값인 격자를 만든다.
 /// 인자: noise — 행마다 소음 (dBA). 0 이면 미측정
@@ -132,7 +132,7 @@ GridResampleResult _noiseGrid(List<double> noise) => _grid([
   for (final v in noise) GridSample(xMg: 0, yMg: 0, zMg: 0, noiseDba: v),
 ]);
 
-/// 작성: 2026-10-07 02:01:58 · nada
+/// 작성: 2026-10-07 02:01:58 · 박건준
 /// 함수: _conditionNoise
 /// 목적: 기본 설정으로 처리한 뒤 소음 열만 꺼낸다. 출력 행 수가 진동 열
 ///       재표본 길이와 같은지도 확인한다.
@@ -150,7 +150,7 @@ List<double> _conditionNoise(List<double> noise) {
   return [for (final s in result.grid.samples) s.noiseDba];
 }
 
-/// 작성: 2026-10-07 01:44:43 · nada
+/// 작성: 2026-10-07 01:44:43 · 박건준
 /// 함수: main
 /// 목적: 지표 계산 전 신호 처리가 SciPy 1.18.1 과 같은 결과를 내는지
 ///       시험한다.

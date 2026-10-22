@@ -7,7 +7,7 @@ import 'package:vibration_checker/domain/auth/worker_directory.dart';
 
 import '../../support/fake_worker_bundle.dart';
 
-/// 작성: 2026-10-18 09:09:47 · nada
+/// 작성: 2026-10-18 09:09:47 · 박건준
 /// 함수: main
 /// 목적: 로그인이 기기 저장 값과 지금 작업자를 함께 채우고, 앱을 다시 켜면
 ///       되살아나며, 로그아웃 · 명단에서 빠진 사번은 둘 다 비우는지 시험한다.

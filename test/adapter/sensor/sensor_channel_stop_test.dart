@@ -2,15 +2,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 
-/// 작성: 2026-10-22 12:00:00 · nada
-/// 수정: 2026-10-22 23:30:00 · nada
+/// 작성: 2026-10-22 12:00:00 · 박건준
+/// 수정: 2026-10-22 23:30:00 · 박건준
 /// 변수: _channel
 /// 목적: 안드로이드 `SensorMethodHandler.METHOD_CHANNEL` 과 같은 통로 이름.
 const MethodChannel _channel = MethodChannel(
   'com.otis.vibration_checker/sensors_method',
 );
 
-/// 작성: 2026-10-22 12:00:00 · nada
+/// 작성: 2026-10-22 12:00:00 · 박건준
 /// 함수: main
 /// 목적: 수집 정지 응답(`stopCapture`)에서 원본 · 녹음 경로와 소음 마이크
 ///       표본 속도(2026-10-22)를 읽는지, 응답이 없으면 모두 비우는지 본다.

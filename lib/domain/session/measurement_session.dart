@@ -1,7 +1,7 @@
 import 'package:vibration_checker/domain/session/site_info.dart';
 
 /// 작성: 2026-07-04 15:04:38 · 박건준
-/// 수정: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-04 18:15:24 · 박건준
 /// 클래스: MeasurementSession
 /// 목적: 화면 사이에 넘기는 이번 측정의 상태 보관소. 홈 화면 → 시작
 ///       화면 → 측정 화면이 차례로 채우고 읽는다. 앱 전체에 하나만 둔다.

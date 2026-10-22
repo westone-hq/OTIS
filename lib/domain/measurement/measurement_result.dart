@@ -9,7 +9,7 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-22 15:00:00 · nada
+/// 수정: 2026-10-22 15:00:00 · 박건준
 /// 클래스: MeasurementResult
 /// 목적: 측정 한 건을 리포트 · 목록 · 메일이 읽는 형태로 담는다.
 ///       `MeasurementAssembler` 가 격자 환산 결과에서 만들고,
@@ -238,7 +238,7 @@ class MeasurementResult {
   final String? baselineSource;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -341,7 +341,7 @@ class MeasurementResult {
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -459,7 +459,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -523,7 +523,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -615,7 +615,7 @@ class MeasurementResult {
     );
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: _dateTimeOf
   /// 목적: 저장된 측정 일시를 읽는다.
   /// 인자: raw — 저장된 값 (ISO 8601 문자열). 없으면 null
@@ -638,7 +638,7 @@ class MeasurementResult {
       MeasurementResult.fromMap(jsonDecode(source) as Map<String, dynamic>);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: xExceeded
   /// 목적: X축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
@@ -652,7 +652,7 @@ class MeasurementResult {
       ReportThresholds.exceeds(xPtp, ReportThresholds.xPtpRedMg);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: yExceeded
   /// 목적: Y축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
@@ -666,7 +666,7 @@ class MeasurementResult {
       ReportThresholds.exceeds(yPtp, ReportThresholds.yPtpRedMg);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: zExceeded
   /// 목적: Z축 진동이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
@@ -680,7 +680,7 @@ class MeasurementResult {
       ReportThresholds.exceeds(zPtp, ReportThresholds.zPtpRedMg);
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: noiseExceeded
   /// 목적: 최대 소음이 위험 기준치를 넘었는지 확인한다. 기준 숫자는
   ///       여기 적지 않고 `ReportThresholds` 에서 가져온다 — 저장소
@@ -694,7 +694,7 @@ class MeasurementResult {
   bool? get noiseExceeded =>
       ReportThresholds.exceeds(noiseMax, ReportThresholds.noiseMaxRedDba);
 
-  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 함수: placementKind
   /// 목적: 저장된 거치 방향 이름을 `Placement` 로 바꾼다.
   /// 반환: 거치 방향. 판정하지 않은 예전 결과면 null
@@ -702,7 +702,7 @@ class MeasurementResult {
       // → 로직 이동: Placement.fromName()
       Placement.fromName(placement);
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: uncompensatedDevice
   /// 목적: 보정 표에 없는 기종(또는 기종을 모르는 측정)이라 기종 응답 보정을
   ///       걸지 않았는지. 결과 화면 · 메일이 "미보정 기종" 을 알린다. 보정을
@@ -710,7 +710,7 @@ class MeasurementResult {
   bool get uncompensatedDevice =>
       deviceCompensation == DeviceResponse.noneLabel;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: stoppedTooSoon
   /// 목적: 운행 끝 뒤 `CaptureConfig.minimumStopMarginMs` 를 못 채우고 측정을
   ///       끝냈는지. 결과 화면이 "정지 후 1초 이상 기다린 뒤 종료" 를 알린다.
@@ -720,7 +720,7 @@ class MeasurementResult {
     return margin != null && margin * 1000 < CaptureConfig.minimumStopMarginMs;
   }
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: baselineContaminated
   /// 목적: 기준선 구간이 움직임에 섞였는데 줄이거나 끝 정지 구간으로 옮기지
   ///       못했는지(`BaselineSource.contaminated`). 결과 화면이 "시작 후 2초

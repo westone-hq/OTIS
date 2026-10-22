@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// 작성: 2026-10-07 01:55:02 · nada
+/// 작성: 2026-10-07 01:55:02 · 박건준
 /// 클래스: PolyphaseResampler
 /// 목적: 신호의 표본 속도를 정수비 `up` / `down` 배로 바꾼다(재표본).
 ///       SciPy 1.18.1 `resample_poly(x, up, down, window=('kaiser', 5.0))`
@@ -14,7 +14,7 @@ import 'dart:typed_data';
 ///       출력 하나마다 실제 입력에 닿는 계수만 골라 곱한다(다상 방식).
 ///       25 / 64 이면 출력 하나에 계수 1281개 중 약 51개만 곱한다.
 class PolyphaseResampler {
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: PolyphaseResampler
   /// 목적: 두 배수를 최대공약수로 약분하고 거를 계수를 설계해 둔다. 축마다
   ///       같은 계수를 쓰므로 한 번만 만든다.
@@ -43,7 +43,7 @@ class PolyphaseResampler {
     return PolyphaseResampler._(reducedUp, reducedDown, halfLen, taps);
   }
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: PolyphaseResampler._
   /// 목적: 약분한 배수와 설계한 계수를 그대로 담는 생성자.
   /// 인자: up — 약분한 늘리는 배수
@@ -52,7 +52,7 @@ class PolyphaseResampler {
   ///       taps — 거를 계수
   PolyphaseResampler._(this.up, this.down, this.halfLen, this.taps);
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 변수: halfLenPerRate
   /// 목적: 계수 한쪽 길이를 큰 배수의 몇 배로 잡을지 정한다. 길수록 차단이
   ///       가팔라지고 계산이 늘어난다.
@@ -60,7 +60,7 @@ class PolyphaseResampler {
   ///       max_rate`
   static const int halfLenPerRate = 10;
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 변수: kaiserBeta
   /// 목적: 계수에 곱하는 카이저 창(계수 양 끝을 0 쪽으로 줄여 잘린 끝에서
   ///       생기는 출렁임을 막는 가중치)의 모양값이다. 클수록 차단 대역이
@@ -69,7 +69,7 @@ class PolyphaseResampler {
   ///       `('kaiser', 5.0)`
   static const double kaiserBeta = 5.0;
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 변수: _besselTermLimit
   /// 목적: 베셀 함수 급수를 멈추는 항 크기다. 항이 이보다 작아지면 더해도
   ///       배정밀도 실수 결과가 바뀌지 않는다.
@@ -90,7 +90,7 @@ class PolyphaseResampler {
   /// 거를 계수. 가운데가 `halfLen` 번이고 좌우 대칭이다
   final Float64List taps;
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: outputLength
   /// 목적: 입력 표본 수에 대한 출력 표본 수를 반환한다.
   /// 인자: inputLength — 입력 표본 수
@@ -99,7 +99,7 @@ class PolyphaseResampler {
   /// 근거: 표준 — SciPy 1.18.1 `resample_poly()` 의 `n_out`
   int outputLength(int inputLength) => (inputLength * up + down - 1) ~/ down;
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: apply
   /// 목적: 신호 하나를 재표본한다. 입력 밖은 0 으로 보고(SciPy
   ///       `padtype='constant'`), 출력 자리는 SciPy 와 같게 맞춘다.
@@ -142,7 +142,7 @@ class PolyphaseResampler {
     return out;
   }
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: _lowpassTaps
   /// 목적: 카이저 창을 씌운 저역 FIR 계수를 만든다. 이상적인 저역
   ///       필터의 응답(sinc, sin(πx) / (πx))을 정해진 길이로 자르고 창을
@@ -185,7 +185,7 @@ class PolyphaseResampler {
     return taps;
   }
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: _besselI0
   /// 목적: 0차 제1종 변형 베셀 함수 I0 를 급수로 구한다. 카이저 창에
   ///       필요한데 Dart 표준 라이브러리에 없다. 항이 `_besselTermLimit`

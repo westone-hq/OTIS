@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
-/// 작성: 2026-10-15 15:53:26 · nada
+/// 작성: 2026-10-15 15:53:26 · 박건준
 /// 함수: main
 /// 목적: `KoreaTime.of()` 가 같은 순간을 늘 한국 시간 글자로 바꾸는지 본다.
 ///       기기 시간대가 무엇이든 UTC 로 준 순간과 그 순간의 현지 시각이

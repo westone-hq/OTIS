@@ -7,14 +7,14 @@ import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 변수: _layoutJsonPath
 /// 목적: 좌표 정본 기록의 경로. `report_layout.dart` 는 이 파일을 사람이
 ///       옮긴 사본이다.
 const _layoutJsonPath = 'docs/report_layout.json';
 
-/// 작성: 2026-09-15 19:43:50 · nada
-/// 수정: 2026-10-15 15:53:26 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-15 15:53:26 · 박건준
 /// 변수: _layoutJsonMd5
 /// 목적: 옮길 때 본 정본 기록의 md5. 정본이 바뀌면 이 값이 달라져,
 ///       사본을 함께 고쳐야 한다는 사실이 시험 실패로 드러난다.
@@ -27,7 +27,7 @@ const _layoutJsonPath = 'docs/report_layout.json';
 ///       갱신했다.
 const _layoutJsonMd5 = 'c6e6d6981e94f6003bda5196dae43945';
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 함수: _layout
 /// 목적: 좌표 정본 기록을 읽어 들인다.
 /// 반환: json 을 그대로 풀어놓은 Map
@@ -36,7 +36,7 @@ Map<String, dynamic> _layout() {
       as Map<String, dynamic>;
 }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 함수: _fieldByKey
 /// 목적: json 의 칸 목록에서 이름이 같은 칸 하나를 찾는다.
 /// 인자: fields — json 의 `fields` 목록
@@ -49,7 +49,7 @@ Map<String, dynamic> _fieldByKey(List<dynamic> fields, String key) {
   );
 }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 함수: _expectField
 /// 목적: 옮겨 적은 칸 하나가 정본과 같은지 본다. 자리 · 크기 · 정렬 ·
 ///       굵기 · 색을 모두 맞춰 본다.
@@ -64,7 +64,7 @@ void _expectField(LayoutField actual, Map<String, dynamic> expected) {
   expect(actual.weight.name, expected['weight'], reason: '$where weight');
 }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 함수: main
 /// 목적: `report_layout.dart` 의 좌표가 정본 `docs/report_layout.json` 과
 ///       같은지 대조한다. 사람이 손으로 옮기는 과정에서 숫자 하나가

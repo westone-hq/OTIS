@@ -3,7 +3,7 @@ import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/adapter/storage/prefs_store.dart';
 import 'package:vibration_checker/domain/mail/mail_composer.dart';
 
-/// 작성: 2026-10-23 00:20:00 · nada
+/// 작성: 2026-10-23 00:20:00 · 박건준
 /// 클래스: MailService
 /// 목적: 리포트 메일 한 통을 준비해 기기의 메일 앱에 넘기는 절차. 저장소
 ///       (`MeasurementRepository`)에서 측정 결과와 파일을 찾고, 문구는
@@ -11,7 +11,7 @@ import 'package:vibration_checker/domain/mail/mail_composer.dart';
 ///       연다. 메일 시트는 받는 사람 · 보낼 항목 · 버튼만 다룬다.
 abstract final class MailService {
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-23 00:20:00 · nada
+  /// 수정: 2026-10-23 00:20:00 · 박건준
   /// 함수: buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -137,7 +137,7 @@ abstract final class MailService {
     );
   }
 
-  /// 작성: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-23 00:20:00 · 박건준
   /// 함수: send
   /// 목적: 기기에 이미 설치된 메일 앱(Gmail 등)의 작성 화면을 메일 내용으로
   ///       미리 채워서 띄우고, 고른 주소를 기억해 다음에 미리 골라 둔다.

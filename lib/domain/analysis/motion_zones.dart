@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:vibration_checker/domain/analysis/half_cycle.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 
-/// 작성: 2026-10-21 13:10:00 · nada
+/// 작성: 2026-10-21 13:10:00 · 박건준
 /// 클래스: MotionZones
 /// 목적: 운행 한 번을 정속 구간과 가감속 구간으로 나눈 결과. 첨자는 100Hz
 ///       격자 기준이고 끝 첨자를 포함한다.
@@ -15,7 +15,7 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 ///       가감속 구간의 반주기 P2P 최대다(2026-10-21 오티스폰 원시데이터로
 ///       재계산해 확인, 1 · 2회는 최대가 나온 시각까지 같다).
 class MotionZones {
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: MotionZones
   /// 목적: 구간 첨자를 그대로 담는다.
   /// 인자: runStartIndex, runEndIndex — 운행 첫 · 끝 첨자
@@ -44,18 +44,18 @@ class MotionZones {
   /// 첨자를 초로 바꿀 표본 주기 (Hz)
   final double sampleRate;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: steadyStartSec
   /// 목적: 정속 시작 시각 (초, 격자 첫 행 기준).
   double get steadyStartSec => steadyStartIndex / sampleRate;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: steadyEndSec
   /// 목적: 정속 끝 시각 (초, 격자 첫 행 기준).
   double get steadyEndSec => steadyEndIndex / sampleRate;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
-  /// 수정: 2026-10-22 15:40:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-22 15:40:00 · 박건준
   /// 함수: methodLabel
   /// 목적: 구간을 나눈 방식을 결과 파일(result.json `signalConditioning`)에
   ///       남길 문자열. 이 표시가 없는 2026-10-21 전 결과의 수직 최대
@@ -71,7 +71,7 @@ class MotionZones {
       'min${CaptureConfig.zoneMinimumSteadyMs}ms,'
       'jpad${CaptureConfig.zoneTransientPaddingMs}ms)';
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: steadyMaximum
   /// 목적: 정속 구간 안 최대 반주기 P2P 를 찾는다. 리포트 1쪽 "수직진동,
   ///       최대" 와 2쪽 수직 차트 `ptp` 다.
@@ -87,8 +87,8 @@ class MotionZones {
     );
   }
 
-  /// 작성: 2026-10-21 13:10:00 · nada
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: transientMaximum
   /// 목적: 가감속 구간 안 최대 반주기 P2P 를 찾는다. 2쪽 수직 차트 `Jptp`
   ///       다. 가감속 구간은 운행 시작 `CaptureConfig.zoneTransientPaddingMs`
@@ -116,14 +116,14 @@ class MotionZones {
     return best;
   }
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: _transientPadRows
   /// 목적: 가감속 구간을 운행 앞뒤로 넓힐 행 수.
   /// 식: round(zoneTransientPaddingMs / 1000 x sampleRate)
   int get _transientPadRows =>
       (CaptureConfig.zoneTransientPaddingMs / 1000 * sampleRate).round();
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: transientPadClippedAtEnd
   /// 목적: 운행 끝 뒤로 넓힌 가감속 구간이 기록 끝에 막혔는지 알려 준다.
   ///       막히면 `transientMaximum()` 은 있는 데까지만 쓴다. 정지 직후
@@ -133,7 +133,7 @@ class MotionZones {
   bool transientPadClippedAtEnd(int length) =>
       runEndIndex + _transientPadRows > length - 1;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: toMap
   /// 목적: 결과 파일(result.json)에 담을 표로 바꾼다. 초는 사람이 읽기
   ///       쉽게 함께 남긴다. `MotionZones.fromMap` 이 되읽는다.
@@ -148,7 +148,7 @@ class MotionZones {
     'steadyEndSec': steadyEndSec,
   };
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: MotionZones.fromMap
   /// 목적: `toMap()` 이 만든 표에서 구간을 되살린다.
   /// 인자: map — 결과 파일에서 읽은 표
@@ -169,7 +169,7 @@ class MotionZones {
     );
   }
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: of
   /// 목적: 속도와 1.6Hz 저역 가속도로 정속 · 가감속 구간을 정한다.
   ///       1. 운행: 속도 크기가 `CaptureConfig.zoneRunSpeedMps` 를 넘는 처음
@@ -260,19 +260,19 @@ class MotionZones {
   }
 }
 
-/// 작성: 2026-10-21 13:10:00 · nada
+/// 작성: 2026-10-21 13:10:00 · 박건준
 /// 클래스: MotionZonesResult
 /// 목적: `MotionZones.of()` 의 결과. 구간을 정했으면 구간을, 못 정했으면
 ///       사유를 담는다.
 class MotionZonesResult {
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: MotionZonesResult.success
   /// 목적: 정한 구간을 담는다.
   /// 인자: zones — 정한 구간
   const MotionZonesResult.success(MotionZones this.zones)
     : failureReason = null;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: MotionZonesResult.failure
   /// 목적: 구간을 정하지 못한 사유를 담는다.
   /// 인자: failureReason — 사유

@@ -8,7 +8,7 @@ import 'package:vibration_checker/ui/features/login/login_screen.dart';
 
 import '../../../support/fake_worker_bundle.dart';
 
-/// 작성: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-18 09:41:12 · 박건준
 /// 함수: _pumpLogin
 /// 목적: 시험용 명단을 읽는 로그인 화면과, 로그인하면 옮겨 갈 홈 자리
 ///       화면을 띄운다.
@@ -29,7 +29,7 @@ Future<void> _pumpLogin(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// 작성: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-18 09:41:12 · 박건준
 /// 함수: _submit
 /// 목적: 사번 · 비밀번호 칸을 채우고 "로그인" 을 누른다.
 /// 인자: tester — 위젯 시험 도구
@@ -46,7 +46,7 @@ Future<void> _submit(WidgetTester tester, String id, String password) async {
   await tester.pumpAndSettle();
 }
 
-/// 작성: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-18 09:41:12 · 박건준
 /// 함수: main
 /// 목적: 로그인 화면이 맞는 사번 · 비밀번호면 홈으로 가고, 틀리면 사유에
 ///       맞는 칸에 문구를 띄우는지 시험한다.

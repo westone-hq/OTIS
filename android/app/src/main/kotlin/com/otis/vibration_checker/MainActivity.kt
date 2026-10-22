@@ -9,7 +9,7 @@ import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * 작성: 2026-08-17 15:43:39 · 박건준
- * 수정: 2026-10-22 23:30:00 · nada
+ * 수정: 2026-10-22 23:30:00 · 박건준
  * 클래스: MainActivity
  * 목적: 안드로이드(네이티브, Flutter 쪽에서 부르는 안드로이드 코틀린
  *       코드) 진입점. Flutter와 채널로 연결된다.
@@ -29,7 +29,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: configureFlutterEngine
      * 목적: Flutter 엔진이 뜰 때 측정 통로 담당(`SensorMethodHandler`)과
      *       업데이트 담당(`UpdateInstaller`)을 만들어 각자 통로를 등록하게
@@ -52,7 +52,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-10-01 13:04:31 · 박희정
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: dispatchKeyEvent
      * 목적: 측정 중 볼륨키를 측정 종료 요청으로 쓰도록 측정 통로 담당에
      *       먼저 넘긴다. 가로채지 않은 키는 본래 동작을 그대로 둔다.
@@ -71,7 +71,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: onRequestPermissionsResult
      * 목적: 시스템 권한 대화상자에 대한 사용자 응답을 측정 통로 담당에
      *       넘긴다. 마이크 · 고속 샘플링 권한 모두 그쪽이 요청했다.
@@ -93,7 +93,7 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: onActivityResult
      * 목적: 다른 화면에서 돌아온 결과를 받는다. 앱 설치 허용 설정 화면에서
      *       돌아온 것이면 `UpdateInstaller` 가 다시 확인해 Flutter 에
@@ -114,7 +114,7 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: onDestroy
      * 목적: 액티비티가 완전히 종료될 때 측정 통로 담당과 업데이트 담당을
      *       정리해, 자원을 계속 붙들고 있지 않게 한다.

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 
-/// 작성: 2026-10-11 17:28:28 · nada
-/// 수정: 2026-10-22 23:10:00 · nada
+/// 작성: 2026-10-11 17:28:28 · 박건준
+/// 수정: 2026-10-22 23:10:00 · 박건준
 /// 클래스: LabeledDropdown
 /// 목적: 선택지 하나를 고르는 드롭다운을 라벨과 함께 둔다. 기종과 해석
 ///       종류가 같은 모양을 쓴다. 긴 선택지("사이클 저크(가속도증가율)
@@ -20,7 +20,7 @@ class LabeledDropdown extends StatelessWidget {
   /// 다른 값을 고르면 부를 함수. 고른 값을 받는다
   final ValueChanged<String> onChanged;
 
-  /// 작성: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-22 23:10:00 · 박건준
   /// 함수: LabeledDropdown
   /// 목적: 라벨 · 지금 값 · 선택지 · 바꿀 때 할 일을 받는다.
   /// 인자: label, value, options, onChanged — 위 필드 설명을 따른다
@@ -32,8 +32,8 @@ class LabeledDropdown extends StatelessWidget {
     required this.onChanged,
   });
 
-  /// 작성: 2026-10-11 17:28:28 · nada
-  /// 수정: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-11 17:28:28 · 박건준
+  /// 수정: 2026-10-22 23:10:00 · 박건준
   /// 함수: build
   /// 목적: 라벨 아래에 가로를 채우는 드롭다운을 놓는다.
   @override

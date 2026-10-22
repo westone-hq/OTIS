@@ -5,7 +5,7 @@ import 'package:vibration_checker/adapter/storage/evimp_writer.dart';
 import 'package:vibration_checker/adapter/storage/meta_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 
-/// 작성: 2026-10-21 23:20:00 · nada
+/// 작성: 2026-10-21 23:20:00 · 박건준
 /// 함수: _grid
 /// 목적: 축마다 영점 오차(치우침)가 얹힌 256Hz 격자를 만든다. 진동은
 ///       사인파, 소음은 50 dBA 근처다.
@@ -37,7 +37,7 @@ GridResampleResult _grid() {
   );
 }
 
-/// 작성: 2026-10-21 23:20:00 · nada
+/// 작성: 2026-10-21 23:20:00 · 박건준
 /// 함수: main
 /// 목적: 값 파일(raw.txt)이 OTIS EVIMP1 관례대로 축별 전체 평균을 빼고
 ///       쓰이는지, 소음 열은 그대로인지, 뺀 평균이 집계 파일에 남는지 본다.

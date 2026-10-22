@@ -6,7 +6,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 클래스: _TempPathProvider
 /// 목적: 저장소가 쓰는 기준 폴더를 시험용 임시 폴더로 바꿔 끼운다. 실제
 ///       구현은 안드로이드 기기의 외장 저장소를 묻는데, 시험은 기기 없이
@@ -15,20 +15,20 @@ class _TempPathProvider extends PathProviderPlatform {
   /// 기준 폴더로 쓸 임시 폴더 경로
   final String root;
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 함수: _TempPathProvider
   /// 목적: 기준 폴더로 쓸 경로를 담는 생성자.
   /// 인자: root — 임시 폴더 경로
   _TempPathProvider(this.root);
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 함수: getExternalStoragePath
   /// 목적: 외장 저장소 자리에 임시 폴더를 돌려준다.
   /// 반환: 임시 폴더 경로
   @override
   Future<String?> getExternalStoragePath() async => root;
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 함수: getApplicationDocumentsPath
   /// 목적: 앱 문서 폴더 자리에 임시 폴더를 돌려준다.
   /// 반환: 임시 폴더 경로
@@ -36,7 +36,7 @@ class _TempPathProvider extends PathProviderPlatform {
   Future<String?> getApplicationDocumentsPath() async => root;
 }
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 함수: _result
 /// 목적: 저장했다 읽어 볼 측정 결과를 꾸민다. 시계열을 짧게 두어 파일
 ///       크기가 시험 시간을 잡아먹지 않게 한다.
@@ -66,7 +66,7 @@ MeasurementResult _result(String id, DateTime measuredAt) {
   );
 }
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 함수: main
 /// 목적: 저장소를 시험한다. 측정 한 건이 폴더 하나로 저장되는지, 목록이
 ///       요약만 읽는지, 지울 때 폴더째 사라지는지를 본다.

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// 작성: 2026-09-26 14:10:00 · nada
+/// 작성: 2026-09-26 14:10:00 · 박건준
 /// 함수: pdfContentStreams
 /// 목적: PDF 에서 눌러 담긴 쪽 내용 스트림을 풀어 꺼낸다. 시험이 "무엇이
 ///       그려졌는지" 를 눈이 아니라 값으로 확인할 수 있게 하려고 둔다.
@@ -28,7 +28,7 @@ List<String> pdfContentStreams(List<int> bytes) {
   return out;
 }
 
-/// 작성: 2026-09-26 14:10:00 · nada
+/// 작성: 2026-09-26 14:10:00 · 박건준
 /// 함수: pdfChartStreams
 /// 목적: 차트가 그려진 쪽의 내용 스트림만 고른다. 차트를 그리면 점선
 ///       격자가 반드시 들어가므로 그것으로 가른다.
@@ -40,7 +40,7 @@ List<String> pdfChartStreams(List<int> bytes) {
   ).where((stream) => stream.contains('[1.2 1.2] 0 d')).toList();
 }
 
-/// 작성: 2026-09-26 14:10:00 · nada
+/// 작성: 2026-09-26 14:10:00 · 박건준
 /// 함수: verticalGridLines
 /// 목적: 쪽 하나에서 차트마다 세로 격자선이 가로 어디에 놓였는지 뽑는다.
 ///       세로 격자선은 가로축 눈금 자리에 그어지므로, 그 자리가 같으면 두
@@ -70,14 +70,14 @@ List<List<String>> verticalGridLines(String stream) {
   return charts;
 }
 
-/// 작성: 2026-09-26 14:10:00 · nada
+/// 작성: 2026-09-26 14:10:00 · 박건준
 /// 변수: markerColorOperand
 /// 목적: 차트 표시점 색(`ReportColors.chartMarker`)이 PDF 에 적히는 모양.
 ///       0~1 로 나눈 세 값이라 원래 색 값과 생김새가 다르다.
 /// 근거: 측정 — 0xE0/255 = 0.87843, 0x30/255 = 0.18824
 const String markerColorOperand = '0.87843 0.18824 0.18824';
 
-/// 작성: 2026-09-27 09:30:00 · nada
+/// 작성: 2026-09-27 09:30:00 · 박건준
 /// 함수: axisFrames
 /// 목적: 쪽 하나에서 축 틀 네모의 자리를 뽑는다. 렌더러가 실제로 찍은
 ///       좌표라서, 계산으로 기대한 자리와 맞는지 대조하는 데 쓴다.
@@ -105,7 +105,7 @@ List<List<double>> axisFrames(String stream, {required double pageWidthPt}) {
   return out;
 }
 
-/// 작성: 2026-10-20 15:02:44 · nada
+/// 작성: 2026-10-20 15:02:44 · 박건준
 /// 함수: guideLines
 /// 목적: 쪽 하나에서 운행 구간 점선(`ReportChartRenderer.guideDashPattern`
 ///       무늬로 그은 선)을 뽑는다. 점선을 켜고 끈 사이에 그은 선분이다.
@@ -131,7 +131,7 @@ List<({double left, double y, double right})> guideLines(String stream) {
   ];
 }
 
-/// 작성: 2026-10-21 13:10:00 · nada
+/// 작성: 2026-10-21 13:10:00 · 박건준
 /// 함수: labelBoxes
 /// 목적: 쪽 하나에서 표시점 옆 글자 상자(흰 바탕 · 빨간 테두리로 채우고
 ///       긋는 네모)의 자리를 뽑는다. 두 상자가 겹치는지 보는 데 쓴다.

@@ -12,7 +12,7 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 클래스: ReportChartPagePlan
 /// 목적: 차트 쪽 한 장에 무엇이 들어가는지 담는다. 쪽 번호와 그 쪽에 놓일
 ///       축 넷을 한 자리에 묶어, 번호와 내용이 따로 놀지 않게 한다.
@@ -23,7 +23,7 @@ class ReportChartPagePlan {
   /// 이 쪽에 위에서 아래 차례로 놓일 축 넷
   final List<ChartAxisSpec> axes;
 
-  /// 작성: 2026-09-23 09:40:00 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
   /// 함수: ReportChartPagePlan
   /// 목적: 쪽 번호와 그 쪽에 놓일 축 넷을 그대로 담는 생성자.
   /// 인자: pageNumber — 이 쪽의 번호
@@ -31,20 +31,21 @@ class ReportChartPagePlan {
   const ReportChartPagePlan({required this.pageNumber, required this.axes});
 }
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
+/// 수정: 2026-10-23 10:00:00 · 박건준
 /// 클래스: ReportChartPageRenderer
 /// 목적: TUNE 리포트의 차트 쪽을 PDF 로 그린다. 2쪽과 3쪽이 같은 서식을
 ///       쓰고 놓이는 축만 달라, 한 렌더러가 두 쪽을 모두 그린다.
 ///
-///       자리는 `ReportLayout` 이, 축 사양과 파형은
-///       `report_chart.dart` 가 정해 둔 것을 받아 놓기만 한다 — 여기서
+///       자리는 `ReportLayout` 이, 축 사양은 `chart_axes.dart` 가, 파형은
+///       `report_chart_renderer.dart` 가 정해 둔 것을 받아 놓기만 한다 — 여기서
 ///       좌표를 계산하거나 축 범위를 정하지 않는다.
 ///
 ///       1쪽(`report_page1.dart`)과 달리 서식에 덮어야 할 옛 값이 없다.
 ///       차트 자리가 서식에서 비어 있어 그대로 얹으면 된다.
 class ReportChartPageRenderer {
-  /// 작성: 2026-09-23 09:40:00 · nada
-  /// 수정: 2026-10-21 16:30:00 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
+  /// 수정: 2026-10-21 16:30:00 · 박건준
   /// 변수: title
   /// 목적: 차트 쪽 제목. 두 쪽 모두 같은 제목을 쓴다. "테이터" 는 오타가
   ///       아니다 — OTIS 원본 리포트 표기를 그대로 따른 의도된 표기이니
@@ -53,7 +54,7 @@ class ReportChartPageRenderer {
   ///       차트' 로". OTIS 리포트 2쪽과 3쪽 제목이 "테이터 차트" 다
   static const String title = '테이터 차트';
 
-  /// 작성: 2026-09-23 09:40:00 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
   /// 변수: pages
   /// 목적: 차트 쪽 두 장의 구성. 쪽 번호와 놓일 축을 짝지어 둔다.
   ///       - 2쪽 — 진동 세 축과 소음. 사람이 직접 느끼는 양이다
@@ -93,7 +94,7 @@ class ReportChartPageRenderer {
   /// 차트 한 개씩을 그리는 렌더러
   final ReportChartRenderer chartRenderer;
 
-  /// 작성: 2026-09-23 09:40:00 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
   /// 함수: ReportChartPageRenderer
   /// 목적: 문서와 미리 읽어 둔 자산을 그대로 담는 생성자. 직접 부르지 말고
   ///       `load()` 를 쓴다.
@@ -109,8 +110,8 @@ class ReportChartPageRenderer {
     required this.chartRenderer,
   });
 
-  /// 작성: 2026-09-23 09:40:00 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: load
   /// 목적: 글꼴 두 벌과 차트 쪽 서식 이미지를 자산에서 읽어 렌더러를
   ///       만든다. 자산 읽기는 느리고 두 쪽에 한 번이면 되므로 그리기와
@@ -141,8 +142,8 @@ class ReportChartPageRenderer {
     );
   }
 
-  /// 작성: 2026-09-23 09:40:00 · nada
-  /// 수정: 2026-10-12 02:15:16 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
+  /// 수정: 2026-10-12 02:15:16 · 박건준
   /// 함수: draw
   /// 목적: 차트 쪽 한 장을 문서에 더한다. 순서대로 그린다.
   ///       1. 서식 이미지를 A4 전면에 깐다
@@ -214,8 +215,8 @@ class ReportChartPageRenderer {
     return page;
   }
 
-  /// 작성: 2026-09-23 09:40:00 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: headerValues
   /// 목적: 머리말 네 칸에 채울 문구를 만든다.
   ///       - 제번 → 측정 ID, 쪽 번호 → 받은 번호
@@ -244,7 +245,7 @@ class ReportChartPageRenderer {
   }
 }
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 함수: renderReportChartPages
 /// 목적: 차트 쪽 두 장만 담은 PDF 한 부를 만든다. 아직 1쪽과 이어 붙이는
 ///       곳이 없어서 차트 쪽만 따로 확인할 때 쓴다.

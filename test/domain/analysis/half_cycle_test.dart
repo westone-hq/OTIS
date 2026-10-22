@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/analysis/half_cycle.dart';
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: main
 /// 목적: 반주기 P2P(`HalfCycle`)의 정의를 시험한다. 최대 P2P · A95 · 차트
 ///       표시점이 모두 이 한 정의에서 나오는지 본다.

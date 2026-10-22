@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// 작성: 2026-10-22 21:50:00 · nada
+/// 작성: 2026-10-22 21:50:00 · 박건준
 /// 변수: _packagePrefix
 /// 목적: 이 앱 파일을 가리키는 import 의 앞부분.
 const String _packagePrefix = 'package:vibration_checker/';
 
-/// 작성: 2026-10-22 21:50:00 · nada
+/// 작성: 2026-10-22 21:50:00 · 박건준
 /// 변수: _domainForbidden
 /// 목적: domain 이 import 하면 안 되는 앞부분. domain 은 화면 · 파일 ·
 ///       플랫폼을 모르는 순수 Dart 로 두어 시험에서 그대로 돌린다.
@@ -20,7 +20,7 @@ const List<String> _domainForbidden = <String>[
   '${_packagePrefix}ui/',
 ];
 
-/// 작성: 2026-10-22 21:50:00 · nada
+/// 작성: 2026-10-22 21:50:00 · 박건준
 /// 함수: _importsOf
 /// 목적: Dart 파일 하나의 import · export 대상을 읽는다.
 /// 인자: file — 읽을 파일
@@ -35,7 +35,7 @@ List<String> _importsOf(File file) {
   ];
 }
 
-/// 작성: 2026-10-22 21:50:00 · nada
+/// 작성: 2026-10-22 21:50:00 · 박건준
 /// 함수: _violationsOf
 /// 목적: lib 파일 하나가 층 규칙을 어긴 import 를 찾는다.
 ///       - domain → domain 만 (`_domainForbidden`)
@@ -70,7 +70,7 @@ List<String> _violationsOf(String path, List<String> imports) {
   return out;
 }
 
-/// 작성: 2026-10-22 21:50:00 · nada
+/// 작성: 2026-10-22 21:50:00 · 박건준
 /// 함수: main
 /// 목적: lib 의 import 가 층 규칙(CLAUDE.md "층 규칙")을 지키는지 본다.
 void main() {

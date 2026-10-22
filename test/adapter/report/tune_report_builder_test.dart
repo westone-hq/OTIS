@@ -12,19 +12,19 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 import '../../support/pdf_probe.dart';
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 변수: _outputPath
 /// 목적: 만들어 낸 리포트 한 부를 남겨 둘 자리. 세 쪽이 제대로 이어졌는지는
 ///       눈으로 열어 봐야 알 수 있어 시험이 끝나도 지우지 않는다.
 const _outputPath = 'build/tune_report_test.pdf';
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 변수: _sampleCount
 /// 목적: 시험에 쓰는 표본 개수.
 /// 근거: 인용 — 회귀 기준 측정 기록의 행 수와 같다
 const _sampleCount = 11388;
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 함수: _series
 /// 목적: 시험용 시계열 하나를 만든다.
 /// 인자: amplitude — 파형의 진폭. 단위는 쓰는 쪽을 따른다
@@ -37,7 +37,7 @@ List<double> _series(double amplitude, double cycles) {
   );
 }
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 함수: _result
 /// 목적: 리포트 한 부를 그려 보려고 꾸미는 측정 결과. 소음까지 채워 실제
 ///       측정에 가장 가까운 모양으로 둔다.
@@ -74,7 +74,7 @@ MeasurementResult _result() {
   );
 }
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 함수: _pageCount
 /// 목적: PDF 안에 쪽이 몇 장 들어 있는지 센다. 쪽 하나가 `/Type/Page` 로
 ///       적히는데, 쪽 목록을 담는 객체도 `/Type/Pages` 라 앞부분이 겹친다.
@@ -88,7 +88,7 @@ int _pageCount(List<int> bytes) {
   return all - lists;
 }
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 함수: main
 /// 목적: 리포트 한 부 만들기를 시험한다. 1쪽과 차트 두 쪽이 한 문서에
 ///       차례대로 담기는지, 그리고 자산을 한 번만 읽는 것이 실제로 파일을

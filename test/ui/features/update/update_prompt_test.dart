@@ -13,7 +13,7 @@ import 'package:vibration_checker/domain/update/update_info.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
 import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
-/// 작성: 2026-10-13 14:27:24 · nada
+/// 작성: 2026-10-13 14:27:24 · 박건준
 /// 변수: _info
 /// 목적: 안내할 버전 정보 (minimum 12, latest 13).
 final UpdateInfo _info = UpdateInfo(
@@ -25,7 +25,7 @@ final UpdateInfo _info = UpdateInfo(
   notes: '소음 표시를 고쳤습니다',
 );
 
-/// 작성: 2026-10-13 14:27:24 · nada
+/// 작성: 2026-10-13 14:27:24 · 박건준
 /// 클래스: _FakeInstaller
 /// 목적: 안드로이드 통로 대신 쓰는 가짜 설치기. 설치 허용 · 내려받기 ·
 ///       설치 결과를 시험이 정하고, 불린 요청을 기록한다.
@@ -42,7 +42,7 @@ class _FakeInstaller implements UpdateInstaller {
   /// 불린 요청 이름을 차례대로 기록한다
   final List<String> calls = <String>[];
 
-  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: canInstall
   /// 목적: 설치 허용 여부를 `allowed` 로 답한다.
   @override
@@ -51,7 +51,7 @@ class _FakeInstaller implements UpdateInstaller {
     return allowed;
   }
 
-  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: openInstallSettings
   /// 목적: 설정 화면에서 돌아온 결과를 `allowed` 로 답한다.
   @override
@@ -60,14 +60,14 @@ class _FakeInstaller implements UpdateInstaller {
     return allowed;
   }
 
-  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: progress
   /// 목적: 50% 진행률 한 건을 흘려보낸다.
   @override
   Stream<DownloadProgress> progress() =>
       Stream<DownloadProgress>.value(const DownloadProgress(50, 100));
 
-  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: download
   /// 목적: `downloadError` 가 있으면 그 코드로 실패하고, 없으면 가짜 경로를
   ///       돌려준다.
@@ -79,13 +79,13 @@ class _FakeInstaller implements UpdateInstaller {
     return '/cache/update/vcheck-update.apk';
   }
 
-  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: cancelDownload
   /// 목적: 취소 요청을 기록한다.
   @override
   Future<void> cancelDownload() async => calls.add('cancelDownload');
 
-  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: install
   /// 목적: 설치 결과를 `outcome` 으로 답한다.
   @override
@@ -95,7 +95,7 @@ class _FakeInstaller implements UpdateInstaller {
   }
 }
 
-/// 작성: 2026-10-13 14:27:24 · nada
+/// 작성: 2026-10-13 14:27:24 · 박건준
 /// 함수: _checker
 /// 목적: 가짜 서버로 확인기를 만든다.
 /// 인자: respond — 서버 응답. 안 주면 latest 13 · minimum 12 정상 응답
@@ -122,7 +122,7 @@ UpdateChecker _checker({
   );
 }
 
-/// 작성: 2026-10-13 14:27:24 · nada
+/// 작성: 2026-10-13 14:27:24 · 박건준
 /// 함수: _pumpHost
 /// 목적: 창을 띄울 빈 화면을 띄우고 그 위치 정보를 돌려준다.
 /// 인자: tester — 위젯 시험 도구
@@ -144,7 +144,7 @@ Future<BuildContext> _pumpHost(WidgetTester tester) async {
   return ctx;
 }
 
-/// 작성: 2026-10-13 14:27:24 · nada
+/// 작성: 2026-10-13 14:27:24 · 박건준
 /// 함수: main
 /// 목적: 업데이트 안내 창을 시험한다.
 ///       - 선택 창: "나중에" 로 닫히고 기록이 남는지, "업데이트" 가 허용

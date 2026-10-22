@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 
-/// 작성: 2026-09-15 21:14:33 · nada
-/// 수정: 2026-10-21 13:10:00 · nada
+/// 작성: 2026-09-15 21:14:33 · 박건준
+/// 수정: 2026-10-21 13:10:00 · 박건준
 /// 클래스: ReportMetric
 /// 목적: Performance Metrics 표의 한 행에 들어갈 지표 하나를 담는다. 값과
 ///       단위뿐 아니라, 그 값을 표에 어떻게 찍을지(`display`)와 신호등을
@@ -15,7 +15,7 @@ import 'package:vibration_checker/domain/report/report_thresholds.dart';
 ///       만든다. 그때 `display` 는 `—` 이고 `verdict` 는 미확정이다.
 ///       재지 못한 자리를 0 이나 빈 문자열로 메우지 않는다.
 class ReportMetric {
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 변수: vibrationUnit
   /// 목적: 리포트가 진동 값(mg) 뒤에 붙이는 단위 표기. 1쪽 표와 차트
   ///       값 글자가 함께 쓴다. 저장 값 · 앱 화면의 단위는 그대로 mg 다.
@@ -50,8 +50,8 @@ class ReportMetric {
   /// 항목). 문구를 쓰지 않는 행 · 초록 · 값 없음이면 null
   final List<String>? remarkLines;
 
-  /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
+  /// 수정: 2026-10-21 13:10:00 · 박건준
   /// 함수: ReportMetric
   /// 목적: 지표 한 행의 값과 표시 정보를 그대로 담는 생성자.
   /// 인자: key — 서식 행 이름
@@ -73,7 +73,7 @@ class ReportMetric {
     this.remarkLines,
   });
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 변수: _decimalsByUnit
   /// 목적: 단위마다 값 칸에 남길 소수 자리 수. 여기 없는 단위는
   ///       `_defaultDecimals` 자리다. 값이 100 이상이면 단위와 상관없이
@@ -83,7 +83,7 @@ class ReportMetric {
   ///       "6.1milli-G"(첫째 자리). 2026-10-15 점검 지시
   static const Map<String, int> _decimalsByUnit = <String, int>{'m/s': 2};
 
-  /// 작성: 2026-10-22 15:00:00 · nada
+  /// 작성: 2026-10-22 15:00:00 · 박건준
   /// 함수: decimalsFor
   /// 목적: 단위의 값 칸 소수 자리 수를 알려 준다. 리포트 1쪽 표(`display`)와
   ///       결과 화면이 같은 자리로 보이게 같이 쓴다. 최대 속도(m/s)는 반올림
@@ -98,13 +98,13 @@ class ReportMetric {
   static int decimalsFor(String unit) =>
       _decimalsByUnit[unit] ?? _defaultDecimals;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 변수: _defaultDecimals
   /// 목적: `_decimalsByUnit` 에 없는 단위의 소수 자리 수.
   static const int _defaultDecimals = 1;
 
-  /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-22 15:00:00 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
+  /// 수정: 2026-10-22 15:00:00 · 박건준
   /// 함수: display
   /// 목적: 표의 값 칸에 그대로 찍을 문자열을 만든다. 값이 100 이상이면
   ///       소수점을 떼고, 그보다 작으면 단위별 자리(`_decimalsByUnit`,
@@ -123,20 +123,20 @@ class ReportMetric {
     return suffix.isEmpty ? '$digits$unit' : '$digits$unit $suffix';
   }
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 함수: yellowDisplay
   /// 목적: 표의 황색 기준 칸에 찍을 문자열을 만든다.
   /// 반환: 기준치 문자열. 칸을 비우는 행이면 빈 문자열
   String get yellowDisplay => _limitText(yellowLimit);
 
-  /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: redDisplay
   /// 목적: 표의 적색 기준 칸에 찍을 문자열을 만든다.
   /// 반환: 기준치 문자열. 칸을 비우는 행이면 빈 문자열
   String get redDisplay => _limitText(redLimit);
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 함수: _limitText
   /// 목적: 기준치 하나를 칸에 찍을 문자열로 바꾼다. 정수면 소수점을 떼고
   ///       ("60"), 아니면 그대로("13.5") 적는다.
@@ -150,8 +150,8 @@ class ReportMetric {
   }
 }
 
-/// 작성: 2026-09-15 21:14:33 · nada
-/// 수정: 2026-10-15 15:53:26 · nada
+/// 작성: 2026-09-15 21:14:33 · 박건준
+/// 수정: 2026-10-15 15:53:26 · 박건준
 /// 클래스: ReportMetrics
 /// 목적: 측정 결과 하나에서 Performance Metrics 표 여덟 행을 만든다.
 ///       임계값은 여기 적지 않고 `ReportThresholds` 에서 가져온다.
@@ -206,7 +206,7 @@ class ReportMetrics {
   /// 운행 거리 (m)
   final ReportMetric travelDistance;
 
-  /// 작성: 2026-09-15 21:14:33 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
   /// 함수: ReportMetrics
   /// 목적: 표 여덟 행을 그대로 담는 생성자.
   /// 인자: noiseAvg, noiseMax — 소음 평균 · 최대
@@ -224,7 +224,7 @@ class ReportMetrics {
     required this.travelDistance,
   });
 
-  /// 작성: 2026-09-15 21:14:33 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
   /// 함수: rows
   /// 목적: 여덟 행을 서식에 놓인 차례대로 돌려준다. `ReportPage1Layout.metricRows`
   ///       와 같은 순서라, 그리는 쪽이 둘을 나란히 짝지어 쓸 수 있다.
@@ -240,7 +240,7 @@ class ReportMetrics {
     travelDistance,
   ];
 
-  /// 작성: 2026-09-15 21:14:33 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
   /// 함수: byKey
   /// 목적: 서식 행 이름으로 지표 하나를 찾는다.
   /// 인자: key — 찾을 행 이름 (`noise_avg` 등)
@@ -252,8 +252,8 @@ class ReportMetrics {
     return null;
   }
 
-  /// 작성: 2026-09-15 21:14:33 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: from
   /// 목적: 측정 결과 하나에서 표 여덟 행을 만든다. 값을 낼 수 있는 항목만
   ///       채우고 나머지는 비운 채로 둔다. 소음 평균은 진동 · 소음 최대와
@@ -396,7 +396,7 @@ class ReportMetrics {
     );
   }
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: _verticalRemark
   /// 목적: 수직 행이 황색 · 적색이면 OTIS 문구를 붙인 지표로 바꾼다. 초록 ·
   ///       회색이면 그대로 돌려준다(서식 라벨 · 값을 그대로 찍는다).
@@ -440,7 +440,7 @@ class ReportMetrics {
     );
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: _noiseInTravel
   /// 목적: 소음 평균을 낼 표본 범위를 고른다.
   ///       - 운행 구간이 있으면 그 구간
@@ -462,7 +462,7 @@ class ReportMetrics {
     return result.noiseSeries;
   }
 
-  /// 작성: 2026-09-15 21:14:33 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
   /// 함수: _withoutWarmupZeros
   /// 목적: 소음 시계열에서 0 인 표본을 걸러낸다. 수집 계층은 소음 창이
   ///       가득 차기 전에 0 을 내보내므로, 측정을 시작한 직후 구간이 0 으로
@@ -486,7 +486,7 @@ class ReportMetrics {
     return kept;
   }
 
-  /// 작성: 2026-09-15 21:14:33 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
   /// 함수: _average
   /// 목적: 표본의 평균을 낸다.
   /// 인자: series — 평균 낼 표본 목록
@@ -501,7 +501,7 @@ class ReportMetrics {
     return sum / series.length;
   }
 
-  /// 작성: 2026-09-15 21:14:33 · nada
+  /// 작성: 2026-09-15 21:14:33 · 박건준
   /// 함수: _larger
   /// 목적: 두 축 값 중 큰 쪽을 고른다. 리포트의 수평 진동 행이 X 와 Y 를
   ///       한 행으로 내보내기 때문이다.

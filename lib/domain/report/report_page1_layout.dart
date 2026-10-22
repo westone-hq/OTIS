@@ -1,7 +1,7 @@
 import 'package:vibration_checker/domain/report/report_layout.dart';
 
-/// 작성: 2026-09-15 19:43:50 · nada
-/// 수정: 2026-10-23 00:40:00 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-23 00:40:00 · 박건준
 /// 클래스: ReportPage1Layout
 /// 목적: 리포트 1쪽의 자리들을 담는다. 머리말 11칸, Performance Metrics
 ///       표 8행, 분석 자료 표 7행이 있다.
@@ -11,8 +11,8 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 ///       않고, 특히 마지막 한 칸이 뚜렷하게 좁다. 첫 행에서 일정 간격을
 ///       더해 가면 마지막 행이 12픽셀 넘게 어긋난다.
 class ReportPage1Layout {
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-22 11:10:00 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-22 11:10:00 · 박건준
   /// 변수: background
   /// 목적: 서식 배경 이미지 자산 경로. 정본이 가진 파일 이름 앞에 자산
   ///       디렉터리를 붙인 것이다. 2026-10-22 이미지에서 예전 값을 붓으로
@@ -33,8 +33,8 @@ class ReportPage1Layout {
     color: ReportColors.navy,
   );
 
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-12 02:13:59 · 박건준
   /// 변수: engineerName
   /// 목적: 엔지니어명. 측정을 저장할 때 설정에 있던 이름이다. 없으면
   ///       `placeholder`. "엔지니어:" 라벨 바로 아래, 라벨과 같은 왼쪽
@@ -64,8 +64,8 @@ class ReportPage1Layout {
     color: ReportColors.navy,
   );
 
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-11 19:15:25 · 박건준
   /// 변수: product
   /// 목적: 제품. "엘리베이터, 기종" 이다. 기종이 없는 예전 결과는
   ///       "엘리베이터".
@@ -81,8 +81,8 @@ class ReportPage1Layout {
     color: ReportColors.white,
   );
 
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-11 19:15:25 · 박건준
   /// 변수: load
   /// 목적: 하중. 입력 숫자와 단위의 리포트 표기("2000 킬로그램")다. 값이
   ///       없는 예전 결과는 `placeholder`.
@@ -109,8 +109,8 @@ class ReportPage1Layout {
     color: ReportColors.white,
   );
 
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-11 19:15:25 · 박건준
   /// 변수: testType
   /// 목적: 측정 종류. 홈 화면에서 고른 해석 종류 문구 그대로다. 값이 없는
   ///       예전 결과는 기본값 "층간 시험".
@@ -148,8 +148,8 @@ class ReportPage1Layout {
     color: ReportColors.white,
   );
 
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-12 02:13:59 · 박건준
   /// 변수: buildingName
   /// 목적: 건물명 (현장명). "건물명:" 라벨 바로 아래, 라벨과 같은 왼쪽
   ///       끝에서 시작한다.
@@ -167,8 +167,8 @@ class ReportPage1Layout {
     color: ReportColors.text,
   );
 
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-12 02:13:59 · 박건준
   /// 변수: address
   /// 목적: 주소. "주소, 우편번호" 다. 둘 다 없는 예전 결과는
   ///       `placeholder`. "주소:" 라벨과 같은 줄, 라벨 바로 뒤에서
@@ -188,7 +188,7 @@ class ReportPage1Layout {
     color: ReportColors.text,
   );
 
-  /// 작성: 2026-10-11 19:15:25 · nada
+  /// 작성: 2026-10-11 19:15:25 · 박건준
   /// 변수: placeholder
   /// 목적: 값이 없는 머리말 칸(엔지니어 · 하중 · 주소)에 찍는 자리 표시
   ///       문구. 칸을 비우면 빠뜨린 것처럼 보인다. 0 이나 지어낸 값은 찍지
@@ -196,14 +196,14 @@ class ReportPage1Layout {
   /// 근거: 인용 — 2026-10-11 사용자 결정
   static const String placeholder = '미입력';
 
-  /// 작성: 2026-10-11 19:15:25 · nada
+  /// 작성: 2026-10-11 19:15:25 · 박건준
   /// 변수: headerRightLimitX
   /// 목적: 머리말 글자가 넘지 않을 오른쪽 끝의 가로 좌표 (픽셀). 측정 일시
   ///       칸의 오른쪽 맞춤 자리와 같은 여백이다.
   /// 근거: 인용 — `datetime` 칸의 x 와 같다
   static const int headerRightLimitX = 2192;
 
-  /// 작성: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-10-12 02:13:59 · 박건준
   /// 변수: engineerRightLimitX
   /// 목적: 엔지니어명이 넘지 않을 오른쪽 끝의 가로 좌표 (픽셀). 같은 금색
   ///       띠 오른쪽의 측정 일시 문구와 겹치지 않게 그 앞에서 멈춘다.
@@ -211,7 +211,7 @@ class ReportPage1Layout {
   ///       시작한다. 그 앞으로 여백을 둔다
   static const int engineerRightLimitX = 1800;
 
-  /// 작성: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-10-12 02:13:59 · 박건준
   /// 변수: buildingNameRightLimitX
   /// 목적: 건물명이 넘지 않을 오른쪽 끝의 가로 좌표 (픽셀). 금색 띠의 사선
   ///       줄무늬가 시작하기 전에 멈춘다.
@@ -219,8 +219,8 @@ class ReportPage1Layout {
   ///       709 에서 시작한다
   static const int buildingNameRightLimitX = 700;
 
-  /// 작성: 2026-10-11 19:15:25 · nada
-  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-10-11 19:15:25 · 박건준
+  /// 수정: 2026-10-12 02:13:59 · 박건준
   /// 변수: fitRightLimitX
   /// 목적: 문구가 길어 서식 오른쪽 끝이나 이웃 문구에 닿을 수 있는 칸과 그
   ///       칸의 오른쪽 한계 (픽셀). 넘칠 때만 한 줄을 지키며 글자를 줄인다.
@@ -237,8 +237,8 @@ class ReportPage1Layout {
     'building_name': buildingNameRightLimitX,
   };
 
-  /// 작성: 2026-10-11 19:15:25 · nada
-  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-10-11 19:15:25 · 박건준
+  /// 수정: 2026-10-12 02:13:59 · 박건준
   /// 함수: maxWidthOf
   /// 목적: 칸 하나가 쓸 수 있는 가장 큰 폭을 정한다. 차트 쪽 머리말도 같은
   ///       이름 · 같은 자리의 칸(엔지니어명)이라 함께 쓴다.
@@ -249,7 +249,7 @@ class ReportPage1Layout {
     return limit == null ? null : limit - field.x;
   }
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: fields
   /// 목적: 머리말 11칸을 이름으로 찾아 쓸 수 있게 모아 둔 것. 낱개 상수와
   ///       같은 값이며, 전부 훑어야 할 때 쓴다.
@@ -306,7 +306,7 @@ class ReportPage1Layout {
   /// 황색 기준치를 칸의 어느 쪽에 붙일지
   static const LayoutAlign colYellowAlign = LayoutAlign.center;
 
-  /// 작성: 2026-09-15 20:13:49 · nada
+  /// 작성: 2026-09-15 20:13:49 · 박건준
   /// 변수: colRedAlign
   /// 목적: 적색 기준치를 칸의 어느 쪽에 붙일지. 이 칸만 가운데로 모은다.
   /// 근거: 인용 — `docs/report_layout.json` 의
@@ -325,7 +325,7 @@ class ReportPage1Layout {
   /// 서식에 남아 있는 황색 · 적색 칸을 덮을 네모의 세로 길이 (픽셀)
   static const int eraseRedHeight = 46;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 변수: remarkX
   /// 목적: 황색 · 적색 행의 OTIS 문구(`ReportMetric.remarkLines`)를 쓰기
   ///       시작하는 가로 좌표 (픽셀). 서식 설명 라벨 자리(`colValueNoLabelX`
@@ -337,7 +337,7 @@ class ReportPage1Layout {
   /// 문구를 쓰기 전에 서식 설명 라벨 · 값 자리를 덮을 네모의 왼쪽 끝 (픽셀)
   static const int remarkEraseX = 735;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 변수: remarkEraseWidth
   /// 목적: 문구 자리를 덮을 네모의 가로 길이 (픽셀). 오른쪽 끝(1447)이 황색
   ///       칸 덮개 왼쪽 끝(`colYellowX` − `eraseRedWidth` / 2 = 1456)에 닿지
@@ -347,8 +347,8 @@ class ReportPage1Layout {
   /// 문구 자리를 덮을 네모의 세로 길이 (픽셀). 행 줄무늬 안이다
   static const int remarkEraseHeight = 86;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
-  /// 수정: 2026-10-22 11:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-22 11:10:00 · 박건준
   /// 변수: remarkSize
   /// 목적: 문구 글자 크기 (픽셀). 다른 행 설명 글자와 같은 크기로 두 줄을
   ///       쓴다. 덮은 폭(`remarkEraseWidth`)을 넘는 줄은 글자를 줄인다.
@@ -357,8 +357,8 @@ class ReportPage1Layout {
   ///       지시 "다른 행 설명 글자와 같게"
   static const int remarkSize = 28;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
-  /// 수정: 2026-10-22 11:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-22 11:10:00 · 박건준
   /// 변수: remarkLineGap
   /// 목적: 문구 두 줄의 세로 간격 (픽셀). 행 가운데에서 위아래로 반씩
   ///       띄운다. 두 줄(±18 + 글자 반 높이 14)이 덮개 높이(±43) 안이다.
@@ -382,7 +382,7 @@ class ReportPage1Layout {
   /// 최대 수평 진동 행의 세로 좌표 (픽셀)
   static const int horizMaxY = 1538;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: maxSpeedY
   /// 목적: 최대 속도 행의 세로 좌표 (픽셀).
   /// 근거: 인용 — 원본 리포트에서 잰 값이다. 앞 행과의 간격은 110으로
@@ -390,7 +390,7 @@ class ReportPage1Layout {
   ///       구하지 않는다. 이 값을 그대로 쓴다
   static const int maxSpeedY = 1648;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: travelDistanceY
   /// 목적: 운행 거리 행의 세로 좌표 (픽셀).
   /// 근거: 인용 — 원본 리포트에서 잰 값이다. 앞 행과의 간격이 95로 표에서
@@ -398,7 +398,7 @@ class ReportPage1Layout {
   ///       나와 12픽셀 넘게 어긋난다. 계산하지 말고 이 값을 그대로 쓴다
   static const int travelDistanceY = 1743;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: metricRows
   /// 목적: Performance Metrics 표 여덟 행을 서식에 놓인 차례대로 모아
   ///       둔 것. 세로 좌표는 위 낱개 상수와 같은 값이다.
@@ -449,14 +449,14 @@ class ReportPage1Layout {
   /// 분석 자료 표의 구분 이름이 시작하는 가로 좌표 (픽셀)
   static const int analysisCategoryX = 313;
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 변수: analysisCategorySize
   /// 목적: 분석 자료 표의 구분 이름을 새로 찍을 때 글자 크기 (픽셀).
   /// 근거: 측정 — 서식 tem_1.jpg 에서 "Machine으로 부터 진동" 글자 높이가
   ///       y 2185~2212(27 픽셀)다. 1쪽 표의 값 글자 크기(28)와 같게 둔다
   static const int analysisCategorySize = 28;
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 변수: analysisCategoryWeight
   /// 목적: 분석 자료 표의 구분 이름을 새로 찍을 때 글자 굵기.
   /// 근거: 측정 — 서식 tem_1.jpg 의 구분 이름은 본문 글자보다 굵다. 보통
@@ -464,7 +464,7 @@ class ReportPage1Layout {
   ///       270dpi 비교)
   static const LayoutWeight analysisCategoryWeight = LayoutWeight.bold;
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 변수: eraseAnalysisLabelX
   /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 왼쪽 끝 가로 좌표 (픽셀).
   ///       신호등 원(오른쪽 끝 x 258)에 닿지 않는다.
@@ -472,14 +472,14 @@ class ReportPage1Layout {
   ///       시작한다
   static const int eraseAnalysisLabelX = 300;
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 변수: eraseAnalysisLabelWidth
   /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 가로 길이 (픽셀).
   /// 근거: 측정 — 가장 긴 "Machine으로 부터 진동" 이 x 620 에서 끝난다.
   ///       설명 칸(x 1172)보다 한참 앞에서 멈춘다
   static const int eraseAnalysisLabelWidth = 360;
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 변수: eraseAnalysisLabelHeight
   /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 세로 길이 (픽셀). 행
   ///       세로 좌표를 가운데로 둔다.
@@ -487,7 +487,7 @@ class ReportPage1Layout {
   ///       101)의 절반을 넘지 않아 이웃 행을 덮지 않는다
   static const int eraseAnalysisLabelHeight = 52;
 
-  /// 작성: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-10-15 15:53:26 · 박건준
   /// 변수: analysisRelabels
   /// 목적: 서식에 박힌 분석 자료 구분 이름 가운데 바꿔 찍을 행과 새 이름.
   ///       열쇠는 `analysisRowKeys` 의 행 이름이다. 서식 글자를 덮고 이
@@ -508,7 +508,7 @@ class ReportPage1Layout {
   /// 분석 자료 표의 설명 글자 크기 (픽셀)
   static const int analysisDescriptionSize = 28;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: analysisRowYs
   /// 목적: 분석 자료 표 일곱 행의 세로 좌표 (픽셀)를 서식에 놓인
   ///       차례대로 모아 둔 것. 행 이름은 `analysisRowKeys` 와 짝이다.
@@ -523,7 +523,7 @@ class ReportPage1Layout {
     2707,
   ];
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: analysisRowKeys
   /// 목적: 분석 자료 표 일곱 행의 이름. `analysisRowYs` 와 같은 차례다.
   ///       일곱 항목 모두 판정 근거가 없어 지금은 회색으로 비워 둔다.

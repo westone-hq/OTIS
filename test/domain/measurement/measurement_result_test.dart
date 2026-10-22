@@ -6,7 +6,7 @@ import 'package:vibration_checker/domain/analysis/travel_window.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-/// 작성: 2026-10-07 02:22:28 · nada
+/// 작성: 2026-10-07 02:22:28 · 박건준
 /// 함수: _result
 /// 목적: 시험용 측정 결과를 만든다. 시계열은 짧게, 지표는 0 이 아닌 값으로
 ///       둬 저장 · 복원에서 빠진 값이 없는지 보이게 한다.
@@ -36,8 +36,8 @@ MeasurementResult _result({String? signalConditioning}) {
   );
 }
 
-/// 작성: 2026-10-07 02:22:28 · nada
-/// 수정: 2026-10-11 16:58:59 · nada
+/// 작성: 2026-10-07 02:22:28 · 박건준
+/// 수정: 2026-10-11 16:58:59 · 박건준
 /// 함수: main
 /// 목적: 측정 결과의 신호 처리 방식(`signalConditioning`)과 현장 정보 새
 ///       항목(하중 · 단위 · 해석 종류 · 우편번호 · 참고사항)이 JSON 저장 ·

@@ -9,7 +9,7 @@ import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 
-/// 작성: 2026-10-04 18:38:14 · nada
+/// 작성: 2026-10-04 18:38:14 · 박건준
 /// 클래스: _Status
 /// 목적: 목록 한 줄에 붙이는 측정 상태. 색 · 아이콘 · 글자를 함께 써서
 ///       색을 구분하기 어려워도 알아볼 수 있게 한다.
@@ -19,7 +19,7 @@ import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 enum _Status { exceeded, normal, unmeasured }
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-04 18:38:14 · nada
+/// 수정: 2026-10-04 18:38:14 · 박건준
 /// 클래스: HistoryScreen
 /// 목적: 기기에 저장된 측정 결과 목록 화면. 최근 것부터 보여주고, 한 줄을
 ///       누르면 그 측정의 결과 화면(`ResultScreen`)을 연다. 줄마다 삭제할
@@ -40,7 +40,7 @@ class HistoryScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-15 16:50:04 · nada
+/// 수정: 2026-10-15 16:50:04 · 박건준
 /// 클래스: _HistoryScreenState
 /// 목적: 저장된 측정 결과 목록을 읽어 오고, 결과 화면으로 넘기고, 한 건씩
 ///       지우는 상태를 관리한다. 읽지 못한 결과는 목록 끝에 "읽을 수 없는
@@ -60,7 +60,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   bool _loadFailed = false;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-22 12:20:00 · nada
+  /// 수정: 2026-10-22 12:20:00 · 박건준
   /// 함수: initState
   /// 목적: 이 화면이 나타날 때 한 번 저장된 결과 목록을 불러오고, 그 뒤로는
   ///       측정 폴더가 바뀔 때마다(`MeasurementRepository.changes`) 다시
@@ -73,7 +73,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     MeasurementRepository.instance.changes.addListener(_loadItems);
   }
 
-  /// 작성: 2026-10-22 12:20:00 · nada
+  /// 작성: 2026-10-22 12:20:00 · 박건준
   /// 함수: dispose
   /// 목적: 측정 폴더 변경 듣기를 끊는다. 저장소는 앱 전역 하나라 끊지 않으면
   ///       사라진 화면을 계속 부른다.
@@ -84,7 +84,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: _loadItems
   /// 목적: 저장소에서 측정 결과 목록(읽지 못한 건 포함)을 불러와 화면
   ///       상태에 채운다. 조회 자체가 실패하면 빈 목록으로 두고 실패 상태를
@@ -110,8 +110,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
   }
 
-  /// 작성: 2026-10-04 18:38:14 · nada
-  /// 수정: 2026-10-22 12:20:00 · nada
+  /// 작성: 2026-10-04 18:38:14 · 박건준
+  /// 수정: 2026-10-22 12:20:00 · 박건준
   /// 함수: _open
   /// 목적: 고른 측정의 결과 화면을 연다. 결과 화면에서 테스트를 다시 재
   ///       새 결과가 생기면 저장소 변경 알림(`initState()`)이 목록을 새로
@@ -123,7 +123,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: _confirmDelete
   /// 목적: 측정 결과 한 건을 지운다. 되돌릴 수 없어 먼저 확인을 받는다.
   ///       이미 지워진 기록이면 그렇다고 알리고 목록을 새로 읽는다. 읽지
@@ -167,7 +167,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-22 23:50:00 · nada
+  /// 수정: 2026-10-22 23:50:00 · 박건준
   /// 함수: _formatDate
   /// 목적: 측정 일시를 목록에 쓸 문구로 바꾼다. 기기 시간대와 상관없이
   ///       한국 시간으로 적는다(`KoreaTime.of()`).
@@ -176,7 +176,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _formatDate(DateTime dt) =>
       KoreaTime.minuteLabel(dt); // → 로직 이동: KoreaTime.minuteLabel()
 
-  /// 작성: 2026-10-04 18:38:14 · nada
+  /// 작성: 2026-10-04 18:38:14 · 박건준
   /// 함수: _statusOf
   /// 목적: 측정 결과의 상태를 정한다. 판정은 세 축 진동과 소음 최대를 본다.
   /// 인자: item — 판정할 측정 결과
@@ -195,7 +195,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-04 18:38:14 · 박건준
   /// 함수: _getSummaryText
   /// 목적: 목록 한 줄에 보여줄 요약 문구를 만든다. 초과한 항목이 있으면
   ///       그 항목만 나열하고, 초과가 없으면 "전 지표 정상"을 쓴다.
@@ -228,7 +228,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-04 18:38:14 · 박건준
   /// 함수: _buildEmptyState
   /// 목적: 목록이 비었거나 읽지 못했을 때의 안내를 만든다. 읽지 못했으면
   ///       다시 시도 버튼을, 비었으면 홈으로 돌아가 측정하러 가는 버튼을
@@ -272,7 +272,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 18:38:14 · nada
+  /// 작성: 2026-10-04 18:38:14 · 박건준
   /// 함수: _buildStatusBadge
   /// 목적: 상태를 아이콘 + 글자로 보여주는 표시를 만든다.
   /// 인자: status — 보여줄 상태
@@ -299,7 +299,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: _buildListItem
   /// 목적: 측정 결과 한 줄을 만든다. 왼쪽부터 상태, 제번 · 현장명과
   ///       측정 일시 · 요약, 삭제 버튼, 넘어가기 표시를 둔다. 줄 어디를
@@ -364,7 +364,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: _buildUnreadableItem
   /// 목적: 결과 파일을 읽지 못한 측정 한 줄을 만든다. 누를 수 없고(열 결과가
   ///       없다) 지우기만 할 수 있다. 측정 ID 가 측정 시각이라 언제 측정인지
@@ -416,7 +416,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: build
   /// 목적: 목록 화면을 그린다. 읽는 중이면 진행 표시, 비었거나 읽지
   ///       못했으면 안내, 그 밖에는 저장 결과를 한 줄씩 늘어놓는다. 넓은

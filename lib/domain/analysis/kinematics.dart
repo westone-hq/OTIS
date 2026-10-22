@@ -4,13 +4,13 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/dsp/butterworth.dart';
 import 'package:vibration_checker/domain/dsp/units.dart';
 
-/// 작성: 2026-10-20 14:05:12 · nada
+/// 작성: 2026-10-20 14:05:12 · 박건준
 /// 클래스: MotionWindow
 /// 목적: 운행 거리 · 최대 속도를 적분한 "움직인 구간". 진동 · 소음 지표를
 ///       내는 운행 구간(`TravelWindow`, 출발 · 정지 0.5 m 제외)과 다르다 —
 ///       이 구간은 출발 직전부터 정지 직후까지다. 첨자는 100Hz 격자 기준이다.
 class MotionWindow {
-  /// 작성: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
   /// 함수: MotionWindow
   /// 목적: 구간 끝 첨자와 잘림 여부를 그대로 담는다.
   /// 인자: startIndex, endIndex — 구간 첫 · 끝 첨자 (끝 포함)
@@ -42,19 +42,19 @@ class MotionWindow {
   /// 첨자를 초로 바꿀 표본 주기 (Hz)
   final double sampleRate;
 
-  /// 작성: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
   /// 함수: startSec
   /// 목적: 구간 시작 시각 (초, 격자 첫 행 기준).
   double get startSec => startIndex / sampleRate;
 
-  /// 작성: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
   /// 함수: endSec
   /// 목적: 구간 끝 시각 (초, 격자 첫 행 기준).
   double get endSec => endIndex / sampleRate;
 }
 
-/// 작성: 2026-09-15 14:32:07 · nada
-/// 수정: 2026-10-22 22:40:00 · nada
+/// 작성: 2026-09-15 14:32:07 · 박건준
+/// 수정: 2026-10-22 22:40:00 · 박건준
 /// 클래스: Kinematics
 /// 목적: 수직 진동에서 뽑아낸 파생 물리량과 거기서 나온 두 지표를 한
 ///       묶음으로 담는다. `derive()` 가 만들어 돌려준다.
@@ -94,8 +94,8 @@ class Kinematics {
   /// 움직인 구간. 정지 측정이면 null
   final MotionWindow? motion;
 
-  /// 작성: 2026-09-15 14:32:07 · nada
-  /// 수정: 2026-10-22 22:40:00 · nada
+  /// 작성: 2026-09-15 14:32:07 · 박건준
+  /// 수정: 2026-10-22 22:40:00 · 박건준
   /// 함수: Kinematics
   /// 목적: 파생 물리량과 두 지표를 그대로 담는 생성자.
   /// 인자: accel — 가속도 시계열 (m/s²)
@@ -121,8 +121,8 @@ class Kinematics {
     required this.motion,
   });
 
-  /// 작성: 2026-09-15 19:14:22 · nada
-  /// 수정: 2026-10-22 22:40:00 · nada
+  /// 작성: 2026-09-15 19:14:22 · 박건준
+  /// 수정: 2026-10-22 22:40:00 · 박건준
   /// 변수: minimumRows
   /// 목적: 변환에 필요한 최소 격자 행 수. 이보다 적으면 변환하지 않고
   ///       사유를 올린다.
@@ -138,7 +138,7 @@ class Kinematics {
   ///       (`Butterworth.padLength()`)
   static const int minimumRows = 3 * (CaptureConfig.jerkLowpassOrder + 1) + 1;
 
-  /// 작성: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
   /// 함수: kinematicsMethodLabel
   /// 목적: 운행 거리 · 최대 속도를 낸 방식을 결과 파일(result.json
   ///       `signalConditioning`)에 남길 문자열. 신호 처리 · 가중 표시 뒤에
@@ -150,7 +150,7 @@ class Kinematics {
       'motion(v>${CaptureConfig.motionSpeedThresholdMps},'
       'pad${CaptureConfig.motionPaddingMs}ms)';
 
-  /// 작성: 2026-10-21 10:05:00 · nada
+  /// 작성: 2026-10-21 10:05:00 · 박건준
   /// 함수: jerkMethodLabel
   /// 목적: 저크를 낸 방식을 결과 파일(result.json `signalConditioning`)에
   ///       남길 문자열. 이 표시가 없는 2026-10-21 전 결과의 저크는 40Hz
@@ -161,7 +161,7 @@ class Kinematics {
       'jerk(lp${CaptureConfig.jerkLowpassHz}'
       'bw${CaptureConfig.jerkLowpassOrder}zp)';
 
-  /// 작성: 2026-10-21 11:20:00 · nada
+  /// 작성: 2026-10-21 11:20:00 · 박건준
   /// 함수: accelChartMethodLabel
   /// 목적: 차트용 가속도(`accelSeries`)를 만든 방식을 결과 파일
   ///       (`signalConditioning`)에 남길 문자열. 이 표시가 없는 2026-10-21 전
@@ -171,8 +171,8 @@ class Kinematics {
       'acc(lp${CaptureConfig.accelChartLowpassHz}'
       'bw${CaptureConfig.accelChartLowpassOrder}zp)';
 
-  /// 작성: 2026-09-15 14:32:07 · nada
-  /// 수정: 2026-10-22 23:55:00 · nada
+  /// 작성: 2026-09-15 14:32:07 · 박건준
+  /// 수정: 2026-10-22 23:55:00 · 박건준
   /// 함수: derive
   /// 목적: 수직 진동 시계열에서 가속도 · 속도 · 누적 이동량 · 저크와
   ///       최대 속도 · 운행 거리를 만든다. 순서대로 한다.
@@ -332,7 +332,7 @@ class Kinematics {
     );
   }
 
-  /// 작성: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
   /// 함수: _findMotion
   /// 목적: 승강기가 움직인 구간을 찾는다. 예전 방식대로 전체를 한 번
   ///       적분해 대략 속도를 만들고(전체 평균 빼기 + 양 끝 직선 빼기),

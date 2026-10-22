@@ -8,13 +8,13 @@ import 'package:vibration_checker/adapter/storage/prefs_store.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
 
-/// 작성: 2026-10-11 17:28:28 · nada
+/// 작성: 2026-10-11 17:28:28 · 박건준
 /// 변수: _startScreenText
 /// 목적: 측정 시작이 통과했을 때 넘어가는 자리에 띄우는 문구. 시작 화면
 ///       대신 이 문구가 보이면 홈 화면이 `/start` 로 넘어간 것이다.
 const String _startScreenText = '시작 화면 자리';
 
-/// 작성: 2026-10-11 17:28:28 · nada
+/// 작성: 2026-10-11 17:28:28 · 박건준
 /// 함수: _pumpHome
 /// 목적: 홈 화면을 길쭉한 화면에 띄운다. 입력칸이 모두 한 화면에 들어오게
 ///       해 스크롤 없이 누를 수 있게 하고, `/start` 로 넘어가는지 볼 수
@@ -40,7 +40,7 @@ Future<void> _pumpHome(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// 작성: 2026-10-11 17:28:28 · nada
+/// 작성: 2026-10-11 17:28:28 · 박건준
 /// 함수: _field
 /// 목적: 화면 위에서부터 n 번째 입력칸을 찾는다. 차례는 제번(0) ·
 ///       현장명(1) · 우편번호(2) · 주소(3) · 최하층(4) · 최상층(5) ·
@@ -49,7 +49,7 @@ Future<void> _pumpHome(WidgetTester tester) async {
 /// 반환: 그 입력칸을 찾는 조건
 Finder _field(int index) => find.byType(TextField).at(index);
 
-/// 작성: 2026-10-11 17:28:28 · nada
+/// 작성: 2026-10-11 17:28:28 · 박건준
 /// 함수: _fillRequired
 /// 목적: 필수 입력칸을 검사를 통과하는 값으로 모두 채운다. 참고사항은
 ///       비워 둔다.
@@ -65,8 +65,8 @@ Future<void> _fillRequired(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// 작성: 2026-10-04 14:35:59 · nada
-/// 수정: 2026-10-13 13:17:56 · nada
+/// 작성: 2026-10-04 14:35:59 · 박건준
+/// 수정: 2026-10-13 13:17:56 · 박건준
 /// 함수: main
 /// 목적: 홈 화면을 시험한다.
 ///       - 지난번 현장 정보로 입력창 · 선택지를 미리 채우는지, 선택지에

@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: UnreadableMeasurement
 /// 목적: 결과 파일은 있는데 읽지 못한 측정 한 건. 저장 결과 목록이 이 건만
 ///       "읽을 수 없는 결과" 로 보여 주고 나머지는 그대로 보여 준다 — 한
@@ -19,7 +19,7 @@ class UnreadableMeasurement {
   /// 읽지 못한 사유 (예외 문구). 기록 · 진단용이다
   final String reason;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: UnreadableMeasurement
   /// 목적: 값을 담는다.
   /// 인자: id, reason — 위 필드
@@ -27,7 +27,7 @@ class UnreadableMeasurement {
 }
 
 /// 작성: 2026-08-18 23:29:46 · 박건준
-/// 수정: 2026-10-05 10:03:35 · nada
+/// 수정: 2026-10-05 10:03:35 · 박건준
 /// 클래스: MeasurementRepository
 /// 목적: 완성된 측정 결과를 기기에 파일 형태로 저장하거나, 목록을
 ///       불러오고, 삭제하는 저장소 역할을 한다.
@@ -63,52 +63,52 @@ class UnreadableMeasurement {
 ///         측정을 목록에서 조용히 빠뜨리면 있는 기록을 없는 것처럼
 ///         보여 주게 된다.
 class MeasurementRepository {
-  /// 작성: 2026-10-15 22:22:45 · nada
+  /// 작성: 2026-10-15 22:22:45 · 박건준
   /// 변수: maxStoredMeasurements
   /// 목적: 기기에 남겨 두는 측정 결과 수. 새 측정을 저장한 뒤 이보다
   ///       많으면 오래된 것부터 지운다(`pruneOldest()`).
   /// 근거: 인용 — 2026-10-15 사용자 지시 "30개 쌓이면 지우는걸로"
   static const int maxStoredMeasurements = 30;
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 변수: resultFileName
   /// 목적: 측정 결과 전부를 담는 파일 이름.
   static const String resultFileName = 'result.json';
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 변수: summaryFileName
   /// 목적: 목록 화면이 읽는, 시계열을 뺀 파일 이름.
   static const String summaryFileName = 'summary.json';
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 변수: reportFileName
   /// 목적: 만들어 둔 리포트 파일 이름.
   static const String reportFileName = 'report.pdf';
 
-  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 작성: 2026-09-27 11:00:00 · 박건준
   /// 변수: rawFileName
   /// 목적: 격자에 맞춘 측정값 파일 이름 (EVIMP1, X Y Z 소음 네 열).
   static const String rawFileName = 'raw.txt';
 
-  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 작성: 2026-09-27 11:00:00 · 박건준
   /// 변수: metaFileName
   /// 목적: 격자 환산 집계 파일 이름. 사람이 읽어 보는 진단용이다.
   static const String metaFileName = 'meta.txt';
 
-  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 작성: 2026-09-27 11:00:00 · 박건준
   /// 변수: nativeRawFileName
   /// 목적: 안드로이드가 따로 남긴 원본 기록을 이 폴더로 옮겨 온 사본의
   ///       이름.
   static const String nativeRawFileName = 'native_raw.txt';
 
-  /// 작성: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-18 10:12:30 · 박건준
   /// 변수: noiseAudioFileName
   /// 목적: 측정 중 마이크로 녹음한 현장 소음(AAC, M4A 틀) 파일 이름.
   ///       안드로이드(`NoiseAudioEncoder`)가 남긴 것을 저장 절차가 이 폴더로
   ///       옮겨 온다. 메일에 "현장 소음" 으로 붙는다.
   static const String noiseAudioFileName = 'noise.m4a';
 
-  /// 작성: 2026-09-27 11:00:00 · nada
+  /// 작성: 2026-09-27 11:00:00 · 박건준
   /// 변수: jobFileNames
   /// 목적: 측정 폴더에 놓이는 파일 이름을 모두 모아 둔 것. 낱개 상수와
   ///       같은 값이며, 폴더에 무엇이 들어가는지 한눈에 보거나 전부
@@ -123,7 +123,7 @@ class MeasurementRepository {
     noiseAudioFileName,
   ];
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 변수: seriesKeys
   /// 목적: `summary.json` 에서 뺄 시계열 항목의 이름들. `toMap()` 이 쓰는
   ///       이름과 같아야 한다.
@@ -157,7 +157,7 @@ class MeasurementRepository {
   final ValueNotifier<int> changes = ValueNotifier<int>(0);
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-27 09:30:00 · nada
+  /// 수정: 2026-09-27 09:30:00 · 박건준
   /// 함수: getBaseDirectory
   /// 목적: 측정 산출물을 저장할 기준 폴더를 확보한다. 기기의 외장
   ///       저장소가 있으면 그 안에, 없으면 앱 전용 문서 폴더 안에
@@ -180,7 +180,7 @@ class MeasurementRepository {
     return dir;
   }
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 함수: jobDirectory
   /// 목적: 측정 한 건의 폴더를 확보한다. 어디에 무엇을 두는지 정하는 곳을
   ///       한 군데로 두어, 저장하는 쪽과 읽는 쪽이 어긋나지 않게 한다.
@@ -195,7 +195,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-10-22 12:20:00 · nada
+  /// 수정: 2026-10-22 12:20:00 · 박건준
   /// 함수: save
   /// 목적: 새롭게 계산된 측정 결과를 기기에 저장한다. 결과 전부를 담은
   ///       파일과, 목록이 읽을 요약 파일을 함께 쓴다. 같은 식별자로 다시
@@ -214,7 +214,7 @@ class MeasurementRepository {
     return dir;
   }
 
-  /// 작성: 2026-09-26 14:10:00 · nada
+  /// 작성: 2026-09-26 14:10:00 · 박건준
   /// 함수: _writeSummary
   /// 목적: 정본에서 시계열만 덜어내 목록용 캐시를 쓴다. 저장할 때와 캐시를
   ///       고쳐 쓸 때가 같은 코드를 타야 두 자리의 결과가 갈라지지 않는다.
@@ -234,7 +234,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: list
   /// 목적: 기기에 저장되어 있는 읽을 수 있는 측정 결과 목록을 불러온다.
   ///       결과 화면의 비교 대상 고르기가 쓴다. 읽지 못한 건까지 보여야 하는
@@ -244,7 +244,7 @@ class MeasurementRepository {
       // → 로직 이동: listEntries()
       (await listEntries()).results;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: listEntries
   /// 목적: 기기에 저장되어 있는 모든 과거 측정 결과 목록을 불러온다.
   ///       요약 파일만 읽으므로 시계열은 비어 있다 — 목록 화면이 쓰는
@@ -290,8 +290,8 @@ class MeasurementRepository {
     return (results: items, unreadable: broken);
   }
 
-  /// 작성: 2026-09-26 14:10:00 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-09-26 14:10:00 · 박건준
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: _readListEntry
   /// 목적: 폴더 하나에서 목록에 올릴 측정 결과를 읽는다. 요약 캐시를 먼저
   ///       보고, 없거나 깨졌으면 정본에서 다시 만든다.
@@ -346,7 +346,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-26 09:30:00 · nada
+  /// 수정: 2026-09-26 09:30:00 · 박건준
   /// 함수: load
   /// 목적: 특정 ID의 측정 결과 파일 하나만 찾아서 읽어온다. 시계열까지
   ///       들어 있는 파일을 읽으므로 리포트를 그리는 데 쓸 수 있다.
@@ -364,8 +364,8 @@ class MeasurementRepository {
     );
   }
 
-  /// 작성: 2026-10-15 22:22:45 · nada
-  /// 수정: 2026-10-22 12:20:00 · nada
+  /// 작성: 2026-10-15 22:22:45 · 박건준
+  /// 수정: 2026-10-22 12:20:00 · 박건준
   /// 함수: pruneOldest
   /// 목적: 측정 결과가 `maxStoredMeasurements` 개를 넘으면 오래된 것부터
   ///       폴더째 지운다. 폴더 이름(측정 ID, `yyyyMMdd-HHmmss` 한국 시간)을
@@ -408,7 +408,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-10-22 12:20:00 · nada
+  /// 수정: 2026-10-22 12:20:00 · 박건준
   /// 함수: delete
   /// 목적: 특정 ID의 측정 결과를 기기에서 완전히 삭제한다. 측정 한 건이
   ///       폴더 하나이므로 폴더째 지운다 — 리포트와 원본까지 함께 사라진다.
@@ -425,7 +425,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-26 09:30:00 · nada
+  /// 수정: 2026-09-26 09:30:00 · 박건준
   /// 함수: ensureReportPdf
   /// 목적: 측정 한 건의 리포트 PDF 를 가져온다. 이미 만들어 둔 것이 있으면
   ///       그대로 주고, 없으면 그 자리에서 만들어 남긴 뒤 준다. 측정을
@@ -448,7 +448,7 @@ class MeasurementRepository {
     return writeTuneReport(result: result, path: file.path);
   }
 
-  /// 작성: 2026-10-08 21:39:21 · nada
+  /// 작성: 2026-10-08 21:39:21 · 박건준
   /// 함수: rawFile
   /// 목적: 측정 한 건의 `raw.txt` 를 찾는다. 리포트와 달리 나중에 다시
   ///       만들 수 없는 기록이라, 없으면 없다고만 알린다. `jobDirectory()`
@@ -464,7 +464,7 @@ class MeasurementRepository {
     return await file.exists() ? file : null;
   }
 
-  /// 작성: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-18 10:12:30 · 박건준
   /// 함수: noiseAudioFile
   /// 목적: 측정 한 건의 현장 소음 녹음(`noise.m4a`)을 찾는다. `rawFile()`
   ///       과 같이 폴더를 만들지 않고 찾기만 한다.
@@ -478,8 +478,8 @@ class MeasurementRepository {
     return await file.exists() ? file : null;
   }
 
-  /// 작성: 2026-10-05 10:03:35 · nada
-  /// 수정: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-05 10:03:35 · 박건준
+  /// 수정: 2026-10-23 00:20:00 · 박건준
   /// 함수: mailAttachmentCopy
   /// 목적: 측정 폴더의 파일을 메일용 이름으로 앱 임시 폴더(`mail/`)에
   ///       복사한다. 측정 폴더 안 이름은 리포트 생성 · 목록 읽기가 기대하는

@@ -11,14 +11,14 @@ import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
 import '../../support/pdf_probe.dart';
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 변수: _outputPath
 /// 목적: 만들어 낸 차트 두 쪽을 남겨 둘 자리. 자리는 아래 시험이 값으로
 ///       대조하므로, 이 파일은 눈금과 라벨이 겹치지 않는지처럼 숫자로 재기
 ///       어려운 것을 눈으로 열어 볼 때 쓴다.
 const _outputPath = 'build/report_chart_page_test.pdf';
 
-/// 작성: 2026-09-27 09:30:00 · nada
+/// 작성: 2026-09-27 09:30:00 · 박건준
 /// 변수: _framePrecision
 /// 목적: 축 틀 자리를 대조할 때 봐주는 오차 (PDF 포인트).
 /// 근거: 측정 — 렌더러와 기대값이 같은 계수로 같은 곱셈을 하므로 실제
@@ -26,20 +26,20 @@ const _outputPath = 'build/report_chart_page_test.pdf';
 ///       PDF 대조가 허용하던 0.1pt 보다 백 배 촘촘하다
 const _framePrecision = 0.001;
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 변수: _sampleRate
 /// 목적: 시험에 쓰는 표본 주기 (Hz).
 /// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/records/ride_reference.txt`)이
 ///       이 주기로 기록돼 있다
 const _sampleRate = 256.0;
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 변수: _sampleCount
 /// 목적: 시험에 쓰는 표본 개수.
 /// 근거: 인용 — 회귀 기준 측정 기록의 행 수와 같다
 const _sampleCount = 11388;
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 함수: _series
 /// 목적: 시험용 시계열 하나를 만든다.
 /// 인자: amplitude — 파형의 진폭. 단위는 쓰는 쪽을 따른다
@@ -52,7 +52,7 @@ List<double> _series(double amplitude, double cycles) {
   );
 }
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 함수: _result
 /// 목적: 차트 쪽을 그려 보려고 만드는 측정 결과.
 /// 인자: noiseSeries — 소음 시계열 (dBA). 안 주면 빈 목록이며, 마이크
@@ -84,8 +84,8 @@ MeasurementResult _result({List<double> noiseSeries = const <double>[]}) {
   );
 }
 
-/// 작성: 2026-09-23 09:40:00 · nada
-/// 수정: 2026-10-23 01:10:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
+/// 수정: 2026-10-23 01:10:00 · 박건준
 /// 함수: main
 /// 목적: 차트 쪽 렌더링을 시험한다. 쪽 구성이 원본 차례와 같은지, 만들어진
 ///       PDF 의 축 틀이 서식 좌표에서 계산한 자리와 맞는지를 본다.

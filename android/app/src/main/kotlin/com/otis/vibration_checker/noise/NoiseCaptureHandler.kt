@@ -15,7 +15,7 @@ import kotlin.math.sqrt
 
 /**
  * 작성: 2026-09-15 13:20:00 · 박희정
- * 수정: 2026-10-22 16:20:00 · nada
+ * 수정: 2026-10-22 16:20:00 · 박건준
  * 클래스: NoiseCaptureHandler
  * 목적: 측정하는 동안 마이크로 소음 크기(dBA)를 재서 `latestDba` 에
  *       채운다. 표본마다 A 가중(`A_WEIGHTING_SOS`)을 건 뒤, 최근
@@ -35,7 +35,7 @@ import kotlin.math.sqrt
 class NoiseCaptureHandler(private val context: Context) {
     /**
      * 작성: 2026-07-04 12:00:10 · 박건준
-     * 수정: 2026-10-04 13:50:15 · nada
+     * 수정: 2026-10-04 13:50:15 · 박건준
      * 클래스: Companion
      * 목적: 마이크 녹음 설정과 소음 계산 설정을 모아 둔다.
      */
@@ -44,7 +44,7 @@ class NoiseCaptureHandler(private val context: Context) {
         private const val TAG = "NoiseCaptureHandler"
 
         /**
-         * 작성: 2026-10-22 12:00:00 · nada
+         * 작성: 2026-10-22 12:00:00 · 박건준
          * 변수: PREFERRED_SAMPLE_RATE
          * 목적: 마이크를 먼저 열어 보는 표본 속도(Hz). 이 기기에서 열리지
          *       않으면 `FALLBACK_SAMPLE_RATE` 로 연다(`openRecord()`).
@@ -56,7 +56,7 @@ class NoiseCaptureHandler(private val context: Context) {
         private const val PREFERRED_SAMPLE_RATE = 48000
 
         /**
-         * 작성: 2026-10-22 12:00:00 · nada
+         * 작성: 2026-10-22 12:00:00 · 박건준
          * 변수: FALLBACK_SAMPLE_RATE
          * 목적: 48kHz 를 열지 못할 때 쓰는 표본 속도(Hz).
          * 근거: 표준 — 안드로이드가 모든 기기에서 보장하는 녹음 표본 속도는
@@ -71,8 +71,8 @@ class NoiseCaptureHandler(private val context: Context) {
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
 
         /**
-         * 작성: 2026-10-04 13:50:15 · nada
-         * 수정: 2026-10-20 17:10:22 · nada
+         * 작성: 2026-10-04 13:50:15 · 박건준
+         * 수정: 2026-10-20 17:10:22 · 박건준
          * 변수: DEFAULT_MIC_DBFS_TO_DBA_OFFSET
          * 목적: Flutter 가 오프셋을 넘기지 않았을 때 쓰는 A 가중 dBFS→dBA
          *       기본 오프셋. Flutter 는 늘 `kDefaultMicDbfsToDbaOffset`
@@ -84,7 +84,7 @@ class NoiseCaptureHandler(private val context: Context) {
         const val DEFAULT_MIC_DBFS_TO_DBA_OFFSET = 105.2
 
         /**
-         * 작성: 2026-10-20 17:10:22 · nada
+         * 작성: 2026-10-20 17:10:22 · 박건준
          * 변수: A_WEIGHTING_SOS
          * 목적: A 가중(사람 귀가 소리 높이마다 다르게 느끼는 만큼 깎는 보정)
          *       필터 계수. 2차 필터 세 단을 이어 건다. 한 단은
@@ -110,7 +110,7 @@ class NoiseCaptureHandler(private val context: Context) {
         )
 
         /**
-         * 작성: 2026-10-22 12:00:00 · nada
+         * 작성: 2026-10-22 12:00:00 · 박건준
          * 변수: A_WEIGHTING_SOS_48000
          * 목적: `A_WEIGHTING_SOS` 와 같은 A 가중을 48000Hz
          *       (`PREFERRED_SAMPLE_RATE`)에 옮긴 계수.
@@ -131,7 +131,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
         /**
          * 작성: 2026-09-21 17:37:25 · 박희정
-         * 수정: 2026-10-04 13:50:15 · nada
+         * 수정: 2026-10-04 13:50:15 · 박건준
          * 변수: WINDOW_SEC
          * 목적: RMS 창 길이(초). 짧을수록 순간 소리를 덜 평균 내 피크가
          *       살아난다.
@@ -142,7 +142,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
         /**
          * 작성: 2026-10-12 17:20:16 · 박희정
-         * 수정: 2026-10-22 16:20:00 · nada
+         * 수정: 2026-10-22 16:20:00 · 박건준
          * 변수: FAST_TIME_WEIGHT_SEC
          * 목적: 소음 RMS에 적용하는 지수평활의 시간 상수(초). 홉마다 새로
          *       들어오는 평균 제곱값을 이 상수로 평활해, 소음계의 "Fast"
@@ -155,7 +155,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
         /**
          * 작성: 2026-09-21 17:37:25 · 박희정
-         * 수정: 2026-10-04 13:50:15 · nada
+         * 수정: 2026-10-04 13:50:15 · 박건준
          * 변수: HOP_HZ
          * 목적: 소음값을 새로 내는 횟수(1초당). 진동 격자(256Hz)보다
          *       촘촘하게 `latestDba` 를 갱신해, 센서 이벤트에 같은 소음값이
@@ -205,7 +205,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-22 12:00:00 · nada
+     * 수정: 2026-10-22 12:00:00 · 박건준
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다
      *       — 그때 닫힌 앞 녹음은 받아 갈 곳이 없어 지운다.
@@ -322,7 +322,8 @@ class NoiseCaptureHandler(private val context: Context) {
                             encoder.feed(hopBuffer, read)
                         } catch (e: Exception) {
                             Log.e(TAG, "noise audio encode failed; recording dropped", e)
-                            encoder.abort() // → 로직 이동: NoiseAudioEncoder.abort()
+                            // → 로직 이동: NoiseAudioEncoder.abort()
+                            encoder.abort()
                             audioEncoder = null
                         }
                     }
@@ -397,7 +398,7 @@ class NoiseCaptureHandler(private val context: Context) {
     }
 
     /**
-     * 작성: 2026-10-22 12:00:00 · nada
+     * 작성: 2026-10-22 12:00:00 · 박건준
      * 함수: openRecord
      * 목적: 주어진 표본 속도로 마이크 녹음기를 연다.
      * 인자: sampleRate — 표본 속도(Hz)
@@ -431,7 +432,7 @@ class NoiseCaptureHandler(private val context: Context) {
     }
 
     /**
-     * 작성: 2026-10-22 12:00:00 · nada
+     * 작성: 2026-10-22 12:00:00 · 박건준
      * 함수: weightingFor
      * 목적: 표본 속도에 맞는 A 가중 계수를 고른다.
      * 인자: sampleRate — 연 표본 속도(Hz). `PREFERRED_SAMPLE_RATE` 나
@@ -442,8 +443,8 @@ class NoiseCaptureHandler(private val context: Context) {
         if (sampleRate == PREFERRED_SAMPLE_RATE) A_WEIGHTING_SOS_48000 else A_WEIGHTING_SOS
 
     /**
-     * 작성: 2026-10-20 17:10:22 · nada
-     * 수정: 2026-10-22 12:00:00 · nada
+     * 작성: 2026-10-20 17:10:22 · 박건준
+     * 수정: 2026-10-22 12:00:00 · 박건준
      * 함수: aWeight
      * 목적: 표본 하나에 A 가중 필터 세 단을 차례로 건다. 녹음 스레드가
      *       표본마다 부른다.
@@ -472,7 +473,7 @@ class NoiseCaptureHandler(private val context: Context) {
     }
 
     /**
-     * 작성: 2026-10-18 10:12:30 · nada
+     * 작성: 2026-10-18 10:12:30 · 박건준
      * 함수: openAudioEncoder
      * 목적: 현장 소음 녹음 파일을 앱 저장 공간 맨 위에 만들고 녹음기를
      *       준비한다. 측정 폴더는 Flutter 가 저장할 때 정하므로, 원본 기록
@@ -496,7 +497,7 @@ class NoiseCaptureHandler(private val context: Context) {
     }
 
     /**
-     * 작성: 2026-10-18 10:12:30 · nada
+     * 작성: 2026-10-18 10:12:30 · 박건준
      * 함수: stopAndDiscardAudio
      * 목적: 측정을 멈추되 닫힌 녹음 파일은 지운다. 받아 갈 곳이 없는
      *       정지(다시 시작 전, 시작 실패, 화면 종료)에 쓴다 — 지우지 않으면
@@ -509,7 +510,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-18 10:12:30 · nada
+     * 수정: 2026-10-18 10:12:30 · 박건준
      * 함수: stop
      * 목적: 소음 측정을 멈추고 마이크 자원을 반납한다. latestDba도 0.0으로 돌린다.
      *       순서를 지킨다. 녹음을 먼저 멈춰 녹음 스레드의 읽기를 풀고, 그

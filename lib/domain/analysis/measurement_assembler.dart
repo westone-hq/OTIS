@@ -12,7 +12,7 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 
-/// 작성: 2026-09-15 13:08:37 · nada
+/// 작성: 2026-09-15 13:08:37 · 박건준
 /// 클래스: MeasurementAssembleResult
 /// 목적: 캡처 결과를 측정 결과 모델로 바꾼 결과를 담는다. 성공이면
 ///       `result`에 모델이, 실패면 `failureReason`에 사유가 들어가고
@@ -31,8 +31,8 @@ class MeasurementAssembleResult {
   /// (meta.txt)에 적는다. 정지 측정이거나 변환하지 못했으면 null
   final MotionWindow? motion;
 
-  /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-09-15 13:08:37 · 박건준
+  /// 수정: 2026-10-20 14:05:12 · 박건준
   /// 함수: MeasurementAssembleResult.success
   /// 목적: 변환에 성공한 결과를 담는 생성자.
   /// 인자: result — 변환된 측정 결과
@@ -42,8 +42,8 @@ class MeasurementAssembleResult {
     this.motion,
   }) : failureReason = null;
 
-  /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-09-15 13:08:37 · 박건준
+  /// 수정: 2026-10-20 14:05:12 · 박건준
   /// 함수: MeasurementAssembleResult.failure
   /// 목적: 변환하지 못한 사유만 담는 생성자.
   /// 인자: failureReason — 변환하지 못한 사유
@@ -51,15 +51,15 @@ class MeasurementAssembleResult {
     : result = null,
       motion = null;
 
-  /// 작성: 2026-09-15 13:08:37 · nada
+  /// 작성: 2026-09-15 13:08:37 · 박건준
   /// 함수: isSuccess
   /// 목적: 변환에 성공했는지 알려준다.
   /// 반환: `result`가 채워져 있고 사유가 없으면 true
   bool get isSuccess => failureReason == null && result != null;
 }
 
-/// 작성: 2026-09-15 13:08:37 · nada
-/// 수정: 2026-10-22 22:40:00 · nada
+/// 작성: 2026-09-15 13:08:37 · 박건준
+/// 수정: 2026-10-22 22:40:00 · 박건준
 /// 클래스: MeasurementAssembler
 /// 목적: 격자(일정한 시간 간격으로 줄 세운 표의 각 행) 환산 결과와 현장
 ///       정보를 리포트가 쓰는 측정 결과 모델로 바꾼다. 진동 시계열은
@@ -117,8 +117,8 @@ class MeasurementAssembleResult {
 ///       재지 않은 값을 0 으로 넣으면 실제로 0 이 나온 측정과 구분할 수
 ///       없게 된다.
 class MeasurementAssembler {
-  /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-22 22:40:00 · nada
+  /// 작성: 2026-09-15 13:08:37 · 박건준
+  /// 수정: 2026-10-22 22:40:00 · 박건준
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -378,7 +378,7 @@ class MeasurementAssembler {
     );
   }
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: _stopMargin
   /// 목적: 운행 끝부터 기록 끝까지의 시간을 낸다. 운행 끝은 속도 크기가
   ///       `CaptureConfig.zoneRunSpeedMps` 를 넘은 마지막 행이다(정속 ·
@@ -397,7 +397,7 @@ class MeasurementAssembler {
     return null;
   }
 
-  /// 작성: 2026-10-22 15:00:00 · nada
+  /// 작성: 2026-10-22 15:00:00 · 박건준
   /// 함수: _steadySpeed
   /// 목적: 정속 구간 평균 속도 크기를 낸다. 표시하지 않고 결과 파일에만 남겨
   ///       다른 현장에서 OTIS 최대 속도 표시 규칙을 견줄 때 쓴다.
@@ -416,7 +416,7 @@ class MeasurementAssembler {
     return sum / (zones.steadyEndIndex - zones.steadyStartIndex + 1);
   }
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: _positionAtPeak
   /// 목적: 반주기 P2P 가 나온 순간의 위치를 고른다. 두 봉우리 가운데 크기가
   ///       큰 쪽 자리의 위치다 — 차트 빨간 점 옆 글자가 붙는 자리와 같다.
@@ -435,7 +435,7 @@ class MeasurementAssembler {
     return position[at];
   }
 
-  /// 작성: 2026-09-15 21:38:58 · nada
+  /// 작성: 2026-09-15 21:38:58 · 박건준
   /// 함수: _peakIgnoringZeros
   /// 목적: 소음 표본 중 가장 큰 값을 찾되 0 인 표본은 빼고 센다. 0 은
   ///       값이 아니라 미측정 표시라서다 — 클래스 주석의 소음 계약을

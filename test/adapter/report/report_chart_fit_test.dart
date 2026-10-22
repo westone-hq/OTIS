@@ -7,8 +7,8 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 import '../../support/pdf_probe.dart';
 import '../../support/reference_records.dart';
 
-/// 작성: 2026-10-22 10:30:00 · nada
-/// 수정: 2026-10-23 01:00:00 · nada
+/// 작성: 2026-10-22 10:30:00 · 박건준
+/// 수정: 2026-10-23 01:00:00 · 박건준
 /// 함수: main
 /// 목적: 2026-10-22 축 규칙(가속도 · 저크 0 대칭 여백, 2 · 3쪽 시간축 여백 ·
 ///       눈금)으로 원본 리포트 기록(ride_reference)을 그렸을 때

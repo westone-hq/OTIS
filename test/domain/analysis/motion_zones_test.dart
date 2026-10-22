@@ -6,7 +6,7 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 
 import '../../support/reference_records.dart';
 
-/// 작성: 2026-10-21 13:10:00 · nada
+/// 작성: 2026-10-21 13:10:00 · 박건준
 /// 함수: _trapezoid
 /// 목적: 사다리꼴 속도 운행 합성 신호를 만든다. 가속도는 반사인 꼴로
 ///       오르내려 1.6Hz 저역을 거쳐도 모양이 남는다.
@@ -41,8 +41,8 @@ import '../../support/reference_records.dart';
   return (speed, accel);
 }
 
-/// 작성: 2026-10-21 13:10:00 · nada
-/// 수정: 2026-10-23 01:00:00 · nada
+/// 작성: 2026-10-21 13:10:00 · 박건준
+/// 수정: 2026-10-23 01:00:00 · 박건준
 /// 함수: main
 /// 목적: 정속 · 가감속 구간 판정(`MotionZones.of()`)과 그 구간에서 낸 수직
 ///       지표를 시험한다.

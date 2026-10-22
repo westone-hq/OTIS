@@ -59,7 +59,7 @@ class AppDialogButton extends StatelessWidget {
   });
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 13:37:23 · 박건준
   /// 함수: build
   /// 목적: primary·isDestructive·icon 여부에 따라 ElevatedButton 또는
   ///       TextButton으로 그린다.
@@ -147,7 +147,7 @@ class AppDialogButton extends StatelessWidget {
 }
 
 /// 작성: 2026-08-06 15:59:06 · 박건준
-/// 수정: 2026-10-04 13:37:23 · nada
+/// 수정: 2026-10-04 13:37:23 · 박건준
 /// 클래스: AppDialogIconButton
 /// 목적: 어르신 UX(최소 터치 타깃 56dp x 56dp)를 준수하는 아이콘 전용
 ///       버튼이다.
@@ -168,7 +168,7 @@ class AppDialogIconButton extends StatelessWidget {
   final double size;
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 13:37:23 · 박건준
   /// 함수: AppDialogIconButton
   /// 목적: 아이콘 버튼에 필요한 값을 받아 위젯을 만든다. 각 인자의
   ///       의미는 위 필드 설명을 따른다.
@@ -204,7 +204,7 @@ class AppDialogIconButton extends StatelessWidget {
 }
 
 /// 작성: 2026-08-06 15:59:06 · 박건준
-/// 수정: 2026-10-13 14:18:51 · nada
+/// 수정: 2026-10-13 14:18:51 · 박건준
 /// 함수: showAppConfirmDialog
 /// 목적: 제목 · 문구 · 버튼 한두 개로 된 대화상자를 띄우고 사용자의
 ///       선택을 돌려준다. 측정 중단 확인, 측정 실패 · 중단 안내, 이메일

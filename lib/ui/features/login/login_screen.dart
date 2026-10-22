@@ -6,14 +6,14 @@ import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 
-/// 작성: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-18 09:41:12 · 박건준
 /// 클래스: LoginScreen
 /// 목적: 로그인 화면. 사번 · 비밀번호를 받아 `LoginStore.login()` 에 넘기고,
 ///       받아 주면 홈으로 간다. 로그인 전에는 라우터(router.dart)가 모든
 ///       화면을 이 화면으로 돌린다. 판정은 `WorkerDirectory` 가 하고 이
 ///       화면은 사유에 맞는 문구와 옮겨 갈 입력칸만 고른다.
 class LoginScreen extends StatefulWidget {
-  /// 작성: 2026-10-18 09:41:12 · nada
+  /// 작성: 2026-10-18 09:41:12 · 박건준
   /// 함수: LoginScreen
   /// 목적: 로그인 화면을 만든다.
   /// 인자: store — 로그인을 맡길 저장소. 안 주면 `LoginStore.instance`.
@@ -27,7 +27,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-/// 작성: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-18 09:41:12 · 박건준
 /// 클래스: _LoginScreenState
 /// 목적: 로그인 화면의 입력 · 오류 문구 · 진행 중 상태를 관리한다.
 class _LoginScreenState extends State<LoginScreen> {
@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
   /// 로그인 판정을 기다리는 중인지. 그동안 버튼을 꺼 두 번 누르지 않게 한다
   bool _busy = false;
 
-  /// 작성: 2026-10-18 09:41:12 · nada
+  /// 작성: 2026-10-18 09:41:12 · 박건준
   /// 함수: dispose
   /// 목적: 화면이 사라질 때 입력 컨트롤러 · 초점 객체를 해제한다.
   @override
@@ -60,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// 작성: 2026-10-18 09:41:12 · nada
+  /// 작성: 2026-10-18 09:41:12 · 박건준
   /// 함수: _submit
   /// 목적: "로그인" 을 눌렀을 때 판정을 맡기고 결과에 따라 화면을 고른다.
   ///       - 받아 주면 홈으로 간다
@@ -106,8 +106,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// 작성: 2026-10-18 09:41:12 · nada
-  /// 수정: 2026-10-22 12:50:00 · nada
+  /// 작성: 2026-10-18 09:41:12 · 박건준
+  /// 수정: 2026-10-22 12:50:00 · 박건준
   /// 함수: build
   /// 목적: 사번 → 비밀번호 입력칸을 세로로 두고 아래에 "로그인" 버튼을
   ///       고정한다. 버튼은 키보드가 열리면 그 위로 올라온다. 뒤로 갈 화면이

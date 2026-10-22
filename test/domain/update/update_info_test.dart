@@ -4,12 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 변수: _sha
 /// 목적: 형식이 맞는 SHA-256 자리 값(16진수 소문자 64자).
 final String _sha = 'ab' * 32;
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 함수: _json
 /// 목적: 정상 version.json 표에서 몇 항목만 바꾸거나 지운 본문을 만든다.
 /// 인자: override — 바꿀 항목. 값이 null 이면 그 항목을 지운다
@@ -34,13 +34,13 @@ String _json([Map<String, Object?> override = const {}]) {
   return jsonEncode(map);
 }
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 함수: _info
 /// 목적: 판정 시험에 쓸 버전 정보(minimum 12, latest 13)를 만든다.
 /// 반환: 버전 정보
 UpdateInfo _info() => UpdateInfo.parse(_json()).info!;
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 함수: main
 /// 목적: version.json 읽기(정상 · 필드 누락 · 자료형 · http 주소 ·
 ///       sha256 형식 · minimum > latest · JSON 아님)와 업데이트 판정

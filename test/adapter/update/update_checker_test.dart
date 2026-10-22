@@ -9,7 +9,7 @@ import 'package:vibration_checker/adapter/update/update_checker.dart';
 import 'package:vibration_checker/domain/update/update_config.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 변수: _body
 /// 목적: 서버가 돌려줄 정상 version.json (minimum 12, latest 13).
 final String _body = jsonEncode({
@@ -21,7 +21,7 @@ final String _body = jsonEncode({
   'notes': '고침',
 });
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 함수: _checker
 /// 목적: 가짜 서버 응답 · 빌드 번호 · 시각으로 확인기를 만든다.
 /// 인자: respond — 요청 하나에 돌려줄 응답을 만드는 함수
@@ -40,7 +40,7 @@ UpdateChecker _checker(
   );
 }
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 함수: _ok
 /// 목적: 정상 version.json 을 200 으로 돌려주는 가짜 응답.
 /// 인자: request — 받은 요청
@@ -48,7 +48,7 @@ UpdateChecker _checker(
 Future<http.Response> _ok(http.Request request) async =>
     http.Response.bytes(utf8.encode(_body), 200);
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 함수: main
 /// 목적: `UpdateChecker` 를 시험한다. 성공 · 시간 초과 · 404 · 깨진 JSON
 ///       에서 앞의 셋이 앱을 막지 않는 `none` 인지, 판정이 맞는지, "나중에"

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/update/update_installer.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
 
-/// 작성: 2026-10-13 16:27:48 · nada
+/// 작성: 2026-10-13 16:27:48 · 박건준
 /// 변수: _channel
 /// 목적: 가짜 응답을 끼울 통로. 이름이 `update_installer.dart` 의
 ///       `_methodChannel` 과 같아야 한다.
@@ -11,7 +11,7 @@ const MethodChannel _channel = MethodChannel(
   'com.otis.vibration_checker/update_method',
 );
 
-/// 작성: 2026-10-13 16:27:48 · nada
+/// 작성: 2026-10-13 16:27:48 · 박건준
 /// 변수: _info
 /// 목적: 받을 버전 정보.
 final UpdateInfo _info = UpdateInfo(
@@ -23,7 +23,7 @@ final UpdateInfo _info = UpdateInfo(
   notes: '',
 );
 
-/// 작성: 2026-10-13 16:27:48 · nada
+/// 작성: 2026-10-13 16:27:48 · 박건준
 /// 함수: _answer
 /// 목적: 안드로이드 쪽 대신 요청에 답할 함수를 끼운다.
 /// 인자: handler — 요청 하나에 답하는 함수
@@ -32,7 +32,7 @@ void _answer(Future<Object?> Function(MethodCall call) handler) {
       .setMockMethodCallHandler(_channel, handler);
 }
 
-/// 작성: 2026-10-13 16:27:48 · nada
+/// 작성: 2026-10-13 16:27:48 · 박건준
 /// 함수: main
 /// 목적: Dart 쪽 업데이트 통로가 안드로이드 응답을 제대로 옮기는지 본다.
 ///       내려받기 인자 · 실패 코드, 설치 결과 문자열 → `InstallOutcome`.

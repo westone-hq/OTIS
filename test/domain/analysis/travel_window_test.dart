@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/analysis/travel_window.dart';
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _ramp
 /// 목적: 0 에서 `distance` 까지 고르게 움직이는 위치 시계열을 만든다.
 /// 인자: distance — 끝 위치 (m). 음수면 하강
@@ -10,7 +10,7 @@ import 'package:vibration_checker/domain/analysis/travel_window.dart';
 List<double> _ramp(double distance, int count) =>
     List<double>.generate(count, (i) => distance * i / (count - 1));
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: main
 /// 목적: 운행 구간(`TravelWindow.of()`)을 시험한다. 정상 / 운행 1 m 이하 /
 ///       끝까지 0.5 m 를 못 넘음 / 하강 운행(위치 음수)과, 결과 파일 왕복.

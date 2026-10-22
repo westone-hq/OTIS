@@ -10,33 +10,33 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 
-/// 작성: 2026-10-04 18:38:14 · nada
+/// 작성: 2026-10-04 18:38:14 · 박건준
 /// 클래스: _TempPathProvider
 /// 목적: 저장소의 기준 폴더를 시험마다 새로 만든 임시 폴더로 바꿔 끼운다.
 class _TempPathProvider extends PathProviderPlatform {
   /// 임시 폴더 경로
   final String root;
 
-  /// 작성: 2026-10-04 18:38:14 · nada
+  /// 작성: 2026-10-04 18:38:14 · 박건준
   /// 함수: _TempPathProvider
   /// 목적: 돌려줄 임시 폴더 경로를 받는다.
   /// 인자: root — 임시 폴더 경로
   _TempPathProvider(this.root);
 
-  /// 작성: 2026-10-04 18:38:14 · nada
+  /// 작성: 2026-10-04 18:38:14 · 박건준
   /// 함수: getExternalStoragePath
   /// 목적: 외부 저장소 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getExternalStoragePath() async => root;
 
-  /// 작성: 2026-10-04 18:38:14 · nada
+  /// 작성: 2026-10-04 18:38:14 · 박건준
   /// 함수: getApplicationDocumentsPath
   /// 목적: 앱 문서 폴더 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getApplicationDocumentsPath() async => root;
 }
 
-/// 작성: 2026-10-04 18:38:14 · nada
+/// 작성: 2026-10-04 18:38:14 · 박건준
 /// 함수: _result
 /// 목적: 목록에 올릴 측정 결과를 꾸민다.
 /// 인자: id — 측정 ID
@@ -67,7 +67,7 @@ MeasurementResult _result(String id, String jobNo, DateTime measuredAt) {
   );
 }
 
-/// 작성: 2026-10-04 18:38:14 · nada
+/// 작성: 2026-10-04 18:38:14 · 박건준
 /// 함수: _settle
 /// 목적: 파일 읽기처럼 시험 시계 밖에서 도는 작업이 끝날 틈을 주며 화면을
 ///       다시 그린다.
@@ -82,7 +82,7 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1)); // 화면 전환 움직임
 }
 
-/// 작성: 2026-10-04 18:38:14 · nada
+/// 작성: 2026-10-04 18:38:14 · 박건준
 /// 함수: _app
 /// 목적: 목록 화면에서 시작하고 결과 화면으로 넘어갈 수 있는 앱을 만든다.
 /// 반환: 시험용 앱
@@ -106,13 +106,13 @@ Widget _app() {
   return MaterialApp.router(routerConfig: router);
 }
 
-/// 작성: 2026-10-22 12:20:00 · nada
+/// 작성: 2026-10-22 12:20:00 · 박건준
 /// 변수: _router
 /// 목적: `_app()` 이 만든 경로 관리자. 재실행처럼 화면을 바꿔 끼우는 시험이
 ///       직접 부른다.
 late GoRouter _router;
 
-/// 작성: 2026-10-04 18:38:14 · nada
+/// 작성: 2026-10-04 18:38:14 · 박건준
 /// 함수: main
 /// 목적: 저장 결과 목록이 최근 것부터 보이고, 누르면 결과 화면이 열리고,
 ///       삭제되는지, 읽지 못한 결과가 그 한 건만 따로 보이는지 시험한다.

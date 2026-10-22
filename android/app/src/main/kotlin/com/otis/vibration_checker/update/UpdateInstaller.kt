@@ -22,7 +22,7 @@ import java.net.URL
 import java.security.MessageDigest
 
 /**
- * 작성: 2026-10-13 14:18:51 · nada
+ * 작성: 2026-10-13 14:18:51 · 박건준
  * 클래스: UpdateInstaller
  * 목적: 앱 안 업데이트의 안드로이드 쪽. Flutter 의 `update_installer.dart`
  *       가 부른다. 구글 플레이 없이 배포 서버(GitHub Releases)의 APK 를
@@ -47,13 +47,13 @@ class UpdateInstaller(
 ) : EventChannel.StreamHandler {
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 클래스: Companion
      * 목적: 채널 이름 · 요청 코드 · 파일 이름 등 상수를 모아 둔다.
      */
     companion object {
         /**
-         * 작성: 2026-10-13 14:18:51 · nada
+         * 작성: 2026-10-13 14:18:51 · 박건준
          * 변수: METHOD_CHANNEL
          * 목적: 요청 하나 · 응답 하나를 주고받는 통로 이름. Flutter 쪽
          *       `update_installer.dart` 의 `_methodChannel` 과 문자열이
@@ -63,7 +63,7 @@ class UpdateInstaller(
         const val METHOD_CHANNEL = "com.otis.vibration_checker/update_method"
 
         /**
-         * 작성: 2026-10-13 14:18:51 · nada
+         * 작성: 2026-10-13 14:18:51 · 박건준
          * 변수: PROGRESS_CHANNEL
          * 목적: 내려받기 진행률을 흘려보내는 통로 이름. `METHOD_CHANNEL`
          *       과 같은 이유로 `update_installer.dart` 의 `_progressChannel`
@@ -85,7 +85,7 @@ class UpdateInstaller(
         private const val APK_NAME = "vcheck-update.apk"
 
         /**
-         * 작성: 2026-10-13 14:18:51 · nada
+         * 작성: 2026-10-13 14:18:51 · 박건준
          * 변수: CONNECT_TIMEOUT_MS
          * 목적: 서버 연결을 기다리는 한도 (밀리초).
          * 근거: 미정 — 화면에 진행 막대와 취소가 있어 version.json 확인
@@ -94,7 +94,7 @@ class UpdateInstaller(
         private const val CONNECT_TIMEOUT_MS = 15_000
 
         /**
-         * 작성: 2026-10-13 14:18:51 · nada
+         * 작성: 2026-10-13 14:18:51 · 박건준
          * 변수: READ_TIMEOUT_MS
          * 목적: 받는 도중 데이터가 끊긴 채 기다리는 한도 (밀리초).
          * 근거: 미정 — `CONNECT_TIMEOUT_MS` 와 같은 이유
@@ -128,7 +128,7 @@ class UpdateInstaller(
     private var installReceiver: BroadcastReceiver? = null
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: register
      * 목적: 두 통로를 Flutter 엔진에 연결한다. `MainActivity` 가 엔진을
      *       만들 때 한 번 부른다. 지난 업데이트 때 받아 둔 APK(약 55MB)를
@@ -142,7 +142,7 @@ class UpdateInstaller(
         MethodChannel(messenger, METHOD_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 /**
-                 * 작성: 2026-10-13 14:18:51 · nada
+                 * 작성: 2026-10-13 14:18:51 · 박건준
                  * 함수: canInstall
                  * 목적: 이 앱이 다른 APK 를 설치할 수 있게 허용됐는지
                  *       알려 준다. 안드로이드 8 미만은 앱별 허용이 없어
@@ -151,7 +151,7 @@ class UpdateInstaller(
                  */
                 "canInstall" -> result.success(canInstall())
                 /**
-                 * 작성: 2026-10-13 14:18:51 · nada
+                 * 작성: 2026-10-13 14:18:51 · 박건준
                  * 함수: openInstallSettings
                  * 목적: "이 출처의 앱 설치 허용" 설정 화면을 연다. 사용자가
                  *       돌아오면 `onActivityResult()` 가 다시 확인해 답한다.
@@ -175,7 +175,7 @@ class UpdateInstaller(
                     }
                 }
                 /**
-                 * 작성: 2026-10-13 14:18:51 · nada
+                 * 작성: 2026-10-13 14:18:51 · 박건준
                  * 함수: download
                  * 목적: APK 를 내려받아 SHA-256 을 맞춰 본다. 받는 동안
                  *       진행률을 `PROGRESS_CHANNEL` 로 보낸다.
@@ -201,7 +201,7 @@ class UpdateInstaller(
                     }
                 }
                 /**
-                 * 작성: 2026-10-13 14:18:51 · nada
+                 * 작성: 2026-10-13 14:18:51 · 박건준
                  * 함수: cancelDownload
                  * 목적: 받는 중인 APK 내려받기를 멈춘다. 멈춘 내려받기는
                  *       "cancelled" 로 끝나고 받던 파일은 지워진다.
@@ -211,7 +211,7 @@ class UpdateInstaller(
                     result.success(null)
                 }
                 /**
-                 * 작성: 2026-10-13 14:18:51 · nada
+                 * 작성: 2026-10-13 14:18:51 · 박건준
                  * 함수: install
                  * 목적: 받은 APK 를 `PackageInstaller` 세션으로 설치한다.
                  *       안드로이드가 확인 화면을 요구하면 그 화면을 띄우고
@@ -236,7 +236,7 @@ class UpdateInstaller(
                     }
                 }
                 /**
-                 * 작성: 2026-10-13 14:18:51 · nada
+                 * 작성: 2026-10-13 14:18:51 · 박건준
                  * 함수: else
                  * 목적: 정의되지 않은 요청에 미구현으로 응답한다.
                  */
@@ -246,7 +246,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: canInstall
      * 목적: 이 앱에 다른 APK 설치가 허용됐는지 본다.
      * 반환: 허용됐으면 true. 안드로이드 8 미만은 앱별 허용이 없어 true
@@ -256,7 +256,7 @@ class UpdateInstaller(
             activity.packageManager.canRequestPackageInstalls()
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: onActivityResult
      * 목적: 설치 허용 설정 화면에서 돌아오면 다시 확인해, 기다리던 쪽에
      *       허용 여부를 알려 준다. 설정 화면은 결과 코드를 주지 않으므로
@@ -273,7 +273,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: startDownload
      * 목적: 별도 스레드에서 APK 를 받는다. 순서대로 진행한다.
      *       1. 예전에 받은 파일을 지우고 `cacheDir/update/` 를 만든다
@@ -358,7 +358,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: finishDownload
      * 목적: 내려받기 상태를 비우고, 메인 스레드에서 응답한다. Flutter
      *       통로는 메인 스레드에서만 써야 한다.
@@ -372,7 +372,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: sendProgress
      * 목적: 진행률 한 건을 메인 스레드에서 Flutter 로 보낸다.
      * 인자: received — 받은 바이트
@@ -385,7 +385,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: startInstall
      * 목적: `PackageInstaller` 세션에 APK 를 쓰고 넘긴다. 결과는 방송으로
      *       돌아오므로 수신기를 먼저 등록한다.
@@ -428,7 +428,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: registerInstallReceiver
      * 목적: 설치 결과 방송을 받는 수신기를 등록한다. 결과마다 이렇게
      *       처리한다.
@@ -488,7 +488,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: finishInstall
      * 목적: 설치 결과를 기다리던 쪽에 한 번만 알려 주고 수신기를 푼다.
      * 인자: outcome — "success" · "aborted" · "conflict" · "failed:<사유>"
@@ -500,7 +500,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: unregisterInstallReceiver
      * 목적: 등록한 설치 결과 수신기를 푼다. 없으면 아무것도 안 한다.
      */
@@ -510,7 +510,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: dispose
      * 목적: 화면이 끝날 때 받는 중인 내려받기를 멈추고 수신기를 푼다.
      *       `MainActivity.onDestroy()` 가 부른다.
@@ -521,7 +521,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: onListen
      * 목적: Flutter 가 진행률을 듣기 시작하면 보낼 통로를 잡아 둔다.
      * 인자: arguments — 쓰지 않는다
@@ -532,7 +532,7 @@ class UpdateInstaller(
     }
 
     /**
-     * 작성: 2026-10-13 14:18:51 · nada
+     * 작성: 2026-10-13 14:18:51 · 박건준
      * 함수: onCancel
      * 목적: Flutter 가 그만 들으면 통로를 비운다.
      * 인자: arguments — 쓰지 않는다

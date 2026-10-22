@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/config/noise_config.dart';
 
-/// 작성: 2026-10-22 12:00:00 · nada
+/// 작성: 2026-10-22 12:00:00 · 박건준
 /// 변수: _kotlinPath
 /// 목적: 소음을 계산하는 안드로이드 코드 경로. 코틀린은 단위 시험 틀이
 ///       없어, 이 시험이 소스의 상수를 읽어 SciPy 정본과 견준다.
@@ -13,7 +13,7 @@ const String _kotlinPath =
     'android/app/src/main/kotlin/com/otis/vibration_checker/noise/'
     'NoiseCaptureHandler.kt';
 
-/// 작성: 2026-10-22 12:00:00 · nada
+/// 작성: 2026-10-22 12:00:00 · 박건준
 /// 함수: _constant
 /// 목적: 코틀린 소스에서 `private const val 이름 = 값` 의 값을 읽는다.
 /// 인자: source — 코틀린 소스
@@ -27,7 +27,7 @@ double _constant(String source, String name) {
   return double.parse(match!.group(1)!);
 }
 
-/// 작성: 2026-10-22 12:00:00 · nada
+/// 작성: 2026-10-22 12:00:00 · 박건준
 /// 함수: _sos
 /// 목적: 코틀린 소스에서 A 가중 계수 배열(`private val 이름 = arrayOf(…)`)을
 ///       읽는다.
@@ -51,8 +51,8 @@ List<List<double>> _sos(String source, String name) {
   ];
 }
 
-/// 작성: 2026-10-22 12:00:00 · nada
-/// 수정: 2026-10-22 16:20:00 · nada
+/// 작성: 2026-10-22 12:00:00 · 박건준
+/// 수정: 2026-10-22 16:20:00 · 박건준
 /// 함수: main
 /// 목적: 소음 계산(안드로이드 `NoiseCaptureHandler`)의 2026-10-22 설정을
 ///       SciPy 정본(`noise_weighting_cases.json`, `--noise` 모드)과 견준다.

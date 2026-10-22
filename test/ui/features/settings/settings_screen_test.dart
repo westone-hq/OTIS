@@ -7,7 +7,7 @@ import 'package:vibration_checker/domain/auth/login_session.dart';
 import 'package:vibration_checker/domain/auth/worker.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
 
-/// 작성: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-18 09:41:12 · 박건준
 /// 함수: _pumpSettings
 /// 목적: 설정 화면과, 로그아웃하면 옮겨 갈 로그인 자리 화면을 띄운다.
 /// 인자: tester — 위젯 시험 도구
@@ -23,8 +23,8 @@ Future<void> _pumpSettings(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// 작성: 2026-10-11 19:11:50 · nada
-/// 수정: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-11 19:11:50 · 박건준
+/// 수정: 2026-10-18 09:41:12 · 박건준
 /// 함수: main
 /// 목적: 설정 화면의 작업자 칸을 시험한다. 로그인 작업자의 성명 · 사번 ·
 ///       업체 · 팀을 보여 주고 빈 칸은 빼는지, 로그아웃하면 로그인을 지우고

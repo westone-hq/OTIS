@@ -1,7 +1,7 @@
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-/// 작성: 2026-10-22 09:30:00 · nada
+/// 작성: 2026-10-22 09:30:00 · 박건준
 /// 함수: placementWarning
 /// 목적: 결과 화면에 띄울 거치 경고 문구를 고른다. 화면 아래가 아니게
 ///       놓고 잰 결과에만 띄운다. 재측정은 아래 "테스트 재실행" 버튼을 쓴다.
@@ -19,7 +19,7 @@ String? placementWarning(MeasurementResult result) {
       '재측정을 권합니다';
 }
 
-/// 작성: 2026-10-22 19:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · 박건준
 /// 함수: resultWarnings
 /// 목적: 결과 화면 위쪽에 띄울 경고 문구를 고른다. 판정은 결과 모델 게터가
 ///       하고 여기서는 문구만 고른다.
@@ -42,7 +42,7 @@ List<String> resultWarnings(MeasurementResult result) => <String>[
         '다를 수 있습니다',
 ];
 
-/// 작성: 2026-10-23 00:20:00 · nada
+/// 작성: 2026-10-23 00:20:00 · 박건준
 /// 함수: placementMailLine
 /// 목적: 메일 본문에 적을 거치 방향 줄을 만든다(2026-10-22). 결과 화면
 ///       경고와 달리 화면 아래로 잰 결과도 적는다 — 받는 쪽이 거치를 알게
@@ -54,7 +54,7 @@ String? placementMailLine(MeasurementResult result) {
   return placement == null ? null : '거치: ${placement.label}';
 }
 
-/// 작성: 2026-10-23 00:20:00 · nada
+/// 작성: 2026-10-23 00:20:00 · 박건준
 /// 함수: uncompensatedDeviceMailLine
 /// 목적: 기종 응답 보정 표에 없는 기종으로 잰 결과면 메일 본문에 적을 줄을
 ///       만든다(2026-10-22). 결과 화면 경고(`resultWarnings()`)와 같은

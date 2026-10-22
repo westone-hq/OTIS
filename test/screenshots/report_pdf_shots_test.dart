@@ -16,7 +16,7 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 
 import 'shot_harness.dart';
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _reference
 /// 목적: 원본 리포트를 만든 기록(ride_reference)을 앱과 같은 길로 조립한다.
 ///       변경 전 · 후 코드에 모두 있는 함수만 쓴다.
@@ -74,7 +74,7 @@ MeasurementResult _reference() {
   ).result!;
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: main
 /// 목적: 리포트 PDF 세 가지를 만든다. 예전 커밋에서도 이 파일을 돌려 변경
 ///       전 PDF 를 얻는다. 파일 이름 머리는 `SHOT_PREFIX`.

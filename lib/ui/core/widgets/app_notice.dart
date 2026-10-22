@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 클래스: NoticeTone
 /// 목적: 안내 박스의 색 조합. 어르신도 놓치지 않도록 색 · 아이콘 · 문구를
 ///       함께 쓰고, 상황의 무게에 따라 셋 중 하나를 고른다.
@@ -12,7 +12,7 @@ import 'package:vibration_checker/ui/core/theme.dart';
 ///         경고
 enum NoticeTone { danger, caution, alert }
 
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 클래스: AppNotice
 /// 목적: 아이콘 하나와 안내 문구 한 덩이를 담은 박스. 홈 화면 입력 오류,
 ///       시작 화면 센서 미지원, 거치 안내 주의 문구, 측정 화면 경고처럼
@@ -27,7 +27,7 @@ class AppNotice extends StatelessWidget {
   /// 색 조합
   final NoticeTone tone;
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: AppNotice
   /// 목적: 안내 박스에 넣을 아이콘 · 문구 · 색 조합을 받는다.
   /// 인자: icon — 박스 앞 아이콘
@@ -40,7 +40,7 @@ class AppNotice extends StatelessWidget {
     required this.tone,
   });
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: build
   /// 목적: 색 조합에 맞춰 바탕 · 테두리 · 아이콘 · 글자색을 정해 박스를
   ///       그린다.

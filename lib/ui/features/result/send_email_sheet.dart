@@ -9,7 +9,7 @@ import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-04 18:15:24 · 박건준
 /// 함수: showSendEmailSheet
 /// 목적: 저장된 측정 결과 하나를 보낼 이메일 발송 화면을 앱 공통 모양의
 ///       바텀 시트(화면 아래에서 위로 올라오는 패널)로 띄운다. 결과 화면과
@@ -27,7 +27,7 @@ Future<void> showSendEmailSheet(BuildContext context, {required String jobId}) {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-04 18:15:24 · nada
+/// 수정: 2026-10-04 18:15:24 · 박건준
 /// 클래스: SendEmailSheet
 /// 목적: 이메일 발송 바텀 시트 위젯. 등록된 수신자를 보여주고, 보낼
 ///       항목을 선택받아 기기의 메일 앱을 띄운다. 어르신도 쓰기
@@ -37,7 +37,7 @@ class SendEmailSheet extends StatefulWidget {
   final String jobId;
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-04 18:15:24 · 박건준
   /// 함수: SendEmailSheet
   /// 목적: 시트가 보낼 측정 결과를 받는다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
@@ -48,7 +48,7 @@ class SendEmailSheet extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
-/// 수정: 2026-10-22 09:30:00 · nada
+/// 수정: 2026-10-22 09:30:00 · 박건준
 /// 클래스: _SendEmailSheetState
 /// 목적: 이메일 발송 바텀 시트의 상태를 관리한다. 등록된 수신 이메일
 ///       가운데 받을 주소를 여러 개 고르게 하고, 보낼 항목을 선택받아
@@ -85,7 +85,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   final Set<String> _selected = <String>{};
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 16:44:32 · 박건준
   /// 함수: initState
   /// 목적: 이 시트가 화면에 나타날 때 한 번, 저장된 수신 이메일과 지난번
   ///       보낸 주소를 불러와 화면에 표시한다.
@@ -96,7 +96,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 16:44:32 · 박건준
   /// 함수: _loadRecipients
   /// 목적: 등록된 수신 이메일 목록을 불러오고, 지난번 메일을 보낸 주소
   ///       가운데 아직 목록에 남아 있는 것을 미리 고른다. 보낸 적이 없고
@@ -117,7 +117,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     });
   }
 
-  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 작성: 2026-10-04 16:44:32 · 박건준
   /// 함수: _recipients
   /// 목적: 고른 주소를 설정에 등록된 차례대로 늘어놓는다. 메일 앱에 넘기는
   ///       수신자 목록이다.
@@ -126,7 +126,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       _emails.where(_selected.contains).toList(growable: false);
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-23 00:20:00 · nada
+  /// 수정: 2026-10-23 00:20:00 · 박건준
   /// 함수: _send
   /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 하나도
   ///       등록되지 않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
@@ -187,7 +187,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     }
   }
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: _buildCheckboxItem
   /// 목적: 보낼 항목 하나를 체크박스 + 이름 한 줄로 만든다. 줄 어디를
   ///       눌러도 체크가 바뀌고, 체크박스는 어르신이 누르기 쉽게 키운다.
@@ -228,8 +228,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     );
   }
 
-  /// 작성: 2026-10-04 13:37:23 · nada
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
+  /// 수정: 2026-10-18 10:12:30 · 박건준
   /// 함수: build
   /// 목적: 이메일 발송 시트를 그린다. 위에서부터 순서대로 놓는다.
   ///       1. 제목과 닫기 버튼

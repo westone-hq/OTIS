@@ -1,14 +1,14 @@
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
-/// 작성: 2026-09-15 19:43:50 · nada
-/// 수정: 2026-10-23 00:40:00 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-23 00:40:00 · 박건준
 /// 클래스: ReportChartPageLayout
 /// 목적: 차트 쪽의 자리들을 담는다. 머리말 네 칸과 차트 네 자리가 있다.
 ///       1쪽과 달리 쪽 번호 칸이 있고, 쪽 제목이 금색으로 들어간다.
 class ReportChartPageLayout {
-  /// 작성: 2026-09-15 19:43:50 · nada
-  /// 수정: 2026-10-21 17:10:00 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-21 17:10:00 · 박건준
   /// 변수: background
   /// 목적: 서식 배경 이미지 자산 경로. 정본이 가진 파일 이름 앞에 자산
   ///       디렉터리를 붙인 것이다. 2026-10-21 이미지에서 예전 차트를 붓으로
@@ -65,7 +65,7 @@ class ReportChartPageLayout {
     color: ReportColors.navy,
   );
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: fields
   /// 목적: 차트 쪽 머리말 네 칸을 모아 둔 것. 낱개 상수와 같은 값이며,
   ///       전부 훑어야 할 때 쓴다. 쪽 제목은 머리말이 아니라 따로 둔다.
@@ -85,7 +85,7 @@ class ReportChartPageLayout {
   /// 차트 자리의 세로 길이 (픽셀). 네 자리가 모두 같다
   static const int slotHeight = 198;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: slots
   /// 목적: 차트 네 자리를 위에서 아래 차례대로 모아 둔 것. 세로 좌표만
   ///       다르고 가로 좌표와 크기는 같다.

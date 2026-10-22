@@ -4,7 +4,7 @@ import 'package:vibration_checker/ui/core/router.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 
 /// 작성: 2026-08-17 11:15:41 · 박건준
-/// 수정: 2026-10-18 09:41:12 · nada
+/// 수정: 2026-10-18 09:41:12 · 박건준
 /// 함수: main
 /// 목적: 앱 실행 진입점.
 ///       - `WidgetsFlutterBinding.ensureInitialized()` — 프레임워크 바인딩
@@ -34,7 +34,7 @@ class VibrationCheckerApp extends StatelessWidget {
   const VibrationCheckerApp({super.key});
 
   /// 작성: 2026-08-17 11:15:41 · 박건준
-  /// 수정: 2026-10-13 14:15:29 · nada
+  /// 수정: 2026-10-13 14:15:29 · 박건준
   /// 함수: build
   /// 목적: 앱의 최상위 설정을 구성한다. 화면 전환 자체는 `appRouter`
   ///       (앱 라우터. GoRouter 패키지로 만든 것으로, URL 경로 하나하나를

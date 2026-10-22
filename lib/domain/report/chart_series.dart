@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
 /// 클래스: ChartSample
 /// 목적: 줄이기를 거쳐 남은 표본 하나. 값과 함께 원래 시계열에서의 자리를
 ///       갖는다 — 가로 자리를 시각으로 되돌리려면 자리 번호가 있어야 한다.
@@ -11,7 +11,7 @@ class ChartSample {
   /// 그 자리의 값. 단위는 그 시계열의 단위를 따른다
   final double value;
 
-  /// 작성: 2026-09-17 10:05:00 · nada
+  /// 작성: 2026-09-17 10:05:00 · 박건준
   /// 함수: ChartSample
   /// 목적: 표본 하나의 자리와 값을 그대로 담는 생성자.
   /// 인자: index — 원래 시계열에서의 자리 번호
@@ -19,8 +19,8 @@ class ChartSample {
   const ChartSample(this.index, this.value);
 }
 
-/// 작성: 2026-09-17 10:05:00 · nada
-/// 수정: 2026-10-11 15:34:38 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
+/// 수정: 2026-10-11 15:34:38 · 박건준
 /// 함수: reduceSeries
 /// 목적: 시계열을 가로 칸 수만큼으로 나눠, 칸마다 가장 작은 값과 가장 큰
 ///       값만 남긴다.
@@ -42,7 +42,7 @@ List<ChartSample> reduceSeries(List<double> values, {required int columns}) {
   return _reduceRun(values, 0, values.length, columns);
 }
 
-/// 작성: 2026-10-11 15:34:38 · nada
+/// 작성: 2026-10-11 15:34:38 · 박건준
 /// 함수: reduceSeriesSegments
 /// 목적: 시계열을 줄이되, 0 을 미측정으로 보는 시계열(소음)은 0 구간에서
 ///       끊어 실측 구간마다 따로 줄인다. 0 구간에 선을 그으면 재지 않은
@@ -76,7 +76,7 @@ List<List<ChartSample>> reduceSeriesSegments(
   return segments;
 }
 
-/// 작성: 2026-10-11 15:34:38 · nada
+/// 작성: 2026-10-11 15:34:38 · 박건준
 /// 함수: _reduceRun
 /// 목적: 시계열의 한 구간 [start, end) 를 줄인다. 칸 경계는 시계열 전체를
 ///       `columns` 칸으로 나눈 자리를 그대로 쓰고, 이 구간과 겹치는

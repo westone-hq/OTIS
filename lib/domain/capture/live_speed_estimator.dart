@@ -3,8 +3,8 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/dsp/units.dart';
 
-/// 작성: 2026-10-10 11:54:43 · nada
-/// 수정: 2026-10-22 22:40:00 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
+/// 수정: 2026-10-22 22:40:00 · 박건준
 /// 클래스: LiveSpeedEstimator
 /// 목적: 측정 중에 들어오는 센서 이벤트로 승강기 속도를 그때그때 어림한다.
 ///       측정 화면에 보여 주기만 하고 저장 · 리포트에는 쓰지 않는다.
@@ -60,26 +60,26 @@ class LiveSpeedEstimator {
   /// 정지 판정 조건이 이어진 시간 (마이크로초). 조건이 깨지면 0
   int _stillUs = 0;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 함수: LiveSpeedEstimator
   /// 목적: 기준선 구간 길이를 꺼낼 수집 설정을 받는다.
   /// 인자: config — 수집 설정. 안 주면 기본값
   LiveSpeedEstimator({this.config = const CaptureConfig()});
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 함수: velocityMps
   /// 목적: 어림한 수직 속도 (m/s). 부호는 격자 Z 와 같다. 기준선이 정해지기
   ///       전이면 null.
   double? get velocityMps => _baselineMg == null ? null : _velocity;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 함수: speedMps
   /// 목적: 어림한 속도의 크기 (m/s). 화면에 보이는 값이다. 기준선이
   ///       정해지기 전이면 null.
   double? get speedMps => velocityMps?.abs();
 
-  /// 작성: 2026-10-10 11:54:43 · nada
-  /// 수정: 2026-10-22 23:55:00 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
+  /// 수정: 2026-10-22 23:55:00 · 박건준
   /// 함수: onEvent
   /// 목적: 센서 이벤트 한 건을 받아 속도 어림을 한 걸음 진행한다. 쓰지
   ///       못하는 이벤트는 조용히 건너뛴다 — 저장용 격자

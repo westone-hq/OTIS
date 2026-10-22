@@ -10,7 +10,7 @@ import 'package:vibration_checker/domain/report/chart_axes.dart';
 
 import '../../support/reference_records.dart';
 
-/// 작성: 2026-10-21 10:05:00 · nada
+/// 작성: 2026-10-21 10:05:00 · 박건준
 /// 함수: _cases
 /// 목적: SciPy 로 만든 저크 · 가속도 차트 저역 픽스처를 읽는다
 ///       (`tool/fixtures/gen_conditioning_fixtures.py --jerk`).
@@ -21,7 +21,7 @@ Map<String, dynamic> _cases() =>
         )
         as Map<String, dynamic>;
 
-/// 작성: 2026-10-21 10:05:00 · nada
+/// 작성: 2026-10-21 10:05:00 · 박건준
 /// 함수: _doubles
 /// 목적: JSON 숫자 목록을 실수 목록으로 바꾼다.
 /// 인자: raw — JSON 에서 읽은 목록
@@ -29,7 +29,7 @@ Map<String, dynamic> _cases() =>
 List<double> _doubles(Object? raw) =>
     (raw as List<dynamic>).map((v) => (v as num).toDouble()).toList();
 
-/// 작성: 2026-10-21 10:05:00 · nada
+/// 작성: 2026-10-21 10:05:00 · 박건준
 /// 함수: _expectSections
 /// 목적: 설계한 2차 구간 계수가 SciPy 계수 행과 같은지 본다.
 /// 인자: actual — Dart 가 설계한 구간
@@ -51,8 +51,8 @@ void _expectSections(List<SosSection> actual, List<dynamic> expected) {
   }
 }
 
-/// 작성: 2026-10-21 10:05:00 · nada
-/// 수정: 2026-10-23 01:00:00 · nada
+/// 작성: 2026-10-21 10:05:00 · 박건준
+/// 수정: 2026-10-23 01:00:00 · 박건준
 /// 함수: main
 /// 목적: 운동 계산(`Kinematics`)의 저크 처리(1.6Hz 4차 버터워스 양방향 →
 ///       중앙 차분)와 차트 가속도(10Hz 4차 양방향)를 시험한다.

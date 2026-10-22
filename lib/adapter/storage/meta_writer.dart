@@ -11,26 +11,26 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/config/noise_config.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-/// 작성: 2026-10-23 00:50:00 · nada
+/// 작성: 2026-10-23 00:50:00 · 박건준
 /// 클래스: MetaWriter
 /// 목적: 측정 한 건의 집계 파일(`meta.txt`)을 만든다. 격자 환산에서 버리거나
 ///       특이하게 처리한 표본 수, 신호 처리 · 가중 · 운행 구간 · 움직인
 ///       구간 · 거치 · 소음 설정을 사람이 읽는 줄로 적는다. 값 파일
 ///       (`raw.txt`)은 `EvimpWriter` 가 쓴다.
 class MetaWriter {
-  /// 작성: 2026-10-23 00:50:00 · nada
+  /// 작성: 2026-10-23 00:50:00 · 박건준
   /// 변수: lineEnding
   /// 목적: 줄바꿈 문자. 값 파일과 같은 것을 쓴다(`EvimpWriter.lineEnding`).
   static const String lineEnding = EvimpWriter.lineEnding;
 
-  /// 작성: 2026-10-23 00:50:00 · nada
+  /// 작성: 2026-10-23 00:50:00 · 박건준
   /// 변수: decimalDigits
   /// 목적: 값 하나의 소수점 자리 수. 값 파일과 같은 것을 쓴다
   ///       (`EvimpWriter.decimalDigits`).
   static const int decimalDigits = EvimpWriter.decimalDigits;
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
-  /// 수정: 2026-10-23 00:50:00 · nada
+  /// 수정: 2026-10-23 00:50:00 · 박건준
   /// 함수: encodeMeta
   /// 목적: 환산 과정에서 폐기되거나 특이하게 처리된 표본 수를 모아
   ///       사람이 읽을 수 있는 집계 문자열로 만든다. 값 파일(`EvimpWriter.encode()`
@@ -40,7 +40,7 @@ class MetaWriter {
   /// 반환: 집계 항목이 줄바꿈으로 이어진 문자열
   static String encodeMeta(GridResampleResult result) {
     final buffer = StringBuffer(); // 집계 문자열을 쌓아갈 버퍼
-    /// 작성: 2026-08-26 04:58:38 · nada
+    /// 작성: 2026-08-26 04:58:38 · 박건준
     /// 함수: line
     /// 목적: 한 줄을 쓰고 줄바꿈 문자를 붙여 버퍼에 담는다.
     /// 인자: text — 추가할 한 줄 내용
@@ -100,7 +100,7 @@ class MetaWriter {
   }
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
-  /// 수정: 2026-10-23 00:50:00 · nada
+  /// 수정: 2026-10-23 00:50:00 · 박건준
   /// 함수: writeMeta
   /// 목적: 집계 파일을 기록한다. 격자 환산이 실패하면 `result`에는
   ///       표본 없이 실패 사유(`failureReason`)만 담겨 오는데, 이때도
@@ -125,8 +125,8 @@ class MetaWriter {
     return file;
   }
 
-  /// 작성: 2026-10-07 02:10:57 · nada
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-07 02:10:57 · 박건준
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: encodeConditioningMeta
   /// 목적: 지표 계산 전 신호 처리(`SignalConditioner.condition()`)를 어떻게
   ///       했는지 집계 파일 끝에 덧붙일 문자열로 만든다. 값 파일(`raw.txt`)은
@@ -195,7 +195,7 @@ class MetaWriter {
     return buffer.toString();
   }
 
-  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 작성: 2026-10-07 02:10:57 · 박건준
   /// 함수: encodeConditioningFailure
   /// 목적: 지표 계산 전 신호 처리가 실패한 사유를 집계 파일 끝에 덧붙일
   ///       문자열로 만든다. 처리가 실패해도 값 파일(`raw.txt`)은 이미 써
@@ -205,8 +205,8 @@ class MetaWriter {
   static String encodeConditioningFailure(String reason) =>
       '${lineEnding}conditioningFailureReason: $reason$lineEnding';
 
-  /// 작성: 2026-10-20 14:05:12 · nada
-  /// 수정: 2026-10-22 22:40:00 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
+  /// 수정: 2026-10-22 22:40:00 · 박건준
   /// 함수: encodeMotionMeta
   /// 목적: 운행 거리 · 최대 속도를 적분한 움직인 구간을 집계 파일 끝에
   ///       덧붙일 문자열로 만든다. 거리가 이상할 때 어느 구간을 적분했는지
@@ -246,7 +246,7 @@ class MetaWriter {
     return buffer.toString();
   }
 
-  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 함수: encodePlacementMeta
   /// 목적: 거치 방향 판정을 집계 파일 끝에 덧붙일 문자열로 만든다.
   /// 인자: placement — 판정 결과. 측정이 1초보다 짧아 판정하지 못했으면 null
@@ -279,7 +279,7 @@ class MetaWriter {
     return buffer.toString();
   }
 
-  /// 작성: 2026-10-22 12:00:00 · nada
+  /// 작성: 2026-10-22 12:00:00 · 박건준
   /// 함수: encodeNoiseMeta
   /// 목적: 소음 계산 방식(시간가중 · 마이크 표본 속도)을 집계 파일 끝에
   ///       덧붙일 문자열로 만든다. 2026-10-22 에 44.1 → 48kHz 로 바꿔, 예전
@@ -302,8 +302,8 @@ class MetaWriter {
     return buffer.toString();
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: encodeTravelMeta
   /// 목적: 주파수 가중과 운행 구간을 집계 파일 끝에 덧붙일 문자열로 만든다.
   ///       지표는 가중한 시계열의 운행 구간 안에서 내므로, 리포트 값이
@@ -375,7 +375,7 @@ class MetaWriter {
     return buffer.toString();
   }
 
-  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 작성: 2026-10-07 02:10:57 · 박건준
   /// 함수: appendMeta
   /// 목적: 이미 쓴 집계 파일 끝에 문자열을 덧붙인다. 집계는 격자 환산
   ///       직후에 먼저 쓰고, 신호 처리 결과는 그 뒤에 알 수 있기 때문이다.

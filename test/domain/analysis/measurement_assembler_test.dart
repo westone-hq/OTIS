@@ -15,13 +15,13 @@ import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 
-/// 작성: 2026-09-15 19:14:22 · nada
+/// 작성: 2026-09-15 19:14:22 · 박건준
 /// 변수: _fixturePath
 /// 목적: 기준 측정 데이터 파일 경로. 원본 TUNE 리포트를 만든 실제 현장
 ///       측정 기록이며, 회귀는 이 파일로 고정한다.
 const _fixturePath = 'test/fixtures/records/ride_reference.txt';
 
-/// 작성: 2026-09-15 13:08:37 · nada
+/// 작성: 2026-09-15 13:08:37 · 박건준
 /// 함수: _grid
 /// 목적: 시험에 쓸 격자 환산 결과를 만든다. 행 수와 격자 간격만 받고
 ///       나머지 집계값은 변환에 쓰이지 않으므로 0 으로 둔다.
@@ -49,7 +49,7 @@ GridResampleResult _grid(
   );
 }
 
-/// 작성: 2026-09-15 19:14:22 · nada
+/// 작성: 2026-09-15 19:14:22 · 박건준
 /// 함수: _fixtureFields
 /// 목적: 기준 데이터 파일을 읽어 데이터 줄마다 열 값을 잘라 돌려준다.
 ///       EVIMP1 포맷이라 머리말이 두 줄(형식 태그, 샘플레이트)이고, 그
@@ -69,7 +69,7 @@ List<List<String>> _fixtureFields() {
       .toList();
 }
 
-/// 작성: 2026-09-15 19:14:22 · nada
+/// 작성: 2026-09-15 19:14:22 · 박건준
 /// 함수: _fixtureRows
 /// 목적: 기준 데이터를 격자 행으로 만든다. 진동 세 열과 소음 열을 모두
 ///       싣는다 — 수집 계층이 격자 행에 소음을 실어 주므로 실제 경로와
@@ -88,7 +88,7 @@ List<GridSample> _fixtureRows() {
       .toList();
 }
 
-/// 작성: 2026-09-15 14:32:07 · nada
+/// 작성: 2026-09-15 14:32:07 · 박건준
 /// 함수: _trapezoid
 /// 목적: 승강기 한 번 운행을 흉내 낸 사다리꼴 속도 프로파일을 격자 행으로
 ///       만든다. 가속 · 정속 · 감속 세 구간이고, 수직 진동에만 값이 있다.
@@ -130,7 +130,7 @@ List<GridSample> _trapezoid() {
   return rows;
 }
 
-/// 작성: 2026-09-15 13:08:37 · nada
+/// 작성: 2026-09-15 13:08:37 · 박건준
 /// 변수: _site
 /// 목적: 시험에 쓸 현장 정보. 홈 화면이 실제로 넣는 값과 같은 형태다.
 const _site = SiteInfo(
@@ -142,8 +142,8 @@ const _site = SiteInfo(
   model: 'Gen2',
 );
 
-/// 작성: 2026-09-15 19:14:22 · nada
-/// 수정: 2026-10-21 10:05:00 · nada
+/// 작성: 2026-09-15 19:14:22 · 박건준
+/// 수정: 2026-10-21 10:05:00 · 박건준
 /// 변수: _shortRows
 /// 목적: 최소 행 수 조건(16행, 저크 저역 필터의 양 끝 덧댐 15행 + 1)을
 ///       넘기려고 두는, 값 자체는 뜻이 없는 격자 행 16개. 행 수 말고 다른
@@ -153,7 +153,7 @@ final _shortRows = List<GridSample>.filled(
   const GridSample(xMg: 0.0, yMg: 0.0, zMg: 0.0),
 );
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _rideWithNoise
 /// 목적: 사다리꼴 운행(`_trapezoid()`)에 소음을 얹은 격자 행을 만든다.
 ///       운행 구간(출발 · 정지 0.5 m 제외)이 생기는 입력이라 구간 안 ·
@@ -174,7 +174,7 @@ List<GridSample> _rideWithNoise(double Function(int index) noise) {
   ];
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _conditionedReference
 /// 목적: 기준 데이터(ride_reference)를 앱과 같은 길 — 신호 처리
 ///       (`SignalConditioner`) 뒤 조립 — 으로 측정 결과로 만든다.
@@ -191,7 +191,7 @@ MeasurementResult _conditionedReference() {
   ).result!;
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _expectedReference
 /// 목적: 같은 기준 데이터를 SciPy 로 재계산한 기대값을 읽는다
 ///       (`tool/fixtures/gen_conditioning_fixtures.py --weighting`).
@@ -205,8 +205,8 @@ Map<String, dynamic> _expectedReference() =>
             as Map<String, dynamic>)['ride_reference']
         as Map<String, dynamic>;
 
-/// 작성: 2026-09-15 13:08:37 · nada
-/// 수정: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-09-15 13:08:37 · 박건준
+/// 수정: 2026-10-15 16:50:04 · 박건준
 /// 함수: main
 /// 목적: 캡처 결과를 측정 결과 모델로 바꾸는 변환을 시험한다.
 ///       - 진동 시계열과 샘플레이트가 제대로 옮겨지는지

@@ -4,8 +4,8 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/features/home/widgets/field_error.dart';
 
-/// 작성: 2026-10-11 17:28:28 · nada
-/// 수정: 2026-10-22 23:10:00 · nada
+/// 작성: 2026-10-11 17:28:28 · 박건준
+/// 수정: 2026-10-22 23:10:00 · 박건준
 /// 클래스: LoadField
 /// 목적: 하중 입력칸과 단위 글자(`SiteInfo.loadUnit`, kg)를 한 줄에 둔다.
 ///       단위는 고를 수 없다(2026-10-13 kg 고정). 입력칸 안 꼬리
@@ -28,7 +28,7 @@ class LoadField extends StatelessWidget {
   /// 값이 바뀔 때마다 부를 함수(저장 · 오류 지우기)
   final VoidCallback onChanged;
 
-  /// 작성: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-22 23:10:00 · 박건준
   /// 함수: LoadField
   /// 목적: 하중 입력칸에 필요한 값을 받는다.
   /// 인자: anchorKey, controller, focusNode, error, onChanged — 위 필드
@@ -42,8 +42,8 @@ class LoadField extends StatelessWidget {
     required this.onChanged,
   });
 
-  /// 작성: 2026-10-11 17:28:28 · nada
-  /// 수정: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-11 17:28:28 · 박건준
+  /// 수정: 2026-10-22 23:10:00 · 박건준
   /// 함수: build
   /// 목적: 라벨 → 입력칸 · 단위 한 줄 → (오류 박스) 를 세로로 놓는다.
   @override

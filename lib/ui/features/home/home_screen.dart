@@ -17,7 +17,7 @@ import 'package:vibration_checker/ui/features/home/widgets/site_text_field.dart'
 import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
-/// 수정: 2026-10-13 14:27:24 · nada
+/// 수정: 2026-10-13 14:27:24 · 박건준
 /// 클래스: HomeScreen
 /// 목적: 이번 측정의 현장 정보(제번, 현장명, 우편번호 · 주소, 층수, 운전
 ///       방향, 기종, 하중, 해석 종류, 추가 참고사항)를 입력받고 측정을
@@ -29,7 +29,7 @@ import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 ///       - 앱이 켜져 처음 뜰 때 한 번 업데이트를 확인한다
 ///         (`UpdatePrompt.checkAtLaunch()`)
 class HomeScreen extends StatefulWidget {
-  /// 작성: 2026-10-13 14:27:24 · nada
+  /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: HomeScreen
   /// 목적: 홈 화면을 만든다.
   /// 인자: updatePrompt — 시작 때 쓸 업데이트 안내 흐름. 안 주면 실제
@@ -44,7 +44,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
-/// 수정: 2026-10-22 23:10:00 · nada
+/// 수정: 2026-10-22 23:10:00 · 박건준
 /// 클래스: _HomeScreenState
 /// 목적: 홈 화면의 입력 상태를 관리한다. 입력이 바뀔 때마다 기기에 저장해,
 ///       다음 측정이나 다음 앱 실행 때 마지막 입력이 그대로 남게 한다.
@@ -146,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _loadError;
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-13 14:27:24 · nada
+  /// 수정: 2026-10-13 14:27:24 · 박건준
   /// 함수: initState
   /// 목적: `initState`(이 화면이 새로 만들어질 때, 화면을 그리기 전에
   ///       Flutter가 딱 한 번만 불러주는 생명주기(lifecycle, "만들어짐
@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · nada
+  /// 수정: 2026-10-13 13:17:56 · 박건준
   /// 함수: _loadSavedInputs
   /// 목적: `PrefsStore`(기기에 값을 저장·불러오는 저장소 클래스)에 저장된
   ///       마지막 현장 정보를 불러와 입력 필드를 채운다.
@@ -198,8 +198,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  /// 작성: 2026-10-04 16:44:32 · nada
-  /// 수정: 2026-10-13 13:17:56 · nada
+  /// 작성: 2026-10-04 16:44:32 · 박건준
+  /// 수정: 2026-10-13 13:17:56 · 박건준
   /// 함수: _currentSite
   /// 목적: 지금 입력창 · 선택지에 있는 값을 앞뒤 공백을 지워 현장 정보로
   ///       묶는다.
@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 작성: 2026-10-04 16:44:32 · 박건준
   /// 함수: _saveDraft
   /// 목적: 지금 입력을 마지막 현장 정보로 저장한다. 입력이 바뀔 때마다
   ///       부른다 — 측정을 시작하지 않고 앱을 닫아도 다음에 그대로
@@ -231,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-11 17:28:28 · nada
+  /// 수정: 2026-10-11 17:28:28 · 박건준
   /// 함수: dispose
   /// 목적: `dispose`(이 화면이 완전히 사라질 때 Flutter가 마지막으로
   ///       한 번 불러주는 생명주기 메서드. `initState`의 반대 시점)다.
@@ -258,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-22 23:10:00 · nada
+  /// 수정: 2026-10-22 23:10:00 · 박건준
   /// 함수: _startMeasure
   /// 목적: 입력값을 검증하고, 통과하면 측정을 시작한다.
   ///       - 포커스를 해제하고 입력값을 다듬어 `SiteInfo`(제번 · 현장명 ·
@@ -350,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
     context.push('/start'); // → 로직 이동: StartScreen.initState()
   }
 
-  /// 작성: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-22 23:10:00 · 박건준
   /// 함수: _onEdited
   /// 목적: 입력칸 값이 바뀌었을 때 입력을 저장하고, 그 칸에 오류 표시가
   ///       있으면 지운다. 칸마다 같은 순서라 한 곳에 둔다.
@@ -362,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 13:37:23 · 박건준
   /// 함수: _buildActionBtn
   /// 목적: 앱바 오른쪽에 쓰는 아이콘 + 문구 버튼을 만든다.
   /// 인자: onPressed — 버튼을 눌렀을 때 실행할 동작
@@ -389,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-22 23:10:00 · nada
+  /// 수정: 2026-10-22 23:10:00 · 박건준
   /// 함수: build
   /// 목적: 홈 화면(현장 정보 입력) 레이아웃을 구성한다.
   ///       - `appBar` — 화면 제목과, 설정·저장 결과 화면으로 이동하는

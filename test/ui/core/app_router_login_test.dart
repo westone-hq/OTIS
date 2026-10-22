@@ -9,13 +9,13 @@ import 'package:vibration_checker/domain/auth/login_session.dart';
 import 'package:vibration_checker/ui/core/router.dart';
 import 'package:vibration_checker/ui/features/login/login_screen.dart';
 
-/// 작성: 2026-10-20 09:12:40 · nada
+/// 작성: 2026-10-20 09:12:40 · 박건준
 /// 함수: _location
 /// 목적: 앱 라우터가 지금 보여 주는 경로를 읽는다.
 /// 반환: 경로 (예: "/home")
 String _location() => appRouter.routerDelegate.currentConfiguration.uri.path;
 
-/// 작성: 2026-10-20 09:12:40 · nada
+/// 작성: 2026-10-20 09:12:40 · 박건준
 /// 함수: _waitForAsset
 /// 목적: 명단 자산 읽기처럼 시험 시계 밖에서 도는 작업이 끝나기를 기다린 뒤
 ///       화면을 다시 그린다.
@@ -27,7 +27,7 @@ Future<void> _waitForAsset(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// 작성: 2026-10-20 09:12:40 · nada
+/// 작성: 2026-10-20 09:12:40 · 박건준
 /// 함수: main
 /// 목적: 앱의 실제 라우터(`appRouter`)와 실제 명단 자산으로 로그인 흐름을
 ///       끝까지 시험한다. 로그인 전에는 어느 경로로 가도 로그인 화면이고,

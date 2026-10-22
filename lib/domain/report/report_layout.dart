@@ -1,5 +1,5 @@
-/// 작성: 2026-09-15 19:43:50 · nada
-/// 수정: 2026-10-22 22:20:00 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-22 22:20:00 · 박건준
 /// 클래스: ReportLayout
 /// 목적: TUNE 리포트 서식 위에 값을 얹을 자리를 모아 둔다. 리포트의
 ///       좌표 숫자는 전부 이 파일과 쪽별 좌표 파일
@@ -31,7 +31,7 @@ class ReportLayout {
   /// A4 세로 (PDF 포인트)
   static const double pageHeightPt = 841.89;
 
-  /// 작성: 2026-09-25 09:30:00 · nada
+  /// 작성: 2026-09-25 09:30:00 · 박건준
   /// 변수: assetDirectory
   /// 목적: 서식 배경 이미지가 놓인 자산 디렉터리. 정본은 파일 이름만 갖고,
   ///       디렉터리는 쓰는 쪽이 앞에 붙인다.
@@ -47,8 +47,8 @@ class ReportLayout {
   /// 굵게 쓸 자리용 한글 글꼴 자산 경로
   static const String boldFontAsset = '${assetDirectory}NanumGothic-Bold.ttf';
 
-  /// 작성: 2026-09-25 09:30:00 · nada
-  /// 수정: 2026-10-23 01:10:00 · nada
+  /// 작성: 2026-09-25 09:30:00 · 박건준
+  /// 수정: 2026-10-23 01:10:00 · 박건준
   /// 변수: textBaselineDropRatio
   /// 목적: 글자 크기 대비, 글자 덩이의 세로 한가운데에서 앉는 선까지
   ///       내려야 하는 몫. 서식의 세로 좌표가 글자의 수직 중심이라, 찍기
@@ -60,14 +60,14 @@ class ReportLayout {
   ///       약속이며, 바꾸면 원본 리포트와 글자 자리가 갈라진다
   static const double textBaselineDropRatio = 0.36;
 
-  /// 작성: 2026-09-25 09:30:00 · nada
+  /// 작성: 2026-09-25 09:30:00 · 박건준
   /// 변수: datetimePattern
   /// 목적: 머리말 측정 일시의 표기 형식. 1쪽과 차트 쪽이 같은 자리에 같은
   ///       문구를 찍어야 해서 한 곳에 둔다.
   /// 근거: 인용 — 원본 리포트 머리말이 `14/01/2026 11:03:59 AM` 형태다
   static const String datetimePattern = 'dd/MM/yyyy hh:mm:ss a';
 
-  /// 작성: 2026-09-15 20:13:49 · nada
+  /// 작성: 2026-09-15 20:13:49 · 박건준
   /// 변수: ptPerPxX
   /// 목적: 서식 이미지 픽셀 하나가 PDF 포인트로 가로 몇인지. json 에는
   ///       소수로 끊은 사본이 적혀 있고, 여기서는 페이지 크기에서 직접
@@ -81,7 +81,7 @@ class ReportLayout {
   ///       0.16pt 어긋난다
   static const double ptPerPxX = pageWidthPt / pageWidthPx;
 
-  /// 작성: 2026-09-15 20:13:49 · nada
+  /// 작성: 2026-09-15 20:13:49 · 박건준
   /// 변수: ptPerPxY
   /// 목적: 서식 이미지 픽셀 하나가 PDF 포인트로 세로 몇인지.
   /// 식: ky = pageHeightPt / pageHeightPx
@@ -89,7 +89,7 @@ class ReportLayout {
   ///       `ptPerPxX` 와 다른 이유는 같은 설명을 본다
   static const double ptPerPxY = pageHeightPt / pageHeightPx;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 함수: xToPoints
   /// 목적: 서식 이미지의 가로 좌표를 PDF 가로 좌표로 바꾼다.
   /// 인자: xPx — 서식 이미지 가로 좌표 (픽셀, 왼쪽이 0)
@@ -97,7 +97,7 @@ class ReportLayout {
   /// 식: x_pt = x_px x ptPerPxX
   static double xToPoints(num xPx) => xPx * ptPerPxX;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 함수: yToPoints
   /// 목적: 서식 이미지의 세로 좌표를 PDF 세로 좌표로 바꾼다. 위아래가
   ///       뒤집히므로 곱하기만 해서는 안 된다.
@@ -110,7 +110,7 @@ class ReportLayout {
   ///     함께 뒤집힌다.
   static double yToPoints(num yPx) => pageHeightPt - yPx * ptPerPxY;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 함수: lengthToPoints
   /// 목적: 길이(글자 크기 · 너비 · 지름)를 PDF 포인트로 바꾼다. 위치가
   ///       아니라 길이라 위아래 뒤집기가 끼지 않는다.
@@ -122,17 +122,17 @@ class ReportLayout {
   static double lengthToPoints(num lengthPx) => lengthPx * ptPerPxX;
 }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 클래스: LayoutAlign
 /// 목적: 글자를 기준 좌표의 어느 쪽에 붙일지.
 enum LayoutAlign { left, center, right }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 클래스: LayoutWeight
 /// 목적: 글자 굵기. 서식에 쓰는 글꼴이 보통과 굵게 두 벌뿐이다.
 enum LayoutWeight { regular, bold }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 클래스: ReportColors
 /// 목적: 리포트에 쓰는 색을 모아 둔다. 값은 0xRRGGBB 이며, PDF 색 자료형으로
 ///       바꾸는 일은 그리는 쪽이 한다 — 이 파일은 바깥 패키지를 쓰지 않는다.
@@ -167,7 +167,7 @@ class ReportColors {
   /// 차트 격자 선 색. 축 틀 · 눈금 · 라벨은 `text` 를 쓰고 격자만 이 색이다
   static const int chartGrid = 0x555555;
 
-  /// 작성: 2026-09-23 09:40:00 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
   /// 변수: chartMarker
   /// 목적: 차트에서 최댓값 자리를 짚는 점과 그 옆에 적는 값의 색. 지금은
   ///       소음 차트에만 붙는다 — 진동 차트의 최댓값은 저역통과
@@ -175,7 +175,7 @@ class ReportColors {
   ///       나오는 값이라, 필터가 정해지기 전에는 찍을 값이 없다.
   static const int chartMarker = 0xE03030;
 
-  /// 작성: 2026-09-23 09:40:00 · nada
+  /// 작성: 2026-09-23 09:40:00 · 박건준
   /// 변수: chartGuide
   /// 목적: 차트에 가로로 긋는 기준선의 색. 지금은 소음 차트의 평균선에
   ///       쓴다.
@@ -193,7 +193,7 @@ class ReportColors {
   static const int stripeEven = 0xFAF6ED;
 }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 클래스: LayoutField
 /// 목적: 글자 하나를 찍을 자리와 모양을 담는다. 서식 머리말의 각 칸처럼
 ///       값 하나가 한 자리에 들어가는 곳에 쓴다.
@@ -219,7 +219,7 @@ class LayoutField {
   /// 글자색 (0xRRGGBB). `ReportColors` 의 값 중 하나
   final int color;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 함수: LayoutField
   /// 목적: 글자 한 칸의 자리와 모양을 그대로 담는 생성자.
   /// 인자: key — 칸 이름
@@ -239,7 +239,7 @@ class LayoutField {
   });
 }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 클래스: LayoutMetricRow
 /// 목적: Performance Metrics 표의 한 행이 어디에 놓이고 어떤 성질인지 담는다.
 class LayoutMetricRow {
@@ -255,7 +255,7 @@ class LayoutMetricRow {
   /// 설명 라벨이 서식에 박혀 있는 행인지. 없으면 값을 라벨 자리부터 쓴다
   final bool hasLabel;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 함수: LayoutMetricRow
   /// 목적: 표 한 행의 자리와 성질을 그대로 담는 생성자.
   /// 인자: key — 지표 이름
@@ -270,7 +270,7 @@ class LayoutMetricRow {
   });
 }
 
-/// 작성: 2026-09-15 19:43:50 · nada
+/// 작성: 2026-09-15 19:43:50 · 박건준
 /// 클래스: LayoutPlotBox
 /// 목적: 차트 하나가 놓일 네모난 자리. 축 눈금과 라벨을 뺀, 실제 축 틀이
 ///       들어갈 영역이다.
@@ -287,7 +287,7 @@ class LayoutPlotBox {
   /// 세로 길이 (픽셀)
   final int height;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 함수: LayoutPlotBox
   /// 목적: 차트 자리의 좌표와 크기를 그대로 담는 생성자.
   /// 인자: x, y — 왼쪽 위 모서리 (픽셀)

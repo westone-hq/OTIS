@@ -4,14 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/report/chart_series.dart';
 import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
 /// 변수: _rideSampleCount
 /// 목적: 시험에 쓰는 표본 개수.
 /// 근거: 인용 — 회귀 기준 측정 기록의 행 수와 같다. 줄이기가 실제 측정
 ///       크기에서 어떻게 도는지 보려고 같은 수를 쓴다
 const _rideSampleCount = 11388;
 
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
 /// 함수: _wave
 /// 목적: 시험용 파형을 만든다. 사인파에 뾰족한 봉우리 하나를 섞어, 줄이기가
 ///       봉우리를 지우지 않는지 볼 수 있게 한다.
@@ -32,8 +32,8 @@ List<double> _wave(
   return values;
 }
 
-/// 작성: 2026-09-17 10:05:00 · nada
-/// 수정: 2026-10-22 23:40:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
+/// 수정: 2026-10-22 23:40:00 · 박건준
 /// 함수: main
 /// 목적: 차트 표본 줄이기를 시험한다(렌더러 시험에서 옮겼다). 최댓값과
 ///       최솟값이 살아남는지, 소음 0 구간에서 선을 끊는지 본다.

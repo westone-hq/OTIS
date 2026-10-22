@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 
-/// 작성: 2026-10-11 16:58:59 · nada
-/// 수정: 2026-10-13 13:17:56 · nada
+/// 작성: 2026-10-11 16:58:59 · 박건준
+/// 수정: 2026-10-13 13:17:56 · 박건준
 /// 함수: _site
 /// 목적: 새 항목까지 모두 채운 현장 정보를 만든다.
 /// 반환: 시험용 현장 정보
@@ -21,7 +21,7 @@ SiteInfo _site() => const SiteInfo(
   notes: '참고',
 );
 
-/// 작성: 2026-10-11 17:28:28 · nada
+/// 작성: 2026-10-11 17:28:28 · 박건준
 /// 함수: _siteWith
 /// 목적: 검사를 통과하는 현장 정보에서 몇 칸만 바꾼 것을 만든다.
 /// 인자: address, postalCode, load, notes — 바꿀 값. 안 주면 통과하는 값
@@ -44,7 +44,7 @@ SiteInfo _siteWith({
   notes: notes,
 );
 
-/// 작성: 2026-10-11 16:58:59 · nada
+/// 작성: 2026-10-11 16:58:59 · 박건준
 /// 함수: _result
 /// 목적: 현장 정보만 의미 있는 측정 결과를 만든다.
 /// 인자: load, loadUnit, analysisType, postalCode, notes — 새 항목. 안
@@ -83,8 +83,8 @@ MeasurementResult _result({
   );
 }
 
-/// 작성: 2026-10-11 16:58:59 · nada
-/// 수정: 2026-10-13 13:17:56 · nada
+/// 작성: 2026-10-11 16:58:59 · 박건준
+/// 수정: 2026-10-13 13:17:56 · 박건준
 /// 함수: main
 /// 목적: 현장 정보의 새 항목(하중 · 해석 종류 · 우편번호 · 참고사항)을
 ///       시험한다. 기기 저장 표 왕복, 선택지 밖 값의 기본값 처리, kg 고정

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/storage/login_store.dart';
 import 'package:vibration_checker/domain/auth/worker_directory.dart';
 
-/// 작성: 2026-10-20 09:12:40 · nada
+/// 작성: 2026-10-20 09:12:40 · 박건준
 /// 함수: main
 /// 목적: 앱에 묶인 실제 작업자 명단 전원이 로그인되는지 시험한다. 이름 ·
 ///       사번을 시험 코드에 적지 않고, 실행할 때 자산을 읽어 한 명씩 돈다.

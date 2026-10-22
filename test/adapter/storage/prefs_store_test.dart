@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/adapter/storage/prefs_store.dart';
 
-/// 작성: 2026-10-04 14:30:00 · nada
+/// 작성: 2026-10-04 14:30:00 · 박건준
 /// 함수: main
 /// 목적: 기기 저장소에 둔 수신 이메일 · 수신자 · 마지막 현장 정보가 저장한 그대로
 ///       돌아오는지, 깨진 값은 빈 값으로 받는지 시험한다.

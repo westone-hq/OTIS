@@ -11,8 +11,8 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/config/noise_config.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-/// 작성: 2026-10-04 13:29:41 · nada
-/// 수정: 2026-10-22 09:30:00 · nada
+/// 작성: 2026-10-04 13:29:41 · 박건준
+/// 수정: 2026-10-22 09:30:00 · 박건준
 /// 클래스: CaptureSession
 /// 목적: 측정 한 번의 센서 수집을 켜고 끄는 절차를 맡는다. 측정 화면
 ///       (measuring_screen.dart)이 화면 모양과 상관없이 같은 순서로
@@ -27,7 +27,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 ///       수집한 이벤트는 `resampler` 에 쌓이고, 저장은
 ///       `MeasurementRecorder`(measurement_recorder.dart)가 한다.
 class CaptureSession {
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: CaptureSession
   /// 목적: 수집 한 번에 쓸 센서 통로와 격자(일정한 시간 간격으로 줄 세운
   ///       표의 각 행) 환산기를 준비한다.
@@ -36,14 +36,14 @@ class CaptureSession {
   CaptureSession({SensorChannelManager? sensorManager})
     : _sensorManager = sensorManager ?? SensorChannelManager();
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 변수: noResponseTimeout
   /// 목적: 수집을 시작한 뒤 이 시간 안에 센서 값이 하나도 안 오면 무응답
   ///       으로 본다.
   /// 근거: 미확인 — 3초를 고른 근거가 코드 · 문서에 없다
   static const Duration noResponseTimeout = Duration(seconds: 3);
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 변수: _flushWait
   /// 목적: 수집 정지를 요청한 뒤 구독을 끊기 전까지 기다리는 시간.
   ///       안드로이드는 남은 묶음을 정지 요청의 응답 뒤에 메인 스레드로
@@ -51,15 +51,15 @@ class CaptureSession {
   /// 근거: 미확인 — 300ms 를 고른 근거가 코드 · 문서에 없다
   static const Duration _flushWait = Duration(milliseconds: 300);
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 변수: _slowStepLimit
   /// 목적: 정리 단계 하나를 기다리는 한도. 넘기면 포기하고 다음 단계로
   ///       간다 — 안드로이드 응답이 늦어 화면 나가기가 멈추면 안 된다.
   /// 근거: 미확인 — 500ms 를 고른 근거가 코드 · 문서에 없다
   static const Duration _slowStepLimit = Duration(milliseconds: 500);
 
-  /// 작성: 2026-10-05 10:00:11 · nada
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
+  /// 수정: 2026-10-18 10:12:30 · 박건준
   /// 변수: _stopCaptureLimit
   /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 정지는 안드로이드가 원본
   ///       기록 · 현장 소음 녹음 파일을 닫고 경로를 돌려주는 단계라 다른
@@ -70,7 +70,7 @@ class CaptureSession {
   ///       본다)보다 길게 둔다
   static const Duration _stopCaptureLimit = Duration(seconds: 4);
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 변수: _wakelockOnLimit
   /// 목적: 화면 꺼짐 방지를 켤 때 기다리는 한도. 넘기면 켜졌는지와
   ///       상관없이 수집을 시작한다 — 화면 꺼짐 방지 때문에 측정이
@@ -78,7 +78,7 @@ class CaptureSession {
   /// 근거: 미확인 — 100ms 를 고른 근거가 코드 · 문서에 없다
   static const Duration _wakelockOnLimit = Duration(milliseconds: 100);
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 변수: _wakelockOffLimit
   /// 목적: 화면 꺼짐 방지를 끌 때 기다리는 한도.
   /// 근거: 미확인 — 200ms 를 고른 근거가 코드 · 문서에 없다
@@ -118,13 +118,13 @@ class CaptureSession {
   /// 경고 시각에 이미 운행 중이라 거치 경고를 건너뛰었는지
   bool _placementAlertSkipped = false;
 
-  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 함수: placement
   /// 목적: 거치 방향 판정 결과. 저장 절차(`MeasurementRecorder.record()`)가
   ///       결과 파일에 싣는다. 수집 처음 1초가 지나기 전이면 null.
   PlacementReading? get placement => _placementMonitor.reading;
 
-  /// 작성: 2026-10-22 17:10:00 · nada
+  /// 작성: 2026-10-22 17:10:00 · 박건준
   /// 함수: placementAlertOffsetMs
   /// 목적: 거치 경고를 울린 시각을 첫 중력 이벤트부터 잰 값 (밀리초). 경고가
   ///       기준선 구간 뒤에 울렸는지 시험이 본다. 울리지 않았으면 null.
@@ -135,7 +135,7 @@ class CaptureSession {
     return (alerted - start) / 1000;
   }
 
-  /// 작성: 2026-10-22 17:10:00 · nada
+  /// 작성: 2026-10-22 17:10:00 · 박건준
   /// 함수: placementAlertSkipped
   /// 목적: 경고 시각에 이미 운행 중이라 거치 경고를 건너뛰었는지. 이때는
   ///       결과 화면 경고만 남는다.
@@ -172,43 +172,43 @@ class CaptureSession {
   /// 화면 꺼짐 방지를 켰는지. `_teardown()` 이 끌지 정한다
   bool _wakelockEnabled = false;
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: lastCaptureError
   /// 목적: 수집 시작 요청이 실패했을 때 화면에 보여줄 원인 문구. 실패가
   ///       없었으면 null.
   String? get lastCaptureError => _sensorManager.lastCaptureError;
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: nativeRecordPath
   /// 목적: 안드로이드가 `stop()` 때 저장한 원본 기록 파일 경로. 저장하지
   ///       못했거나 아직 멈추기 전이면 null.
   String? get nativeRecordPath => _sensorManager.lastRecordPath;
 
-  /// 작성: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-18 10:12:30 · 박건준
   /// 함수: noiseAudioPath
   /// 목적: 안드로이드가 `stop()` 때 닫은 현장 소음 녹음(M4A) 경로. 녹음하지
   ///       못했거나 아직 멈추기 전이면 null.
   String? get noiseAudioPath => _sensorManager.lastAudioPath;
 
-  /// 작성: 2026-10-22 12:00:00 · nada
+  /// 작성: 2026-10-22 12:00:00 · 박건준
   /// 함수: noiseSampleRateHz
   /// 목적: 안드로이드가 `stop()` 때 알려 준 소음 마이크 표본 속도(Hz, 48000
   ///       또는 44100). 마이크를 못 열었거나 아직 멈추기 전이면 null.
   int? get noiseSampleRateHz => _sensorManager.lastNoiseSampleRateHz;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: deviceManufacturer
   /// 목적: 수집을 멈출 때 안드로이드가 알려 준 휴대폰 제조사. 멈추기 전이거나
   ///       응답이 없으면 null.
   String? get deviceManufacturer => _sensorManager.lastDeviceManufacturer;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: deviceModel
   /// 목적: 수집을 멈출 때 안드로이드가 알려 준 휴대폰 기종 이름. 저장 절차가
   ///       기종 응답 보정을 고른다. 멈추기 전이거나 응답이 없으면 null.
   String? get deviceModel => _sensorManager.lastDeviceModel;
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: start
   /// 목적: 수집을 시작한다. 순서대로 진행한다. 마이크 권한은 여기서
   ///       요청하지 않는다 — 측정 중에 권한 창이 뜨면 뒤집어 놓은 휴대폰에서
@@ -268,7 +268,7 @@ class CaptureSession {
     });
   }
 
-  /// 작성: 2026-10-15 22:32:44 · nada
+  /// 작성: 2026-10-15 22:32:44 · 박건준
   /// 함수: _publishSpeed
   /// 목적: 이벤트 한 건을 속도 추정기에 넣고, 앞서 내보낸 뒤
   ///       `CaptureConfig.livePublishMs` 가 지났으면 어림한 속도를
@@ -285,8 +285,8 @@ class CaptureSession {
     liveSpeedMps.value = _speedEstimator.speedMps;
   }
 
-  /// 작성: 2026-10-22 09:30:00 · nada
-  /// 수정: 2026-10-22 17:10:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
+  /// 수정: 2026-10-22 17:10:00 · 박건준
   /// 함수: _watchPlacement
   /// 목적: 이벤트 한 건을 거치 감시기에 넣고, "화면 아래" 가 아니라고 판정했으면
   ///       첫 중력 이벤트부터 `CaptureConfig.placementAlertDelayMs`(1.7초)가
@@ -324,7 +324,7 @@ class CaptureSession {
     unawaited(_sensorManager.playPlacementAlert());
   }
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: stop
   /// 목적: 수집을 멈춘다. 측정을 끝낼 때, 중단할 때, 화면이 사라질 때 모두
   ///       부르므로 두 번 불러도 안전하다. 먼저 정지 표시를 세워, 아직
@@ -334,8 +334,8 @@ class CaptureSession {
     await _teardown(); // → 로직 이동: _teardown()
   }
 
-  /// 작성: 2026-10-07 03:30:18 · nada
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-07 03:30:18 · 박건준
+  /// 수정: 2026-10-18 10:12:30 · 박건준
   /// 함수: discard
   /// 목적: 저장하지 않고 끝내는 측정(뒤로가기 중단, 앱 전환 중단, 센서
   ///       무응답)의 수집을 멈추고, 안드로이드가 남긴 원본 기록 파일과
@@ -357,7 +357,7 @@ class CaptureSession {
     }
   }
 
-  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
   /// 함수: _teardown
   /// 목적: `start()` 가 지금까지 켠 것만 거꾸로 푼다. 켜지 않은 것은 건드리지
   ///       않고, 각 표시와 필드를 먼저 비워 두 번 불려도 같은 요청을 두 번
@@ -400,7 +400,7 @@ class CaptureSession {
     }
   }
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: _limit
   /// 목적: 정리 단계 하나를 한도까지만 기다린다. 늦거나 실패해도 오류를
   ///       올리지 않는다 — 정리가 막혀 화면을 못 나가는 것이 더 나쁘다.

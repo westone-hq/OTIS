@@ -19,8 +19,8 @@ import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/result/compare_sheet.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
-/// 작성: 2026-10-04 18:15:24 · nada
-/// 수정: 2026-10-23 00:10:00 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
+/// 수정: 2026-10-23 00:10:00 · 박건준
 /// 클래스: _Metric
 /// 목적: 결과 화면에 한 줄로 보여줄 지표 하나의 정의. 이름 · 단위 · 값을
 ///       꺼내는 방법 · 적색 판정 · 적색 기준 글자 · 소수 자리를 묶는다.
@@ -46,8 +46,8 @@ class _Metric {
   /// 값을 보여줄 소수 자리 수
   final int decimals;
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-23 00:10:00 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-23 00:10:00 · 박건준
   /// 함수: _Metric
   /// 목적: 지표 정의를 받는다.
   /// 인자: label, unit, read, exceeded, redLimit, decimals — 위 필드
@@ -62,7 +62,7 @@ class _Metric {
   });
 }
 
-/// 작성: 2026-10-04 18:15:24 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
 /// 변수: _metrics
 /// 목적: 결과 화면에 보여줄 지표와 그 차례. 적색 기준은 리포트와 같은
 ///       `ReportThresholds` 값을 쓴다 — 화면과 리포트의 판정이 갈라지지
@@ -112,7 +112,7 @@ final List<_Metric> _metrics = <_Metric>[
 ];
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-11 19:28:11 · nada
+/// 수정: 2026-10-11 19:28:11 · 박건준
 /// 클래스: ResultScreen
 /// 목적: 저장된 측정 결과 하나를 보여주는 화면. 측정을 마쳤을 때와 저장
 ///       결과 목록에서 하나를 골랐을 때 같은 화면을 쓴다.
@@ -129,7 +129,7 @@ class ResultScreen extends StatefulWidget {
   final SensorChannelManager? sensorManager;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-04 18:15:24 · 박건준
   /// 함수: ResultScreen
   /// 목적: 보여줄 측정 결과의 식별자를 받아 화면을 만든다.
   /// 인자: id — 측정 결과 식별자
@@ -140,7 +140,7 @@ class ResultScreen extends StatefulWidget {
   State<ResultScreen> createState() => _ResultScreenState();
 }
 
-/// 작성: 2026-10-04 18:15:24 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
 /// 클래스: _ResultScreenState
 /// 목적: 결과 화면의 상태를 관리한다. 측정 결과를 읽어 오고, 비교 대상을
 ///       고르고, 메일 · 재실행으로 넘긴다.
@@ -164,7 +164,7 @@ class _ResultScreenState extends State<ResultScreen> {
   /// 화면이 두 번 열리거나 권한 요청이 겹치지 않게 한다
   bool _rerunning = false;
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: initState
   /// 목적: 화면이 처음 만들어질 때 측정 결과를 읽기 시작한다.
   @override
@@ -173,7 +173,7 @@ class _ResultScreenState extends State<ResultScreen> {
     _load(); // → 로직 이동: _load()
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: _load
   /// 목적: `id` 의 측정 결과를 저장소에서 읽는다. 읽지 못하면 결과 없이
   ///       읽기를 끝내 "찾을 수 없음" 안내가 나오게 한다.
@@ -192,7 +192,7 @@ class _ResultScreenState extends State<ResultScreen> {
     });
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: _pickCompare
   /// 목적: 이 결과 말고 저장된 결과 목록을 시트로 보여주고, 고른 하나를
   ///       비교 대상으로 둔다. 견줄 결과가 없으면 그렇다고 알린다.
@@ -228,8 +228,8 @@ class _ResultScreenState extends State<ResultScreen> {
     setState(() => _compare = picked);
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-11 19:09:59 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-11 19:09:59 · 박건준
   /// 함수: _rerun
   /// 목적: 이 결과와 같은 현장 정보로 곧바로 다시 측정한다. 순서대로
   ///       진행한다.
@@ -287,7 +287,7 @@ class _ResultScreenState extends State<ResultScreen> {
     }
   }
 
-  /// 작성: 2026-10-05 10:03:35 · nada
+  /// 작성: 2026-10-05 10:03:35 · 박건준
   /// 함수: _askDirection
   /// 목적: 다시 잴 운전 방향을 고르게 한다. 지난 측정과 반대 방향을 주
   ///       버튼으로 두어 한 번에 고를 수 있게 한다. 바깥을 누르면 취소다.
@@ -321,7 +321,7 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: _format
   /// 목적: 지표 값을 정한 소수 자리로 바꾼다.
   /// 인자: value — 지표 값. 없으면 null
@@ -330,7 +330,7 @@ class _ResultScreenState extends State<ResultScreen> {
   String _format(double? value, int decimals) =>
       value == null ? '—' : value.toStringAsFixed(decimals);
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: _formatLimit
   /// 목적: 적색 기준을 화면에 쓸 문구로 바꾼다. 정수면 소수점을 떼고("30"),
   ///       아니면 그대로("25.5") 적는다. 소수 0 자리로 반올림하면 25.5 가
@@ -341,8 +341,8 @@ class _ResultScreenState extends State<ResultScreen> {
       ? limit.toStringAsFixed(0)
       : limit.toString();
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-23 00:10:00 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-23 00:10:00 · 박건준
   /// 함수: _isRed
   /// 목적: 측정 결과의 이 지표가 적색 기준을 넘었는지 본다. 판정은 결과
   ///       모델 게터(`_Metric.exceeded`)가 한다.
@@ -356,8 +356,8 @@ class _ResultScreenState extends State<ResultScreen> {
     return metric.exceeded?.call(result) ?? false;
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-22 23:50:00 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-22 23:50:00 · 박건준
   /// 함수: _buildHeader
   /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 제번 · 현장명,
   ///       측정 일시, 운전 방향 · 층 · 기종, 주소(있을 때만)를 보여준다.
@@ -394,8 +394,8 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-22 23:50:00 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-22 23:50:00 · 박건준
   /// 함수: _buildCompareBanner
   /// 목적: 지금 무엇과 비교하는지 알리고 비교를 끌 수 있는 줄을 만든다.
   /// 인자: compare — 비교 대상 결과
@@ -425,8 +425,8 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-23 00:10:00 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-23 00:10:00 · 박건준
   /// 함수: _buildMetricRow
   /// 목적: 지표 한 줄을 만든다. 왼쪽에 이름 · 단위와 적색 기준, 오른쪽에
   ///       값을 둔다. 기준을 넘은 값은 붉은 글자와 경고 아이콘으로 표시해
@@ -506,7 +506,7 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: _signedDiff
   /// 목적: 이번 값에서 비교 값을 뺀 차이를 부호를 붙여 쓴다.
   /// 인자: value — 이번 값. 없으면 null
@@ -521,7 +521,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 09:30:00 · 박건준
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스

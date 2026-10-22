@@ -9,7 +9,7 @@ import 'package:vibration_checker/ui/features/result/result_screen.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
 
 /// 작성: 2026-08-17 11:50:18 · 박건준
-/// 수정: 2026-10-18 09:41:12 · nada
+/// 수정: 2026-10-18 09:41:12 · 박건준
 /// 변수: appRouter
 /// 목적: 화면 전환을 URL 경로 기반으로 정의하는 앱 라우터. 경로 하나가
 ///       화면 하나에 대응한다. 라우트(route, 경로 하나와 그 경로에서

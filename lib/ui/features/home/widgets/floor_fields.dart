@@ -4,7 +4,7 @@ import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/features/home/widgets/field_error.dart';
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
-/// 수정: 2026-10-22 23:10:00 · nada
+/// 수정: 2026-10-22 23:10:00 · 박건준
 /// 클래스: FloorFields
 /// 목적: 최하층 · 최상층 입력 필드 2개를 나란히 둔다. 숫자 세 자리까지만
 ///       받고, 두 칸이 오류 상자 하나를 함께 쓴다.
@@ -33,7 +33,7 @@ class FloorFields extends StatelessWidget {
   /// 두 칸 가운데 하나라도 값이 바뀌면 부를 함수(저장 · 오류 지우기)
   final VoidCallback onChanged;
 
-  /// 작성: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-22 23:10:00 · 박건준
   /// 함수: FloorFields
   /// 목적: 두 입력칸에 필요한 값을 받는다.
   /// 인자: anchorKey, bottomController, bottomFocus, topController,
@@ -52,7 +52,7 @@ class FloorFields extends StatelessWidget {
   });
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-22 23:10:00 · nada
+  /// 수정: 2026-10-22 23:10:00 · 박건준
   /// 함수: build
   /// 목적: 라벨 → 최하층 · 최상층 한 줄 → (오류 박스) 를 세로로 놓는다.
   @override

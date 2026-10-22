@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/mail/mail_composer.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
-/// 작성: 2026-10-23 00:30:00 · nada
+/// 작성: 2026-10-23 00:30:00 · 박건준
 /// 함수: _result
 /// 목적: 메일 문구에 넘길 측정 결과. 시계열은 비우고 머리 값만 채운다.
 /// 반환: 시험용 측정 결과 (2026-01-14 11:03:59 한국 시각)
@@ -26,7 +26,7 @@ MeasurementResult _result() {
   );
 }
 
-/// 작성: 2026-10-23 00:30:00 · nada
+/// 작성: 2026-10-23 00:30:00 · 박건준
 /// 함수: main
 /// 목적: 메일 제목 · 본문 · 첨부 이름(`MailComposer`)이 이전 메일 시트와
 ///       글자 하나까지 같은지 본다. 파일을 모으는 경로는

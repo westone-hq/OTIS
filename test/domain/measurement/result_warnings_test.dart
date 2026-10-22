@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/measurement/result_warnings.dart';
 
-/// 작성: 2026-10-22 23:00:00 · nada
+/// 작성: 2026-10-22 23:00:00 · 박건준
 /// 함수: _result
 /// 목적: 경고 판정에 넘길 측정 결과. 시계열은 비우고 지표만 채운다.
 /// 반환: 시험용 측정 결과
@@ -37,7 +37,7 @@ MeasurementResult _result() {
   );
 }
 
-/// 작성: 2026-10-22 23:00:00 · nada
+/// 작성: 2026-10-22 23:00:00 · 박건준
 /// 함수: main
 /// 목적: 결과 화면 경고 문구(`resultWarnings()`)의 차례와 문구를 시험한다.
 void main() {

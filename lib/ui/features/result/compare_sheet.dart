@@ -4,8 +4,8 @@ import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_card.dart';
 
-/// 작성: 2026-10-04 18:15:24 · nada
-/// 수정: 2026-10-22 22:55:00 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
+/// 수정: 2026-10-22 22:55:00 · 박건준
 /// 클래스: CompareSheet
 /// 목적: 비교할 저장 결과를 고르는 시트. 최근 것부터 한 줄씩 보여주고,
 ///       누르면 그 결과를 고른 것으로 알린다.
@@ -16,8 +16,8 @@ class CompareSheet extends StatelessWidget {
   /// 하나를 골랐을 때 부를 함수. 고른 결과를 받는다
   final void Function(MeasurementResult) onPicked;
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-22 22:55:00 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-22 22:55:00 · 박건준
   /// 함수: CompareSheet
   /// 목적: 고를 결과 목록과 골랐을 때 할 일을 받는다.
   /// 인자: candidates, onPicked — 위 필드 설명을 따른다
@@ -27,8 +27,8 @@ class CompareSheet extends StatelessWidget {
     required this.onPicked,
   });
 
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-22 23:50:00 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
+  /// 수정: 2026-10-22 23:50:00 · 박건준
   /// 함수: build
   /// 목적: 제목 아래에 저장 결과를 한 줄씩 늘어놓는다. 줄마다 제번 ·
   ///       현장명과 측정 일시를 보여준다.

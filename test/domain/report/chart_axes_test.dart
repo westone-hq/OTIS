@@ -5,21 +5,21 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/chart_axes.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
 /// 변수: _sampleRate
 /// 목적: 시험에 쓰는 표본 주기 (Hz).
 /// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/records/ride_reference.txt`)이
 ///       이 주기로 기록돼 있다
 const _sampleRate = 256.0;
 
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
 /// 변수: _rideSampleCount
 /// 목적: 시험에 쓰는 표본 개수.
 /// 근거: 인용 — 회귀 기준 측정 기록의 행 수와 같다. 줄이기가 실제 측정
 ///       크기에서 어떻게 도는지 보려고 같은 수를 쓴다
 const _rideSampleCount = 11388;
 
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
 /// 함수: _wave
 /// 목적: 시험용 파형을 만든다. 사인파에 뾰족한 봉우리 하나를 섞어, 줄이기가
 ///       봉우리를 지우지 않는지 볼 수 있게 한다.
@@ -40,7 +40,7 @@ List<double> _wave(
   return values;
 }
 
-/// 작성: 2026-09-17 10:05:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
 /// 함수: _result
 /// 목적: 차트를 그려 보려고 만드는 측정 결과. 소음만 비워 둔다 — 마이크
 ///       권한이 없는 측정을 흉내 내, 빈 시계열에서도 축 틀이 그려지는지
@@ -86,8 +86,8 @@ MeasurementResult _result() {
   );
 }
 
-/// 작성: 2026-09-17 10:05:00 · nada
-/// 수정: 2026-10-22 23:40:00 · nada
+/// 작성: 2026-09-17 10:05:00 · 박건준
+/// 수정: 2026-10-22 23:40:00 · 박건준
 /// 함수: main
 /// 목적: 차트 축 사양을 시험한다(렌더러 시험에서 옮겼다).
 ///       1. 축마다 세로축 범위 — 최소 범위를 지키는지, 넘치면 넓어지는지,

@@ -1,4 +1,4 @@
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: HalfCyclePeak
 /// 목적: 반주기(신호가 0 을 지나 다음에 다시 0 을 지날 때까지) 하나의 가장
 ///       큰 크기와 그 자리.
@@ -9,14 +9,14 @@ class HalfCyclePeak {
   /// 그 표본의 크기 (mg, 절댓값)
   final double magnitude;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: HalfCyclePeak
   /// 목적: 값을 담는다.
   /// 인자: index, magnitude — 위 필드
   const HalfCyclePeak(this.index, this.magnitude);
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: HalfCyclePeakToPeak
 /// 목적: 이웃한 두 반주기(봉우리와 골) 크기의 합 하나와 그 두 자리.
 class HalfCyclePeakToPeak {
@@ -29,14 +29,14 @@ class HalfCyclePeakToPeak {
   /// 뒤 반주기 골(또는 봉우리)의 자리 (시계열 첨자)
   final int secondIndex;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: HalfCyclePeakToPeak
   /// 목적: 값을 담는다.
   /// 인자: value, firstIndex, secondIndex — 위 필드
   const HalfCyclePeakToPeak(this.value, this.firstIndex, this.secondIndex);
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: HalfCycle
 /// 목적: 진동 지표 두 개(최대 P2P, A95)를 같은 정의 — 이웃한 봉우리 · 골
 ///       의 반주기 P2P — 에서 낸다. 정의를 이 한 곳에 둬 두 지표와 차트
@@ -50,7 +50,7 @@ class HalfCyclePeakToPeak {
 ///       최댓값". 예전 "전체 최대 − 전체 최소" 는 출발 · 정지 가감속처럼
 ///       느린 흐름이 그대로 들어가 원본 리포트와 달랐다
 abstract final class HalfCycle {
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: peaks
   /// 목적: 구간 안의 반주기마다 가장 큰 크기와 그 자리를 차례로 모은다.
   /// 인자: series — 한 축 진동 시계열 (mg)
@@ -86,7 +86,7 @@ abstract final class HalfCycle {
     return result;
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: peakToPeaks
   /// 목적: 이웃한 두 반주기마다 P2P 를 만든다.
   /// 인자: series, start, end — `peaks()` 와 같다
@@ -109,7 +109,7 @@ abstract final class HalfCycle {
     ];
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: maximum
   /// 목적: 반주기 P2P 가운데 가장 큰 것을 찾는다. 리포트의 "최대 진동" 과
   ///       차트 빨간 점 두 자리가 이것이다. 같은 값이 여럿이면 처음 것.
@@ -128,7 +128,7 @@ abstract final class HalfCycle {
     return best;
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: a95
   /// 목적: 반주기 P2P 의 95백분위를 낸다. 리포트의 "평균 진동" 이다.
   /// 인자: series, start, end — `peaks()` 와 같다

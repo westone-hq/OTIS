@@ -17,7 +17,7 @@ import 'package:vibration_checker/domain/config/noise_config.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
-/// 작성: 2026-10-04 13:29:41 · nada
+/// 작성: 2026-10-04 13:29:41 · 박건준
 /// 클래스: RecordFailure
 /// 목적: 측정을 저장하지 못한 사유의 종류. 화면이 종류마다 다른 안내
 ///       문구를 고른다.
@@ -38,7 +38,7 @@ enum RecordFailure {
   ioError,
 }
 
-/// 작성: 2026-10-04 13:29:41 · nada
+/// 작성: 2026-10-04 13:29:41 · 박건준
 /// 클래스: RecordOutcome
 /// 목적: `MeasurementRecorder.record()` 의 결과. 성공이면 측정 ID 와
 ///       저장한 파일 목록을, 실패면 사유를 담는다. 성공과 실패를 같은 형태로
@@ -46,7 +46,7 @@ enum RecordFailure {
 ///       실패는 원인 종류(`conditioningCause`)까지 담아, 화면이 사유
 ///       문자열을 비교하지 않고 문구를 고르게 한다.
 class RecordOutcome {
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: RecordOutcome.success
   /// 목적: 저장에 성공한 결과를 만든다.
   /// 인자: id — 저장한 측정 ID. 결과 화면이 이 ID 로 측정 결과를 읽는다
@@ -58,7 +58,7 @@ class RecordOutcome {
        conditioningCause = null,
        detail = null;
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: RecordOutcome.failure
   /// 목적: 저장에 실패한 결과를 만든다.
   /// 인자: failure — 실패 종류
@@ -68,7 +68,7 @@ class RecordOutcome {
       id = null,
       savedPaths = const <String>[];
 
-  /// 작성: 2026-10-07 02:22:28 · nada
+  /// 작성: 2026-10-07 02:22:28 · 박건준
   /// 함수: RecordOutcome.conditioningFailed
   /// 목적: 지표 계산 전 신호 처리에 실패한 결과를 만든다. 실패 종류는
   ///       `RecordFailure.conditioningFailed` 이고 원인 종류를 함께 담는다.
@@ -100,25 +100,25 @@ class RecordOutcome {
   /// 만들었으면 빠진다. 실패면 빈 목록
   final List<String> savedPaths;
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: isSuccess
   /// 목적: 저장에 성공했는지 알려준다.
   bool get isSuccess => failure == null;
 }
 
-/// 작성: 2026-10-04 13:29:41 · nada
+/// 작성: 2026-10-04 13:29:41 · 박건준
 /// 클래스: MeasurementRecorder
 /// 목적: 수집이 끝난 측정 한 건을 파일로 남기는 절차를 한 곳에 둔다.
 ///       측정 화면(measuring_screen.dart)에 있던 저장 단계를 옮겨 와,
 ///       화면을 다시 만들어도 저장 순서가 바뀌지 않게 한다.
 class MeasurementRecorder {
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 함수: MeasurementRecorder._
   /// 목적: 상태가 없는 절차 묶음이라 인스턴스를 만들지 않게 막는다.
   MeasurementRecorder._();
 
-  /// 작성: 2026-10-05 10:03:35 · nada
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-05 10:03:35 · 박건준
+  /// 수정: 2026-10-18 10:12:30 · 박건준
   /// 함수: _moveNativeFile
   /// 목적: 안드로이드가 앱 저장 공간 맨 위에 따로 남긴 파일(원본 기록,
   ///       현장 소음 녹음)을 이번 측정 폴더로 옮긴다.
@@ -168,8 +168,8 @@ class MeasurementRecorder {
     return copyPath;
   }
 
-  /// 작성: 2026-10-07 02:10:57 · nada
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-07 02:10:57 · 박건준
+  /// 수정: 2026-10-22 19:00:00 · 박건준
   /// 함수: _condition
   /// 목적: 격자에 지표 계산 전 신호 처리를 하고, 그 결과를 집계 파일 끝에
   ///       덧붙인다.
@@ -231,7 +231,7 @@ class MeasurementRecorder {
           );
   }
 
-  /// 작성: 2026-10-07 02:10:57 · nada
+  /// 작성: 2026-10-07 02:10:57 · 박건준
   /// 함수: _appendMeta
   /// 목적: 집계 파일 끝에 문자열을 덧붙인다. 집계 파일은 진단용이라 쓰기가
   ///       실패해도 저장 절차를 멈추지 않고 기록만 남긴다.
@@ -246,15 +246,15 @@ class MeasurementRecorder {
     }
   }
 
-  /// 작성: 2026-10-04 13:29:41 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 변수: _minimumSamples
   /// 목적: 가속도 · 중력 각각 이만큼은 모여야 저장을 시도한다.
   /// 근거: 표준 — 격자 환산은 양옆 실측값 사이를 비례로 채우므로 축마다
   ///       값이 최소 2개 있어야 계산할 수 있다
   static const int _minimumSamples = 2;
 
-  /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-23 00:50:00 · nada
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 수정: 2026-10-23 00:50:00 · 박건준
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기

@@ -4,8 +4,8 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/features/home/widgets/field_error.dart';
 
-/// 작성: 2026-10-04 16:44:32 · nada
-/// 수정: 2026-10-22 23:10:00 · nada
+/// 작성: 2026-10-04 16:44:32 · 박건준
+/// 수정: 2026-10-22 23:10:00 · 박건준
 /// 클래스: AddressFields
 /// 목적: 우편번호와 현장 주소를 받는다. 둘 다 필수이고 리포트 머리말
 ///       주소 칸에 "주소, 우편번호" 로 찍힌다. 우편번호는 주소 위 줄에
@@ -38,7 +38,7 @@ class AddressFields extends StatelessWidget {
   /// 두 칸 가운데 하나라도 값이 바뀌면 부를 함수(저장 · 오류 지우기)
   final VoidCallback onChanged;
 
-  /// 작성: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-22 23:10:00 · 박건준
   /// 함수: AddressFields
   /// 목적: 두 입력칸에 필요한 값을 받는다.
   /// 인자: anchorKey, postalCodeController, postalCodeFocus,
@@ -56,8 +56,8 @@ class AddressFields extends StatelessWidget {
     required this.onChanged,
   });
 
-  /// 작성: 2026-10-04 16:44:32 · nada
-  /// 수정: 2026-10-22 23:10:00 · nada
+  /// 작성: 2026-10-04 16:44:32 · 박건준
+  /// 수정: 2026-10-22 23:10:00 · 박건준
   /// 함수: build
   /// 목적: 라벨 → 우편번호(반 폭) → 주소 → (오류 박스) 를 세로로 놓는다.
   @override

@@ -4,7 +4,7 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/service/measurement_recorder.dart';
 import 'package:vibration_checker/ui/features/measure/record_failure_message.dart';
 
-/// 작성: 2026-10-07 02:33:18 · nada
+/// 작성: 2026-10-07 02:33:18 · 박건준
 /// 함수: main
 /// 목적: 신호 처리 실패의 원인 종류에 따라 측정 화면 실패 문구가 갈리는지
 ///       시험한다. 최소 측정 길이는 앱과 같은 기본 설정에서 가져온다.

@@ -25,7 +25,7 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * 작성: 2026-10-22 23:30:00 · nada
+ * 작성: 2026-10-22 23:30:00 · 박건준
  * 클래스: SensorMethodHandler
  * 목적: 측정 통로의 안드로이드 쪽. Flutter 의 `sensor_channel.dart` 가
  *       부른다. `MainActivity` 가 엔진을 만들 때 `register()` 로 통로를
@@ -44,7 +44,7 @@ class SensorMethodHandler(
 ) {
     /**
      * 작성: 2026-07-04 12:00:10 · 박건준
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 클래스: Companion
      * 목적: Flutter와 연결할 채널 이름, 권한 요청 코드 등 측정 통로
      *       전역에서 쓰는 상수를 모아둔다.
@@ -52,7 +52,7 @@ class SensorMethodHandler(
     companion object {
         /**
          * 작성: 2026-07-04 12:00:10 · 박건준
-         * 수정: 2026-10-04 13:50:15 · nada
+         * 수정: 2026-10-04 13:50:15 · 박건준
          * 변수: METHOD_CHANNEL
          * 목적: 요청 하나 · 응답 하나를 주고받는 통로 이름. Flutter 쪽
          *       `sensor_channel.dart` 의 `_methodChannel` 과 문자열이 반드시
@@ -65,7 +65,7 @@ class SensorMethodHandler(
 
         /**
          * 작성: 2026-07-04 12:00:10 · 박건준
-         * 수정: 2026-10-04 13:50:15 · nada
+         * 수정: 2026-10-04 13:50:15 · 박건준
          * 변수: STREAM_CHANNEL
          * 목적: 센서 값을 계속 흘려보내는 통로 이름. `METHOD_CHANNEL` 과
          *       같은 이유로 `sensor_channel.dart` 의 `_eventChannel` 과
@@ -81,7 +81,7 @@ class SensorMethodHandler(
         private const val REQ_HIGH_RATE_PERMISSION = 1002
 
         /**
-         * 작성: 2026-10-22 09:30:00 · nada
+         * 작성: 2026-10-22 09:30:00 · 박건준
          * 변수: PLACEMENT_BEEP_MS
          * 목적: 거치 경고음 길이 (밀리초). 짧게 한 번 울린다.
          * 근거: 미정 — 엎어 둔 휴대폰에서 알아들을 만한 길이로 골랐다.
@@ -90,7 +90,7 @@ class SensorMethodHandler(
         private const val PLACEMENT_BEEP_MS = 200
 
         /**
-         * 작성: 2026-10-22 09:30:00 · nada
+         * 작성: 2026-10-22 09:30:00 · 박건준
          * 변수: PLACEMENT_VIBRATE_MS
          * 목적: 거치 경고 진동 길이 (밀리초).
          * 근거: 미정 — `PLACEMENT_BEEP_MS` 와 같은 이유
@@ -124,7 +124,7 @@ class SensorMethodHandler(
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: register
      * 목적: 두 통로를 Flutter 엔진에 연결한다. `MainActivity` 가 엔진을
      *       만들 때 한 번 부른다. 요청마다 아래 갈래에서 응답한다.
@@ -160,7 +160,7 @@ class SensorMethodHandler(
                     }
                     /**
                      * 작성: 2026-09-15 13:30:00 · 박희정
-                     * 수정: 2026-10-05 10:03:35 · nada
+                     * 수정: 2026-10-05 10:03:35 · 박건준
                      * 함수: requestAudioPermission
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "requestAudioPermission" 요청에 응답한다.
@@ -197,7 +197,7 @@ class SensorMethodHandler(
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-10-04 13:50:15 · nada
+                     * 수정: 2026-10-04 13:50:15 · 박건준
                      * 함수: startCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "startCapture" 요청에 응답한다. 소음(마이크)과
@@ -255,7 +255,7 @@ class SensorMethodHandler(
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-10-22 19:00:00 · nada
+                     * 수정: 2026-10-22 19:00:00 · 박건준
                      * 함수: stopCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "stopCapture" 요청에 응답한다. 센서·소음
@@ -293,7 +293,7 @@ class SensorMethodHandler(
                     }
                     /**
                      * 작성: 2026-10-01 13:04:31 · 박희정
-                     * 수정: 2026-10-22 23:30:00 · nada
+                     * 수정: 2026-10-22 23:30:00 · 박건준
                      * 함수: setVolumeKeyCaptureEnabled
                      * 목적: 측정 중에만 볼륨키를 측정 종료 입력으로 바꾼다.
                      *       false 일 때는 시스템 볼륨키 동작에 손대지 않는다.
@@ -305,7 +305,7 @@ class SensorMethodHandler(
                         result.success(null)
                     }
                     /**
-                     * 작성: 2026-10-22 09:30:00 · nada
+                     * 작성: 2026-10-22 09:30:00 · 박건준
                      * 함수: playPlacementAlert
                      * 목적: 거치가 화면 아래가 아닐 때 경고음 한 번과 진동을
                      *       울린다(`playPlacementAlert()`). 측정은 계속한다.
@@ -330,7 +330,7 @@ class SensorMethodHandler(
 
     /**
      * 작성: 2026-10-01 13:04:31 · 박희정
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: handleKeyEvent
      * 목적: 측정 중 볼륨 올림 · 내림 키를 소리 크기 변경 대신 측정 종료
      *       요청으로 쓴다. 가로채는 동안에는 누름 · 뗌 · 길게 눌러 반복되는
@@ -360,7 +360,7 @@ class SensorMethodHandler(
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: onRequestPermissionsResult
      * 목적: 시스템 권한 대화상자에 대한 사용자 응답을 받아, 기다리고
      *       있던 쪽에 결과를 이어준다. `MainActivity` 가 받은 응답을
@@ -401,7 +401,7 @@ class SensorMethodHandler(
 
     /**
      * 작성: 2026-08-17 15:43:39 · 박건준
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: dispose
      * 목적: 액티비티가 완전히 종료될 때 센서 · 소음 캡처를 정리해, 자원을
      *       계속 붙들고 있지 않게 한다. 측정 도중 끝나면 Flutter 가 받아 갈
@@ -415,8 +415,8 @@ class SensorMethodHandler(
     }
 
     /**
-     * 작성: 2026-10-22 09:30:00 · nada
-     * 수정: 2026-10-22 23:30:00 · nada
+     * 작성: 2026-10-22 09:30:00 · 박건준
+     * 수정: 2026-10-22 23:30:00 · 박건준
      * 함수: playPlacementAlert
      * 목적: 경고음(`ToneGenerator`, 알람 소리 통로)을 `PLACEMENT_BEEP_MS` 울리고
      *       진동을 `PLACEMENT_VIBRATE_MS` 준다. 휴대폰이 엎어져 있어 화면

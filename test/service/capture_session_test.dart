@@ -8,7 +8,7 @@ import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/service/capture_session.dart';
 
-/// 작성: 2026-10-05 10:00:11 · nada
+/// 작성: 2026-10-05 10:00:11 · 박건준
 /// 클래스: _FakeSensors
 /// 목적: 안드로이드 대신 요청을 기록하는 센서 통로. 센서 확인 응답을 시험이
 ///       원하는 때 돌려줄 수 있게 붙잡아 둔다.
@@ -30,7 +30,7 @@ class _FakeSensors extends SensorChannelManager {
   /// 이면 녹음하지 않은 것으로 둔다
   String? audioPathOnStop;
 
-  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
   /// 함수: checkSensorsAvailable
   /// 목적: 시험이 풀어 줄 때까지 응답을 미룬다.
   @override
@@ -39,7 +39,7 @@ class _FakeSensors extends SensorChannelManager {
     return availableReply.future;
   }
 
-  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
   /// 함수: startCapture
   /// 목적: 수집 시작 요청을 기록한다.
   @override
@@ -48,8 +48,8 @@ class _FakeSensors extends SensorChannelManager {
     double micDbfsToDbaOffset = 0.0,
   }) async => calls.add('start');
 
-  /// 작성: 2026-10-05 10:00:11 · nada
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
+  /// 수정: 2026-10-18 10:12:30 · 박건준
   /// 함수: stopCapture
   /// 목적: 수집 정지 요청을 기록하고, 안드로이드처럼 원본 기록 · 현장 소음
   ///       녹음 경로를 알린다(`recordPathOnStop`, `audioPathOnStop`).
@@ -60,7 +60,7 @@ class _FakeSensors extends SensorChannelManager {
     lastAudioPath = audioPathOnStop;
   }
 
-  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
   /// 함수: setVolumeKeyCaptureEnabled
   /// 목적: 볼륨키 가로채기 요청을 기록하고 상태를 바꾼다.
   @override
@@ -69,7 +69,7 @@ class _FakeSensors extends SensorChannelManager {
     volumeKeyOn = enabled;
   }
 
-  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 함수: playPlacementAlert
   /// 목적: 거치 경고 요청을 기록한다.
   @override
@@ -78,8 +78,8 @@ class _FakeSensors extends SensorChannelManager {
   /// 수집 중 흘려보낼 이벤트. 비어 있으면 값이 오지 않는다
   List<NativeEvent> events = const <NativeEvent>[];
 
-  /// 작성: 2026-10-05 10:00:11 · nada
-  /// 수정: 2026-10-15 22:32:44 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
+  /// 수정: 2026-10-15 22:32:44 · 박건준
   /// 함수: nativeEventStream
   /// 목적: `events` 를 차례로 흘려보낸다. 비어 있으면 값이 오지 않는다.
   @override
@@ -87,8 +87,8 @@ class _FakeSensors extends SensorChannelManager {
       Stream<NativeEvent>.fromIterable(events);
 }
 
-/// 작성: 2026-10-05 10:00:11 · nada
-/// 수정: 2026-10-15 22:32:44 · nada
+/// 작성: 2026-10-05 10:00:11 · 박건준
+/// 수정: 2026-10-15 22:32:44 · 박건준
 /// 함수: main
 /// 목적: 수집 시작 도중에 정지가 끼어도 정지 뒤에 수집 · 볼륨키 가로채기가
 ///       켜진 채 남지 않는지, 정지를 두 번 불러도 같은 요청을 두 번 보내지
@@ -285,8 +285,8 @@ void main() {
       if (await temp.exists()) await temp.delete(recursive: true);
     });
 
-    /// 작성: 2026-10-07 03:30:18 · nada
-    /// 수정: 2026-10-18 10:12:30 · nada
+    /// 작성: 2026-10-07 03:30:18 · 박건준
+    /// 수정: 2026-10-18 10:12:30 · 박건준
     /// 함수: startedSession
     /// 목적: 원본 기록 파일(과 현장 소음 녹음)을 남기는 센서 통로로 수집을
     ///       켠 상태를 만든다.

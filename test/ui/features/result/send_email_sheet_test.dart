@@ -10,12 +10,12 @@ import 'package:vibration_checker/domain/auth/worker.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
-/// 작성: 2026-10-10 13:54:43 · nada
+/// 작성: 2026-10-10 13:54:43 · 박건준
 /// 변수: _jobId
 /// 목적: 시험에서 저장하고 메일로 보낼 측정의 식별자.
 const String _jobId = '20260114-110359';
 
-/// 작성: 2026-10-10 13:54:43 · nada
+/// 작성: 2026-10-10 13:54:43 · 박건준
 /// 클래스: _TempPathProvider
 /// 목적: 저장소의 기준 폴더와 메일 첨부 사본 폴더를 시험마다 새로 만든 임시
 ///       폴더로 바꿔 끼운다.
@@ -23,25 +23,25 @@ class _TempPathProvider extends PathProviderPlatform {
   /// 임시 폴더 경로
   final String root;
 
-  /// 작성: 2026-10-10 13:54:43 · nada
+  /// 작성: 2026-10-10 13:54:43 · 박건준
   /// 함수: _TempPathProvider
   /// 목적: 돌려줄 임시 폴더 경로를 받는다.
   /// 인자: root — 임시 폴더 경로
   _TempPathProvider(this.root);
 
-  /// 작성: 2026-10-10 13:54:43 · nada
+  /// 작성: 2026-10-10 13:54:43 · 박건준
   /// 함수: getExternalStoragePath
   /// 목적: 외부 저장소 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getExternalStoragePath() async => root;
 
-  /// 작성: 2026-10-10 13:54:43 · nada
+  /// 작성: 2026-10-10 13:54:43 · 박건준
   /// 함수: getApplicationDocumentsPath
   /// 목적: 앱 문서 폴더 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getApplicationDocumentsPath() async => root;
 
-  /// 작성: 2026-10-10 13:54:43 · nada
+  /// 작성: 2026-10-10 13:54:43 · 박건준
   /// 함수: getTemporaryPath
   /// 목적: 메일 첨부 사본을 놓는 앱 임시 폴더 자리 대신 임시 폴더 안
   ///       `tmp` 를 돌려준다.
@@ -49,7 +49,7 @@ class _TempPathProvider extends PathProviderPlatform {
   Future<String?> getTemporaryPath() async => '$root/tmp';
 }
 
-/// 작성: 2026-10-10 13:54:43 · nada
+/// 작성: 2026-10-10 13:54:43 · 박건준
 /// 클래스: _RecordingEmailSender
 /// 목적: 기기 메일 앱 작성창 자리에 끼워, 넘어온 메일을 받아 두기만 한다.
 ///       시험이 첨부 · 본문을 눈으로 대신 확인한다.
@@ -57,14 +57,14 @@ class _RecordingEmailSender extends FlutterEmailSenderPlatform {
   /// 받은 메일. 아직 보내기 전이면 null
   Email? sent;
 
-  /// 작성: 2026-10-10 13:54:43 · nada
+  /// 작성: 2026-10-10 13:54:43 · 박건준
   /// 함수: send
   /// 목적: 넘어온 메일을 받아 둔다.
   /// 인자: email — 시트가 조립한 메일
   @override
   Future<void> send(Email email) async => sent = email;
 
-  /// 작성: 2026-10-10 13:54:43 · nada
+  /// 작성: 2026-10-10 13:54:43 · 박건준
   /// 함수: getCapabilities
   /// 목적: 메일 앱이 할 수 있는 것을 알린다. 시트는 묻지 않는다.
   @override
@@ -72,8 +72,8 @@ class _RecordingEmailSender extends FlutterEmailSenderPlatform {
       const EmailCapabilities.none();
 }
 
-/// 작성: 2026-10-10 13:54:43 · nada
-/// 수정: 2026-10-18 09:41:12 · nada
+/// 작성: 2026-10-10 13:54:43 · 박건준
+/// 수정: 2026-10-18 09:41:12 · 박건준
 /// 함수: _result
 /// 목적: 메일로 보낼 측정 결과를 꾸민다.
 /// 인자: notes — 추가 참고사항. 없으면 null
@@ -106,8 +106,8 @@ MeasurementResult _result({String? notes, Worker? worker, String? placement}) {
   );
 }
 
-/// 작성: 2026-10-10 13:54:43 · nada
-/// 수정: 2026-10-18 10:12:30 · nada
+/// 작성: 2026-10-10 13:54:43 · 박건준
+/// 수정: 2026-10-18 10:12:30 · 박건준
 /// 함수: _saveJob
 /// 목적: 측정 한 건을 저장소에 저장하고, 측정 폴더에 리포트 · 원본 파일을
 ///       놓는다. 리포트를 미리 놓아 시험이 실제 PDF 를 그리지 않게 한다.
@@ -156,7 +156,7 @@ Future<void> _saveJob({
 }
 
 /// 작성: 2026-10-14 13:19:55 · 박건준
-/// 수정: 2026-10-15 22:17:34 · nada
+/// 수정: 2026-10-15 22:17:34 · 박건준
 /// 함수: _saveNoiseDiagnostics
 /// 목적: 소음 진단 폴더 하나를 만들고 PCM · CSV · 메타데이터 산출물을
 ///       채운다. 기기에 진단 폴더가 있어도 메일에 붙지 않는지 볼 때 쓴다.
@@ -171,7 +171,7 @@ Future<void> _saveNoiseDiagnostics(Directory temp) async {
   await File('${dir.path}/metadata.json').writeAsString('{}');
 }
 
-/// 작성: 2026-10-04 16:44:32 · nada
+/// 작성: 2026-10-04 16:44:32 · 박건준
 /// 함수: _openSheet
 /// 목적: 아래쪽 시스템 영역이 있는 화면에서 메일 시트를 띄운다.
 /// 인자: tester — 위젯 시험 도구
@@ -199,7 +199,7 @@ Future<void> _openSheet(WidgetTester tester, {double bottomInset = 0}) async {
   await tester.pumpAndSettle();
 }
 
-/// 작성: 2026-10-10 13:54:43 · nada
+/// 작성: 2026-10-10 13:54:43 · 박건준
 /// 함수: _sendAndCapture
 /// 목적: "보내기" 를 누르고, 파일 읽기 · 복사처럼 시험 시계 밖에서 도는
 ///       작업이 끝날 틈을 준 뒤 메일 앱 자리에 넘어온 메일을 돌려준다.
@@ -222,7 +222,7 @@ Future<Email> _sendAndCapture(
   return sender.sent!;
 }
 
-/// 작성: 2026-10-10 13:54:43 · nada
+/// 작성: 2026-10-10 13:54:43 · 박건준
 /// 함수: _names
 /// 목적: 첨부 경로에서 파일 이름만 뽑는다.
 /// 인자: email — 넘어온 메일
@@ -232,7 +232,7 @@ List<String> _names(Email email) => <String>[
     path.split(RegExp(r'[\\/]')).last,
 ];
 
-/// 작성: 2026-10-04 16:44:32 · nada
+/// 작성: 2026-10-04 16:44:32 · 박건준
 /// 함수: _checked
 /// 목적: 받는 사람 목록에서 한 주소의 체크 상태를 읽는다.
 /// 인자: tester — 위젯 시험 도구
@@ -246,8 +246,8 @@ bool _checked(WidgetTester tester, String email) {
   return box.value ?? false;
 }
 
-/// 작성: 2026-10-04 16:44:32 · nada
-/// 수정: 2026-10-18 10:12:30 · nada
+/// 작성: 2026-10-04 16:44:32 · 박건준
+/// 수정: 2026-10-18 10:12:30 · 박건준
 /// 함수: main
 /// 목적: 메일 시트를 시험한다.
 ///       - 받는 사람: 지난번 보낸 주소만 미리 고르는지, 여러 개를 고를 수

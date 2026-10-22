@@ -13,7 +13,7 @@ import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 import 'package:vibration_checker/ui/features/measure/record_failure_message.dart';
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
-/// 수정: 2026-10-04 13:33:18 · nada
+/// 수정: 2026-10-04 13:33:18 · 박건준
 /// 클래스: MeasuringScreen
 /// 목적: 측정이 진행되는 동안 보여주는 라이브 화면.
 ///       - 멀리서도 보이게 경과 시간을 크게 표시한다
@@ -39,7 +39,7 @@ class MeasuringScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
-/// 수정: 2026-10-04 16:54:15 · nada
+/// 수정: 2026-10-04 16:54:15 · 박건준
 /// 클래스: _MeasuringScreenState
 /// 목적: 라이브 측정 화면의 상태를 관리한다. 경과 시간 · 카운트다운
 ///       타이머와, 앱이 백그라운드로 전환됐을 때의 중단 처리를 맡는다.
@@ -137,7 +137,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 18:15:24 · nada
+  /// 수정: 2026-10-04 18:15:24 · 박건준
   /// 함수: _initCaptureAndTimers
   /// 목적: 카운트다운이 끝난 뒤(또는 대기 시간이 없으면 곧바로) 경과
   ///       시간 타이머를 켜고 센서 수집을 시작한다. 볼륨키는 카운트다운 ·
@@ -160,7 +160,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     );
   }
 
-  /// 작성: 2026-10-04 13:33:18 · nada
+  /// 작성: 2026-10-04 13:33:18 · 박건준
   /// 함수: _onNoResponse
   /// 목적: 수집을 시작했는데 센서 값이 한 번도 오지 않았을 때
   ///       `CaptureSession` 이 부른다. 측정을 끝난 것으로 표시하고 정리한
@@ -177,7 +177,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-07 03:30:18 · nada
+  /// 수정: 2026-10-07 03:30:18 · 박건준
   /// 함수: _cleanup
   /// 목적: 화면 타이머 두 개(경과 시간, 카운트다운)를 멈추고 센서 수집을
   ///       정리한다. 측정을 중단하거나 끝낼 때, 화면이 사라질 때 등 여러
@@ -201,7 +201,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-07 03:30:18 · nada
+  /// 수정: 2026-10-07 03:30:18 · 박건준
   /// 함수: dispose
   /// 목적: 이 화면이 완전히 사라질 때 한 번만 실행된다.
   ///       - `initState`에서 걸어둔 앱 상태 감시(`WidgetsBinding`이
@@ -223,7 +223,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-07 03:30:18 · nada
+  /// 수정: 2026-10-07 03:30:18 · 박건준
   /// 함수: didChangeAppLifecycleState
   /// 목적: 앱이 화면 밖으로 밀려나거나(전화 수신, 홈 버튼 등) 다시
   ///       돌아올 때 Flutter가 불러주는 함수다. 측정 중 앱이 밀려나면
@@ -250,7 +250,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 18:26:41 · nada
+  /// 수정: 2026-10-04 18:26:41 · 박건준
   /// 함수: _showAbortedDialog
   /// 목적: 측정 중 전화가 오는 등 앱이 화면 밖으로 밀려나면 측정이
   ///       중단된다. 앱으로 다시 돌아왔을 때, 이 대화상자로 측정이
@@ -274,7 +274,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-04 18:26:41 · nada
+  /// 수정: 2026-10-04 18:26:41 · 박건준
   /// 함수: _showMeasureFailDialog
   /// 목적: 측정 실패를 알리는 대화상자를 띄운다. "확인"을 누르면 이
   ///       화면을 닫고 측정을 시작한 화면으로 돌아간다. 화면 기록을 통째로
@@ -294,7 +294,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 09:30:00 · 박건준
   /// 함수: _finishMeasurement
   /// 목적: "테스트 완료" 버튼이나 볼륨키로 측정을 마무리한다. 순서대로
   ///       진행한다.
@@ -347,7 +347,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-07 03:30:18 · nada
+  /// 수정: 2026-10-07 03:30:18 · 박건준
   /// 함수: _confirmAndExit
   /// 목적: 기기 뒤로가기(제스처 · 버튼)를 눌렀을 때와 앱바의 뒤로가기
   ///       버튼을 눌렀을 때, 둘 다 이 함수가 실행된다.
@@ -379,7 +379,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-22 20:00:00 · nada
+  /// 수정: 2026-10-22 20:00:00 · 박건준
   /// 함수: build
   /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자 카운트다운
   ///       화면을, 아니면 경과 시간 · 현재 속도와 "테스트 완료" 버튼이 있는

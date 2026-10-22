@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 클래스: AppCard
 /// 목적: 회색 표면 바탕에 테두리를 두른 카드. 시작 화면 거치 안내,
 ///       설정 화면 정보 행, 메일 시트 받는 사람처럼 내용을 한 덩이로
@@ -16,7 +16,7 @@ class AppCard extends StatelessWidget {
   /// 카드의 최소 높이. null 이면 내용 높이를 따른다
   final double? minHeight;
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: AppCard
   /// 목적: 카드 내용과 여백을 받는다.
   /// 인자: child — 카드 내용
@@ -29,7 +29,7 @@ class AppCard extends StatelessWidget {
     this.minHeight,
   });
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: build
   /// 목적: 표면 바탕 · 모서리 · 테두리를 입힌 상자에 내용을 담는다.
   @override

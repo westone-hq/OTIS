@@ -2,7 +2,7 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/measurement/result_warnings.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
-/// 작성: 2026-10-23 00:20:00 · nada
+/// 작성: 2026-10-23 00:20:00 · 박건준
 /// 클래스: MailItem
 /// 목적: 메일에 붙일 수 있는 자료의 종류와, 첨부 이름에 쓰는 머리말 ·
 ///       확장자. 안드로이드 원본(`native_raw.txt`, 2026-10-08 결정)과 소음
@@ -15,7 +15,7 @@ enum MailItem {
   raw('RAW', 'txt'),
   noise('NOISE', 'm4a');
 
-  /// 작성: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-23 00:20:00 · 박건준
   /// 함수: MailItem
   /// 목적: 종류마다 첨부 이름 머리말과 확장자를 담는다.
   /// 인자: prefix — 첨부 이름 머리말
@@ -29,14 +29,14 @@ enum MailItem {
   final String extension;
 }
 
-/// 작성: 2026-10-23 00:20:00 · nada
+/// 작성: 2026-10-23 00:20:00 · 박건준
 /// 클래스: MailComposer
 /// 목적: 리포트 메일의 제목 · 본문 · 첨부 이름을 만든다. 파일을 찾거나
 ///       복사하지 않는 순수 계산이라, 문구를 화면 없이 시험할 수 있다.
 ///       파일을 모아 메일 앱에 넘기는 일은 `MailService` 가 한다.
 abstract final class MailComposer {
-  /// 작성: 2026-10-05 10:03:35 · nada
-  /// 수정: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-05 10:03:35 · 박건준
+  /// 수정: 2026-10-23 00:20:00 · 박건준
   /// 함수: attachmentName
   /// 목적: 메일에 붙일 파일 이름을 정한다. 측정 폴더 안 이름(`report.pdf`
   ///       등)은 모든 측정이 같아, 받는 쪽에서 여러 현장 메일을 모아 두면
@@ -53,7 +53,7 @@ abstract final class MailComposer {
     return '${item.prefix}_${safeJobNo}_${result.id}.${item.extension}';
   }
 
-  /// 작성: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-23 00:20:00 · 박건준
   /// 함수: attachmentLine
   /// 목적: 본문 첨부 목록에 적을 한 줄을 만든다.
   /// 인자: name — 첨부 이름 (`attachmentName()`)
@@ -68,7 +68,7 @@ abstract final class MailComposer {
     return '- $name: $description';
   }
 
-  /// 작성: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-23 00:20:00 · 박건준
   /// 함수: missingLine
   /// 목적: 보내기로 했는데 없는 자료를 본문 끝에 밝히는 한 줄을 만든다.
   ///       빠진 채로 조용히 나가면 받는 쪽이 한참 뒤에야 안다.
@@ -84,7 +84,7 @@ abstract final class MailComposer {
     return '누락: $fileName — $reason';
   }
 
-  /// 작성: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-23 00:20:00 · 박건준
   /// 함수: subject
   /// 목적: 메일 제목을 만든다. 날짜는 한국 시각이다.
   /// 인자: result — 보낼 측정 결과
@@ -95,8 +95,8 @@ abstract final class MailComposer {
     return 'TUNE Summary Report - ${result.jobNo} - $dateStr';
   }
 
-  /// 작성: 2026-10-18 09:41:12 · nada
-  /// 수정: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-18 09:41:12 · 박건준
+  /// 수정: 2026-10-23 00:20:00 · 박건준
   /// 함수: workerLine
   /// 목적: 메일 본문에 적을 작업자 줄을 만든다. 성명 뒤 괄호에 사번,
   ///       그 뒤에 업체명 · 관리팀을 가운뎃점으로 잇는다. 결과에 없는
@@ -118,7 +118,7 @@ abstract final class MailComposer {
     return '작업자: ${parts.join(' · ')}';
   }
 
-  /// 작성: 2026-10-23 00:20:00 · nada
+  /// 작성: 2026-10-23 00:20:00 · 박건준
   /// 함수: body
   /// 목적: 메일 본문을 만든다. 차례는 다음과 같다.
   ///       1. 첫 줄 "OTIS 승강기 진동 측정 리포트입니다."

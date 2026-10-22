@@ -1,6 +1,6 @@
 import 'package:vibration_checker/domain/config/capture_config.dart';
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: TravelWindow
 /// 목적: 진동 · 소음 지표를 낼 운행 구간. 출발한 뒤 위치가
 ///       `CaptureConfig.travelEdgeExclusionM` 를 넘은 첫 표본부터, 도착
@@ -29,7 +29,7 @@ class TravelWindow {
   /// 구간 끝의 위치 (출발점부터 m)
   final double endM;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: TravelWindow
   /// 목적: 값을 담는다. 위치 시계열에서 정할 때는 `TravelWindow.of()` 를
   ///       쓴다.
@@ -43,7 +43,7 @@ class TravelWindow {
     required this.endM,
   });
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: of
   /// 목적: 위치 시계열에서 운행 구간을 정한다. 위치가 늘어나든(상승 ·
   ///       누적 이동량) 줄어들든(하강, 부호 있는 위치) 출발점에서 떨어진
@@ -103,7 +103,7 @@ class TravelWindow {
     );
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: toMap
   /// 목적: 결과 파일(result.json)에 저장할 표로 바꾼다.
   /// 반환: 항목 이름을 열쇠로 하는 표
@@ -116,7 +116,7 @@ class TravelWindow {
     'endM': endM,
   };
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: TravelWindow.fromMap
   /// 목적: `toMap()` 이 만든 표에서 되살린다.
   /// 인자: map — 저장된 표
@@ -147,7 +147,7 @@ class TravelWindow {
   }
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: TravelWindowResult
 /// 목적: 운행 구간을 정한 결과. 성공이면 `window`, 실패면 `failureReason`
 ///       하나만 채운다. 구간을 못 정한 측정을 "구간 없음 = 전체 구간" 으로
@@ -159,14 +159,14 @@ class TravelWindowResult {
   /// 정하지 못한 사유. 성공이면 null
   final String? failureReason;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: TravelWindowResult.success
   /// 목적: 성공 결과를 만든다.
   /// 인자: window — 정한 운행 구간
   const TravelWindowResult.success(TravelWindow this.window)
     : failureReason = null;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: TravelWindowResult.failure
   /// 목적: 실패 결과를 만든다.
   /// 인자: failureReason — 정하지 못한 사유

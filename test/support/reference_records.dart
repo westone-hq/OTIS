@@ -6,15 +6,15 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 
-/// 작성: 2026-10-21 10:05:00 · nada
-/// 수정: 2026-10-23 01:10:00 · nada
+/// 작성: 2026-10-21 10:05:00 · 박건준
+/// 수정: 2026-10-23 01:10:00 · 박건준
 /// 변수: rideReferencePath
 /// 목적: 원본 TUNE 리포트를 만든 레퍼런스폰 기록 경로. 실측 기록으로 남은
 ///       회귀 기준이다(`docs/experiments/ride_reference_기준값.md`).
 const String rideReferencePath = 'test/fixtures/records/ride_reference.txt';
 
-/// 작성: 2026-10-21 10:05:00 · nada
-/// 수정: 2026-10-23 01:10:00 · nada
+/// 작성: 2026-10-21 10:05:00 · 박건준
+/// 수정: 2026-10-23 01:10:00 · 박건준
 /// 함수: readEvimpGrid
 /// 목적: EVIMP1 파일(머리 2줄 뒤 "X Y Z 소음" 행)을 256Hz 격자로 읽는다.
 ///       앱이 저장 절차에서 만드는 격자와 같은 모양이다.
@@ -55,8 +55,8 @@ GridResampleResult readEvimpGrid(String path) {
   );
 }
 
-/// 작성: 2026-10-21 10:05:00 · nada
-/// 수정: 2026-10-23 01:10:00 · nada
+/// 작성: 2026-10-21 10:05:00 · 박건준
+/// 수정: 2026-10-23 01:10:00 · 박건준
 /// 함수: assembleRecord
 /// 목적: 원시데이터 한 건을 앱 저장 절차와 같은 길(신호 처리 → 조립)로
 ///       측정 결과로 바꾼다.

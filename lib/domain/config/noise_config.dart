@@ -1,5 +1,5 @@
 /// 작성: 2026-09-28 15:00:36 · 박희정
-/// 수정: 2026-10-20 17:10:22 · nada
+/// 수정: 2026-10-20 17:10:22 · 박건준
 /// 변수: kDefaultMicDbfsToDbaOffset
 /// 목적: A 가중한 마이크 신호 크기(dBFS, 디지털로 담을 수 있는 최대 크기를
 ///       0 으로 잡은 데시벨)를 소음 크기(dBA)로 옮길 때 더하는 기본 오프셋.
@@ -20,8 +20,8 @@
 ///       수 있다 (`docs/experiments/noise_otis_offset_notes.md`)
 const double kDefaultMicDbfsToDbaOffset = 105.2;
 
-/// 작성: 2026-10-22 12:00:00 · nada
-/// 수정: 2026-10-22 16:20:00 · nada
+/// 작성: 2026-10-22 12:00:00 · 박건준
+/// 수정: 2026-10-22 16:20:00 · 박건준
 /// 변수: kNoiseTimeWeightSec
 /// 목적: 안드로이드가 소음을 낼 때 쓰는 지수평활(시간가중) 시정수 (초).
 ///       `NoiseCaptureHandler.FAST_TIME_WEIGHT_SEC` 와 같게 둔다 — Dart 와
@@ -33,8 +33,8 @@ const double kDefaultMicDbfsToDbaOffset = 105.2;
 ///       바꿨다가 같은 날 되돌림)
 const double kNoiseTimeWeightSec = 0.125;
 
-/// 작성: 2026-10-20 17:10:22 · nada
-/// 수정: 2026-10-22 16:20:00 · nada
+/// 작성: 2026-10-20 17:10:22 · 박건준
+/// 수정: 2026-10-22 16:20:00 · 박건준
 /// 함수: noiseMethodLabel
 /// 목적: 소음 계산 방식을 결과 파일(result.json `signalConditioning`)에 남길
 ///       문자열. 진동 처리 표시 뒤에 이어 붙인다.

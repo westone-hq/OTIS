@@ -8,34 +8,34 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 
-/// 작성: 2026-10-04 18:15:24 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
 /// 클래스: _TempPathProvider
 /// 목적: 저장소의 기준 폴더를 시험마다 새로 만든 임시 폴더로 바꿔 끼운다.
 class _TempPathProvider extends PathProviderPlatform {
   /// 임시 폴더 경로
   final String root;
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: _TempPathProvider
   /// 목적: 돌려줄 임시 폴더 경로를 받는다.
   /// 인자: root — 임시 폴더 경로
   _TempPathProvider(this.root);
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: getExternalStoragePath
   /// 목적: 외부 저장소 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getExternalStoragePath() async => root;
 
-  /// 작성: 2026-10-04 18:15:24 · nada
+  /// 작성: 2026-10-04 18:15:24 · 박건준
   /// 함수: getApplicationDocumentsPath
   /// 목적: 앱 문서 폴더 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getApplicationDocumentsPath() async => root;
 }
 
-/// 작성: 2026-10-04 18:15:24 · nada
-/// 수정: 2026-10-11 19:09:59 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
+/// 수정: 2026-10-11 19:09:59 · 박건준
 /// 함수: _result
 /// 목적: 결과 화면에 띄울 측정 결과를 꾸민다. 기본은 지금 필수 항목(주소 ·
 ///       우편번호 · 하중)을 다 갖춘 결과다.
@@ -80,7 +80,7 @@ MeasurementResult _result(
   );
 }
 
-/// 작성: 2026-10-04 18:15:24 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
 /// 함수: _settle
 /// 목적: 파일 읽기처럼 시험 시계 밖에서 도는 작업이 끝날 틈을 준 뒤 화면을
 ///       다시 그린다.
@@ -95,7 +95,7 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1)); // 시트가 올라오는 움직임
 }
 
-/// 작성: 2026-10-04 18:15:24 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
 /// 함수: main
 /// 목적: 결과 화면이 지표 여섯 줄을 보여주고 기준을 넘은 값만 표시하는지,
 ///       다른 저장 결과와 비교하는지, 재실행 전에 운전 방향을 묻는지

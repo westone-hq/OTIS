@@ -1,5 +1,5 @@
 /// 작성: 2026-08-19 08:04:05 · 박건준
-/// 수정: 2026-10-22 19:00:00 · nada
+/// 수정: 2026-10-22 19:00:00 · 박건준
 /// 클래스: CaptureConfig
 /// 목적: 스마트폰 센서 데이터 수집에 쓰는 속도(Hz)와 불량 판정 기준(us)을 이 파일에서만 정의한다.
 ///       지표를 내기 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)와
@@ -7,7 +7,7 @@
 ///       하드코딩하지 않는다.
 class CaptureConfig {
   /// 작성: 2026-08-19 08:04:05 · 박건준
-  /// 수정: 2026-10-07 01:44:43 · nada
+  /// 수정: 2026-10-07 01:44:43 · 박건준
   /// 함수: CaptureConfig
   /// 목적: 수집 설정 객체를 생성한다. 값을 지정하지 않으면 기본값이 적용된다.
   /// 인자: targetSampleRateHz — 격자 환산의 목표 수집 속도 (Hz), 기본 256
@@ -62,7 +62,7 @@ class CaptureConfig {
   ///       현재 앱 동작에는 영향이 없다. 이 판정은 명령줄 도구의 출력에만 쓰인다.
   final int normalIntervalMaxUs;
 
-  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
   /// 변수: edgeTrimMs
   /// 목적: 두 센서가 함께 값을 낸 구간의 앞과 뒤에서 각각 이만큼을 버리고
   ///       격자를 만든다 (밀리초). 측정을 시작 · 종료하려고 화면 버튼이나
@@ -74,7 +74,7 @@ class CaptureConfig {
   /// 미확인: 볼륨키를 누를 때 충격이 이어지는 길이. 실기기로 확인해야 한다
   final int edgeTrimMs;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 변수: conditionedRateHz
   /// 목적: 지표 · 리포트를 계산하기 전에 격자를 다시 맞추는 표본 속도다
   ///       (Hz). 오티스폰(OTIS iOS 앱)이 담을 수 있는 주파수 범위만 남겨
@@ -83,7 +83,7 @@ class CaptureConfig {
   /// 근거: 인용 — 오티스폰의 측정 주기 100Hz
   final int conditionedRateHz;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 변수: lowpassCutoffHz
   /// 목적: 재표본 전에 거는 저역 필터(정한 주파수 위 성분을 줄이는 계산)의
   ///       차단 주파수다 (Hz). 개발폰 격자는 128Hz 까지 담지만 오티스폰은
@@ -94,8 +94,8 @@ class CaptureConfig {
   ///       스펙트럼이 30Hz 부터 줄어 40Hz 부근에서 저주파의 약 1/6 이다
   final int lowpassCutoffHz;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 변수: lowpassOrder
   /// 목적: 저역 필터의 차수다. 짝수여야 한다 — 홀수면 1차 구간이 생기는데
   ///       설계 함수(`Butterworth.lowpass()`)가 다루지 않고
@@ -103,7 +103,7 @@ class CaptureConfig {
   /// 근거: 미정 — 일반 관행. 비교 측정을 더 모아 조정할 수 있다
   final int lowpassOrder;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 변수: baselineWindowMs
   /// 목적: 기준선(정지 상태에서 0 이어야 할 값)을 구하는 측정 첫 구간
   ///       길이다 (밀리초). 이 구간의 축별 평균을 그 축 전체에서 뺀다.
@@ -111,32 +111,32 @@ class CaptureConfig {
   ///       첫 1초는 정지 구간이다
   final int baselineWindowMs;
 
-  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
   /// 변수: defaultEdgeTrimMs
   /// 목적: edgeTrimMs 기본값이다.
   static const int defaultEdgeTrimMs = 500;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 변수: defaultConditionedRateHz
   /// 목적: `conditionedRateHz` 기본값이다.
   static const int defaultConditionedRateHz = 100;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 변수: defaultLowpassCutoffHz
   /// 목적: `lowpassCutoffHz` 기본값이다.
   static const int defaultLowpassCutoffHz = 40;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 변수: defaultLowpassOrder
   /// 목적: `lowpassOrder` 기본값이다.
   static const int defaultLowpassOrder = 4;
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 변수: defaultBaselineWindowMs
   /// 목적: `baselineWindowMs` 기본값이다.
   static const int defaultBaselineWindowMs = 1000;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 변수: liveSmoothingMs
   /// 목적: 측정 중 속도 추정(`LiveSpeedEstimator`)이 수직 가속도를 적분하기
   ///       전에 거는 1차 저역(지난 값에 새 값을 조금씩 섞어 빠른 흔들림을
@@ -146,7 +146,7 @@ class CaptureConfig {
   /// 근거: 미정 — 화면 갱신 간격(`livePublishMs`)과 같게 잡았다
   static const int liveSmoothingMs = 250;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 변수: liveStillAccelMg
   /// 목적: 거른 수직 가속도의 크기가 이보다 작으면 "가속 · 감속하지 않는
   ///       중" 으로 본다 (mg). 정지 판정의 첫 조건이다.
@@ -155,7 +155,7 @@ class CaptureConfig {
   ///       구간은 1.4 mg 이하, 출발 첫 0.5초는 12 mg 이다
   static const double liveStillAccelMg = 3.0;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 변수: liveStillHoldMs
   /// 목적: 정지 판정 조건이 이만큼 이어지면 속도를 0 으로 되돌린다
   ///       (밀리초). 감속 끝의 짧은 출렁임에서 너무 일찍 0 으로 가지 않게
@@ -163,7 +163,7 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-10 사용자 지시의 예시 값 0.5초
   static const int liveStillHoldMs = 500;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 변수: liveStillSpeedMps
   /// 목적: 적분한 속도의 크기가 이보다 작을 때만 정지로 볼 수 있다
   ///       (m/s). 정지 판정의 둘째 조건이다. 정속 운행도 가속도가 0 이라
@@ -177,14 +177,14 @@ class CaptureConfig {
   /// 미확인: 정격 속도가 이 값에 가까운 저속 승강기(유압 등)에서의 동작
   static const double liveStillSpeedMps = 0.2;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 변수: livePublishMs
   /// 목적: 측정 중 속도를 화면에 내보내는 간격이다 (밀리초). 이벤트마다
   ///       내보내면 초당 수백 번 화면을 다시 그린다.
   /// 근거: 인용 — 2026-10-10 사용자 지시 "초당 4~5번"
   static const int livePublishMs = 250;
 
-  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 변수: placementWindowMs
   /// 목적: 거치 방향을 판정할 때 중력 Z 를 평균 내는 길이 (밀리초). 수집을
   ///       시작한 뒤 첫 중력 이벤트부터 센다(`PlacementMonitor`).
@@ -192,7 +192,7 @@ class CaptureConfig {
   ///       평균으로 거치 방향을 판정"
   static const int placementWindowMs = 1000;
 
-  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 변수: placementFaceDownMaxMg
   /// 목적: 중력 Z 평균이 이 값 이하면 "화면 아래" 거치다 (mg). 화면이 바닥을
   ///       보면 약 −1000 mg 이다.
@@ -200,35 +200,37 @@ class CaptureConfig {
   ///       −940 mg 는 약 20° 기울기(cos 20° = 0.94)다
   static const double placementFaceDownMaxMg = -940.0;
 
-  /// 작성: 2026-10-22 09:30:00 · nada
+  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 변수: placementFaceUpMinMg
   /// 목적: 중력 Z 평균이 이 값 이상이면 "화면 위" 거치다 (mg). 그 사이는
   ///       기울어짐이다.
   /// 근거: 인용 — 2026-10-22 사용자 지시 "≥ +940 이면 화면 위"
   static const double placementFaceUpMinMg = 940.0;
 
-  /// 작성: 2026-10-22 17:10:00 · nada
+  /// 작성: 2026-10-22 17:10:00 · 박건준
+  /// 수정: 2026-10-23 10:00:00 · 박건준
   /// 변수: placementAlertMarginMs
   /// 목적: 거치 경고를 신호 처리 기준선 구간이 끝난 뒤로 미룰 때 더하는 여유
   ///       (밀리초, `placementAlertDelayMs`).
-  /// 근거: 계산 — 격자는 두 센서(가속도 · 중력)가 겹친 첫 시각에서 시작하는데,
+  /// 근거: 미정 — 격자는 두 센서(가속도 · 중력)가 겹친 첫 시각에서 시작하는데,
   ///       경고 시각은 첫 중력 이벤트부터 잰다. 두 센서 첫 이벤트 차이(수 ms
   ///       ~ 수십 ms)를 덮을 만큼만 둔다. 길게 두면 운행 시작과 겹칠 일이 늘어난다
   static const int placementAlertMarginMs = 200;
 
-  /// 작성: 2026-10-22 17:10:00 · nada
+  /// 작성: 2026-10-22 17:10:00 · 박건준
+  /// 수정: 2026-10-23 10:00:00 · 박건준
   /// 변수: placementAlertDelayMs
   /// 목적: 첫 중력 이벤트부터 거치 경고(경고음 · 진동)를 울리기까지의 길이
   ///       (밀리초). 판정 창(`placementWindowMs`, 1초)과 신호 처리 기준선 구간
   ///       (격자 앞 `defaultEdgeTrimMs` 0.5초를 버린 뒤 `defaultBaselineWindowMs`
   ///       1초 = 수집 0.5 ~ 1.5초), 측정 중 속도 기준선(첫 1초)이 모두 끝난 뒤에
   ///       울려 진동 모터 · 경고음이 기준선 평균에 들지 않게 한다.
-  /// 근거: 계산 — 0.5 + 1.0 + 여유 0.2 = 1.7초. 2026-10-22 리뷰 지시 "기준선
+  /// 근거: 인용 — 0.5 + 1.0 + 여유 0.2 = 1.7초. 2026-10-22 리뷰 지시 "기준선
   ///       구간이 모두 끝난 뒤에만 경고"
   static const int placementAlertDelayMs =
       defaultEdgeTrimMs + defaultBaselineWindowMs + placementAlertMarginMs;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 변수: minimumStopMarginMs
   /// 목적: 운행 끝(속도가 `zoneRunSpeedMps` 아래로 내려온 뒤)부터 기록 끝까지
   ///       이보다 짧으면 결과 화면이 "정지 후 1초 이상 기다린 뒤 종료" 를
@@ -239,7 +241,7 @@ class CaptureConfig {
   ///       7건은 3.6 ~ 9.6초. 2026-10-22 점검 지시 "1.0초 미만이면 경고"
   static const int minimumStopMarginMs = 1000;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 변수: baselineMotionAccelMps2
   /// 목적: 기준선 구간 안에 움직임이 있는지 보는 가속도 문턱 (m/s²). 수직
   ///       가속도에 저크 저역(`jerkLowpassHz`)을 양방향으로 건 값이 기준선
@@ -248,7 +250,7 @@ class CaptureConfig {
   ///       정속 판정 문턱(`zoneSteadyAccelMps2`)과 같다
   static const double baselineMotionAccelMps2 = 0.03;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 변수: baselineMinimumMs
   /// 목적: 기준선 구간을 움직임 앞까지 줄일 때 남겨야 하는 가장 짧은 길이
   ///       (밀리초). 이보다 일찍 움직였으면 기록 끝 정지 구간으로 기준선을
@@ -272,7 +274,7 @@ class CaptureConfig {
   /// 목적: normalIntervalMaxUs 기본값이다.
   static const int defaultNormalIntervalMaxUs = 7900;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 변수: rideVerticalHighpassHz
   /// 목적: 수직(Z) 진동 지표 전에 거는 고역 필터의 차단 주파수 (Hz). 승강기
   ///       가감속(1Hz 아래의 느린 흐름)을 빼 진동만 남긴다. 그 뒤에 ISO 8041
@@ -284,14 +286,14 @@ class CaptureConfig {
   ///       미확인: 원본(레퍼런스폰 앱)이 실제로 쓴 수직 처리
   static const double rideVerticalHighpassHz = 1.0;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 변수: rideVerticalHighpassOrder
   /// 목적: `rideVerticalHighpassHz` 고역 필터의 차수. 버터워스이고 양방향
   ///       (영위상)으로 걸어 실제 기울기는 두 배가 된다.
   /// 근거: 인용 — 2026-10-15 점검 지시 "1 Hz 2차 버터워스 고역, 양방향"
   static const int rideVerticalHighpassOrder = 2;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 변수: deviceResponseByModelPrefix
   /// 목적: 기종 응답 보정 표. 기종 이름(`Build.MODEL`)이 열쇠의 글자로
   ///       시작하면 그 필터를 가중한 수직(Z) 진동에 양방향으로 건다
@@ -327,7 +329,7 @@ class CaptureConfig {
         'SM-S901': DeviceResponseFilter(order: 2, lowpassHz: 25.0),
       };
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 변수: travelEdgeExclusionM
   /// 목적: 진동 · 소음 지표를 낼 운행 구간에서 출발 뒤 · 도착 전 빼는 거리
   ///       (m). 출발 · 정지 순간의 가감속 충격을 지표에서 뺀다.
@@ -335,7 +337,7 @@ class CaptureConfig {
   ///       제외). 2026-10-15 점검 지시
   static const double travelEdgeExclusionM = 0.5;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 변수: minimumTravelM
   /// 목적: 운행 구간을 정할 수 있는 가장 짧은 운행 거리 (m). 이 이하면 양
   ///       끝 `travelEdgeExclusionM` 를 빼고 남는 구간이 없거나 너무
@@ -343,8 +345,8 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-15 점검 지시 "운행 거리가 1 m 이하이면 실패"
   static const double minimumTravelM = 1.0;
 
-  /// 작성: 2026-10-20 14:05:12 · nada
-  /// 수정: 2026-10-22 22:40:00 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
+  /// 수정: 2026-10-22 22:40:00 · 박건준
   /// 변수: motionSpeedThresholdMps
   /// 목적: 운행 거리 · 최대 속도를 적분할 "움직인 구간" 을 찾는 속도 문턱
   ///       (m/s). 전체를 한 번 적분한 대략 속도가 이 값을 넘는 첫 순간부터
@@ -356,7 +358,7 @@ class CaptureConfig {
   ///       중 떠다님을 움직임으로 보지 않게 한다
   static const double motionSpeedThresholdMps = 0.05;
 
-  /// 작성: 2026-10-20 14:05:12 · nada
+  /// 작성: 2026-10-20 14:05:12 · 박건준
   /// 변수: motionPaddingMs
   /// 목적: 움직인 구간 앞뒤로 더 넣는 시간 (밀리초). 출발 직후 · 도착 직전
   ///       속도가 아직 `motionSpeedThresholdMps` 아래인 부분을 잘라 내지
@@ -368,7 +370,7 @@ class CaptureConfig {
   ///       중 떠다님이 다시 섞인다
   static const int motionPaddingMs = 500;
 
-  /// 작성: 2026-10-21 10:05:00 · nada
+  /// 작성: 2026-10-21 10:05:00 · 박건준
   /// 변수: jerkLowpassHz
   /// 목적: 저크(가속도가 변하는 빠르기)를 내기 전에 가속도에 거는 저역
   ///       필터의 차단 주파수 (Hz). 양방향(영위상)으로 건 뒤 중앙 차분으로
@@ -380,13 +382,13 @@ class CaptureConfig {
   ///       개발폰 원시데이터에 같은 처리를 하면 봉우리가 OTIS 와 0.02 안이다
   static const double jerkLowpassHz = 1.6;
 
-  /// 작성: 2026-10-21 10:05:00 · nada
+  /// 작성: 2026-10-21 10:05:00 · 박건준
   /// 변수: jerkLowpassOrder
   /// 목적: `jerkLowpassHz` 저역 필터의 차수. 버터워스이고 양방향으로 건다.
   /// 근거: 측정 — `jerkLowpassHz` 와 같은 비교에서 4차가 가장 맞았다
   static const int jerkLowpassOrder = 4;
 
-  /// 작성: 2026-10-21 11:20:00 · nada
+  /// 작성: 2026-10-21 11:20:00 · 박건준
   /// 변수: accelChartLowpassHz
   /// 목적: 리포트 3쪽 가속도 차트에 그릴 가속도에 거는 저역 필터의 차단
   ///       주파수 (Hz). 양방향(영위상)으로 건다. 차트 표시용이다 — 최대
@@ -397,14 +399,14 @@ class CaptureConfig {
   ///       빠진다
   static const double accelChartLowpassHz = 10.0;
 
-  /// 작성: 2026-10-21 11:20:00 · nada
+  /// 작성: 2026-10-21 11:20:00 · 박건준
   /// 변수: accelChartLowpassOrder
   /// 목적: `accelChartLowpassHz` 저역 필터의 차수. 버터워스이고 양방향으로
   ///       건다.
   /// 근거: 인용 — 2026-10-21 점검 지시 "4차 버터워스 저역 10 Hz 양방향"
   static const int accelChartLowpassOrder = 4;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 변수: zoneRunSpeedMps
   /// 목적: 정속 · 가감속 구간을 나눌 "운행" 의 속도 문턱 (m/s). 속도
   ///       크기가 이 값을 넘는 처음부터 마지막까지가 운행이다
@@ -414,7 +416,7 @@ class CaptureConfig {
   ///       적분 속도 떠다님 최대 0.022 m/s 의 두 배 이상)
   static const double zoneRunSpeedMps = 0.05;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 변수: zonePeakRatio
   /// 목적: 가속 · 감속 봉우리를 찾는 비율. 운행 안 1.6Hz 저역 가속도
   ///       크기가 그 최대의 이 비율을 처음 넘는 곳이 가속 봉우리, 마지막으로
@@ -425,7 +427,7 @@ class CaptureConfig {
   ///       정속을 25 ~ 37초로 잘못 잡아 쓰지 않는다
   static const double zonePeakRatio = 0.5;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 변수: zoneSteadyAccelMps2
   /// 목적: 정속으로 보는 1.6Hz 저역 가속도 크기의 상한 (m/s²). 가속
   ///       봉우리 뒤 처음으로 이보다 작아지는 곳이 정속 시작, 감속 봉우리
@@ -433,7 +435,7 @@ class CaptureConfig {
   /// 근거: 측정 — `zonePeakRatio` 와 같은 비교
   static const double zoneSteadyAccelMps2 = 0.03;
 
-  /// 작성: 2026-10-22 15:40:00 · nada
+  /// 작성: 2026-10-22 15:40:00 · 박건준
   /// 변수: zoneTransientPaddingMs
   /// 목적: 가감속 구간(수직 Jptp)을 운행(|v| > `zoneRunSpeedMps`) 시작 앞 ·
   ///       끝 뒤로 넓히는 길이 (밀리초). 속도가 문턱을 넘기 전의 출발 충격
@@ -457,7 +459,7 @@ class CaptureConfig {
   ///       판정 없이 2쪽 수직 차트에만 적는다(2026-10-22 리뷰 결정 "유지")
   static const int zoneTransientPaddingMs = 400;
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 변수: zoneMinimumSteadyMs
   /// 목적: 정속 구간의 최소 길이 (밀리초). 이보다 짧으면 정속을 정하지
   ///       못한 것으로 보고 수직 최대(정속 구간 최대)를 비운다.
@@ -475,7 +477,7 @@ class CaptureConfig {
   /// 식: 1,000,000,000 / targetSampleRateHz
   int get idealIntervalNs => 1000000000 ~/ targetSampleRateHz;
 
-  /// 작성: 2026-10-05 10:00:11 · nada
+  /// 작성: 2026-10-05 10:00:11 · 박건준
   /// 함수: edgeTrimNs
   /// 목적: 앞뒤에서 각각 버리는 길이를 나노초로 반환한다.
   /// 반환: 버리는 길이 (나노초)
@@ -489,7 +491,7 @@ class CaptureConfig {
   /// 반환: 정확히 나뉘면 true
   bool get isGridExact => 1000000000 % targetSampleRateHz == 0;
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: resampleUp
   /// 목적: 격자를 `conditionedRateHz` 로 재표본할 때 늘리는 배수를 반환한다.
   ///       두 속도를 최대공약수로 나눠 가장 작은 정수비로 맞춘다.
@@ -499,7 +501,7 @@ class CaptureConfig {
   int get resampleUp =>
       conditionedRateHz ~/ conditionedRateHz.gcd(targetSampleRateHz);
 
-  /// 작성: 2026-10-07 01:55:02 · nada
+  /// 작성: 2026-10-07 01:55:02 · 박건준
   /// 함수: resampleDown
   /// 목적: 격자를 `conditionedRateHz` 로 재표본할 때 줄이는 배수를 반환한다.
   /// 반환: 줄이는 배수. 기본값이면 64
@@ -507,7 +509,7 @@ class CaptureConfig {
   int get resampleDown =>
       targetSampleRateHz ~/ conditionedRateHz.gcd(targetSampleRateHz);
 
-  /// 작성: 2026-10-07 02:01:58 · nada
+  /// 작성: 2026-10-07 02:01:58 · 박건준
   /// 함수: conditionedIntervalNs
   /// 목적: 재표본한 격자 한 칸의 간격을 나노초로 반환한다. 지표 계산
   ///       (`MeasurementAssembler`)이 이 간격으로 표본 속도를 다시 구한다.
@@ -515,14 +517,14 @@ class CaptureConfig {
   /// 식: 1,000,000,000 / conditionedRateHz
   int get conditionedIntervalNs => 1000000000 ~/ conditionedRateHz;
 
-  /// 작성: 2026-10-07 02:01:58 · nada
+  /// 작성: 2026-10-07 02:01:58 · 박건준
   /// 함수: isConditionedGridExact
   /// 목적: 재표본 속도가 나노초 정수 간격으로 나뉘는지 알려준다. 나뉘지
   ///       않으면 `SignalConditioner.condition()` 이 사유를 담아 실패한다.
   /// 반환: 정확히 나뉘면 true
   bool get isConditionedGridExact => 1000000000 % conditionedRateHz == 0;
 
-  /// 작성: 2026-10-07 02:01:58 · nada
+  /// 작성: 2026-10-07 02:01:58 · 박건준
   /// 함수: baselineWindowRows
   /// 목적: 기준선 구간에 드는 격자 행 수를 반환한다. 행 시각이 구간 길이
   ///       보다 앞서는 행(0 ≤ t < `baselineWindowMs`)을 센다.
@@ -531,7 +533,7 @@ class CaptureConfig {
   int get baselineWindowRows =>
       (baselineWindowMs * targetSampleRateHz + 999) ~/ 1000;
 
-  /// 작성: 2026-10-07 02:22:28 · nada
+  /// 작성: 2026-10-07 02:22:28 · 박건준
   /// 함수: minimumRecordMs
   /// 목적: 지표를 낼 수 있는 가장 짧은 측정 길이를 반환한다 (밀리초).
   ///       앞뒤에서 `edgeTrimMs` 씩 버린 뒤에도 기준선 구간이 남아야 한다.
@@ -542,12 +544,12 @@ class CaptureConfig {
   int get minimumRecordMs => 2 * edgeTrimMs + baselineWindowMs;
 }
 
-/// 작성: 2026-10-22 19:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · 박건준
 /// 클래스: DeviceResponseFilter
 /// 목적: 기종 응답 보정 필터 하나(버터워스 저역, 양방향). 보정 표
 ///       (`CaptureConfig.deviceResponseByModelPrefix`)의 값이다.
 class DeviceResponseFilter {
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: DeviceResponseFilter
   /// 목적: 필터 차수와 차단 주파수를 담는다.
   /// 인자: order — 버터워스 차수 (짝수)
@@ -560,7 +562,7 @@ class DeviceResponseFilter {
   /// 저역 차단 주파수 (Hz)
   final double lowpassHz;
 
-  /// 작성: 2026-10-22 19:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: label
   /// 목적: 결과 파일 · 집계 파일에 남길 필터 표시(예: "lp25.0bw2zp").
   String get label => 'lp${lowpassHz}bw${order}zp';

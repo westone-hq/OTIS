@@ -3,8 +3,8 @@ import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 
 import '../../support/reference_records.dart';
 
-/// 작성: 2026-10-22 19:00:00 · nada
-/// 수정: 2026-10-23 01:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · 박건준
+/// 수정: 2026-10-23 01:00:00 · 박건준
 /// 함수: main
 /// 목적: 운행 끝 뒤 여유(`MeasurementResult.stopMarginSec`)와 Jptp 정지 쪽
 ///       넓힘이 기록 끝에 막혔는지(`zJptpClippedAtEnd`)를 시험한다.

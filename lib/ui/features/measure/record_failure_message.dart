@@ -1,7 +1,7 @@
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/service/measurement_recorder.dart';
 
-/// 작성: 2026-10-04 13:33:18 · nada
+/// 작성: 2026-10-04 13:33:18 · 박건준
 /// 함수: recordFailureMessage
 /// 목적: 저장 실패 종류를 사용자에게 보여줄 안내 문구로 바꾼다. 측정
 ///       화면(measuring_screen.dart)이 실패 대화상자에 넣는다. 화면 상태에

@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:vibration_checker/domain/dsp/sos_section.dart';
 
-/// 작성: 2026-10-07 01:44:43 · nada
-/// 수정: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-07 01:44:43 · 박건준
+/// 수정: 2026-10-15 16:50:04 · 박건준
 /// 클래스: Butterworth
 /// 목적: 버터워스 필터(통과 대역이 평평한 필터)를 설계하고, 앞으로 한 번 ·
 ///       뒤로 한 번 걸러 위상 지연이 없게 한다(양방향, 영위상). 저역은
@@ -16,8 +16,8 @@ import 'package:vibration_checker/domain/dsp/sos_section.dart';
 ///       `sosfiltfilt()` 와 같아야 한다. 기대값 픽스처
 ///       (`test/fixtures/scipy/conditioning_*`)를 SciPy 로 만들었기 때문이다.
 abstract final class Butterworth {
-  /// 작성: 2026-10-07 01:44:43 · nada
-  /// 수정: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
+  /// 수정: 2026-10-15 16:50:04 · 박건준
   /// 함수: lowpass
   /// 목적: 디지털 버터워스 저역 필터를 2차 구간 목록으로 설계한다. 필터
   ///       모양은 극점(응답이 끝없이 커지는 복소수 점)과 영점(응답이 0 이
@@ -101,7 +101,7 @@ abstract final class Butterworth {
     ];
   }
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: highpass
   /// 목적: 디지털 버터워스 고역 필터를 2차 구간 목록으로 설계한다. 같은 차수
   ///       · 차단 주파수의 저역 필터(`lowpass()`)와 디지털 극점이 같고 영점과
@@ -149,7 +149,7 @@ abstract final class Butterworth {
     ];
   }
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 함수: padLength
   /// 목적: 양 끝에 덧붙이는 길이를 반환한다. 입력은 이보다 길어야 한다.
   /// 인자: sections — 걸 2차 구간 목록
@@ -161,7 +161,7 @@ abstract final class Butterworth {
   static int padLength(List<SosSection> sections) =>
       3 * (2 * sections.length + 1);
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 함수: filtfilt
   /// 목적: 2차 구간 목록을 앞으로 한 번, 뒤로 한 번 걸어 위상 지연 없이
   ///       거른다. SciPy `sosfiltfilt(padtype='odd')` 의 순서를 따른다.
@@ -201,7 +201,7 @@ abstract final class Butterworth {
     return Float64List.sublistView(ext, edge, edge + n);
   }
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 함수: _steadyState
   /// 목적: 입력이 처음부터 1 이었다면 각 구간의 내부 상태 두 칸이 어떤 값에
   ///       머물러 있을지를 구한다. 첫 표본을 곱해 초기값으로 쓰면 걸기
@@ -231,7 +231,7 @@ abstract final class Butterworth {
     return states;
   }
 
-  /// 작성: 2026-10-07 01:44:43 · nada
+  /// 작성: 2026-10-07 01:44:43 · 박건준
   /// 함수: _filterInPlace
   /// 목적: 2차 구간들을 차례로 걸어 신호를 그 자리에서 바꾼다. 모든 구간이
   ///       거르기 전 신호의 첫 표본에 정상상태를 곱한 값에서 출발한다.

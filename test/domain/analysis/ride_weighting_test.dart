@@ -8,7 +8,7 @@ import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
 import 'package:vibration_checker/domain/dsp/butterworth.dart';
 import 'package:vibration_checker/domain/dsp/sos_section.dart';
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _cases
 /// 목적: SciPy 로 만든 가중 필터 기대값을 읽는다
 ///       (`tool/fixtures/gen_conditioning_fixtures.py --weighting`).
@@ -21,7 +21,7 @@ Map<String, dynamic> _cases() =>
         )
         as Map<String, dynamic>;
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _doubles
 /// 목적: JSON 숫자 목록을 실수 목록으로 바꾼다.
 /// 인자: raw — JSON 에서 읽은 목록
@@ -29,7 +29,7 @@ Map<String, dynamic> _cases() =>
 List<double> _doubles(Object? raw) =>
     (raw as List<dynamic>).map((v) => (v as num).toDouble()).toList();
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _expectSections
 /// 목적: 2차 구간 목록이 SciPy `sos` 행렬([b0 b1 b2 1 a1 a2])과 같은지 본다.
 /// 인자: actual — Dart 가 만든 구간
@@ -51,7 +51,7 @@ void _expectSections(List<SosSection> actual, Object? expected, String label) {
   }
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: main
 /// 목적: ISO 8041 가중(`RideWeighting`)과 버터워스 고역을 시험한다.
 ///       - 계수와 출력이 SciPy 정본(`bilinear` · `butter` · `sosfilt` ·
