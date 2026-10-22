@@ -129,7 +129,7 @@ class MotionWindow {
 ///          `_deriveKinematics()`)
 ///       2. 진동에 주파수 가중(`RideWeighting`)을 건다 — 수평 Wd, 수직
 ///          1Hz 고역 + Wk. 가감속이 빠져 Z 가 늘 적색을 넘던 문제가 없다.
-///          수직은 그 뒤 기종 응답 보정(`DeviceResponse`, 2026-10-23)을 건다.
+///          수직은 그 뒤 기종 응답 보정(`DeviceResponse`, 2026-10-22)을 건다.
 ///          보정 표에 있는 기종의 기록에만 걸고 오티스폰 기록에는 걸지
 ///          않는다(2026-10-21 2차의 모든 기록 20Hz 저역을 바꿈)
 ///       3. 위치에서 운행 구간(`TravelWindow`, 출발 · 정지 0.5 m 제외)을
@@ -167,7 +167,7 @@ class MotionWindow {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -427,7 +427,7 @@ class MeasurementAssembler {
     );
   }
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: _stopMargin
   /// 목적: 운행 끝부터 기록 끝까지의 시간을 낸다. 운행 끝은 속도 크기가
   ///       `CaptureConfig.zoneRunSpeedMps` 를 넘은 마지막 행이다(정속 ·

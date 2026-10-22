@@ -524,7 +524,7 @@ class PolyphaseResampler {
 ///         차수 · 차단 주파수, 나노초로 나뉘지 않는 재표본 속도
 enum ConditioningFailure { gridTooShort, invalidConfig }
 
-/// 작성: 2026-10-23 10:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · nada
 /// 클래스: BaselineSource
 /// 목적: 기준선(정지 상태 오프셋)을 어느 구간에서 냈는지. 기준선은 처음
 ///       `baselineWindowMs` 를 정지로 가정하는데, 측정을 시작하자마자
@@ -539,7 +539,7 @@ enum ConditioningFailure { gridTooShort, invalidConfig }
 enum BaselineSource { start, startShortened, end, contaminated }
 
 /// 작성: 2026-10-07 02:01:58 · nada
-/// 수정: 2026-10-23 10:00:00 · nada
+/// 수정: 2026-10-22 19:00:00 · nada
 /// 클래스: ConditionedGrid
 /// 목적: 지표 계산 전 신호 처리(`SignalConditioner.condition()`)의 결과를
 ///       담는다. 처리한 격자는 `GridResampleResult` 형태 그대로라 지표
@@ -548,7 +548,7 @@ enum BaselineSource { start, startShortened, end, contaminated }
 ///       남기려고 함께 싣는다.
 class ConditionedGrid {
   /// 작성: 2026-10-07 02:01:58 · nada
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: ConditionedGrid
   /// 목적: 처리에 성공한 격자와 기준선 값 · 표준편차를 그대로 담는 생성자.
   /// 인자: grid — 처리한 격자 (`CaptureConfig.conditionedRateHz` 간격)
@@ -573,7 +573,7 @@ class ConditionedGrid {
   }) : failureCause = null;
 
   /// 작성: 2026-10-07 02:01:58 · nada
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: ConditionedGrid.failure
   /// 목적: 처리하지 못한 결과를 만든다. 기준선과 표준편차는 구하지
   ///       못했으므로 null 로 두고 0 으로 채우지 않는다.
@@ -686,7 +686,7 @@ class SignalConditioner {
       '+rs${config.conditionedRateHz}';
 
   /// 작성: 2026-10-07 02:01:58 · nada
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: condition
   /// 목적: 격자 하나를 처리한다. 순서대로 진행한다.
   ///       1. 차단 주파수가 재표본 속도의 절반보다 낮은지 확인한다. 아니면
@@ -862,7 +862,7 @@ class SignalConditioner {
     );
   }
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: _baselineWindow
   /// 목적: 기준선을 낼 구간을 고른다. 처음 `baselineWindowMs` 안에서 수직
   ///       가속도(저크 저역 `jerkLowpassHz` 를 양방향으로 건 값)가 처음
@@ -881,7 +881,7 @@ class SignalConditioner {
   /// 인자: zs — Z 열 (mg, 입력 격자)
   ///       rows — 기본 기준선 행 수 (`baselineWindowRows`). `zs` 길이 이하
   /// 반환: 구간 첫 행 · 행 수와 종류
-  /// 근거: 인용 — 2026-10-23 점검 지시 "기준선 구간 안에서 움직임(1.6 Hz
+  /// 근거: 인용 — 2026-10-22 점검 지시 "기준선 구간 안에서 움직임(1.6 Hz
   ///       가속도 |a| > 0.03 m/s²)이 잡히면, 기준선을 움직임 전까지로
   ///       줄이거나(최소 0.3초) 기록 끝 정지 구간으로 낸다"
   ({int start, int rows, BaselineSource source}) _baselineWindow(
@@ -948,7 +948,7 @@ class SignalConditioner {
     return (start: 0, rows: rows, source: BaselineSource.contaminated);
   }
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 변수: _mgToMetersPerSecondSquared
   /// 목적: mg 를 m/s² 로 바꾸는 배수. 움직임 문턱(m/s²)을 mg 로 옮긴다.
   /// 근거: 표준 — 표준 중력 9.80665 m/s² 의 1/1000. `MeasurementAssembler` ·
@@ -956,7 +956,7 @@ class SignalConditioner {
   static const double _mgToMetersPerSecondSquared = 9.80665e-3;
 
   /// 작성: 2026-10-07 02:01:58 · nada
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: _baseline
   /// 목적: 측정 첫 구간의 평균(기준선)을 구한다. 정지 상태에서 0 이어야 할
   ///       진동값이 고정 오프셋만큼 떠 있으면, 그 오프셋이 반주기 P2P 에
@@ -982,7 +982,7 @@ class SignalConditioner {
   }
 
   /// 작성: 2026-10-07 02:10:57 · nada
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: _baselineStd
   /// 목적: 기준선 구간의 표준편차를 구한다. 기준선 구간은 정지 상태라고
   ///       가정하는데, 거치하며 손이 닿아 진동이 섞이면 이 값이 커진다.

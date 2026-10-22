@@ -197,13 +197,13 @@ class CaptureSession {
   ///       또는 44100). 마이크를 못 열었거나 아직 멈추기 전이면 null.
   int? get noiseSampleRateHz => _sensorManager.lastNoiseSampleRateHz;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: deviceManufacturer
   /// 목적: 수집을 멈출 때 안드로이드가 알려 준 휴대폰 제조사. 멈추기 전이거나
   ///       응답이 없으면 null.
   String? get deviceManufacturer => _sensorManager.lastDeviceManufacturer;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: deviceModel
   /// 목적: 수집을 멈출 때 안드로이드가 알려 준 휴대폰 기종 이름. 저장 절차가
   ///       기종 응답 보정을 고른다. 멈추기 전이거나 응답이 없으면 null.

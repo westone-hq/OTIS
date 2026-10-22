@@ -3,13 +3,13 @@ import 'package:vibration_checker/domain/report/motion_zones.dart';
 
 import '../../support/otis_1021_records.dart';
 
-/// 작성: 2026-10-23 10:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · nada
 /// 함수: main
 /// 목적: 운행 끝 뒤 여유(`MeasurementResult.stopMarginSec`)와 Jptp 정지 쪽
 ///       넓힘이 기록 끝에 막혔는지(`zJptpClippedAtEnd`)를 시험한다.
 ///       - 합성 구간: 운행 끝 + 넓힘(0.4초)이 마지막 행을 넘으면 막힌다
 ///       - 실측 11건: 2026-10-22 4건은 정지 뒤 1초를 못 채워 경고 대상이고,
-///         개발폰 상승만 넓힘이 막힌다(2026-10-23 점검 표와 같다)
+///         개발폰 상승만 넓힘이 막힌다(2026-10-22 점검 표와 같다)
 void main() {
   test('운행 끝 뒤 넓힘이 마지막 행을 넘으면 막혔다고 알린다', () {
     const zones = MotionZones(

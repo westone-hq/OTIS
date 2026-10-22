@@ -208,7 +208,7 @@ class MeasurementResult {
   final double? steadySpeedMps;
 
   /// 측정한 휴대폰 제조사(안드로이드 `Build.MANUFACTURER`, 예: "samsung").
-  /// null 이면 2026-10-23 전 결과, 외부 기록(오티스폰 EVIMP1)이거나 정지
+  /// null 이면 2026-10-22 전 결과, 외부 기록(오티스폰 EVIMP1)이거나 정지
   /// 응답을 받지 못했다
   final String? deviceManufacturer;
 
@@ -219,7 +219,7 @@ class MeasurementResult {
 
   /// 수직 진동에 건 기종 응답 보정 필터 표시(예: "lp25.0bw2zp"). 보정 표에
   /// 없는 기종이면 `DeviceResponse.noneLabel`("none") — 결과 화면 · 메일이
-  /// "미보정 기종" 으로 알린다. null 이면 보정을 정하기 전(2026-10-23 전)
+  /// "미보정 기종" 으로 알린다. null 이면 보정을 정하기 전(2026-10-22 전)
   /// 결과다
   final String? deviceCompensation;
 
@@ -234,11 +234,11 @@ class MeasurementResult {
   final bool? zJptpClippedAtEnd;
 
   /// 신호 처리 기준선을 어디서 냈는지(`BaselineSource.name`). null 이면
-  /// 2026-10-23 전 결과다(늘 처음 1초)
+  /// 2026-10-22 전 결과다(늘 처음 1초)
   final String? baselineSource;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -341,7 +341,7 @@ class MeasurementResult {
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -459,7 +459,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -523,7 +523,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -702,15 +702,15 @@ class MeasurementResult {
       // → 로직 이동: Placement.fromName()
       Placement.fromName(placement);
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: uncompensatedDevice
   /// 목적: 보정 표에 없는 기종(또는 기종을 모르는 측정)이라 기종 응답 보정을
   ///       걸지 않았는지. 결과 화면 · 메일이 "미보정 기종" 을 알린다. 보정을
-  ///       정하기 전(2026-10-23 전) 결과는 false 다.
+  ///       정하기 전(2026-10-22 전) 결과는 false 다.
   bool get uncompensatedDevice =>
       deviceCompensation == DeviceResponse.noneLabel;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: stoppedTooSoon
   /// 목적: 운행 끝 뒤 `CaptureConfig.minimumStopMarginMs` 를 못 채우고 측정을
   ///       끝냈는지. 결과 화면이 "정지 후 1초 이상 기다린 뒤 종료" 를 알린다.
@@ -720,7 +720,7 @@ class MeasurementResult {
     return margin != null && margin * 1000 < CaptureConfig.minimumStopMarginMs;
   }
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: baselineContaminated
   /// 목적: 기준선 구간이 움직임에 섞였는데 줄이거나 끝 정지 구간으로 옮기지
   ///       못했는지(`BaselineSource.contaminated`). 결과 화면이 "시작 후 2초

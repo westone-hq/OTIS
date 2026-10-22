@@ -128,7 +128,7 @@ def weight_vertical(z, fs=FS):
     return sosfilt(_sos(WK, fs), sosfiltfilt(_hp1(fs), z))
 
 
-# 기종 응답 보정(CaptureConfig.deviceResponseByModelPrefix, 2026-10-23): 표에 있는 기종의
+# 기종 응답 보정(CaptureConfig.deviceResponseByModelPrefix, 2026-10-22): 표에 있는 기종의
 # 기록에만 수직에 건다. 이 픽스처의 두 기록(ride_reference · 2026-10-06 개발폰)은 시험이 기종
 # 정보 없이 계산하므로 보정하지 않는다. 2026-10-21 2차 ~ 10-22 의 수직 20Hz 4차 저역은 없앴다.
 DEVICE_COMP_ORDER, DEVICE_COMP_HZ = 2, 25.0  # SM-S901 (갤럭시 S22)

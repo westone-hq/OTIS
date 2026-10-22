@@ -402,7 +402,7 @@ void main() {
     expect(exact[25], 60.0);
     expect(exact[26], 0.0);
   });
-  group('기준선 구간 고르기 (2026-10-23)', () {
+  group('기준선 구간 고르기 (2026-10-22)', () {
     const conditioner = SignalConditioner(config: CaptureConfig()); // 기본 설정
     // 256Hz 격자 4초. z(i) 로 Z 를 정한다
     GridResampleResult zGrid(double Function(int i) z) => _grid(<GridSample>[
