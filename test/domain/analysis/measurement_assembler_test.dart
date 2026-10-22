@@ -9,6 +9,7 @@ import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
+import 'package:vibration_checker/domain/dsp/butterworth.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';

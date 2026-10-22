@@ -5,7 +5,8 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/analysis/half_cycle.dart';
 import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
-import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
+import 'package:vibration_checker/domain/dsp/butterworth.dart';
+import 'package:vibration_checker/domain/dsp/sos_section.dart';
 
 /// 작성: 2026-10-15 16:50:04 · nada
 /// 함수: _cases
