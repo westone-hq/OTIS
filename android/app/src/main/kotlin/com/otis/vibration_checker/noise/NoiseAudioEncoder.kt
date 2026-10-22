@@ -1,4 +1,4 @@
-package com.otis.vibration_checker
+package com.otis.vibration_checker.noise
 
 import android.media.MediaCodec
 import android.media.MediaCodecInfo

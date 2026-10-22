@@ -19,6 +19,9 @@ import android.hardware.SensorManager
 import android.view.KeyEvent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.otis.vibration_checker.noise.NoiseCaptureHandler
+import com.otis.vibration_checker.sensor.SensorStreamHandler
+import com.otis.vibration_checker.update.UpdateInstaller
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel

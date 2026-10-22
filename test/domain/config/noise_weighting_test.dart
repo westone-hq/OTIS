@@ -10,7 +10,7 @@ import 'package:vibration_checker/domain/config/noise_config.dart';
 /// 목적: 소음을 계산하는 안드로이드 코드 경로. 코틀린은 단위 시험 틀이
 ///       없어, 이 시험이 소스의 상수를 읽어 SciPy 정본과 견준다.
 const String _kotlinPath =
-    'android/app/src/main/kotlin/com/otis/vibration_checker/'
+    'android/app/src/main/kotlin/com/otis/vibration_checker/noise/'
     'NoiseCaptureHandler.kt';
 
 /// 작성: 2026-10-22 12:00:00 · nada

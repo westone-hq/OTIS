@@ -1,4 +1,4 @@
-package com.otis.vibration_checker
+package com.otis.vibration_checker.sensor
 
 import android.content.Context
 import android.hardware.Sensor
@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.util.Log
+import com.otis.vibration_checker.noise.NoiseCaptureHandler
 import io.flutter.plugin.common.EventChannel
 import java.io.BufferedWriter
 import java.io.File

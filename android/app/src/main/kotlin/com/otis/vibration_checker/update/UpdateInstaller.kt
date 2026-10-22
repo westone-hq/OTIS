@@ -1,4 +1,4 @@
-package com.otis.vibration_checker
+package com.otis.vibration_checker.update
 
 import android.app.Activity
 import android.app.PendingIntent

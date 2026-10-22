@@ -1,4 +1,4 @@
-package com.otis.vibration_checker
+package com.otis.vibration_checker.noise
 
 import android.Manifest
 import android.content.Context
