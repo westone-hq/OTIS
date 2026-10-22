@@ -12,9 +12,11 @@ pending 21번. 오티스폰 원시데이터를 앱 경로로 계산하면 OTIS P
   `OITS2.txt` · 하강3 `OITS1 (1).txt`, 10-22 상승 `otis_up_1022.txt` · 하강
   `otis_down_1022.txt`)과 ride_reference, 각 OTIS PDF 의 수직 최대(ptp) ·
   평균(A95) · Jptp. 오티스폰 기록이라 기종 응답 보정은 걸지 않는다.
-- 계산: 앱 경로를 그대로 재현하는 파이썬 계산(`pdf_report_dev/
-  gen_conditioning_fixtures.py` 의 `_pipeline`, 앱 고정값과 소수 둘째 자리까지
-  같음)에서 한 항목만 바꿨다.
+  원시데이터 10건(`docs/reference/*.txt`)은 2026-10-23 저장소에서 지웠다 —
+  커밋 6bd171a 에 있다.
+- 계산: 앱 경로를 그대로 재현하는 파이썬 계산(지금
+  `tool/fixtures/gen_conditioning_fixtures.py` 의 `_pipeline`, 앱 고정값과 소수
+  둘째 자리까지 같음)에서 한 항목만 바꿨다.
 - 목표: 6건 모두 ptp · A95 ±5%, Jptp ±10%. 한 기록에만 맞는 조정은 고르지
   않는다.
 

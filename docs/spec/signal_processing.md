@@ -14,7 +14,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
         3. 256Hz → 100Hz 재표본   25/64 다상 FIR, 카이저 창 β 5.0
         소음 열은 거르지 않고 100Hz 시각에 선형 보간한다
       ─▶ MeasurementAssembler.assemble()   지표 · 리포트 · result.json
-            4. 운동 · 최대 속도 · 운행 거리   가중 전 Z 의 움직인 구간만 적분 (`_deriveKinematics`)
+            4. 운동 · 최대 속도 · 운행 거리   가중 전 Z 의 움직인 구간만 적분 (`Kinematics.derive()`)
                저크                           가속도 → 1.6Hz 4차 버터워스 양방향 → 중앙 차분
                가속도 차트(표시용)             가속도 → 10Hz 4차 버터워스 양방향
             5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
@@ -28,7 +28,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `lowpassCutoffHz`(40) · `lowpassOrder`(4) · `baselineWindowMs`(1000).
   재표본 비 · 기준선 행 수 · 최소 측정 길이(`minimumRecordMs`, 2초)는 같은
   클래스의 게터가 유도한다. SciPy 정의를 따르는 알고리즘 상수(`halfLenPerRate`
-  10, `kaiserBeta` 5.0)는 `signal_conditioner.dart` 의 `PolyphaseResampler` 에
+  10, `kaiserBeta` 5.0)는 `dsp/polyphase_resampler.dart` 의 `PolyphaseResampler` 에
   있다. 차수가 홀수이거나 차단 주파수가 100Hz 의 절반 이상이면 `ArgumentError`.
 - **실패**: `RecordFailure.conditioningFailed`. 원인은
   `RecordOutcome.conditioningCause` 로 가른다 — 격자가 기준선 구간보다 짧으면
@@ -53,7 +53,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   +noise(A,fast,+105.2,48000Hz)`,
   `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
   `DeviceResponse.methodLabel(기종)` +
-  `MeasurementAssembler.kinematicsMethodLabel` + `jerkMethodLabel` +
+  `Kinematics.kinematicsMethodLabel` + `jerkMethodLabel` +
   `accelChartMethodLabel` + `MotionZones.methodLabel` +
   `noiseMethodLabel(마이크 표본 속도)`) 과
   `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`, `motionZones`

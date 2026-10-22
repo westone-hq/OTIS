@@ -1,6 +1,6 @@
 # 기준 데이터 — ride_reference.txt
 
-`test/fixtures/records/ride_reference.txt`. 원본 TUNE 리포트(`docs/reference/`)를 만든 실제
+`test/fixtures/records/ride_reference.txt`. 원본 TUNE 리포트(H6N1AP65, 저장소 밖 보관)를 만든 실제
 측정 데이터다. 합성 프로파일 대신 이걸로 회귀를 고정한다.
 
 ## 출처

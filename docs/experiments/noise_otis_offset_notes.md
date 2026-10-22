@@ -38,7 +38,7 @@ dBA ≈ dBFS + micDbfsToDbaOffset + calibrationOffsetDba
 코드 쪽 기본값 위치:
 
 - Dart 상수: `lib/domain/config/noise_config.dart` (`kDefaultMicDbfsToDbaOffset`)
-- Android: `NoiseCaptureHandler` / `MainActivity` 기본 인자
+- Android: `NoiseCaptureHandler` / `SensorMethodHandler` 기본 인자
 - 측정 시작: `sensor_channel.dart` / `measuring_screen.dart`
 
 ---
@@ -177,8 +177,8 @@ OTIS 파일은 처음부터 소음 숫자가 있다.
 ## 참고 파일
 
 - `lib/domain/config/noise_config.dart`
-- `android/.../NoiseCaptureHandler.kt`
-- `android/.../MainActivity.kt`
+- `android/.../noise/NoiseCaptureHandler.kt`
+- `android/.../sensor/SensorMethodHandler.kt`
 - `lib/adapter/sensor/sensor_channel.dart`
 - `lib/ui/features/measure/measuring_screen.dart`
 - `lib/domain/capture/grid_resampler.dart`

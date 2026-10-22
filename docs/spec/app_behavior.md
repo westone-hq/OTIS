@@ -85,7 +85,7 @@
   `CaptureConfig.placementWindowMs` · `placementFaceDownMaxMg` −940 ·
   `placementFaceUpMinMg` +940 — 화면 아래 / 화면 위 / 기울어짐). 화면 아래가
   아니면 측정 중에 경고음 200ms + 진동 300ms 를 한 번 울린다
-  (`MainActivity.playPlacementAlert`, `VIBRATE` 권한, 측정은 계속. 진동은 알람
+  (`SensorMethodHandler.playPlacementAlert`, `VIBRATE` 권한, 측정은 계속. 진동은 알람
   용도 — 용도 없이 내면 "터치" 로 기록돼 터치 진동을 끈 기기에서 막힐 수
   있다, 2026-10-22). result.json
   `placement` · `placementGravityZMg`, meta.txt `placement` ·
