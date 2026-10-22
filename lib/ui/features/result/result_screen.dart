@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
-import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/measurement/result_warnings.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
@@ -17,6 +17,7 @@ import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
+import 'package:vibration_checker/ui/features/result/compare_sheet.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
 /// 작성: 2026-10-04 18:15:24 · nada
@@ -202,7 +203,7 @@ class _ResultScreenState extends State<ResultScreen> {
     // → 로직 이동: showAppSheet()
     await showAppSheet(
       context,
-      builder: (sheetContext) => _CompareSheet(
+      builder: (sheetContext) => CompareSheet(
         candidates: others,
         onPicked: (result) {
           picked = result;
@@ -600,119 +601,6 @@ class _ResultScreenState extends State<ResultScreen> {
                 ],
               ),
             ),
-    );
-  }
-}
-
-/// 작성: 2026-10-22 09:30:00 · nada
-/// 함수: placementWarning
-/// 목적: 결과 화면에 띄울 거치 경고 문구를 고른다. 화면 아래가 아니게
-///       놓고 잰 결과에만 띄운다. 재측정은 아래 "테스트 재실행" 버튼을 쓴다.
-/// 인자: result — 측정 결과
-/// 반환: 경고 문구. 화면 아래로 잰 결과이거나 판정하지 않은 예전 결과면 null
-/// 근거: 인용 — 2026-10-22 사용자 지시 문구
-String? placementWarning(MeasurementResult result) {
-  final kind = switch (result.placementKind) {
-    Placement.faceUp => '화면 위',
-    Placement.tilted => '기울어진',
-    Placement.faceDown || null => null,
-  }; // 경고에 넣을 거치 이름, 경고하지 않으면 null
-  if (kind == null) return null;
-  return '$kind 거치로 측정됨 — 소음 · 수평 값이 달라질 수 있습니다. '
-      '재측정을 권합니다';
-}
-
-/// 작성: 2026-10-22 19:00:00 · nada
-/// 함수: resultWarnings
-/// 목적: 결과 화면 위쪽에 띄울 경고 문구를 고른다. 판정은 결과 모델 게터가
-///       하고 여기서는 문구만 고른다.
-///       - 거치 경고(`placementWarning()`)
-///       - 정지 직후 끝낸 측정(`MeasurementResult.stoppedTooSoon`)
-///       - 기준선 구간에 움직임(`MeasurementResult.baselineContaminated`)
-///       - 보정 표에 없는 기종(`MeasurementResult.uncompensatedDevice`)
-/// 인자: result — 측정 결과
-/// 반환: 경고 문구 목록. 없으면 빈 목록
-/// 근거: 인용 — 2026-10-22 점검 지시 문구("정지 후 1초 이상 기다린 뒤
-///       종료하세요 — 끝부분 값이 부정확할 수 있습니다", "시작 후 2초
-///       기다린 뒤 출발", "미보정 기종")
-List<String> resultWarnings(MeasurementResult result) => <String>[
-  // → 로직 이동: placementWarning()
-  ?placementWarning(result),
-  if (result.stoppedTooSoon) '정지 후 1초 이상 기다린 뒤 종료하세요 — 끝부분 값이 부정확할 수 있습니다',
-  if (result.baselineContaminated) '시작 후 2초 기다린 뒤 출발하세요 — 측정 시작 직후에 움직임이 있었습니다',
-  if (result.uncompensatedDevice)
-    '미보정 기종(${result.deviceModel ?? '기종 미확인'}) — 진동 값이 기준 폰과 '
-        '다를 수 있습니다',
-];
-
-/// 작성: 2026-10-04 18:15:24 · nada
-/// 클래스: _CompareSheet
-/// 목적: 비교할 저장 결과를 고르는 시트. 최근 것부터 한 줄씩 보여주고,
-///       누르면 그 결과를 고른 것으로 알린다.
-class _CompareSheet extends StatelessWidget {
-  /// 고를 수 있는 저장 결과. 최근 것부터
-  final List<MeasurementResult> candidates;
-
-  /// 하나를 골랐을 때 부를 함수. 고른 결과를 받는다
-  final void Function(MeasurementResult) onPicked;
-
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 함수: _CompareSheet
-  /// 목적: 고를 결과 목록과 골랐을 때 할 일을 받는다.
-  /// 인자: candidates, onPicked — 위 필드 설명을 따른다
-  const _CompareSheet({required this.candidates, required this.onPicked});
-
-  /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
-  /// 함수: build
-  /// 목적: 제목 아래에 저장 결과를 한 줄씩 늘어놓는다. 줄마다 제번 ·
-  ///       현장명과 측정 일시를 보여준다.
-  @override
-  Widget build(BuildContext context) {
-    final height =
-        MediaQuery.of(context).size.height * AppDims.sheetHeightFactor; // 시트 높이
-    return SizedBox(
-      height: height,
-      child: Padding(
-        padding: const EdgeInsets.all(AppDims.screenPad),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('비교할 결과 선택', style: AppText.subhead),
-            const SizedBox(height: AppDims.gap2),
-            Expanded(
-              child: ListView.separated(
-                itemCount: candidates.length,
-                separatorBuilder: (_, _) => const SizedBox(height: AppDims.gap),
-                itemBuilder: (_, index) {
-                  final item = candidates[index]; // 이 줄의 저장 결과
-                  final when = DateFormat(
-                    'yyyy-MM-dd HH:mm',
-                  ).format(KoreaTime.of(item.dateTime)); // 측정 일시 (한국 시간)
-                  return InkWell(
-                    onTap: () => onPicked(item),
-                    borderRadius: BorderRadius.circular(AppDims.radius),
-                    child: AppCard(
-                      minHeight: AppDims.rowMinH,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${item.jobNo} · ${item.siteName}',
-                            style: AppText.bodyBold,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(when, style: AppText.caption),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
