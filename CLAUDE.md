@@ -22,7 +22,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
 |---|---|
 | `lib/model/` | 순수 자료형 (`MeasurementResult` · `Worker`) |
 | `lib/domain/auth/` | 작업자 명단 읽기 · 로그인 판정 (`WorkerDirectory`) |
-| `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`), 지표 계산 전 신호 처리 (`SignalConditioner`), ISO 8041 주파수 가중 (`RideWeighting`). 수집 · 처리 수치는 `CaptureConfig` |
+| `lib/domain/capture/` | 네이티브 이벤트 → 256Hz 격자 환산 (`GridResampler`), 지표 계산 전 신호 처리 (`SignalConditioner`), ISO 8041 주파수 가중 (`RideWeighting`), 기종 응답 보정 (`DeviceResponse`). 수집 · 처리 수치는 `CaptureConfig` |
 | `lib/domain/report/` | 리포트 좌표·임계값·지표 계산. 운행 구간(`TravelWindow`) · 반주기 P2P(`HalfCycle`)도 여기. 숫자는 여기에만 둔다 |
 | `lib/domain/session/` | 화면 사이에 넘기는 이번 측정 상태 (`MeasurementSession`), 지금 로그인한 작업자 (`LoginSession`) |
 | `lib/domain/time/` | 사람이 읽는 시각을 한국 시간(UTC+9)으로 맞추는 `KoreaTime` |
@@ -126,6 +126,19 @@ flutter test --tags screenshot --run-skipped test/screenshots
   에서 측정되었습니다."(`ReportMetric.remarkLines`). 다른 행은 문구가 없다.
   OTIS 대비 개발폰 3건: ptp −6 · +12 · +33%(하강, 오티스폰 원시데이터도
   +11%), Jptp +15 · −3 · −12%.
+- 결과 화면 경고(2026-10-23, `resultWarnings()`, 판정은 결과 모델 게터): 거치
+  경고 다음에 정지 뒤 여유가 1초 미만이면 "정지 후 1초 이상 기다린 뒤
+  종료하세요 — 끝부분 값이 부정확할 수 있습니다"(`stoppedTooSoon`), 기준선
+  구간을 줄이지도 옮기지도 못했으면 "시작 후 2초 기다린 뒤 출발하세요"
+  (`baselineContaminated`), 보정 표에 없는 기종이면 "미보정 기종(기종 이름)"
+  (`uncompensatedDevice`)을 띄운다. 메일 본문은 거치 줄 아래 "미보정 기종:
+  제조사 기종" 한 줄. 휴대폰 제조사 · 기종은 수집 정지 응답
+  (`stopCapture` 의 `deviceManufacturer` · `deviceModel`)으로 받는다.
+  기준선은 처음 1초 안에서 움직이면(1.6Hz 가속도가 처음 0.3초 평균에서
+  0.03 m/s² 넘게 벗어남) 움직임 앞까지(0.3초 이상), 안 되면 기록 끝 1초
+  정지 구간에서 낸다(`SignalConditioner._baselineWindow()`). 진동은 고역을
+  거치고 거리 · 속도는 움직인 구간 평균을 다시 빼서 지표는 거의 바뀌지
+  않는다(10-22 개발폰 하강 0.86초로 줄여도 거리 0.0002 m).
 - 저장 결과 목록은 결과 파일을 읽지 못한 측정(측정 일시가 없거나 깨짐 등)을
   그 한 건만 "읽을 수 없는 결과" 로 보여 주고 지울 수 있게 한다
   (`MeasurementRepository.listEntries()`, 2026-10-15). 측정 일시를 "지금"
@@ -238,7 +251,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
 GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤 0.5초 버림
   ├─▶ raw.txt (EVIMP1, 256Hz)    필터 · 기준선 보정 없음, 축별 전체 평균만 뺌(OTIS 관례). 원본은 native_raw.txt
   └─▶ SignalConditioner.condition()
-        1. 기준선 0 맞춤          첫 1초 평균을 X · Y · Z 마다 뺀다
+        1. 기준선 0 맞춤          첫 1초 평균을 X · Y · Z 마다 뺀다(그 안에서 움직였으면 움직임 앞까지 · 끝 정지 1초)
         2. 40Hz 저역              4차 버터워스, 양방향(영위상)
         3. 256Hz → 100Hz 재표본   25/64 다상 FIR, 카이저 창 β 5.0
         소음 열은 거르지 않고 100Hz 시각에 선형 보간한다
@@ -247,7 +260,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
                저크                           가속도 → 1.6Hz 4차 버터워스 양방향 → 중앙 차분
                가속도 차트(표시용)             가속도 → 10Hz 4차 버터워스 양방향
             5. 주파수 가중 (RideWeighting)   X·Y Wd, Z 1Hz 고역(2차, 양방향) + Wk
-               수직 저역                       Z 만 가중 뒤 20Hz 4차 버터워스 양방향 (`_verticalLowpass`)
+               기종 응답 보정 (DeviceResponse)  Z 만, 보정 표에 있는 기종만 (갤럭시 S22 SM-S901…: 2차 25Hz 저역 양방향)
             6. 운행 구간 (TravelWindow)      출발 · 정지 0.5 m 제외, 운행 1 m 이하면 실패
             7. 반주기 P2P (HalfCycle)        구간 안 최대 P2P · A95, 구간 안 소음 최대 · 평균
             8. 정속 · 가감속 (MotionZones)   수직 최대 = 정속 구간 최대, Jptp = 가감속 구간 최대
@@ -271,22 +284,29 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   `travelWindowFailureReason`) 줄을, 그 뒤에 `kinematics` 와
   `motionWindowStart/EndSec`(정지 측정이면 `motionWindow: none`, 여유가 기록
   앞 · 끝에서 잘렸으면 `motionWindowClippedAtStart/End: true`) 줄을 덧붙인다.
-  운행 구간 줄 뒤에는 `zones` 와 `steadyStart/EndSec`(못 정하면
-  `zonesFailureReason`) 줄이 붙는다.
+  운행 구간 줄 뒤에는 `zones` 와 `steadyStart/EndSec` · `zJptpClippedAtEnd`
+  (못 정하면 `zonesFailureReason`) 줄과 `stopMarginSec` 이 붙는다. 가중 줄
+  아래에 `deviceManufacturer` · `deviceModel` · `deviceCompensation`, 신호 처리
+  줄에 `baselineSource` · `baselineStartSec` · `baselineSec` 이 있다
+  (2026-10-23).
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
-  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)+motion(v>0.05,pad500ms)
+  (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+devcomp(SM-S901N,lp25.0bw2zp)+motion(v>0.05,pad500ms)
   +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)
   +noise(A,fast,+105.2,48000Hz)`,
   `SignalConditioner.methodLabel` + `RideWeighting.methodLabel` +
-  `MeasurementAssembler.verticalLowpassMethodLabel` +
+  `DeviceResponse.methodLabel(기종)` +
   `MeasurementAssembler.kinematicsMethodLabel` + `jerkMethodLabel` +
   `accelChartMethodLabel` + `MotionZones.methodLabel` +
   `noiseMethodLabel(마이크 표본 속도)`) 과
   `travelWindow`(첨자 · 초 · m) 또는 `travelWindowFailure`, `motionZones`
   (첨자 · 초) 또는 `motionZonesFailure`, `zJptp` · `zPtpPositionM`. `+zones`
   가 없는 2026-10-21 전 결과의 `zPtp` 는 운행 구간 전체 최대이고 Jptp ·
-  위치가 없다. `+zlp` 가 없는 2026-10-21 2차 전 결과의 수직 시계열 · 지표는
-  20Hz 저역을 걸지 않은 값이다. `+motion` 이 없는
+  위치가 없다. 2026-10-21 2차 ~ 10-22 결과는 `+devcomp` 자리에 `+zlp(20.0bw4zp)`
+  가 있고 모든 기록의 수직에 20Hz 4차 저역을 건 값이다(그대로 읽는다). 그
+  전 결과는 둘 다 없고 수직 저역이 없다. 2026-10-23 부터 기종
+  (`deviceManufacturer` · `deviceModel`), 보정(`deviceCompensation`, 표에 없는
+  기종이면 "none"), 정지 뒤 여유(`stopMarginSec`), Jptp 넓힘 막힘
+  (`zJptpClippedAtEnd`), 기준선 출처(`baselineSource`)를 싣는다. `+motion` 이 없는
   2026-10-20 전 결과는 기록 전체를 적분한 예전 거리 · 최대 속도다. `+jerk`
   가 없는 2026-10-21 전 결과의 저크는 40Hz 가속도를 그대로 미분해 ±10 ~ 20
   m/s³ 로 크다(그대로 읽고 그린다). `+acc` 가 없는 결과의 `accelSeries` 는
@@ -296,14 +316,16 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   결과는 원시 256Hz 기준이다. 시계열 `x/y/zSeries` 는 지표를 낸 그 값(가중
   뒤)이라 차트도 같은 값을 그린다. 화면에는 보이지 않는다.
 - **가중 · 구간 상수**: `CaptureConfig.rideVerticalHighpassHz`(1.0) ·
-  `rideVerticalHighpassOrder`(2) · `rideVerticalLowpassHz`(20) ·
-  `rideVerticalLowpassOrder`(4) · `travelEdgeExclusionM`(0.5) ·
+  `rideVerticalHighpassOrder`(2) · `deviceResponseByModelPrefix`(기종 응답
+  보정 표, `SM-S901` → 2차 25Hz) · `travelEdgeExclusionM`(0.5) ·
   `minimumTravelM`(1.0) · `motionSpeedThresholdMps`(0.05) ·
   `motionPaddingMs`(500) · `jerkLowpassHz`(1.6) · `jerkLowpassOrder`(4) ·
   `accelChartLowpassHz`(10) · `accelChartLowpassOrder`(4, 차트 표시용) ·
   `zoneRunSpeedMps`(0.05) · `zonePeakRatio`(0.5) · `zoneSteadyAccelMps2`(0.03)
   · `zoneMinimumSteadyMs`(1000, 정속 · 가감속 구간) · `zoneTransientPaddingMs`
-  (400, Jptp 구간 넓힘). 저크
+  (400, Jptp 구간 넓힘) · `minimumStopMarginMs`(1000, 정지 뒤 여유 경고) ·
+  `baselineMotionAccelMps2`(0.03) · `baselineMinimumMs`(300, 기준선 구간
+  고르기). 저크
   저역은 OTIS 리포트 저크 차트 4개와 RMSE 0.02 ~ 0.03 m/s³ 로 맞춘 값이다
   (2026-10-21). 저크 필터의 양 끝 덧댐(15행) 때문에 조립은 16행 미만 격자를
   사유와 함께 돌려보낸다. ISO 8041 가중 상수(0.4 Hz 대역 제한, Wd 2 Hz/0.63,
@@ -463,7 +485,28 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     −2 ~ +10% 이고 저역을 걸면 3회 A95 가 +21% 로 벌어져 걸지 않는다. 2회
     ptp 차이(+6 ~ +13%)는 어느 차단에서도 줄지 않아 잡음이 아니다. 한
     현장 3회 비교로 정한 값이라 다른 현장 동시 측정으로 다시 확인한다
-    (`docs/pending_checks.md`)
+    (`docs/pending_checks.md`) — **2026-10-23 되돌림**, 아래 항목
+  - 2026-10-23: 수직 20Hz 저역을 지우고 **기종 응답 보정**으로 바꾼다
+    (`DeviceResponse`, `CaptureConfig.deviceResponseByModelPrefix`). 보정 표에
+    있는 기종(지금은 개발폰 갤럭시 S22, `SM-S901…` → 2차 25Hz 저역 양방향)의
+    기록에만 수직에 걸고, 오티스폰 · ride_reference 같은 외부 기록과 표에
+    없는 기종은 걸지 않는다(결과 화면 · 메일에 "미보정 기종"). 수평은 보정
+    없이 ±8%, 신호등 5/5 라 걸지 않는다. 되돌린 이유: 10-22 서일대 하강
+    정속 구간에 24Hz 기계 진동이 있고(두 폰 모두, OTIS 2쪽 수직 차트의
+    촘촘한 떨림) 4차 20Hz 양방향이 이를 약 80% 깎아 하강 수직 최대가 앱
+    14.3 / OTIS 21.0(−32%, 신호등 초록 vs 황색)이었다. 10-21 2차 실험은
+    앱 값을 OTIS PDF 에 맞추면서 계산 방식 차이와 기기 차이가 섞였고,
+    오티스폰 기록(ride_reference)에까지 필터를 건 것이 잘못이었다. 바른
+    기준(개발폰(보정) ÷ 오티스폰(보정 없음), 앱 경로, 5쌍)에서 수직 최대 ·
+    A95 · Jptp 최악 오차는 없음 19/27/11%, 4차 20Hz 26/20/6%, 4차 25Hz
+    11/9/6%, 2차 25Hz 11/7/5%, 48Hz 노치 Q4 + 2차 30Hz 10/7/6%. 노치는
+    48Hz 가 하강 24Hz 의 두 배라 이 승강기의 진동일 수 있어 과적합 위험이
+    있고, 진폭비(15Hz 1.2, 25Hz 1.5, 30Hz 1.9, 40Hz 3)가 완만하게 올라 완만한
+    저역인 2차 25Hz 를 골랐다. 하강3 을 뺀 4쌍도 같은 순위다. 오티스폰
+    원시데이터를 보정 없이 앱 경로로 낸 값도 OTIS PDF 와 ±8 ~ 18% 다르다
+    (계산 방식 차이의 하한, 10-22 상승 A95 −12%, 10-21 하강3 Jptp +18%).
+    ride_reference 수직 최대는 다시 5.53(원본 6.1 대비 −9%). 근거가 서일대
+    한 대라 다른 건물에서 재확인한다(`docs/pending_checks.md`)
   - 2026-10-21 2차: `raw.txt`(EVIMP1 내보내기)는 축별로 내보내는 행 전체의
     평균을 빼고 쓴다(`VibrationFileWriter.encode()`, 뺀 값은 meta.txt
     `rawExportMeanX/Y/Zmg`). 오티스폰 EVIMP1 내보내기(otis_* · ride_reference)

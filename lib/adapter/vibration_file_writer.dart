@@ -254,7 +254,7 @@ class VibrationFileWriter {
   }
 
   /// 작성: 2026-10-07 02:10:57 · nada
-  /// 수정: 2026-10-21 23:20:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: encodeConditioningMeta
   /// 목적: 지표 계산 전 신호 처리(`SignalConditioner.condition()`)를 어떻게
   ///       했는지 집계 파일 끝에 덧붙일 문자열로 만든다. 값 파일(`raw.txt`)은
@@ -296,6 +296,17 @@ class VibrationFileWriter {
     line('baselineStdXmg: ${mg(conditioned.baselineStdXMg)}');
     line('baselineStdYmg: ${mg(conditioned.baselineStdYMg)}');
     line('baselineStdZmg: ${mg(conditioned.baselineStdZMg)}');
+    // 성공이면 기준선 구간도 늘 있다 — `ConditionedGrid` 생성자가 요구한다
+    final rate = config.targetSampleRateHz; // 입력 격자 속도 (Hz)
+    line('baselineSource: ${conditioned.baselineSource!.name}');
+    line(
+      'baselineStartSec: '
+      '${(conditioned.baselineStartRow! / rate).toStringAsFixed(decimalDigits)}',
+    );
+    line(
+      'baselineSec: '
+      '${(conditioned.baselineRows! / rate).toStringAsFixed(decimalDigits)}',
+    );
     line('conditionedRateHz: ${conditioned.sampleRateHz.round()}');
     line('conditionedRowCount: ${conditioned.rowCount}');
     line(
@@ -304,8 +315,10 @@ class VibrationFileWriter {
       '값으로 낸다.',
     );
     line(
-      '# baselineStd 는 기준선 구간(처음 ${config.baselineWindowMs}ms)의 '
-      '표준편차다. 판정에는 쓰지 않는다.',
+      '# baselineStd 는 기준선 구간(baselineStartSec 부터 baselineSec)의 '
+      '표준편차다. 판정에는 쓰지 않는다. 기준선은 처음 '
+      '${config.baselineWindowMs}ms 이고, 그 안에서 움직였으면 움직임 '
+      '앞까지(startShortened) 또는 기록 끝 정지 구간(end)에서 낸다.',
     );
     return buffer.toString();
   }
@@ -417,14 +430,17 @@ class VibrationFileWriter {
   }
 
   /// 작성: 2026-10-15 16:50:04 · nada
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: encodeTravelMeta
   /// 목적: 주파수 가중과 운행 구간을 집계 파일 끝에 덧붙일 문자열로 만든다.
   ///       지표는 가중한 시계열의 운행 구간 안에서 내므로, 리포트 값이
   ///       어느 구간에서 나왔는지 집계 파일만 보고 알 수 있어야 한다.
   ///       - 가중 방식 한 줄 — 수치는 실제로 쓴 상수에서 옮긴다
+  ///       - 휴대폰 제조사 · 기종과 기종 응답 보정(2026-10-23)
   ///       - 운행 구간 시작 · 끝 (초, m). 정하지 못했으면 그 사유 한 줄
-  ///       - 정속 구간 판정 방식과 시작 · 끝 (초). 정하지 못했으면 그 사유
+  ///       - 정속 구간 판정 방식과 시작 · 끝 (초), Jptp 넓힘이 기록 끝에
+  ///         막혔는지. 정하지 못했으면 그 사유
+  ///       - 운행 끝부터 기록 끝까지 (초). 1초 미만이면 주석 한 줄
   /// 인자: result — 지표를 낸 측정 결과
   /// 반환: 빈 줄로 시작해 줄바꿈 문자로 끝나는 집계 문자열
   static String encodeTravelMeta(MeasurementResult result) {
@@ -441,6 +457,13 @@ class VibrationFileWriter {
       '${CaptureConfig.rideVerticalHighpassHz}Hz (butterworth '
       '${CaptureConfig.rideVerticalHighpassOrder}, zero-phase) + Wk '
       '(ISO 8041) [${RideWeighting.methodLabel}]',
+    );
+    line('deviceManufacturer: ${result.deviceManufacturer ?? 'unknown'}');
+    line('deviceModel: ${result.deviceModel ?? 'unknown'}');
+    line('deviceCompensation: ${result.deviceCompensation}');
+    line(
+      '# 수직은 가중 뒤 기종 응답 보정(표에 있는 기종만, 양방향 저역)을 건다. '
+      'none 이면 보정하지 않았다.',
     );
     final window = result.travelWindow; // 운행 구간, 못 정했으면 null
     if (window == null) {
@@ -462,9 +485,18 @@ class VibrationFileWriter {
     } else {
       line('steadyStartSec: ${fixed(zones.steadyStartSec)}');
       line('steadyEndSec: ${fixed(zones.steadyEndSec)}');
+      line('zJptpClippedAtEnd: ${result.zJptpClippedAtEnd}');
       line(
         '# 수직 최대(zPtp)는 정속 구간, 가감속 최대(zJptp)는 그 밖 운행에서 '
         '낸다.',
+      );
+    }
+    final margin = result.stopMarginSec; // 정지 뒤 여유 (초), 없으면 null
+    line('stopMarginSec: ${margin == null ? 'none' : fixed(margin)}');
+    if (margin != null && margin * 1000 < CaptureConfig.minimumStopMarginMs) {
+      line(
+        '# 운행 끝 뒤 ${CaptureConfig.minimumStopMarginMs}ms 를 못 채우고 '
+        '끝났다. 끝부분 값이 부정확할 수 있다.',
       );
     }
     return buffer.toString();

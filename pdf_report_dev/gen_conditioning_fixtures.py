@@ -24,8 +24,9 @@
     weighting_unit_cases.json        100Hz 합성 신호 400표본에 건 ISO 8041 가중
                                      (수평 Wd, 수직 1Hz 고역 양방향 + Wk)과 계수
     weighting_expected_metrics.json  두 실측 기록(ride_reference, 개발폰)을 앱과
-                                     같은 길(신호 처리 → 운동 → 가중(수직은 뒤에
-                                     20Hz 저역) → 운행 구간 → 반주기 P2P, 수직
+                                     같은 길(신호 처리 → 운동 → 가중(두 기록은
+                                     기종 정보가 없어 기종 보정 없음) → 운행 구간
+                                     → 반주기 P2P, 수직
                                      최대 · Jptp 는 정속 · 가감속 구간)로 계산한 지표
 주의: unit_cases 의 값은 소수 12자리로 반올림해 저장한다.
       그래서 다시 만든 값과 6.7e-13 정도 차이가 날 수 있다(시험 기준 1e-9).
@@ -127,14 +128,23 @@ def weight_vertical(z, fs=FS):
     return sosfilt(_sos(WK, fs), sosfiltfilt(_hp1(fs), z))
 
 
-Z_LP_HZ, Z_LP_ORDER = 20.0, 4  # CaptureConfig.rideVerticalLowpassHz · Order (2026-10-21 2차)
+# 기종 응답 보정(CaptureConfig.deviceResponseByModelPrefix, 2026-10-23): 표에 있는 기종의
+# 기록에만 수직에 건다. 이 픽스처의 두 기록(ride_reference · 2026-10-06 개발폰)은 시험이 기종
+# 정보 없이 계산하므로 보정하지 않는다. 2026-10-21 2차 ~ 10-22 의 수직 20Hz 4차 저역은 없앴다.
+DEVICE_COMP_ORDER, DEVICE_COMP_HZ = 2, 25.0  # SM-S901 (갤럭시 S22)
+
+
+def device_comp(z, fs=FS):
+    """기종 응답 보정(갤럭시 S22): 가중한 Z 에 2차 25Hz 저역 양방향."""
+    return sosfiltfilt(butter(DEVICE_COMP_ORDER, DEVICE_COMP_HZ, fs=fs, output='sos'), z)
 ZONE_V, ZONE_PEAK, ZONE_A, ZONE_MIN_S = 0.05, 0.5, 0.03, 1.0  # CaptureConfig.zone* (2026-10-21)
 ZONE_JPAD_S = 0.4  # CaptureConfig.zoneTransientPaddingMs (2026-10-22)
 
 
 def vertical_path(z, fs=FS):
-    """앱 수직 경로: 가중(1Hz 고역 양방향 + Wk) 뒤 20Hz 4차 저역 양방향."""
-    return sosfiltfilt(butter(Z_LP_ORDER, Z_LP_HZ, fs=fs, output='sos'), weight_vertical(z, fs))
+    """앱 수직 경로(기종 정보 없는 기록): 가중(1Hz 고역 양방향 + Wk)만. 보정 표에 있는
+    기종이면 앱은 그 뒤 device_comp() 를 더 건다."""
+    return weight_vertical(z, fs)
 
 
 def _zones(v, smooth):

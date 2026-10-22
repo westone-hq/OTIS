@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/domain/capture/device_response.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
@@ -128,8 +129,9 @@ class MotionWindow {
 ///          `_deriveKinematics()`)
 ///       2. 진동에 주파수 가중(`RideWeighting`)을 건다 — 수평 Wd, 수직
 ///          1Hz 고역 + Wk. 가감속이 빠져 Z 가 늘 적색을 넘던 문제가 없다.
-///          수직은 그 뒤 20Hz 저역을 더 건다(`_verticalLowpass()`, 2026-10-21
-///          2차 — 개발폰 센서 고주파 잡음)
+///          수직은 그 뒤 기종 응답 보정(`DeviceResponse`, 2026-10-23)을 건다.
+///          보정 표에 있는 기종의 기록에만 걸고 오티스폰 기록에는 걸지
+///          않는다(2026-10-21 2차의 모든 기록 20Hz 저역을 바꿈)
 ///       3. 위치에서 운행 구간(`TravelWindow`, 출발 · 정지 0.5 m 제외)을
 ///          정한다
 ///       4. 구간 안 가중 시계열의 반주기 P2P(`HalfCycle`)에서 최대 P2P 와
@@ -165,7 +167,7 @@ class MotionWindow {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · nada
-  /// 수정: 2026-10-21 22:40:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
@@ -181,7 +183,9 @@ class MeasurementAssembler {
   ///         거리를 만든다. `_deriveKinematics()` 참고. 적분한 움직인
   ///         구간은 결과와 함께 돌려줘 저장 절차가 집계 파일에 적게 한다
   ///       - 진동 세 축에 가중을 걸어(`RideWeighting`) 그 값을 시계열로
-  ///         싣는다. 수직은 가중 뒤 20Hz 저역을 더 건다(`_verticalLowpass()`). 가중을 걸 수 없는 격자(`RideWeighting.canApply()`,
+  ///         싣는다. 수직은 가중 뒤 기종 응답 보정(`DeviceResponse.apply()`)을
+  ///         건다(보정 표에 있는 기종만). 가중을 걸 수 없는 격자
+  ///         (`RideWeighting.canApply()`,
   ///         아주 짧거나 성김)는 가중 없이 싣고 지표는 비운 채 사유를
   ///         남긴다
   ///       - 운행 구간(`TravelWindow.of()`)을 정해 그 안에서 진동 최대
@@ -212,6 +216,9 @@ class MeasurementAssembler {
   ///       뒤 흐른 시간만 세는 시계) 값이라 벽시계 시각으로 쓸 수 없어
   ///       따로 받는다
   ///       worker — 저장 시점에 로그인해 있던 작업자. 없으면 null
+  ///       deviceManufacturer, deviceModel — 측정한 휴대폰 제조사 · 기종
+  ///       이름(`Build.MANUFACTURER` · `Build.MODEL`). 모르거나 외부
+  ///       기록(오티스폰 EVIMP1)이면 null — 기종 응답 보정을 걸지 않는다
   /// 반환: 변환된 측정 결과, 또는 변환하지 못한 사유
   /// 식: sampleRate = 1,000,000,000 / gridIntervalNs
   static MeasurementAssembleResult assemble({
@@ -220,6 +227,8 @@ class MeasurementAssembler {
     required String id,
     required DateTime measuredAt,
     Worker? worker,
+    String? deviceManufacturer,
+    String? deviceModel,
   }) {
     if (grid.failureReason != null) {
       return MeasurementAssembleResult.failure(grid.failureReason!);
@@ -235,12 +244,14 @@ class MeasurementAssembler {
       );
     }
     final gridRate = 1000000000 / grid.gridIntervalNs; // 격자 표본 속도 (Hz)
-    // 차트용 가속도 저역(10Hz) · 수직 저역(20Hz)은 표본 속도의 절반보다
+    // 차트용 가속도 저역(10Hz) · 기종 응답 보정 저역은 표본 속도의 절반보다
     // 낮아야 설계된다. 실제 격자(100Hz)는 늘 맞고, 어긋난 시험 격자를
     // 예외로 죽이지 않고 사유와 함께 돌려보낸다
+    // → 로직 이동: DeviceResponse.filterFor()
+    final compensation = DeviceResponse.filterFor(deviceModel); // 없으면 null
     final highestCutoff = math.max(
       CaptureConfig.accelChartLowpassHz,
-      CaptureConfig.rideVerticalLowpassHz,
+      compensation?.lowpassHz ?? 0,
     ); // 이 함수가 설계하는 저역 가운데 가장 높은 차단 (Hz)
     if (gridRate <= 2 * highestCutoff) {
       return MeasurementAssembleResult.failure(
@@ -299,14 +310,14 @@ class MeasurementAssembler {
         // → 로직 이동: RideWeighting.horizontal()
         ? RideWeighting.horizontal(ySeries, sampleRate)
         : ySeries; // 지표 · 차트에 쓸 Y (mg)
-    final zWeighted = canWeight
-        // → 로직 이동: _verticalLowpass()
-        ? _verticalLowpass(
-            // → 로직 이동: RideWeighting.vertical()
-            RideWeighting.vertical(zSeries, sampleRate),
-            sampleRate,
-          )
-        : zSeries; // 지표 · 차트에 쓸 Z (mg). 가중 뒤 20Hz 저역
+    // → 로직 이동: RideWeighting.vertical()
+    final zRide = canWeight
+        ? RideWeighting.vertical(zSeries, sampleRate)
+        : zSeries; // 가중한 Z (mg). 가중을 걸 수 없으면 그대로
+    final zWeighted = canWeight && compensation != null
+        // → 로직 이동: DeviceResponse.apply()
+        ? DeviceResponse.apply(compensation, zRide, sampleRate)
+        : zRide; // 지표 · 차트에 쓸 Z (mg). 표에 있는 기종이면 보정 뒤
 
     // 가중하지 못한 시계열로 지표를 내지 않는다 — 기준이 원본 리포트의
     // 가중 지표 기준이라 견줄 수 없다
@@ -395,6 +406,14 @@ class MeasurementAssembler {
         steadySpeedMps: zones == null
             ? null
             : _steadySpeed(zones, motion.speed),
+        deviceManufacturer: deviceManufacturer,
+        deviceModel: deviceModel,
+        // → 로직 이동: DeviceResponse.compensationLabel()
+        deviceCompensation: DeviceResponse.compensationLabel(deviceModel),
+        // → 로직 이동: _stopMargin()
+        stopMarginSec: _stopMargin(motion.speed, sampleRate),
+        // → 로직 이동: MotionZones.transientPadClippedAtEnd()
+        zJptpClippedAtEnd: zones?.transientPadClippedAtEnd(zWeighted.length),
         xA95: a95Of(xWeighted),
         yA95: a95Of(yWeighted),
         zA95: a95Of(zWeighted),
@@ -406,6 +425,25 @@ class MeasurementAssembler {
       ),
       motion: motion.motion,
     );
+  }
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: _stopMargin
+  /// 목적: 운행 끝부터 기록 끝까지의 시간을 낸다. 운행 끝은 속도 크기가
+  ///       `CaptureConfig.zoneRunSpeedMps` 를 넘은 마지막 행이다(정속 ·
+  ///       가감속 구간의 운행과 같은 정의). 짧으면 결과 화면이 "정지 후
+  ///       1초 이상 기다린 뒤 종료" 를 알린다(`CaptureConfig.minimumStopMarginMs`).
+  /// 인자: speed — 속도 시계열 (m/s, 부호 그대로)
+  ///       sampleRate — 표본 속도 (Hz)
+  /// 반환: 여유 (초). 움직임이 없으면 null
+  /// 식: (n − 1 − 운행 끝 첨자) / sampleRate
+  static double? _stopMargin(List<double> speed, double sampleRate) {
+    for (var i = speed.length - 1; i >= 0; i--) {
+      if (speed[i].abs() > CaptureConfig.zoneRunSpeedMps) {
+        return (speed.length - 1 - i) / sampleRate;
+      }
+    }
+    return null;
   }
 
   /// 작성: 2026-10-22 15:00:00 · nada
@@ -510,42 +548,6 @@ class MeasurementAssembler {
   static String get jerkMethodLabel =>
       'jerk(lp${CaptureConfig.jerkLowpassHz}'
       'bw${CaptureConfig.jerkLowpassOrder}zp)';
-
-  /// 작성: 2026-10-21 22:40:00 · nada
-  /// 함수: verticalLowpassMethodLabel
-  /// 목적: 수직 진동 경로 끝 저역을 결과 파일(`signalConditioning`)에 남길
-  ///       문자열. 가중 표시(`RideWeighting.methodLabel`) 바로 뒤에 붙인다.
-  ///       이 표시가 없는 2026-10-21 2차 전 결과의 수직 시계열 · 지표는 이
-  ///       저역을 걸지 않은 값이다(그대로 읽는다).
-  ///       - `zlp(차단bw차수zp)` — 가중한 Z 에 버터워스 저역을 양방향으로 걸었다
-  static String get verticalLowpassMethodLabel =>
-      'zlp(${CaptureConfig.rideVerticalLowpassHz}'
-      'bw${CaptureConfig.rideVerticalLowpassOrder}zp)';
-
-  /// 작성: 2026-10-21 22:40:00 · nada
-  /// 함수: _verticalLowpass
-  /// 목적: 가중한 수직 진동에 `CaptureConfig.rideVerticalLowpassHz` 저역을
-  ///       양방향으로 건다. 표의 수직 최대 · Jptp · A95 와 2쪽 수직 차트 ·
-  ///       표시점이 모두 이 시계열에서 나온다.
-  /// 인자: series — 가중한 Z (mg). `_minimumRows` 개 이상이다
-  ///       sampleRate — 표본 속도 (Hz). 차단의 두 배보다 크다(`assemble()`
-  ///       이 먼저 본다)
-  /// 반환: 거른 Z (mg, 같은 길이)
-  /// 근거: `CaptureConfig.rideVerticalLowpassHz` 를 본다
-  static List<double> _verticalLowpass(
-    List<double> series,
-    double sampleRate,
-  ) =>
-      // → 로직 이동: Butterworth.filtfilt()
-      Butterworth.filtfilt(
-        // → 로직 이동: Butterworth.lowpass()
-        Butterworth.lowpass(
-          order: CaptureConfig.rideVerticalLowpassOrder,
-          cutoffHz: CaptureConfig.rideVerticalLowpassHz,
-          sampleRateHz: sampleRate,
-        ),
-        series,
-      );
 
   /// 작성: 2026-10-21 11:20:00 · nada
   /// 함수: accelChartMethodLabel

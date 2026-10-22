@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/domain/capture/device_response.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
@@ -241,24 +242,72 @@ void main() {
       final model = result.result!; // 변환된 측정 결과
       expect(model.xSeries, RideWeighting.horizontal(xs, 256.0));
       expect(model.ySeries, RideWeighting.horizontal(ys, 256.0));
-      // 수직은 가중 뒤 20Hz 저역을 양방향으로 더 건 값이다(2026-10-21 2차)
-      expect(
-        model.zSeries,
-        Butterworth.filtfilt(
-          Butterworth.lowpass(
-            order: CaptureConfig.rideVerticalLowpassOrder,
-            cutoffHz: CaptureConfig.rideVerticalLowpassHz,
-            sampleRateHz: 256.0,
-          ),
-          RideWeighting.vertical(zs, 256.0),
-        ),
-      );
+      // 기종을 모르는 기록은 기종 응답 보정 없이 가중만 건 값이다
+      // (2026-10-23, 그 전 모든 기록의 수직 20Hz 저역을 없앰)
+      expect(model.zSeries, RideWeighting.vertical(zs, 256.0));
+      expect(model.deviceCompensation, DeviceResponse.noneLabel);
       expect(model.id, '20260915-130837');
       expect(model.jobNo, 'T-1001');
       expect(model.bottomFloor, 1);
       expect(model.topFloor, 8);
       expect(model.dateTime, measuredAt);
       expect(model.zSeries, hasLength(16));
+    });
+
+    test('보정 표에 있는 기종은 가중한 수직에만 보정 저역을 건다', () {
+      // 2026-10-23: 갤럭시 S22(SM-S901…) 기록은 수직에 2차 25Hz 저역을
+      // 양방향으로 건다. 수평은 그대로다
+      final rows = <GridSample>[
+        for (var i = 0; i < 400; i++)
+          GridSample(
+            xMg: (i % 5) - 2.0,
+            yMg: (i % 7) - 3.0,
+            zMg: (i % 3) - 1.0,
+          ),
+      ]; // 100Hz 격자 4초
+      final zs = [for (final r in rows) r.zMg]; // Z (mg)
+      final xs = [for (final r in rows) r.xMg]; // X (mg)
+      final result = MeasurementAssembler.assemble(
+        grid: _grid(rows, gridIntervalNs: 10000000),
+        site: _site,
+        id: 'id',
+        measuredAt: measuredAt,
+        deviceManufacturer: 'samsung',
+        deviceModel: 'SM-S901N',
+      ).result!; // 변환된 측정 결과
+      final filter = DeviceResponse.filterFor('SM-S901N')!; // S22 보정
+
+      expect(filter.order, 2);
+      expect(filter.lowpassHz, 25.0);
+      expect(
+        result.zSeries,
+        DeviceResponse.apply(filter, RideWeighting.vertical(zs, 100), 100),
+      );
+      expect(result.xSeries, RideWeighting.horizontal(xs, 100));
+      expect(result.deviceManufacturer, 'samsung');
+      expect(result.deviceModel, 'SM-S901N');
+      expect(result.deviceCompensation, 'lp25.0bw2zp');
+    });
+
+    test('표에 없는 기종은 보정하지 않고 미보정으로 남긴다', () {
+      final rows = <GridSample>[
+        for (var i = 0; i < 400; i++)
+          GridSample(xMg: 0, yMg: 0, zMg: (i % 3) - 1.0),
+      ]; // 100Hz 격자 4초
+      final result = MeasurementAssembler.assemble(
+        grid: _grid(rows, gridIntervalNs: 10000000),
+        site: _site,
+        id: 'id',
+        measuredAt: measuredAt,
+        deviceModel: 'SM-S908N', // S22 Ultra — S22 와 다른 기종
+      ).result!; // 변환된 측정 결과
+
+      expect(
+        result.zSeries,
+        RideWeighting.vertical([for (final r in rows) r.zMg], 100),
+      );
+      expect(result.deviceCompensation, DeviceResponse.noneLabel);
+      expect(result.uncompensatedDevice, isTrue);
     });
 
     test('샘플레이트를 격자 간격에서 구한다', () {
@@ -816,10 +865,11 @@ void main() {
         // 그 리포트를 만든 측정이다. 진동 ±15%, 소음 ±1.5 dBA, 속도 · 거리
         // ±1% (2026-10-15 점검 지시)
         final metrics = ReportMetrics.from(_conditionedReference()); // 앱 리포트 지표
-        // 수직 최대는 20Hz 저역(2026-10-21 2차) 뒤 원본 대비 −14% 로 경계에
-        // 붙어 있어 여기서 걸지 않는다. 지금 값은 motion_zones_test 가 ±2%
-        // 로 고정한다
+        // 수직 최대는 2026-10-21 2차 ~ 10-22 에 모든 기록에 건 20Hz 저역
+        // 때문에 −14% 로 경계에 붙어 빼 두었다. 이 기록은 오티스폰 기록이라
+        // 기종 응답 보정(2026-10-23)이 걸리지 않아 다시 −9% 다
         const vibration = <String, double>{
+          'vert_max': 6.1,
           'vert_avg': 3.6,
           'horiz_avg': 4.8,
           'horiz_max': 11.3,

@@ -187,7 +187,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -210,7 +210,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///       뺀다. 참고사항은 리포트에 칸이 없어 메일 본문으로만 전한다.
   ///       첫 줄 아래에 그 측정을 저장한 작업자(`_workerLine()`)를 적고,
   ///       거치 방향을 판정한 결과면 "거치: 화면 아래" 처럼 한 줄 더 적는다
-  ///       (2026-10-22). 판정 전 예전 결과는 그 줄을 뺀다.
+  ///       (2026-10-22). 판정 전 예전 결과는 그 줄을 뺀다. 기종 응답 보정
+  ///       표에 없는 기종으로 잰 결과면 "미보정 기종: samsung SM-A536N" 처럼
+  ///       한 줄 더 적는다(2026-10-23).
   ///       지금 로그인한 사람이 아니라 결과에 실린 사람이다 — 다른 사람이
   ///       예전 결과를 보내도 측정한 사람이 남는다.
   /// 인자: jobId — 첨부할 측정 결과의 식별자
@@ -305,10 +307,16 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     final notes = result.notes; // 추가 참고사항, 없으면 null
     final worker = _workerLine(result); // 작업자 줄, 이름이 없으면 null
     final placement = result.placementKind; // 거치 방향, 예전 결과면 null
+    final device = <String?>[
+      result.deviceManufacturer,
+      result.deviceModel,
+    ].nonNulls.join(' '); // 측정한 휴대폰 "제조사 기종", 모르면 빈 문자열
     final bodyLines = <String>[
       'OTIS 승강기 진동 측정 리포트입니다.',
       ?worker,
       if (placement != null) '거치: ${placement.label}',
+      if (result.uncompensatedDevice)
+        '미보정 기종: ${device.isEmpty ? '기종 미확인' : device}',
       if (notes != null) ...['', '[참고사항]', notes, ''],
       ...attachmentDescriptions,
       '',

@@ -88,7 +88,7 @@ class MotionZones {
   }
 
   /// 작성: 2026-10-21 13:10:00 · nada
-  /// 수정: 2026-10-22 15:40:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: transientMaximum
   /// 목적: 가감속 구간 안 최대 반주기 P2P 를 찾는다. 2쪽 수직 차트 `Jptp`
   ///       다. 가감속 구간은 운행 시작 `CaptureConfig.zoneTransientPaddingMs`
@@ -100,9 +100,7 @@ class MotionZones {
   /// 반환: 최대 반주기 P2P. 두 조각 모두 반주기가 두 개도 안 되면 null
   HalfCyclePeakToPeak? transientMaximum(List<double> series) {
     if (runEndIndex >= series.length) return null;
-    final pad = // 운행 앞뒤로 넓힐 행 수
-    (CaptureConfig.zoneTransientPaddingMs / 1000 * sampleRate)
-        .round();
+    final pad = _transientPadRows; // 운행 앞뒤로 넓힐 행 수
     HalfCyclePeakToPeak? best; // 두 조각 가운데 큰 것
     for (final (start, end) in <(int, int)>[
       (math.max(0, runStartIndex - pad), steadyStartIndex - 1),
@@ -117,6 +115,23 @@ class MotionZones {
     }
     return best;
   }
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: _transientPadRows
+  /// 목적: 가감속 구간을 운행 앞뒤로 넓힐 행 수.
+  /// 식: round(zoneTransientPaddingMs / 1000 x sampleRate)
+  int get _transientPadRows =>
+      (CaptureConfig.zoneTransientPaddingMs / 1000 * sampleRate).round();
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: transientPadClippedAtEnd
+  /// 목적: 운행 끝 뒤로 넓힌 가감속 구간이 기록 끝에 막혔는지 알려 준다.
+  ///       막히면 `transientMaximum()` 은 있는 데까지만 쓴다. 정지 직후
+  ///       측정을 끝낸 기록이다(2026-10-22 개발폰 상승, 정지 뒤 0.27초).
+  /// 인자: length — 시계열 길이 (행)
+  /// 반환: 넓힌 끝이 마지막 행을 넘으면 true
+  bool transientPadClippedAtEnd(int length) =>
+      runEndIndex + _transientPadRows > length - 1;
 
   /// 작성: 2026-10-21 13:10:00 · nada
   /// 함수: toMap
