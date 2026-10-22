@@ -130,7 +130,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       _emails.where(_selected.contains).toList(growable: false);
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-10 13:54:43 · nada
+  /// 수정: 2026-10-22 12:50:00 · nada
   /// 함수: _send
   /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 하나도
   ///       등록되지 않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
@@ -173,7 +173,9 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
 
       if (!mounted) return;
       Navigator.of(context).pop();
-      showSuccessSnackBar(context, '메일 작성창이 호출되었습니다 (첨부 구성 완료)');
+      // 메일 앱 선택 창을 취소해도 안드로이드가 알려 주지 않아 여기로 온다.
+      // "작성창이 열렸다" 고 단정하지 않고 실제로 한 일만 적는다(2026-10-22)
+      showSuccessSnackBar(context, '첨부를 준비해 메일 앱 선택 창을 열었습니다');
     } catch (e) {
       if (!mounted) return;
       final message = // 화면에 보여줄 실패 안내 문구

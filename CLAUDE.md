@@ -363,7 +363,9 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
 - 현장 사용자 기준: 본문 18sp 이상, 캡션 16sp 이상, 터치 영역 56dp 이상,
   주 버튼 64dp.
 - 공용 위젯(`lib/ui/core/widgets/`)을 먼저 찾아 쓴다.
-  - `AppScrollBody` · `AppBottomBar` — 화면 본문 틀과 아래 고정 버튼 자리
+  - `AppScrollBody` · `AppBottomBar` — 화면 본문 틀과 아래 고정 버튼 자리.
+    입력 바로 뒤에 누를 버튼(로그인)은 `liftAboveKeyboard: true` 로 키보드 위에
+    올린다(입력칸이 많은 홈은 끈 채로, 2026-10-22)
   - `AppCard` — 회색 표면 카드, `AppNotice` — 안내 박스(danger · caution · alert)
   - `showAppConfirmDialog` — 제목 · 문구 · 버튼 한두 개 대화상자
   - `showAppSheet` — 바텀 시트, `showSuccessSnackBar` · `showErrorSnackBar`

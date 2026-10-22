@@ -46,29 +46,52 @@ class AppScrollBody extends StatelessWidget {
 }
 
 /// 작성: 2026-10-04 13:37:23 · nada
+/// 수정: 2026-10-22 12:50:00 · nada
 /// 클래스: AppBottomBar
 /// 목적: 화면 아래에 고정하는 주 행동 영역. 시스템 영역을 피하고 화면
 ///       여백을 둔다. `Scaffold.bottomNavigationBar` 자리에 넣는다.
+///       `Scaffold` 는 이 자리를 키보드 위로 올리지 않으므로, 입력 바로 뒤에
+///       누를 버튼이면 `liftAboveKeyboard` 를 켠다.
 class AppBottomBar extends StatelessWidget {
   /// 아래 영역에 놓을 내용 (버튼 하나, 또는 안내 + 버튼 묶음)
   final Widget child;
 
+  /// 키보드가 열리면 그 위로 올라오는지. 로그인처럼 칸 두어 개를 채우고 곧바로
+  /// 누르는 화면에 켠다. 입력칸이 많은 홈은 끈 채로 둔다 — 키보드 위에
+  /// 버튼까지 올라오면 입력칸이 보이는 자리가 그만큼 줄어든다
+  final bool liftAboveKeyboard;
+
   /// 작성: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-22 12:50:00 · nada
   /// 함수: AppBottomBar
   /// 목적: 아래 영역에 놓을 내용을 받는다.
   /// 인자: child — 아래 영역 내용
-  const AppBottomBar({super.key, required this.child});
+  ///       liftAboveKeyboard — 키보드가 열리면 그 위로 올릴지. 기본 false
+  const AppBottomBar({
+    super.key,
+    required this.child,
+    this.liftAboveKeyboard = false,
+  });
 
   /// 작성: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-22 12:50:00 · nada
   /// 함수: build
-  /// 목적: 시스템 영역을 피해 여백을 두고 내용을 놓는다.
+  /// 목적: 시스템 영역을 피해 여백을 두고 내용을 놓는다. `liftAboveKeyboard`
+  ///       면 키보드 높이만큼 아래를 띄운다 — 키보드가 열리면 시스템 영역
+  ///       여백은 0 이 되므로 두 여백이 겹치지 않는다.
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      // 시스템 영역을 피해서 배치
-      child: Padding(
-        padding: const EdgeInsets.all(AppDims.screenPad),
-        child: child,
+    final keyboard = liftAboveKeyboard
+        ? MediaQuery.viewInsetsOf(context).bottom
+        : 0.0; // 키보드 높이 (논리 픽셀), 올리지 않으면 0
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: SafeArea(
+        // 시스템 영역을 피해서 배치
+        child: Padding(
+          padding: const EdgeInsets.all(AppDims.screenPad),
+          child: child,
+        ),
       ),
     );
   }
