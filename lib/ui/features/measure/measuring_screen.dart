@@ -381,7 +381,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-23 14:00:00 · nada
+  /// 수정: 2026-10-22 20:00:00 · nada
   /// 함수: build
   /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자 카운트다운
   ///       화면을, 아니면 경과 시간 · 현재 속도와 "테스트 완료" 버튼이 있는
@@ -547,7 +547,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                 ),
                 child: AppNotice(
                   icon: Icons.front_hand_outlined,
-                  // 정지 직후에 끝내면 끝부분 값이 부정확해진다(2026-10-23,
+                  // 정지 직후에 끝내면 끝부분 값이 부정확해진다(2026-10-22,
                   // `MeasurementResult.stoppedTooSoon`)
                   message:
                       '측정 중입니다.\n휴대폰을 움직이지 마세요.\n'
