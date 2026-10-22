@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
-import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/adapter/storage/prefs_store.dart';
-import 'package:vibration_checker/domain/measurement/measurement_result.dart';
-import 'package:vibration_checker/domain/time/korea_time.dart';
+import 'package:vibration_checker/domain/mail/mail_composer.dart';
+import 'package:vibration_checker/service/mail_service.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
@@ -128,12 +126,12 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       _emails.where(_selected.contains).toList(growable: false);
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-22 12:50:00 · nada
+  /// 수정: 2026-10-23 00:20:00 · nada
   /// 함수: _send
   /// 목적: "보내기" 버튼을 눌렀을 때 실행된다. 수신 이메일이 하나도
   ///       등록되지 않았으면 등록 안내 대화상자를 띄우고 멈춘다. 등록되어
   ///       있으면 보낼 메일의 제목·본문·수신자·첨부파일을 정하고
-  ///       (`_buildJobEmail()`), 기기에
+  ///       (`MailService.buildJobEmail()`), 기기에
   ///       이미 설치된 메일 앱(Gmail 등)의 작성 화면을 그 내용으로
   ///       미리 채워서 띄운다. 실제 발송 버튼은 사용자가 그 메일
   ///       앱에서 직접 눌러야 한다 — 이 함수가 메일을 대신 보내주는
@@ -161,13 +159,18 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     setState(() => _loading = true);
 
     try {
-      // → 로직 이동: _buildJobEmail()
-      final email = await _buildJobEmail(widget.jobId); // 조립한 메일
+      // → 로직 이동: MailService.buildJobEmail()
+      final email = await MailService.buildJobEmail(
+        jobId: widget.jobId,
+        items: <MailItem>{
+          if (_sendPdf) MailItem.report,
+          if (_sendRaw) MailItem.raw,
+          if (_sendNoise) MailItem.noise,
+        },
+        recipients: _recipients(), // → 로직 이동: _recipients()
+      ); // 조립한 메일
 
-      // → 로직 이동: FlutterEmailSender.send()
-      await FlutterEmailSender.send(email);
-      // → 로직 이동: PrefsStore.saveLastRecipients()
-      await PrefsStore.instance.saveLastRecipients(email.recipients);
+      await MailService.send(email); // → 로직 이동: MailService.send()
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -182,172 +185,6 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-22 23:50:00 · nada
-  /// 함수: _buildJobEmail
-  /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
-  ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
-  ///       빠진 채로 조용히 나가면 받는 쪽이 한참 뒤에야 안다. 메일 앱
-  ///       작성창에 본문이 그대로 뜨므로 보내는 사람도 누르기 전에 본다.
-  ///       파일이 어디에 어떤 이름으로 있는지는 저장소에 묻는다. 화면이
-  ///       경로를 짜 맞추면 저장 배치가 바뀔 때 여기가 조용히 어긋난다.
-  ///       첨부는 제번 · 측정 ID 가 들어간 이름의 사본으로 붙인다 — 받는
-  ///       쪽에서 여러 현장 메일을 구분하게 하려는 것이다.
-  ///       - PDF 리포트 — 없으면 그 자리에서 만든다
-  ///       - 로우 데이터(`raw.txt`) — 나중에 다시 만들 수 없어, 없으면
-  ///         (이 파일을 쓰기 전 측정, 저장 도중 실패) 누락으로 밝힌다
-  ///       - 현장 소음 녹음(`noise.m4a`) — 측정 중 마이크 녹음. 없으면
-  ///         (녹음 기능 전 측정, 마이크 권한 없음, 녹음 실패) 누락으로
-  ///         밝힌다
-  ///       안드로이드 원본(`native_raw.txt`, 2026-10-08 결정)과 소음 진단
-  ///       산출물(2026-10-15 결정)은 찾지도 붙이지도 않는다.
-  ///       홈에서 적은 추가 참고사항이 있으면 첨부 목록 앞에 "[참고사항]"
-  ///       머리줄과 함께 적은 그대로 넣는다. 없으면 그 덩어리를 통째로
-  ///       뺀다. 참고사항은 리포트에 칸이 없어 메일 본문으로만 전한다.
-  ///       첫 줄 아래에 그 측정을 저장한 작업자(`_workerLine()`)를 적고,
-  ///       거치 방향을 판정한 결과면 "거치: 화면 아래" 처럼 한 줄 더 적는다
-  ///       (2026-10-22). 판정 전 예전 결과는 그 줄을 뺀다. 기종 응답 보정
-  ///       표에 없는 기종으로 잰 결과면 "미보정 기종: samsung SM-A536N" 처럼
-  ///       한 줄 더 적는다(2026-10-22).
-  ///       지금 로그인한 사람이 아니라 결과에 실린 사람이다 — 다른 사람이
-  ///       예전 결과를 보내도 측정한 사람이 남는다.
-  /// 인자: jobId — 첨부할 측정 결과의 식별자
-  /// 반환: 수신자·제목·본문·첨부까지 채운 메일 객체
-  Future<Email> _buildJobEmail(String jobId) async {
-    // → 로직 이동: MeasurementRepository.load()
-    final result = await MeasurementRepository.instance.load(
-      jobId,
-    ); // 조회된 측정 결과, 없으면 null
-    if (result == null) {
-      throw StateError('측정 결과를 찾을 수 없다: $jobId');
-    }
-
-    final repo = MeasurementRepository.instance; // 저장소 인스턴스
-    final List<String> attachments = []; // 실제로 첨부할 파일 경로
-    final List<String> attachmentDescriptions = []; // 본문에 나열할 첨부 설명 줄
-    final List<String> missing = []; // 보내기로 했는데 없는 자료
-
-    if (_sendPdf) {
-      // → 로직 이동: MeasurementRepository.ensureReportPdf()
-      final pdfFile = await repo.ensureReportPdf(
-        jobId,
-      ); // 만들어졌거나 이미 있던 PDF. 저장된 측정이 없으면 null
-      if (pdfFile != null && await pdfFile.exists()) {
-        final name = MeasurementRepository.mailAttachmentName(
-          result,
-          'TUNE',
-          'pdf',
-        ); // 메일에 붙일 이름
-        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
-        final copy = await repo.mailAttachmentCopy(pdfFile, name); // 사본
-        attachments.add(copy.path);
-        attachmentDescriptions.add('- $name: 앱 측정 결과(가공값)');
-      } else {
-        missing.add(
-          '누락: ${MeasurementRepository.reportFileName} — 리포트를 만들지 '
-          '못했습니다',
-        );
-      }
-    }
-
-    if (_sendRaw) {
-      // → 로직 이동: MeasurementRepository.rawFile()
-      final rawFile = await repo.rawFile(jobId); // 그 측정의 raw.txt, 없으면 null
-      if (rawFile != null) {
-        final name = MeasurementRepository.mailAttachmentName(
-          result,
-          'RAW',
-          'txt',
-        ); // 메일에 붙일 이름
-        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
-        final copy = await repo.mailAttachmentCopy(rawFile, name); // 사본
-        attachments.add(copy.path);
-        attachmentDescriptions.add(
-          '- $name: 256Hz 원시값(EVIMP1, 축별 평균 제거 · 필터 없음)',
-        );
-      } else {
-        missing.add(
-          '누락: ${MeasurementRepository.rawFileName} — 이 측정에는 로우 '
-          '데이터 파일이 없습니다',
-        );
-      }
-    }
-
-    if (_sendNoise) {
-      // → 로직 이동: MeasurementRepository.noiseAudioFile()
-      final audioFile = await repo.noiseAudioFile(
-        jobId,
-      ); // 그 측정의 noise.m4a, 없으면 null
-      if (audioFile != null) {
-        final name = MeasurementRepository.mailAttachmentName(
-          result,
-          'NOISE',
-          'm4a',
-        ); // 메일에 붙일 이름
-        // → 로직 이동: MeasurementRepository.mailAttachmentCopy()
-        final copy = await repo.mailAttachmentCopy(audioFile, name); // 사본
-        attachments.add(copy.path);
-        attachmentDescriptions.add('- $name: 측정 중 현장 소음 녹음(AAC)');
-      } else {
-        missing.add(
-          '누락: ${MeasurementRepository.noiseAudioFileName} — 이 측정에는 '
-          '현장 소음 녹음이 없습니다',
-        );
-      }
-    }
-
-    // → 로직 이동: KoreaTime.minuteLabel()
-    final dateStr = KoreaTime.minuteLabel(result.dateTime); // 메일 제목 날짜
-    final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
-    final notes = result.notes; // 추가 참고사항, 없으면 null
-    final worker = _workerLine(result); // 작업자 줄, 이름이 없으면 null
-    final placement = result.placementKind; // 거치 방향, 예전 결과면 null
-    final device = <String?>[
-      result.deviceManufacturer,
-      result.deviceModel,
-    ].nonNulls.join(' '); // 측정한 휴대폰 "제조사 기종", 모르면 빈 문자열
-    final bodyLines = <String>[
-      'OTIS 승강기 진동 측정 리포트입니다.',
-      ?worker,
-      if (placement != null) '거치: ${placement.label}',
-      if (result.uncompensatedDevice)
-        '미보정 기종: ${device.isEmpty ? '기종 미확인' : device}',
-      if (notes != null) ...['', '[참고사항]', notes, ''],
-      ...attachmentDescriptions,
-      '',
-      '※ 첨부 ${attachments.length}개',
-      if (missing.isNotEmpty) ...['', ...missing],
-    ]; // 메일 본문 줄 목록
-    final body = bodyLines.join('\n'); // 메일 본문
-
-    return Email(
-      body: body,
-      subject: subject,
-      recipients: _recipients(), // → 로직 이동: _recipients()
-      attachmentPaths: attachments,
-    );
-  }
-
-  /// 작성: 2026-10-18 09:41:12 · nada
-  /// 함수: _workerLine
-  /// 목적: 메일 본문에 적을 작업자 줄을 만든다. 성명 뒤 괄호에 사번,
-  ///       그 뒤에 업체명 · 관리팀을 가운뎃점으로 잇는다. 결과에 없는
-  ///       값(로그인 전 결과의 사번, OTIS 직원의 업체)은 그 자리째 뺀다.
-  /// 인자: result — 보낼 측정 결과
-  /// 반환: 예 "작업자: 홍길동 (T00001) · (주)시험승강기 · 설치1팀". 성명이
-  ///       없으면(설정에 이름을 적지 않던 예전 결과) null
-  static String? _workerLine(MeasurementResult result) {
-    final name = result.engineerName; // 성명, 없으면 null
-    if (name == null) return null;
-    final id = result.employeeId; // 사번, 없으면 null
-    final parts = <String>[
-      id == null ? name : '$name ($id)',
-      ?result.company,
-      ?result.team,
-    ]; // 가운뎃점으로 이을 조각
-    return '작업자: ${parts.join(' · ')}';
   }
 
   /// 작성: 2026-10-04 13:37:23 · nada

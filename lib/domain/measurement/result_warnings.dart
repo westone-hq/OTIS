@@ -41,3 +41,32 @@ List<String> resultWarnings(MeasurementResult result) => <String>[
     '미보정 기종(${result.deviceModel ?? '기종 미확인'}) — 진동 값이 기준 폰과 '
         '다를 수 있습니다',
 ];
+
+/// 작성: 2026-10-23 00:20:00 · nada
+/// 함수: placementMailLine
+/// 목적: 메일 본문에 적을 거치 방향 줄을 만든다(2026-10-22). 결과 화면
+///       경고와 달리 화면 아래로 잰 결과도 적는다 — 받는 쪽이 거치를 알게
+///       하려는 것이다.
+/// 인자: result — 보낼 측정 결과
+/// 반환: 예 "거치: 화면 아래". 판정 전 예전 결과면 null
+String? placementMailLine(MeasurementResult result) {
+  final placement = result.placementKind; // 거치 방향, 예전 결과면 null
+  return placement == null ? null : '거치: ${placement.label}';
+}
+
+/// 작성: 2026-10-23 00:20:00 · nada
+/// 함수: uncompensatedDeviceMailLine
+/// 목적: 기종 응답 보정 표에 없는 기종으로 잰 결과면 메일 본문에 적을 줄을
+///       만든다(2026-10-22). 결과 화면 경고(`resultWarnings()`)와 같은
+///       판정(`MeasurementResult.uncompensatedDevice`)이다.
+/// 인자: result — 보낼 측정 결과
+/// 반환: 예 "미보정 기종: samsung SM-A536N", 기종을 모르면 "미보정 기종:
+///       기종 미확인". 보정한 기종이거나 예전 결과면 null
+String? uncompensatedDeviceMailLine(MeasurementResult result) {
+  if (!result.uncompensatedDevice) return null;
+  final device = <String?>[
+    result.deviceManufacturer,
+    result.deviceModel,
+  ].nonNulls.join(' '); // 측정한 휴대폰 "제조사 기종", 모르면 빈 문자열
+  return '미보정 기종: ${device.isEmpty ? '기종 미확인' : device}';
+}
