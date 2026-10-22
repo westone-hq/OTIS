@@ -156,10 +156,10 @@ static const int normalIntervalMinUs = 1953;
 
 ```dart
 /// 작성: 2026-09-15 19:43:50 · nada
-/// 클래스: ReportPage1
+/// 클래스: ReportPage1Layout
 /// 목적: 리포트 1쪽의 자리들을 담는다. 좌표는 모두 서식 이미지 픽셀이고
 ///       원점은 좌상단이다.
-class ReportPage1 {
+class ReportPage1Layout {
   /// 신호등 원의 중심 가로 좌표 (픽셀)
   static const int dotCenterX = 243;
 

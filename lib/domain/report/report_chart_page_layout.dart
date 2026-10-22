@@ -2,10 +2,11 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
 /// 작성: 2026-09-15 19:43:50 · nada
-/// 클래스: ReportChartPage
+/// 수정: 2026-10-23 00:40:00 · nada
+/// 클래스: ReportChartPageLayout
 /// 목적: 차트 쪽의 자리들을 담는다. 머리말 네 칸과 차트 네 자리가 있다.
 ///       1쪽과 달리 쪽 번호 칸이 있고, 쪽 제목이 금색으로 들어간다.
-class ReportChartPage {
+class ReportChartPageLayout {
   /// 작성: 2026-09-15 19:43:50 · nada
   /// 수정: 2026-10-21 17:10:00 · nada
   /// 변수: background
@@ -40,7 +41,7 @@ class ReportChartPage {
 
   /// 엔지니어명. 1쪽과 같은 칸을 그대로 쓴다 — 자리를 두 곳에 적으면 한쪽만
   /// 고쳐져 어긋난다
-  static const LayoutField engineerName = ReportPage1.engineerName;
+  static const LayoutField engineerName = ReportPage1Layout.engineerName;
 
   /// 측정 일시. 1쪽과 같은 자리다
   static const LayoutField datetime = LayoutField(

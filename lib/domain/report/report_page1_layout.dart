@@ -1,7 +1,8 @@
 import 'package:vibration_checker/domain/report/report_layout.dart';
 
 /// 작성: 2026-09-15 19:43:50 · nada
-/// 클래스: ReportPage1
+/// 수정: 2026-10-23 00:40:00 · nada
+/// 클래스: ReportPage1Layout
 /// 목적: 리포트 1쪽의 자리들을 담는다. 머리말 11칸, Performance Metrics
 ///       표 8행, 분석 자료 표 7행이 있다.
 ///
@@ -9,7 +10,7 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 ///       그대로 박아 둔다. 행 간격이 106 109 110 109 109 110 95 로 고르지
 ///       않고, 특히 마지막 한 칸이 뚜렷하게 좁다. 첫 행에서 일정 간격을
 ///       더해 가면 마지막 행이 12픽셀 넘게 어긋난다.
-class ReportPage1 {
+class ReportPage1Layout {
   /// 작성: 2026-09-15 19:43:50 · nada
   /// 수정: 2026-10-22 11:10:00 · nada
   /// 변수: background

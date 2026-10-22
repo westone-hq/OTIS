@@ -65,7 +65,7 @@ class ReportPage1Renderer {
       ReportLayout.boldFontAsset,
     ); // 굵은 글꼴 원본
     final backgroundBytes = await rootBundle.load(
-      ReportPage1.background,
+      ReportPage1Layout.background,
     ); // 서식 이미지 원본
 
     final regular = PdfTtfFont(document, regularBytes); // 본문 글꼴
@@ -116,7 +116,7 @@ class ReportPage1Renderer {
     // → 로직 이동: headerValues()
     final header = headerValues(result); // 머리말 칸마다 채울 문구
 
-    for (final field in ReportPage1.fields) {
+    for (final field in ReportPage1Layout.fields) {
       _text(
         canvas,
         xPx: field.x,
@@ -128,8 +128,8 @@ class ReportPage1Renderer {
         color: field.color,
         key: field.key,
         debug: debug,
-        // → 로직 이동: ReportPage1.maxWidthOf()
-        maxWidthPx: ReportPage1.maxWidthOf(field),
+        // → 로직 이동: ReportPage1Layout.maxWidthOf()
+        maxWidthPx: ReportPage1Layout.maxWidthOf(field),
       );
     }
 
@@ -162,7 +162,7 @@ class ReportPage1Renderer {
     ReportMetrics metrics, {
     required bool debug,
   }) {
-    final rows = ReportPage1.metricRows; // 서식에 놓인 행 자리
+    final rows = ReportPage1Layout.metricRows; // 서식에 놓인 행 자리
     for (var index = 0; index < rows.length; index++) {
       final row = rows[index]; // 이번에 그릴 행의 자리
       final metric = metrics.rows[index]; // 그 행에 올릴 지표
@@ -170,10 +170,10 @@ class ReportPage1Renderer {
           ? ReportColors.stripeOdd
           : ReportColors.stripeEven; // 이 행의 줄무늬 색
 
-      const diameter = ReportPage1.dotDiameter; // 신호등 지름 (픽셀)
+      const diameter = ReportPage1Layout.dotDiameter; // 신호등 지름 (픽셀)
       _erase(
         canvas,
-        xPx: ReportPage1.dotCenterX - diameter,
+        xPx: ReportPage1Layout.dotCenterX - diameter,
         yPx: row.y - diameter,
         widthPx: diameter * 2,
         heightPx: diameter * 2,
@@ -183,7 +183,7 @@ class ReportPage1Renderer {
       if (dotColor != null) {
         _dot(
           canvas,
-          centerXPx: ReportPage1.dotCenterX,
+          centerXPx: ReportPage1Layout.dotCenterX,
           centerYPx: row.y,
           diameterPx: diameter,
           color: dotColor,
@@ -195,12 +195,12 @@ class ReportPage1Renderer {
         _text(
           canvas,
           xPx: row.hasLabel
-              ? ReportPage1.colValueX
-              : ReportPage1.colValueNoLabelX,
+              ? ReportPage1Layout.colValueX
+              : ReportPage1Layout.colValueNoLabelX,
           yPx: row.y,
           text: metric.display,
-          sizePx: ReportPage1.valueSize,
-          align: ReportPage1.colValueAlign,
+          sizePx: ReportPage1Layout.valueSize,
+          align: ReportPage1Layout.colValueAlign,
           weight: LayoutWeight.regular,
           color: ReportColors.text,
           key: row.key,
@@ -211,23 +211,26 @@ class ReportPage1Renderer {
         _drawRemark(canvas, row.y, remark, stripe, row.key, debug: debug);
       }
 
-      for (final columnX in [ReportPage1.colYellowX, ReportPage1.colRedX]) {
+      for (final columnX in [
+        ReportPage1Layout.colYellowX,
+        ReportPage1Layout.colRedX,
+      ]) {
         _erase(
           canvas,
-          xPx: columnX - ReportPage1.eraseRedWidth / 2,
-          yPx: row.y - ReportPage1.eraseRedHeight / 2,
-          widthPx: ReportPage1.eraseRedWidth,
-          heightPx: ReportPage1.eraseRedHeight,
+          xPx: columnX - ReportPage1Layout.eraseRedWidth / 2,
+          yPx: row.y - ReportPage1Layout.eraseRedHeight / 2,
+          widthPx: ReportPage1Layout.eraseRedWidth,
+          heightPx: ReportPage1Layout.eraseRedHeight,
           color: stripe,
         );
       }
       _text(
         canvas,
-        xPx: ReportPage1.colYellowX,
+        xPx: ReportPage1Layout.colYellowX,
         yPx: row.y,
         text: metric.yellowDisplay,
-        sizePx: ReportPage1.thresholdSize,
-        align: ReportPage1.colYellowAlign,
+        sizePx: ReportPage1Layout.thresholdSize,
+        align: ReportPage1Layout.colYellowAlign,
         weight: LayoutWeight.regular,
         color: ReportColors.text,
         key: '${row.key}.yellow',
@@ -235,11 +238,11 @@ class ReportPage1Renderer {
       );
       _text(
         canvas,
-        xPx: ReportPage1.colRedX,
+        xPx: ReportPage1Layout.colRedX,
         yPx: row.y,
         text: metric.redDisplay,
-        sizePx: ReportPage1.thresholdSize,
-        align: ReportPage1.colRedAlign,
+        sizePx: ReportPage1Layout.thresholdSize,
+        align: ReportPage1Layout.colRedAlign,
         weight: LayoutWeight.regular,
         color: ReportColors.text,
         key: '${row.key}.red',
@@ -269,30 +272,31 @@ class ReportPage1Renderer {
   }) {
     _erase(
       canvas,
-      xPx: ReportPage1.remarkEraseX,
-      yPx: rowY - ReportPage1.remarkEraseHeight / 2,
-      widthPx: ReportPage1.remarkEraseWidth,
-      heightPx: ReportPage1.remarkEraseHeight,
+      xPx: ReportPage1Layout.remarkEraseX,
+      yPx: rowY - ReportPage1Layout.remarkEraseHeight / 2,
+      widthPx: ReportPage1Layout.remarkEraseWidth,
+      heightPx: ReportPage1Layout.remarkEraseHeight,
       color: stripe,
     );
     final firstY =
-        rowY - ReportPage1.remarkLineGap * (lines.length - 1) / 2; // 첫 줄 자리
+        rowY -
+        ReportPage1Layout.remarkLineGap * (lines.length - 1) / 2; // 첫 줄 자리
     for (var i = 0; i < lines.length; i++) {
       _text(
         canvas,
-        xPx: ReportPage1.remarkX,
-        yPx: firstY + ReportPage1.remarkLineGap * i,
+        xPx: ReportPage1Layout.remarkX,
+        yPx: firstY + ReportPage1Layout.remarkLineGap * i,
         text: lines[i],
-        sizePx: ReportPage1.remarkSize,
-        align: ReportPage1.colValueAlign,
+        sizePx: ReportPage1Layout.remarkSize,
+        align: ReportPage1Layout.colValueAlign,
         weight: LayoutWeight.regular,
         color: ReportColors.text,
         key: '$key.remark$i',
         debug: debug,
         maxWidthPx:
-            ReportPage1.remarkEraseX +
-            ReportPage1.remarkEraseWidth -
-            ReportPage1.remarkX,
+            ReportPage1Layout.remarkEraseX +
+            ReportPage1Layout.remarkEraseWidth -
+            ReportPage1Layout.remarkX,
       );
     }
   }
@@ -304,7 +308,7 @@ class ReportPage1Renderer {
   ///       설명 칸은 비운다. 이것이 완성된 모습이며 나중에 채울 자리가
   ///       아니다 — 회색 점은 "아직 안 그렸다" 가 아니라 "판정하지
   ///       않는다" 를 뜻한다.
-  ///       서식에 박힌 구분 이름 가운데 `ReportPage1.analysisRelabels` 에
+  ///       서식에 박힌 구분 이름 가운데 `ReportPage1Layout.analysisRelabels` 에
   ///       있는 행("Machine으로 부터 진동" · "Belts")은 줄무늬 색으로 덮고
   ///       새 이름("권상기 머신으로 부터 진동" · "로우프")을 찍는다.
   ///       Performance Metrics 의 진동 네 행이 비는 것과는 사정이 다르다.
@@ -318,17 +322,17 @@ class ReportPage1Renderer {
   ///       찍으면 "이상 없음을 확인했다" 로 읽히는데 확인한 적이 없으므로,
   ///       판정하지 않았다는 사실을 회색으로 그대로 드러낸다
   void _drawAnalysisTable(PdfGraphics canvas, {required bool debug}) {
-    final keys = ReportPage1.analysisRowKeys; // 행 이름
-    final ys = ReportPage1.analysisRowYs; // 행 세로 자리
+    final keys = ReportPage1Layout.analysisRowKeys; // 행 이름
+    final ys = ReportPage1Layout.analysisRowYs; // 행 세로 자리
     for (var index = 0; index < ys.length; index++) {
       final stripe = index.isEven
           ? ReportColors.stripeOdd
           : ReportColors.stripeEven; // 이 행의 줄무늬 색
 
-      const diameter = ReportPage1.dotDiameter; // 신호등 지름 (픽셀)
+      const diameter = ReportPage1Layout.dotDiameter; // 신호등 지름 (픽셀)
       _erase(
         canvas,
-        xPx: ReportPage1.dotCenterX - diameter,
+        xPx: ReportPage1Layout.dotCenterX - diameter,
         yPx: ys[index] - diameter,
         widthPx: diameter * 2,
         heightPx: diameter * 2,
@@ -336,30 +340,30 @@ class ReportPage1Renderer {
       );
       _dot(
         canvas,
-        centerXPx: ReportPage1.dotCenterX,
+        centerXPx: ReportPage1Layout.dotCenterX,
         centerYPx: ys[index],
         diameterPx: diameter,
         color: ReportColors.judgeUnknown,
       );
       final relabel =
-          ReportPage1.analysisRelabels[keys[index]]; // 새 이름, 그대로 두면 null
+          ReportPage1Layout.analysisRelabels[keys[index]]; // 새 이름, 그대로 두면 null
       if (relabel != null) {
         _erase(
           canvas,
-          xPx: ReportPage1.eraseAnalysisLabelX,
-          yPx: ys[index] - ReportPage1.eraseAnalysisLabelHeight / 2,
-          widthPx: ReportPage1.eraseAnalysisLabelWidth,
-          heightPx: ReportPage1.eraseAnalysisLabelHeight,
+          xPx: ReportPage1Layout.eraseAnalysisLabelX,
+          yPx: ys[index] - ReportPage1Layout.eraseAnalysisLabelHeight / 2,
+          widthPx: ReportPage1Layout.eraseAnalysisLabelWidth,
+          heightPx: ReportPage1Layout.eraseAnalysisLabelHeight,
           color: stripe,
         );
         _text(
           canvas,
-          xPx: ReportPage1.analysisCategoryX,
+          xPx: ReportPage1Layout.analysisCategoryX,
           yPx: ys[index],
           text: relabel,
-          sizePx: ReportPage1.analysisCategorySize,
-          align: ReportPage1.analysisCategoryAlign,
-          weight: ReportPage1.analysisCategoryWeight,
+          sizePx: ReportPage1Layout.analysisCategorySize,
+          align: ReportPage1Layout.analysisCategoryAlign,
+          weight: ReportPage1Layout.analysisCategoryWeight,
           color: ReportColors.text,
           key: '${keys[index]}.category',
           debug: debug,
@@ -368,7 +372,7 @@ class ReportPage1Renderer {
       if (debug) {
         _debugMark(
           canvas,
-          xPx: ReportPage1.analysisDescriptionX,
+          xPx: ReportPage1Layout.analysisDescriptionX,
           yPx: ys[index],
           label: keys[index],
         );
@@ -380,7 +384,7 @@ class ReportPage1Renderer {
   /// 수정: 2026-10-21 23:20:00 · nada
   /// 함수: headerValues
   /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
-  ///       자리 표시 문구(`ReportPage1.placeholder`, "미입력")를 찍는다.
+  ///       자리 표시 문구(`ReportPage1Layout.placeholder`, "미입력")를 찍는다.
   ///       - 제번 → 측정 ID, 현장명 → 건물명, 최하층·최상층 → 층 정보
   ///       - 엔지니어 → 저장 시점 설정의 이름
   ///       - 제품 → "엘리베이터, 기종". 기종의 쉼표는 이 표기에서만
@@ -423,7 +427,7 @@ class ReportPage1Renderer {
       if (result.address.isNotEmpty) result.address,
       if (result.postalCode case final code? when code.isNotEmpty) code,
     ]; // 주소 칸에 이어 쓸 조각
-    const placeholder = ReportPage1.placeholder; // 값이 없을 때 찍는 문구
+    const placeholder = ReportPage1Layout.placeholder; // 값이 없을 때 찍는 문구
     // → 로직 이동: SiteInfo.startStopFloors()
     final floors = SiteInfo.startStopFloors(
       result.direction,

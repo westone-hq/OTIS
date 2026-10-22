@@ -116,7 +116,7 @@ void main() {
       for (final plan in ReportChartPageRenderer.pages) {
         expect(
           plan.axes.length,
-          ReportChartPage.slots.length,
+          ReportChartPageLayout.slots.length,
           reason: '${plan.pageNumber}쪽',
         );
       }
@@ -162,12 +162,12 @@ void main() {
         ); // 실제로 찍힌 축 틀
         expect(
           drawn.length,
-          ReportChartPage.slots.length,
+          ReportChartPageLayout.slots.length,
           reason: '${p + 2}쪽 축 틀 수',
         );
 
         for (var i = 0; i < drawn.length; i++) {
-          final slot = ReportChartPage.slots[i]; // 서식이 정한 그 자리
+          final slot = ReportChartPageLayout.slots[i]; // 서식이 정한 그 자리
           final where = '${p + 2}쪽 ${i + 1}번째 자리'; // 어긋난 자리를 알릴 문구
 
           expect(
@@ -287,7 +287,7 @@ void main() {
       );
       expect(
         ReportChartPageRenderer.headerValues(_result(), 3)['engineer_name'],
-        ReportPage1.placeholder,
+        ReportPage1Layout.placeholder,
       );
       expect(
         ReportChartPageRenderer.headerValues(_result(), 3)['page_number'],

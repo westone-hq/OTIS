@@ -125,7 +125,7 @@ class ReportChartPageRenderer {
       ReportLayout.boldFontAsset,
     ); // 굵은 글꼴 원본
     final backgroundBytes = await rootBundle.load(
-      ReportChartPage.background,
+      ReportChartPageLayout.background,
     ); // 차트 쪽 서식 이미지 원본
 
     final regular = PdfTtfFont(document, regularBytes); // 본문 글꼴
@@ -162,7 +162,7 @@ class ReportChartPageRenderer {
     // 축 넷과 자리 넷은 서식에서 짝이 정해져 있다. 수가 어긋나면 자리가
     // 남거나 모자라므로, 갈래를 두지 않고 확인만 해 둔다
     assert(
-      plan.axes.length == ReportChartPage.slots.length,
+      plan.axes.length == ReportChartPageLayout.slots.length,
       '축 수와 차트 자리 수가 다르다',
     );
 
@@ -185,25 +185,29 @@ class ReportChartPageRenderer {
 
     // → 로직 이동: headerValues()
     final header = headerValues(result, plan.pageNumber); // 머리말에 채울 문구
-    for (final field in ReportChartPage.fields) {
+    for (final field in ReportChartPageLayout.fields) {
       // → 로직 이동: ReportTextWriter.drawField()
       textWriter.drawField(
         canvas,
         field: field,
         text: header[field.key] ?? '',
-        // → 로직 이동: ReportPage1.maxWidthOf()
-        maxWidthPx: ReportPage1.maxWidthOf(field),
+        // → 로직 이동: ReportPage1Layout.maxWidthOf()
+        maxWidthPx: ReportPage1Layout.maxWidthOf(field),
       );
     }
     // → 로직 이동: ReportTextWriter.drawField()
-    textWriter.drawField(canvas, field: ReportChartPage.title, text: title);
+    textWriter.drawField(
+      canvas,
+      field: ReportChartPageLayout.title,
+      text: title,
+    );
 
     for (var index = 0; index < plan.axes.length; index++) {
       // → 로직 이동: ReportChartRenderer.draw()
       chartRenderer.draw(
         canvas,
         spec: plan.axes[index],
-        box: ReportChartPage.slots[index],
+        box: ReportChartPageLayout.slots[index],
         result: result,
       );
     }
@@ -217,7 +221,7 @@ class ReportChartPageRenderer {
   ///       - 제번 → 측정 ID, 쪽 번호 → 받은 번호
   ///       - 측정 일시 → 1쪽과 같은 한국 시간(`KoreaTime.of()`)
   ///       - 엔지니어명 → 1쪽과 같은 저장 시점 이름. 없으면 자리 표시
-  ///         문구(`ReportPage1.placeholder`). 서식에 "엔지니어:" 라벨이
+  ///         문구(`ReportPage1Layout.placeholder`). 서식에 "엔지니어:" 라벨이
   ///         찍혀 있어 비우면 빠뜨린 것처럼 보인다(2026-10-11 사용자 지시
   ///         "엔지니어 칸에 무조건 기입")
   ///       시험이 칸마다 문구를 확인할 수 있게 공개해 둔다.
@@ -233,7 +237,7 @@ class ReportChartPageRenderer {
     ).format(KoreaTime.of(result.dateTime)); // 머리말 측정 일시 (한국 시간)
     return <String, String>{
       'measurement_id': result.jobNo,
-      'engineer_name': result.engineerName ?? ReportPage1.placeholder,
+      'engineer_name': result.engineerName ?? ReportPage1Layout.placeholder,
       'datetime': stamp,
       'page_number': '$pageNumber',
     };

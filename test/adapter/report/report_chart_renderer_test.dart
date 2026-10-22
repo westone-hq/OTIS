@@ -209,7 +209,7 @@ void main() {
       renderer.draw(
         page.getGraphics(),
         spec: ReportChartAxes.noise,
-        box: ReportChartPage.slots.first,
+        box: ReportChartPageLayout.slots.first,
         result: noisy,
       );
       final bytes = await document.save(); // 만든 PDF
@@ -247,7 +247,7 @@ void main() {
         renderer.draw(
           canvas,
           spec: specs[i],
-          box: ReportChartPage.slots[i],
+          box: ReportChartPageLayout.slots[i],
           result: result,
         );
       }
@@ -287,7 +287,7 @@ void main() {
       renderer.draw(
         page.getGraphics(),
         spec: ReportChartAxes.noise,
-        box: ReportChartPage.slots.first,
+        box: ReportChartPageLayout.slots.first,
         result: _result(),
       );
       final bytes = await document.save(); // 만든 PDF
@@ -345,7 +345,7 @@ void main() {
         renderer.draw(
           page.getGraphics(),
           spec: ReportChartAxes.x,
-          box: ReportChartPage.slots.first,
+          box: ReportChartPageLayout.slots.first,
           result: result,
         );
         final bytes = await document.save(); // 만든 PDF
@@ -380,7 +380,7 @@ void main() {
       startM: 0.5,
       endM: 56.5,
     ); // 시험용 운행 구간
-    final box = ReportChartPage.slots.first; // 차트 자리
+    final box = ReportChartPageLayout.slots.first; // 차트 자리
     final frameLeft = ReportLayout.xToPoints(box.x); // 축 틀 왼쪽 (포인트)
     final frameRight = ReportLayout.xToPoints(
       box.x + box.width,
@@ -507,7 +507,7 @@ void main() {
       renderer.draw(
         page.getGraphics(),
         spec: ReportChartAxes.z,
-        box: ReportChartPage.slots[2],
+        box: ReportChartPageLayout.slots[2],
         result: result,
       );
       return pdfChartStreams(await document.save()).join();

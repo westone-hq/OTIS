@@ -204,9 +204,9 @@ void main() {
     test('값이 없는 예전 결과는 빈 칸 대신 자리 표시와 기본 문구를 찍는다', () {
       final header = ReportPage1Renderer.headerValues(_result()); // 예전 결과
 
-      expect(header['engineer_name'], ReportPage1.placeholder);
-      expect(header['load'], ReportPage1.placeholder);
-      expect(header['address'], ReportPage1.placeholder);
+      expect(header['engineer_name'], ReportPage1Layout.placeholder);
+      expect(header['load'], ReportPage1Layout.placeholder);
+      expect(header['address'], ReportPage1Layout.placeholder);
       expect(header['test_type'], '층간 시험');
       expect(header['product'], '엘리베이터');
       expect(header.values, everyElement(isNot(contains('null'))));
@@ -235,11 +235,17 @@ void main() {
 
     test('넘칠 수 있는 칸만 폭을 재고 폭은 오른쪽 여백까지다', () {
       expect(
-        ReportPage1.maxWidthOf(ReportPage1.address),
-        ReportPage1.headerRightLimitX - ReportPage1.address.x,
+        ReportPage1Layout.maxWidthOf(ReportPage1Layout.address),
+        ReportPage1Layout.headerRightLimitX - ReportPage1Layout.address.x,
       );
-      expect(ReportPage1.maxWidthOf(ReportPage1.testType), isNotNull);
-      expect(ReportPage1.maxWidthOf(ReportPage1.measurementId), isNull);
+      expect(
+        ReportPage1Layout.maxWidthOf(ReportPage1Layout.testType),
+        isNotNull,
+      );
+      expect(
+        ReportPage1Layout.maxWidthOf(ReportPage1Layout.measurementId),
+        isNull,
+      );
     });
   });
 }

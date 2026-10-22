@@ -98,7 +98,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
   1" — 홈은 최하층 · 최상층을 받고 출발 · 도착은 운전 방향이 정한다,
   `SiteInfo.startStopFloors()` — 결과 화면 머리 카드 "하강 · 8층 → 1층" 도
   같은 함수, 2026-10-21). 값이 없는 칸은
-  "미입력"(`ReportPage1.placeholder`).
+  "미입력"(`ReportPage1Layout.placeholder`).
   넘칠 수 있는 칸은 오른쪽 여백을 넘으면 글자를 줄여 한 줄을 지킨다.
 - 리포트 1쪽 Performance Metrics(2026-10-15): 진동 값 단위는 "milli-G"
   (`ReportMetric.vibrationUnit`, 저장 값 · 앱 화면은 mg 그대로). 수평 두

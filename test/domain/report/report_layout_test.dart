@@ -137,8 +137,8 @@ void main() {
       final page1 = _layout()['page1'] as Map<String, dynamic>; // json 의 1쪽
       final fields = page1['fields'] as List<dynamic>; // json 의 칸 목록
 
-      expect(ReportPage1.fields.length, fields.length);
-      for (final moved in ReportPage1.fields) {
+      expect(ReportPage1Layout.fields.length, fields.length);
+      for (final moved in ReportPage1Layout.fields) {
         _expectField(moved, _fieldByKey(fields, moved.key));
       }
     });
@@ -151,10 +151,10 @@ void main() {
       final col = table['col'] as Map<String, dynamic>; // json 의 열 좌표
       final dot = table['dot'] as Map<String, dynamic>; // json 의 신호등 원
 
-      expect(ReportPage1.metricRows.length, rows.length);
+      expect(ReportPage1Layout.metricRows.length, rows.length);
       for (var i = 0; i < rows.length; i++) {
         final expected = rows[i] as Map<String, dynamic>; // json 의 그 행
-        final moved = ReportPage1.metricRows[i]; // 옮겨 적은 그 행
+        final moved = ReportPage1Layout.metricRows[i]; // 옮겨 적은 그 행
         expect(moved.key, expected['key'], reason: '$i번째 행 이름');
         expect(moved.y, expected['y'], reason: '${moved.key} y');
         expect(moved.judge, expected['judge'], reason: '${moved.key} judge');
@@ -165,40 +165,43 @@ void main() {
         );
       }
 
-      expect(ReportPage1.dotCenterX, dot['cx']);
-      expect(ReportPage1.dotDiameter, dot['diameter']);
-      expect(ReportPage1.colCategoryX, col['category']);
-      expect(ReportPage1.colDescLabelStartX, col['desc_label_start']);
-      expect(ReportPage1.colDescLabelEndX, col['desc_label_end']);
-      expect(ReportPage1.colValueX, col['value']);
-      expect(ReportPage1.colValueNoLabelX, col['value_no_label']);
-      expect(ReportPage1.colYellowX, col['yellow']);
-      expect(ReportPage1.colRedX, col['red']);
-      expect(ReportPage1.valueSize, table['value_size']);
-      expect(ReportPage1.thresholdSize, table['threshold_size']);
+      expect(ReportPage1Layout.dotCenterX, dot['cx']);
+      expect(ReportPage1Layout.dotDiameter, dot['diameter']);
+      expect(ReportPage1Layout.colCategoryX, col['category']);
+      expect(ReportPage1Layout.colDescLabelStartX, col['desc_label_start']);
+      expect(ReportPage1Layout.colDescLabelEndX, col['desc_label_end']);
+      expect(ReportPage1Layout.colValueX, col['value']);
+      expect(ReportPage1Layout.colValueNoLabelX, col['value_no_label']);
+      expect(ReportPage1Layout.colYellowX, col['yellow']);
+      expect(ReportPage1Layout.colRedX, col['red']);
+      expect(ReportPage1Layout.valueSize, table['value_size']);
+      expect(ReportPage1Layout.thresholdSize, table['threshold_size']);
       expect(
-        ReportPage1.eraseRedWidth,
+        ReportPage1Layout.eraseRedWidth,
         (table['erase_red'] as Map<String, dynamic>)['w'],
       );
       expect(
-        ReportPage1.eraseRedHeight,
+        ReportPage1Layout.eraseRedHeight,
         (table['erase_red'] as Map<String, dynamic>)['h'],
       );
 
       final remark = table['remark'] as Map<String, dynamic>; // 문구 자리
-      expect(ReportPage1.remarkX, remark['x']);
-      expect(ReportPage1.remarkEraseX, remark['erase_x']);
-      expect(ReportPage1.remarkEraseWidth, remark['erase_w']);
-      expect(ReportPage1.remarkEraseHeight, remark['erase_h']);
-      expect(ReportPage1.remarkSize, remark['size']);
-      expect(ReportPage1.remarkLineGap, remark['line_gap']);
+      expect(ReportPage1Layout.remarkX, remark['x']);
+      expect(ReportPage1Layout.remarkEraseX, remark['erase_x']);
+      expect(ReportPage1Layout.remarkEraseWidth, remark['erase_w']);
+      expect(ReportPage1Layout.remarkEraseHeight, remark['erase_h']);
+      expect(ReportPage1Layout.remarkSize, remark['size']);
+      expect(ReportPage1Layout.remarkLineGap, remark['line_gap']);
 
       final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
-      expect(ReportPage1.colCategoryAlign.name, align['category']);
-      expect(ReportPage1.colValueAlign.name, align['value']);
-      expect(ReportPage1.colValueNoLabelAlign.name, align['value_no_label']);
-      expect(ReportPage1.colYellowAlign.name, align['yellow']);
-      expect(ReportPage1.colRedAlign.name, align['red']);
+      expect(ReportPage1Layout.colCategoryAlign.name, align['category']);
+      expect(ReportPage1Layout.colValueAlign.name, align['value']);
+      expect(
+        ReportPage1Layout.colValueNoLabelAlign.name,
+        align['value_no_label'],
+      );
+      expect(ReportPage1Layout.colYellowAlign.name, align['yellow']);
+      expect(ReportPage1Layout.colRedAlign.name, align['red']);
     });
 
     test('마지막 행은 균등 피치로 계산하면 어긋난다', () {
@@ -207,17 +210,18 @@ void main() {
       // 행이 12픽셀 넘게 밀린다. 계산으로 구하면 안 된다는 사실을
       // 시험으로 남긴다
       const pitch =
-          (ReportPage1.horizMaxY - ReportPage1.noiseAvgY) / 5; // 1~6행 평균 간격
-      const guessedLast = ReportPage1.horizMaxY + 2 * pitch; // 넘겨짚은 8행 자리
+          (ReportPage1Layout.horizMaxY - ReportPage1Layout.noiseAvgY) /
+          5; // 1~6행 평균 간격
+      const guessedLast = ReportPage1Layout.horizMaxY + 2 * pitch; // 넘겨짚은 8행 자리
 
       expect(
-        (guessedLast - ReportPage1.travelDistanceY).abs(),
+        (guessedLast - ReportPage1Layout.travelDistanceY).abs(),
         greaterThan(10),
         reason: '균등 피치로는 마지막 행을 맞힐 수 없다',
       );
       expect(
-        ReportPage1.travelDistanceY - ReportPage1.maxSpeedY,
-        lessThan(ReportPage1.maxSpeedY - ReportPage1.horizMaxY),
+        ReportPage1Layout.travelDistanceY - ReportPage1Layout.maxSpeedY,
+        lessThan(ReportPage1Layout.maxSpeedY - ReportPage1Layout.horizMaxY),
         reason: '마지막 칸이 그 앞 칸보다 좁다',
       );
     });
@@ -228,57 +232,67 @@ void main() {
               as Map<String, dynamic>;
       final rows = table['rows'] as List<dynamic>; // json 의 행 목록
 
-      expect(ReportPage1.analysisRowYs.length, rows.length);
-      expect(ReportPage1.analysisRowKeys.length, rows.length);
+      expect(ReportPage1Layout.analysisRowYs.length, rows.length);
+      expect(ReportPage1Layout.analysisRowKeys.length, rows.length);
       for (var i = 0; i < rows.length; i++) {
         final expected = rows[i] as Map<String, dynamic>; // json 의 그 행
-        expect(ReportPage1.analysisRowKeys[i], expected['key'], reason: '$i');
-        expect(ReportPage1.analysisRowYs[i], expected['y'], reason: '$i');
+        expect(
+          ReportPage1Layout.analysisRowKeys[i],
+          expected['key'],
+          reason: '$i',
+        );
+        expect(ReportPage1Layout.analysisRowYs[i], expected['y'], reason: '$i');
       }
 
       expect(
-        ReportPage1.analysisDescriptionX,
+        ReportPage1Layout.analysisDescriptionX,
         (table['col'] as Map<String, dynamic>)['description'],
       );
-      expect(ReportPage1.analysisDescriptionSize, table['description_size']);
       expect(
-        ReportPage1.analysisCategoryX,
+        ReportPage1Layout.analysisDescriptionSize,
+        table['description_size'],
+      );
+      expect(
+        ReportPage1Layout.analysisCategoryX,
         (table['col'] as Map<String, dynamic>)['category'],
       );
-      expect(ReportPage1.analysisCategorySize, table['category_size']);
+      expect(ReportPage1Layout.analysisCategorySize, table['category_size']);
       final erase =
           table['erase_label'] as Map<String, dynamic>; // json 의 덮을 네모
-      expect(ReportPage1.eraseAnalysisLabelX, erase['x']);
-      expect(ReportPage1.eraseAnalysisLabelWidth, erase['w']);
-      expect(ReportPage1.eraseAnalysisLabelHeight, erase['h']);
+      expect(ReportPage1Layout.eraseAnalysisLabelX, erase['x']);
+      expect(ReportPage1Layout.eraseAnalysisLabelWidth, erase['w']);
+      expect(ReportPage1Layout.eraseAnalysisLabelHeight, erase['h']);
       expect(
-        ReportPage1.analysisRelabels,
+        ReportPage1Layout.analysisRelabels,
         Map<String, String>.from(table['relabel'] as Map<String, dynamic>),
       );
-      for (final key in ReportPage1.analysisRelabels.keys) {
-        expect(ReportPage1.analysisRowKeys, contains(key), reason: key);
+      for (final key in ReportPage1Layout.analysisRelabels.keys) {
+        expect(ReportPage1Layout.analysisRowKeys, contains(key), reason: key);
       }
 
       final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
-      expect(ReportPage1.analysisCategoryAlign.name, align['category']);
-      expect(ReportPage1.analysisDescriptionAlign.name, align['description']);
+      expect(ReportPage1Layout.analysisCategoryAlign.name, align['category']);
+      expect(
+        ReportPage1Layout.analysisDescriptionAlign.name,
+        align['description'],
+      );
     });
 
     test('차트 쪽 머리말 4칸과 제목이 같다', () {
       final chart = _layout()['chart_page'] as Map<String, dynamic>;
       final fields = chart['fields'] as List<dynamic>; // json 의 칸 목록
 
-      expect(ReportChartPage.fields.length, fields.length);
-      for (final moved in ReportChartPage.fields) {
+      expect(ReportChartPageLayout.fields.length, fields.length);
+      for (final moved in ReportChartPageLayout.fields) {
         _expectField(moved, _fieldByKey(fields, moved.key));
       }
 
       final title = chart['title'] as Map<String, dynamic>; // json 의 쪽 제목
-      expect(ReportChartPage.title.x, title['x']);
-      expect(ReportChartPage.title.y, title['y']);
-      expect(ReportChartPage.title.size, title['size']);
-      expect(ReportChartPage.title.align.name, title['align']);
-      expect(ReportChartPage.title.weight.name, title['weight']);
+      expect(ReportChartPageLayout.title.x, title['x']);
+      expect(ReportChartPageLayout.title.y, title['y']);
+      expect(ReportChartPageLayout.title.size, title['size']);
+      expect(ReportChartPageLayout.title.align.name, title['align']);
+      expect(ReportChartPageLayout.title.weight.name, title['weight']);
     });
 
     test('배경 경로는 정본의 파일 이름에 자산 디렉터리를 붙인 것이다', () {
@@ -289,11 +303,11 @@ void main() {
           _layout()['chart_page'] as Map<String, dynamic>; // json 의 차트 쪽
 
       expect(
-        ReportPage1.background,
+        ReportPage1Layout.background,
         '${ReportLayout.assetDirectory}${page1['background']}',
       );
       expect(
-        ReportChartPage.background,
+        ReportChartPageLayout.background,
         '${ReportLayout.assetDirectory}${chart['background']}',
       );
       expect(page1['background'], isNot(contains('/')), reason: '정본은 파일 이름만');
@@ -304,12 +318,12 @@ void main() {
       final chart = _layout()['chart_page'] as Map<String, dynamic>;
       final slots = chart['slots'] as List<dynamic>; // json 의 차트 자리 목록
 
-      expect(ReportChartPage.slots.length, slots.length);
+      expect(ReportChartPageLayout.slots.length, slots.length);
       for (var i = 0; i < slots.length; i++) {
         final box =
             (slots[i] as Map<String, dynamic>)['plot_box']
                 as Map<String, dynamic>; // json 의 그 자리
-        final moved = ReportChartPage.slots[i]; // 옮겨 적은 그 자리
+        final moved = ReportChartPageLayout.slots[i]; // 옮겨 적은 그 자리
         expect(moved.x, box['x'], reason: '$i번째 x');
         expect(moved.y, box['y'], reason: '$i번째 y');
         expect(moved.width, box['w'], reason: '$i번째 w');
@@ -356,8 +370,8 @@ void main() {
 
     test('길이는 뒤집지 않고 가로 배율만 곱한다', () {
       expect(
-        ReportLayout.lengthToPoints(ReportPage1.dotDiameter),
-        closeTo(ReportPage1.dotDiameter * ReportLayout.ptPerPxX, 1e-12),
+        ReportLayout.lengthToPoints(ReportPage1Layout.dotDiameter),
+        closeTo(ReportPage1Layout.dotDiameter * ReportLayout.ptPerPxX, 1e-12),
       );
     });
   });

@@ -129,7 +129,7 @@ void main() {
 
       final reduced = reduceSeries(
         values,
-        columns: ReportChartPage.slotWidth,
+        columns: ReportChartPageLayout.slotWidth,
       ); // 줄인 결과
       final after = (
         min: reduced.map((s) => s.value).reduce(math.min),
@@ -150,7 +150,7 @@ void main() {
 
       final reduced = reduceSeries(
         values,
-        columns: ReportChartPage.slotWidth,
+        columns: ReportChartPageLayout.slotWidth,
       ); // 줄인 결과
 
       expect(
@@ -169,7 +169,7 @@ void main() {
 
       final reduced = reduceSeries(
         values,
-        columns: ReportChartPage.slotWidth,
+        columns: ReportChartPageLayout.slotWidth,
       ); // 줄인 결과
 
       for (var i = 1; i < reduced.length; i++) {
@@ -191,7 +191,7 @@ void main() {
 
       final reduced = reduceSeries(
         values,
-        columns: ReportChartPage.slotWidth,
+        columns: ReportChartPageLayout.slotWidth,
       ); // 줄인 결과
 
       for (final sample in reduced) {

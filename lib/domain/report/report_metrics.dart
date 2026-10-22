@@ -24,7 +24,7 @@ class ReportMetric {
   ///       리포트) 1쪽 표기 "3.6milli-G A95"
   static const String vibrationUnit = 'milli-G';
 
-  /// 서식에서 이 행을 부르는 이름. `ReportPage1.metricRows` 의 `key` 와 같다
+  /// 서식에서 이 행을 부르는 이름. `ReportPage1Layout.metricRows` 의 `key` 와 같다
   final String key;
 
   /// 지표 값. 아직 낼 수 없으면 null
@@ -226,7 +226,7 @@ class ReportMetrics {
 
   /// 작성: 2026-09-15 21:14:33 · nada
   /// 함수: rows
-  /// 목적: 여덟 행을 서식에 놓인 차례대로 돌려준다. `ReportPage1.metricRows`
+  /// 목적: 여덟 행을 서식에 놓인 차례대로 돌려준다. `ReportPage1Layout.metricRows`
   ///       와 같은 순서라, 그리는 쪽이 둘을 나란히 짝지어 쓸 수 있다.
   /// 반환: 서식 순서대로 늘어놓은 지표 목록
   List<ReportMetric> get rows => <ReportMetric>[

@@ -59,10 +59,10 @@ class TuneReportBuilder {
       ReportLayout.boldFontAsset,
     ); // 굵은 글꼴 원본
     final page1Bytes = await rootBundle.load(
-      ReportPage1.background,
+      ReportPage1Layout.background,
     ); // 1쪽 서식 이미지 원본
     final chartBytes = await rootBundle.load(
-      ReportChartPage.background,
+      ReportChartPageLayout.background,
     ); // 차트 쪽 서식 이미지 원본
 
     final document = PdfDocument(); // 두 렌더러가 함께 쓸 문서
