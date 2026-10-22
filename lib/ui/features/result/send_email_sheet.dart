@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/adapter/storage/prefs_store.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
@@ -186,7 +185,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-08-19 10:33:43 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 23:50:00 · nada
   /// 함수: _buildJobEmail
   /// 목적: jobId 로 저장소를 조회해 리포트 메일을 조립한다. 보내기로 한
   ///       자료 중 실제로 없는 것이 있으면 본문 끝에 "누락:" 줄로 밝힌다 —
@@ -299,9 +298,8 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       }
     }
 
-    final dateStr = DateFormat(
-      'yyyy-MM-dd HH:mm',
-    ).format(KoreaTime.of(result.dateTime)); // 메일 제목 날짜 (한국 시간)
+    // → 로직 이동: KoreaTime.minuteLabel()
+    final dateStr = KoreaTime.minuteLabel(result.dateTime); // 메일 제목 날짜
     final subject = 'TUNE Summary Report - ${result.jobNo} - $dateStr'; // 메일 제목
     final notes = result.notes; // 추가 참고사항, 없으면 null
     final worker = _workerLine(result); // 작업자 줄, 이름이 없으면 null

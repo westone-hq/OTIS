@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 /// 작성: 2026-10-15 15:53:26 · nada
 /// 클래스: KoreaTime
 /// 목적: 사람이 읽는 시각(리포트 머리말 · 측정 ID · 화면 · 메일 본문)을
@@ -27,4 +29,26 @@ class KoreaTime {
   /// 반환: 년 · 월 · 일 · 시 · 분 · 초가 한국 시간인 값. 표시 전용이다 —
   ///       UTC 표시가 붙어 있으므로 다른 순간과 견주거나 저장하지 않는다
   static DateTime of(DateTime moment) => moment.toUtc().add(offset);
+
+  /// 작성: 2026-10-22 23:50:00 · nada
+  /// 함수: minuteLabel
+  /// 목적: 화면 · 메일 제목에 적는 분까지의 한국 시각 글자를 만든다. 결과
+  ///       화면 머리 · 비교 배너 · 비교 시트 · 저장 결과 목록 · 메일 제목이
+  ///       같은 모양을 쓴다.
+  /// 인자: moment — 적을 순간
+  /// 반환: `yyyy-MM-dd HH:mm` 꼴 한국 시각 (예: 2026-10-15 15:53)
+  static String minuteLabel(DateTime moment) =>
+      // → 로직 이동: of()
+      DateFormat('yyyy-MM-dd HH:mm').format(of(moment));
+
+  /// 작성: 2026-10-22 23:50:00 · nada
+  /// 함수: idStamp
+  /// 목적: 측정 ID(측정 폴더 이름)에 쓰는 초까지의 한국 시각 글자를 만든다.
+  ///       글자 차례가 곧 시간 차례라 저장 결과 정리가 이 글자로 오래된
+  ///       측정을 고른다.
+  /// 인자: moment — 측정 시각
+  /// 반환: `yyyyMMdd-HHmmss` 꼴 한국 시각 (예: 20261015-155326)
+  static String idStamp(DateTime moment) =>
+      // → 로직 이동: of()
+      DateFormat('yyyyMMdd-HHmmss').format(of(moment));
 }

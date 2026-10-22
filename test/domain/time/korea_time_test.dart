@@ -25,4 +25,11 @@ void main() {
     final moment = DateTime.utc(2026, 1, 14, 2, 3, 59); // 기준 순간
     expect(KoreaTime.of(moment.toLocal()), KoreaTime.of(moment));
   });
+
+  test('화면 · 메일 글자는 분까지, 측정 ID 는 초까지 한국 시각이다', () {
+    final moment = DateTime.utc(2026, 10, 15, 6, 53, 26); // 기준 순간
+    expect(KoreaTime.minuteLabel(moment), '2026-10-15 15:53');
+    expect(KoreaTime.idStamp(moment), '20261015-155326');
+    expect(KoreaTime.minuteLabel(moment.toLocal()), '2026-10-15 15:53');
+  });
 }

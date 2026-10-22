@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
@@ -29,7 +28,7 @@ class CompareSheet extends StatelessWidget {
   });
 
   /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-22 23:50:00 · nada
   /// 함수: build
   /// 목적: 제목 아래에 저장 결과를 한 줄씩 늘어놓는다. 줄마다 제번 ·
   ///       현장명과 측정 일시를 보여준다.
@@ -52,9 +51,8 @@ class CompareSheet extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: AppDims.gap),
                 itemBuilder: (_, index) {
                   final item = candidates[index]; // 이 줄의 저장 결과
-                  final when = DateFormat(
-                    'yyyy-MM-dd HH:mm',
-                  ).format(KoreaTime.of(item.dateTime)); // 측정 일시 (한국 시간)
+                  // → 로직 이동: KoreaTime.minuteLabel()
+                  final when = KoreaTime.minuteLabel(item.dateTime); // 측정 일시
                   return InkWell(
                     onTap: () => onPicked(item),
                     borderRadius: BorderRadius.circular(AppDims.radius),

@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/adapter/storage/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/analysis/device_response.dart';
@@ -260,7 +259,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-22 22:40:00 · nada
+  /// 수정: 2026-10-22 23:50:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -333,9 +332,8 @@ class MeasurementRecorder {
       return const RecordOutcome.failure(RecordFailure.noSamples);
     }
 
-    final id = DateFormat(
-      'yyyyMMdd-HHmmss',
-    ).format(KoreaTime.of(measuredAt)); // 측정 ID (한국 시간)
+    // → 로직 이동: KoreaTime.idStamp()
+    final id = KoreaTime.idStamp(measuredAt); // 측정 ID (한국 시간)
     final grid = resampler.resample(); // → 로직 이동: GridResampler.resample()
 
     try {

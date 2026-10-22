@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
@@ -342,7 +341,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-21 23:20:00 · nada
+  /// 수정: 2026-10-22 23:50:00 · nada
   /// 함수: _buildHeader
   /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 제번 · 현장명,
   ///       측정 일시, 운전 방향 · 층 · 기종, 주소(있을 때만)를 보여준다.
@@ -351,9 +350,8 @@ class _ResultScreenState extends State<ResultScreen> {
   /// 인자: result — 보여줄 측정 결과
   /// 반환: 머리 카드 위젯
   Widget _buildHeader(MeasurementResult result) {
-    final when = DateFormat(
-      'yyyy-MM-dd HH:mm',
-    ).format(KoreaTime.of(result.dateTime)); // 측정 일시 문구 (한국 시간)
+    // → 로직 이동: KoreaTime.minuteLabel()
+    final when = KoreaTime.minuteLabel(result.dateTime); // 측정 일시 문구
     final model = result.model; // 기종, 없으면 null
     // → 로직 이동: SiteInfo.startStopFloors()
     final (start, stop) = SiteInfo.startStopFloors(
@@ -381,15 +379,14 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 수정: 2026-10-22 23:50:00 · nada
   /// 함수: _buildCompareBanner
   /// 목적: 지금 무엇과 비교하는지 알리고 비교를 끌 수 있는 줄을 만든다.
   /// 인자: compare — 비교 대상 결과
   /// 반환: 비교 대상 안내 위젯
   Widget _buildCompareBanner(MeasurementResult compare) {
-    final when = DateFormat(
-      'yyyy-MM-dd HH:mm',
-    ).format(KoreaTime.of(compare.dateTime)); // 비교 대상 측정 일시
+    // → 로직 이동: KoreaTime.minuteLabel()
+    final when = KoreaTime.minuteLabel(compare.dateTime); // 비교 대상 측정 일시
     return AppCard(
       padding: const EdgeInsets.only(left: AppDims.gap2),
       child: Row(
