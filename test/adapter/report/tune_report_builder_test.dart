@@ -3,8 +3,8 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_chart_page.dart';
+import 'package:vibration_checker/adapter/report/report_chart_renderer.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart'
     show renderReportPage1;
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/report/chart_axes.dart';
 
 import '../../support/reference_records.dart';
 

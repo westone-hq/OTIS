@@ -3,9 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
-import 'package:vibration_checker/adapter/report/report_chart.dart';
+import 'package:vibration_checker/adapter/report/report_chart_renderer.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/report/chart_axes.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 

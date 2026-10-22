@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
-import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_chart_page.dart';
+import 'package:vibration_checker/adapter/report/report_chart_renderer.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
