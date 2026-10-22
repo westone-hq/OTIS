@@ -271,15 +271,15 @@ Map<String, Object?> _summary(MeasurementResult r) => <String, Object?>{
 };
 
 /// 작성: 2026-10-15 22:01:43 · 박건준
-/// 수정: 2026-10-18 11:20:05 · 박건준
+/// 수정: 2026-10-23 10:30:00 · 박건준
 /// 함수: main
-/// 목적: 로우 데이터 두 개(`RAW_DIR` 의 오티스꺼.txt · 우리꺼.txt)로 사람이
-///       앱을 쓰는 순서대로 화면을 찍는다. 로그인 → 홈 입력 → 측정 시작 →
-///       측정 화면 → 결과 → 메일 → (두 번째) 결과 비교 → 설정 → 저장 결과
-///       목록. 로그인은 시험용 명단(`FakeWorkerBundle`)으로 한다. 측정 화면을
+/// 목적: 로우 데이터 두 개(`RAW_DIR` 의 `otis_phone.txt` · `dev_phone.txt`,
+///       오티스폰 · 개발폰 EVIMP1 기록)로 사람이 앱을 쓰는 순서대로 화면을
+///       찍는다. 로그인 → 홈 입력 → 측정 시작 → 측정 화면 → 결과 → 메일 →
+///       (두 번째) 결과 비교 → 설정 → 저장 결과 목록. 로그인은 시험용 명단(`FakeWorkerBundle`)으로 한다. 측정 화면을
 ///       볼륨키로 끝내는 대신 그 자리에서 로우 데이터로 저장 절차를 돈다.
 ///       리포트 PDF 는 `SHOT_DIR/pdf/` 에, 지표는 `SHOT_DIR/지표.json` 에
-///       쓴다. `RAW_DIR` 이 없으면 건너뛴다. `RAW_RUNS`(예: "우리앱")를
+///       쓴다. `RAW_DIR` 이 없으면 건너뛴다. `RAW_RUNS`(예: "개발폰")를
 ///       주면 그 측정만 돌린다 — 하나만 돌리면 결과 비교 단계는 없다.
 void main() {
   late Directory temp; // 이번 캡처가 쓸 임시 저장소
@@ -387,14 +387,14 @@ void main() {
     final runs =
         <({String label, String file, String id, DateTime at})>[
               (
-                label: '오티스',
-                file: '오티스꺼.txt',
+                label: '오티스폰',
+                file: 'otis_phone.txt',
                 id: '20261015-140000',
                 at: DateTime.utc(2026, 10, 15, 5),
               ),
               (
-                label: '우리앱',
-                file: '우리꺼.txt',
+                label: '개발폰',
+                file: 'dev_phone.txt',
                 id: '20261015-140100',
                 at: DateTime.utc(2026, 10, 15, 5, 1),
               ),
