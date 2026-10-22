@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
+import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
 /// 작성: 2026-09-15 19:43:50 · nada
 /// 변수: _layoutJsonPath

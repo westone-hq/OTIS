@@ -17,6 +17,7 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/chart_axes.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 import 'package:vibration_checker/domain/report/chart_series.dart';
+import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';

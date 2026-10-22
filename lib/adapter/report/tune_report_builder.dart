@@ -8,7 +8,9 @@ import 'package:vibration_checker/adapter/report/report_chart_renderer.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
+import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
 /// 작성: 2026-09-26 09:30:00 · nada
 /// 클래스: TuneReportBuilder
