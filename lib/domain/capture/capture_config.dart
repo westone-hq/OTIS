@@ -1,5 +1,5 @@
 /// 작성: 2026-08-19 08:04:05 · 박건준
-/// 수정: 2026-10-23 10:00:00 · nada
+/// 수정: 2026-10-22 19:00:00 · nada
 /// 클래스: CaptureConfig
 /// 목적: 스마트폰 센서 데이터 수집에 쓰는 속도(Hz)와 불량 판정 기준(us)을 이 파일에서만 정의한다.
 ///       지표를 내기 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)와
@@ -228,7 +228,7 @@ class CaptureConfig {
   static const int placementAlertDelayMs =
       defaultEdgeTrimMs + defaultBaselineWindowMs + placementAlertMarginMs;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 변수: minimumStopMarginMs
   /// 목적: 운행 끝(속도가 `zoneRunSpeedMps` 아래로 내려온 뒤)부터 기록 끝까지
   ///       이보다 짧으면 결과 화면이 "정지 후 1초 이상 기다린 뒤 종료" 를
@@ -236,24 +236,24 @@ class CaptureConfig {
   ///       넓힘(`zoneTransientPaddingMs`)이 기록 끝에 걸린다.
   /// 근거: 측정 — 2026-10-22 서일대 4건의 정지 뒤 여유가 0.27 · 0.63 · 0.46 ·
   ///       0.98초였고 개발폰 상승은 Jptp 넓힘이 기록 끝에 막혔다. 10-21 · ride
-  ///       7건은 3.6 ~ 9.6초. 2026-10-23 점검 지시 "1.0초 미만이면 경고"
+  ///       7건은 3.6 ~ 9.6초. 2026-10-22 점검 지시 "1.0초 미만이면 경고"
   static const int minimumStopMarginMs = 1000;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 변수: baselineMotionAccelMps2
   /// 목적: 기준선 구간 안에 움직임이 있는지 보는 가속도 문턱 (m/s²). 수직
   ///       가속도에 저크 저역(`jerkLowpassHz`)을 양방향으로 건 값이 기준선
   ///       구간 처음(`baselineMinimumMs`) 평균에서 이만큼 벗어나면 움직임이다.
-  /// 근거: 인용 — 2026-10-23 점검 지시 "1.6 Hz 가속도 |a| > 0.03 m/s²".
+  /// 근거: 인용 — 2026-10-22 점검 지시 "1.6 Hz 가속도 |a| > 0.03 m/s²".
   ///       정속 판정 문턱(`zoneSteadyAccelMps2`)과 같다
   static const double baselineMotionAccelMps2 = 0.03;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 변수: baselineMinimumMs
   /// 목적: 기준선 구간을 움직임 앞까지 줄일 때 남겨야 하는 가장 짧은 길이
   ///       (밀리초). 이보다 일찍 움직였으면 기록 끝 정지 구간으로 기준선을
   ///       낸다.
-  /// 근거: 인용 — 2026-10-23 점검 지시 "기준선을 움직임 전까지로 줄이거나
+  /// 근거: 인용 — 2026-10-22 점검 지시 "기준선을 움직임 전까지로 줄이거나
   ///       (최소 0.3초)"
   static const int baselineMinimumMs = 300;
 
@@ -291,7 +291,7 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-15 점검 지시 "1 Hz 2차 버터워스 고역, 양방향"
   static const int rideVerticalHighpassOrder = 2;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 변수: deviceResponseByModelPrefix
   /// 목적: 기종 응답 보정 표. 기종 이름(`Build.MODEL`)이 열쇠의 글자로
   ///       시작하면 그 필터를 가중한 수직(Z) 진동에 양방향으로 건다
@@ -301,7 +301,7 @@ class CaptureConfig {
   ///       - `SM-S901` — 갤럭시 S22(국내 SM-S901N, 해외 B · U · E 등).
   ///         2026-10-21 · 10-22 개발폰. S22+(SM-S906) · Ultra(SM-S908)는
   ///         다른 기종이라 넣지 않는다
-  ///       2026-10-21 2차의 수직 20Hz 4차 저역(+zlp(20.0bw4zp))을 2026-10-23 에
+  ///       2026-10-21 2차의 수직 20Hz 4차 저역(+zlp(20.0bw4zp))을 2026-10-22 에
   ///       이 표로 바꿨다. 그 저역은 오티스폰 기록에도 걸려, 서일대 하강
   ///       정속 구간의 24Hz 기계 진동(두 폰 모두에 있다)을 약 80% 깎아 하강
   ///       수직 최대가 OTIS 21.0 대비 14.3(−32%)이 됐다.
@@ -319,7 +319,7 @@ class CaptureConfig {
   ///       24Hz 의 두 배라 이 승강기의 진동일 수 있어 노치는 현장에 과적합될
   ///       위험이 있고, 완만히 오르는 진폭비에는 완만한 저역이 맞아 2차 25Hz
   ///       를 골랐다. 하강3(화면 위 거치 추정)을 뺀 4쌍도 같은 순위였다.
-  ///       수평은 보정 없이 ±8%, 신호등 5/5 라 걸지 않는다(2026-10-23 리뷰)
+  ///       수평은 보정 없이 ±8%, 신호등 5/5 라 걸지 않는다(2026-10-22 리뷰)
   ///       미확인: 근거가 서일대 승강기 한 대다. 다른 건물에서 다시 확인한다
   ///       (docs/pending_checks.md)
   static const Map<String, DeviceResponseFilter> deviceResponseByModelPrefix =
@@ -541,12 +541,12 @@ class CaptureConfig {
   int get minimumRecordMs => 2 * edgeTrimMs + baselineWindowMs;
 }
 
-/// 작성: 2026-10-23 10:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · nada
 /// 클래스: DeviceResponseFilter
 /// 목적: 기종 응답 보정 필터 하나(버터워스 저역, 양방향). 보정 표
 ///       (`CaptureConfig.deviceResponseByModelPrefix`)의 값이다.
 class DeviceResponseFilter {
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: DeviceResponseFilter
   /// 목적: 필터 차수와 차단 주파수를 담는다.
   /// 인자: order — 버터워스 차수 (짝수)
@@ -559,7 +559,7 @@ class DeviceResponseFilter {
   /// 저역 차단 주파수 (Hz)
   final double lowpassHz;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: label
   /// 목적: 결과 파일 · 집계 파일에 남길 필터 표시(예: "lp25.0bw2zp").
   String get label => 'lp${lowpassHz}bw${order}zp';

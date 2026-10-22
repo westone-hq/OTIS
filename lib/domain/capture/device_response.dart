@@ -1,7 +1,7 @@
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 
-/// 작성: 2026-10-23 10:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · nada
 /// 클래스: DeviceResponse
 /// 목적: 기종 응답 보정. 휴대폰 기종마다 몸체 · 케이스 · 센서 특성이 달라
 ///       같은 진동을 다른 크기로 받는다. 기준 폰(오티스폰)보다 높은
@@ -10,13 +10,13 @@ import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 ///       있고, 표에 없는 기종 · 기종을 모르는 기록은 보정하지 않는다.
 ///       진동 필터가 아니라 기종 보정이라 오티스폰 기록에는 걸지 않는다.
 abstract final class DeviceResponse {
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 변수: noneLabel
   /// 목적: 보정하지 않았음을 결과 파일에 남기는 표시. 결과 화면 · 메일은 이
   ///       값을 보고 "미보정 기종" 을 알린다.
   static const String noneLabel = 'none';
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: filterFor
   /// 목적: 기종 이름에 맞는 보정 필터를 찾는다. 열쇠 글자로 시작하는
   ///       기종이면 그 필터다 — 같은 모델의 지역판(SM-S901N · SM-S901B 등)은
@@ -31,7 +31,7 @@ abstract final class DeviceResponse {
     return null;
   }
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: compensationLabel
   /// 목적: 결과 파일(`deviceCompensation`)에 남길 보정 표시.
   /// 인자: model — 기종 이름. 모르면 null
@@ -40,7 +40,7 @@ abstract final class DeviceResponse {
       // → 로직 이동: filterFor()
       filterFor(model)?.label ?? noneLabel;
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: methodLabel
   /// 목적: 처리 방식(result.json `signalConditioning`)에 남길 문자열. 가중
   ///       표시 뒤에 붙인다. 2026-10-21 2차 ~ 10-22 결과는 이 자리에
@@ -54,7 +54,7 @@ abstract final class DeviceResponse {
       // → 로직 이동: compensationLabel()
       'devcomp(${model ?? 'unknown'},${compensationLabel(model)})';
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: apply
   /// 목적: 가중한 수직 진동에 보정 필터를 양방향(영위상)으로 건다. 표의
   ///       수직 최대 · Jptp · A95 와 2쪽 수직 차트 · 표시점이 모두 이

@@ -88,7 +88,7 @@ class MotionZones {
   }
 
   /// 작성: 2026-10-21 13:10:00 · nada
-  /// 수정: 2026-10-23 10:00:00 · nada
+  /// 수정: 2026-10-22 19:00:00 · nada
   /// 함수: transientMaximum
   /// 목적: 가감속 구간 안 최대 반주기 P2P 를 찾는다. 2쪽 수직 차트 `Jptp`
   ///       다. 가감속 구간은 운행 시작 `CaptureConfig.zoneTransientPaddingMs`
@@ -116,14 +116,14 @@ class MotionZones {
     return best;
   }
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: _transientPadRows
   /// 목적: 가감속 구간을 운행 앞뒤로 넓힐 행 수.
   /// 식: round(zoneTransientPaddingMs / 1000 x sampleRate)
   int get _transientPadRows =>
       (CaptureConfig.zoneTransientPaddingMs / 1000 * sampleRate).round();
 
-  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 작성: 2026-10-22 19:00:00 · nada
   /// 함수: transientPadClippedAtEnd
   /// 목적: 운행 끝 뒤로 넓힌 가감속 구간이 기록 끝에 막혔는지 알려 준다.
   ///       막히면 `transientMaximum()` 은 있는 데까지만 쓴다. 정지 직후

@@ -623,7 +623,7 @@ String? placementWarning(MeasurementResult result) {
       '재측정을 권합니다';
 }
 
-/// 작성: 2026-10-23 10:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · nada
 /// 함수: resultWarnings
 /// 목적: 결과 화면 위쪽에 띄울 경고 문구를 고른다. 판정은 결과 모델 게터가
 ///       하고 여기서는 문구만 고른다.
@@ -633,7 +633,7 @@ String? placementWarning(MeasurementResult result) {
 ///       - 보정 표에 없는 기종(`MeasurementResult.uncompensatedDevice`)
 /// 인자: result — 측정 결과
 /// 반환: 경고 문구 목록. 없으면 빈 목록
-/// 근거: 인용 — 2026-10-23 점검 지시 문구("정지 후 1초 이상 기다린 뒤
+/// 근거: 인용 — 2026-10-22 점검 지시 문구("정지 후 1초 이상 기다린 뒤
 ///       종료하세요 — 끝부분 값이 부정확할 수 있습니다", "시작 후 2초
 ///       기다린 뒤 출발", "미보정 기종")
 List<String> resultWarnings(MeasurementResult result) => <String>[

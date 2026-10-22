@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/device_response.dart';
 
-/// 작성: 2026-10-23 10:00:00 · nada
+/// 작성: 2026-10-22 19:00:00 · nada
 /// 함수: main
 /// 목적: 기종 응답 보정 표(`CaptureConfig.deviceResponseByModelPrefix`)와 그
 ///       찾기 · 표시(`DeviceResponse`)를 시험한다.

@@ -265,7 +265,7 @@ class MainActivity : FlutterActivity() {
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-10-23 10:00:00 · nada
+                     * 수정: 2026-10-22 19:00:00 · nada
                      * 함수: stopCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "stopCapture" 요청에 응답한다. 센서·소음
@@ -280,7 +280,7 @@ class MainActivity : FlutterActivity() {
                      *       - "deviceManufacturer" · "deviceModel" — 이
                      *         휴대폰 제조사 · 기종 이름(`Build.MANUFACTURER`
                      *         · `Build.MODEL`). Dart 가 기종 응답 보정을
-                     *         고르고 결과에 남긴다(2026-10-23)
+                     *         고르고 결과에 남긴다(2026-10-22)
                      */
                     "stopCapture" -> {
                         // → 로직 이동: SensorStreamHandler.stop()

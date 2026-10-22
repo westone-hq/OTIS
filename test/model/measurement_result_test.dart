@@ -242,7 +242,7 @@ void main() {
 
     final old = MeasurementResult.fromJson(
       jsonEncode(_result().toMap()),
-    ); // 2026-10-23 전 형태(필드 없음)
+    ); // 2026-10-22 전 형태(필드 없음)
     expect(old.deviceCompensation, isNull);
     expect(old.uncompensatedDevice, isFalse);
     expect(old.stoppedTooSoon, isFalse);

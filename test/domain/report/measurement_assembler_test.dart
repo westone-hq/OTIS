@@ -243,7 +243,7 @@ void main() {
       expect(model.xSeries, RideWeighting.horizontal(xs, 256.0));
       expect(model.ySeries, RideWeighting.horizontal(ys, 256.0));
       // 기종을 모르는 기록은 기종 응답 보정 없이 가중만 건 값이다
-      // (2026-10-23, 그 전 모든 기록의 수직 20Hz 저역을 없앰)
+      // (2026-10-22, 그 전 모든 기록의 수직 20Hz 저역을 없앰)
       expect(model.zSeries, RideWeighting.vertical(zs, 256.0));
       expect(model.deviceCompensation, DeviceResponse.noneLabel);
       expect(model.id, '20260915-130837');
@@ -255,7 +255,7 @@ void main() {
     });
 
     test('보정 표에 있는 기종은 가중한 수직에만 보정 저역을 건다', () {
-      // 2026-10-23: 갤럭시 S22(SM-S901…) 기록은 수직에 2차 25Hz 저역을
+      // 2026-10-22: 갤럭시 S22(SM-S901…) 기록은 수직에 2차 25Hz 저역을
       // 양방향으로 건다. 수평은 그대로다
       final rows = <GridSample>[
         for (var i = 0; i < 400; i++)
@@ -867,7 +867,7 @@ void main() {
         final metrics = ReportMetrics.from(_conditionedReference()); // 앱 리포트 지표
         // 수직 최대는 2026-10-21 2차 ~ 10-22 에 모든 기록에 건 20Hz 저역
         // 때문에 −14% 로 경계에 붙어 빼 두었다. 이 기록은 오티스폰 기록이라
-        // 기종 응답 보정(2026-10-23)이 걸리지 않아 다시 −9% 다
+        // 기종 응답 보정(2026-10-22)이 걸리지 않아 다시 −9% 다
         const vibration = <String, double>{
           'vert_max': 6.1,
           'vert_avg': 3.6,

@@ -550,7 +550,7 @@ void main() {
       expect(saved.motionZones, isNull);
       expect(saved.motionZonesFailure, isNotNull);
       expect(saved.zJptp, isNull);
-      // 기종을 모르는 측정은 보정 없음으로 적는다(2026-10-23)
+      // 기종을 모르는 측정은 보정 없음으로 적는다(2026-10-22)
       expect(meta, contains('deviceModel: unknown'));
       expect(meta, contains('deviceCompensation: none'));
       expect(saved.deviceCompensation, 'none');
