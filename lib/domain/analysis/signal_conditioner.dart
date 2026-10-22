@@ -5,6 +5,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/dsp/butterworth.dart';
 import 'package:vibration_checker/domain/dsp/polyphase_resampler.dart';
+import 'package:vibration_checker/domain/dsp/units.dart';
 
 /// 작성: 2026-10-07 02:22:28 · nada
 /// 클래스: ConditioningFailure
@@ -355,6 +356,7 @@ class SignalConditioner {
   }
 
   /// 작성: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 23:55:00 · nada
   /// 함수: _baselineWindow
   /// 목적: 기준선을 낼 구간을 고른다. 처음 `baselineWindowMs` 안에서 수직
   ///       가속도(저크 저역 `jerkLowpassHz` 를 양방향으로 건 값)가 처음
@@ -385,7 +387,8 @@ class SignalConditioner {
     (CaptureConfig.baselineMinimumMs * fs / 1000)
         .ceil();
     final threshold = // 움직임 문턱 (mg)
-        CaptureConfig.baselineMotionAccelMps2 / _mgToMetersPerSecondSquared;
+        CaptureConfig.baselineMotionAccelMps2 /
+        Units.mgToMetersPerSecondSquared;
     // → 로직 이동: Butterworth.lowpass()
     final sections = Butterworth.lowpass(
       order: CaptureConfig.jerkLowpassOrder,
@@ -439,13 +442,6 @@ class SignalConditioner {
     }
     return (start: 0, rows: rows, source: BaselineSource.contaminated);
   }
-
-  /// 작성: 2026-10-22 19:00:00 · nada
-  /// 변수: _mgToMetersPerSecondSquared
-  /// 목적: mg 를 m/s² 로 바꾸는 배수. 움직임 문턱(m/s²)을 mg 로 옮긴다.
-  /// 근거: 표준 — 표준 중력 9.80665 m/s² 의 1/1000. `MeasurementAssembler` ·
-  ///       `LiveSpeedEstimator` 에도 같은 값이 비공개로 있다
-  static const double _mgToMetersPerSecondSquared = 9.80665e-3;
 
   /// 작성: 2026-10-07 02:01:58 · nada
   /// 수정: 2026-10-22 19:00:00 · nada

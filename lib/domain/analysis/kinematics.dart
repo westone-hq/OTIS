@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/dsp/butterworth.dart';
+import 'package:vibration_checker/domain/dsp/units.dart';
 
 /// 작성: 2026-10-20 14:05:12 · nada
 /// 클래스: MotionWindow
@@ -137,12 +138,6 @@ class Kinematics {
   ///       (`Butterworth.padLength()`)
   static const int minimumRows = 3 * (CaptureConfig.jerkLowpassOrder + 1) + 1;
 
-  /// 작성: 2026-09-15 14:32:07 · nada
-  /// 변수: _mgToMetersPerSecondSquared
-  /// 목적: mg(밀리지) → m/s² 환산 계수
-  /// 근거: 표준 — 국제단위계(SI) 표준 중력 9.80665 m/s², 그 1/1000
-  static const double _mgToMetersPerSecondSquared = 9.80665e-3;
-
   /// 작성: 2026-10-20 14:05:12 · nada
   /// 함수: kinematicsMethodLabel
   /// 목적: 운행 거리 · 최대 속도를 낸 방식을 결과 파일(result.json
@@ -177,7 +172,7 @@ class Kinematics {
       'bw${CaptureConfig.accelChartLowpassOrder}zp)';
 
   /// 작성: 2026-09-15 14:32:07 · nada
-  /// 수정: 2026-10-22 22:40:00 · nada
+  /// 수정: 2026-10-22 23:55:00 · nada
   /// 함수: derive
   /// 목적: 수직 진동 시계열에서 가속도 · 속도 · 누적 이동량 · 저크와
   ///       최대 속도 · 운행 거리를 만든다. 순서대로 한다.
@@ -252,7 +247,7 @@ class Kinematics {
 
     final accel = List<double>.generate(
       n,
-      (i) => zSeries[i] * _mgToMetersPerSecondSquared,
+      (i) => zSeries[i] * Units.mgToMetersPerSecondSquared,
     ); // 가속도 시계열 (m/s²). 아래에서 치우침을 뺀다
 
     // → 로직 이동: _findMotion()

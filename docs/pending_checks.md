@@ -19,9 +19,6 @@
   이미 반영. `CaptureConfig` 근거 주석에 개발폰 픽스처의 정지 · 정속
   흔들림 구간이 겹친 수치를 적어 두는 것을 확인한 뒤 지운다.
 - **16.** `GridResampler.motionOf()` 추출 승인. 단위 시험이 없으면 더한다.
-- **17.** 표준 중력 상수를 한 곳(`CaptureConfig` 또는 domain 공용 상수)으로
-  모으고 `MeasurementAssembler` · `LiveSpeedEstimator` 가 그것을 쓴다.
-  `measurement_assembler.dart` 수정 허락.
 - **18.** 표시 전용이라 그대로. CLAUDE.md "실시간 속도는 표시 전용" 줄에
   "긴 정속 구간에서 수 % 높게 나올 수 있음" 을 덧붙인다.
 - **26. 기준선 오염 (기록만).** 기준선 1초 안에 승강기가 움직이기
