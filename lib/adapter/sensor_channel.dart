@@ -123,6 +123,14 @@ class SensorChannelManager {
   /// 또는 44100). 마이크를 열지 못했거나 응답이 없으면 null
   int? lastNoiseSampleRateHz;
 
+  /// 측정을 끝냈을 때 안드로이드가 알려 준 휴대폰 제조사(`Build.MANUFACTURER`).
+  /// 응답이 없으면 null
+  String? lastDeviceManufacturer;
+
+  /// 측정을 끝냈을 때 안드로이드가 알려 준 휴대폰 기종 이름(`Build.MODEL`).
+  /// 기종 응답 보정(`DeviceResponse`)의 열쇠다. 응답이 없으면 null
+  String? lastDeviceModel;
+
   /// 작성: 2026-10-01 13:04:31 · 박희정
   /// 수정: 2026-10-04 13:44:32 · nada
   /// 함수: volumeKeyPresses
@@ -222,7 +230,7 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-10-18 10:12:30 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: startCapture
   /// 목적: 안드로이드에게 센서·소음 데이터를 쏴 달라고 명령을 내린다.
   ///       시작 전에 이전 측정 기록(폐기 개수 · 오류 문구 · 원본 기록과
@@ -241,6 +249,8 @@ class SensorChannelManager {
     lastRecordPath = null;
     lastAudioPath = null;
     lastNoiseSampleRateHz = null;
+    lastDeviceManufacturer = null;
+    lastDeviceModel = null;
     try {
       // → 로직 이동: MainActivity.startCapture
       await _methodChannel.invokeMethod('startCapture', {
@@ -254,15 +264,17 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-10-22 12:00:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: stopCapture
   /// 목적: 안드로이드에게 그만 보내고 지금까지 모은 걸 파일로 저장해
   ///       경로를 알려달라고 명령을 내린다. `_stopReplyLimit` 안에 응답이
   ///       없거나 실패하면 포기하고 넘어간다.
   /// 반환: 없음. 성공하면 `lastRecordPath` 에 원본 기록 경로를,
   ///       `lastAudioPath` 에 현장 소음 녹음 경로를,
-  ///       `lastNoiseSampleRateHz` 에 소음 마이크 표본 속도를 담는다(각각
-  ///       없으면 null). 실패하거나 시간 초과되면 모두 null 을 담는다
+  ///       `lastNoiseSampleRateHz` 에 소음 마이크 표본 속도를,
+  ///       `lastDeviceManufacturer` · `lastDeviceModel` 에 제조사 · 기종
+  ///       이름을 담는다(각각 없으면 null). 실패하거나 시간 초과되면 모두
+  ///       null 을 담는다
   Future<void> stopCapture() async {
     try {
       // → 로직 이동: MainActivity.stopCapture
@@ -272,10 +284,14 @@ class SensorChannelManager {
       lastRecordPath = reply?['recordPath'] as String?;
       lastAudioPath = reply?['audioPath'] as String?;
       lastNoiseSampleRateHz = reply?['noiseSampleRate'] as int?;
+      lastDeviceManufacturer = reply?['deviceManufacturer'] as String?;
+      lastDeviceModel = reply?['deviceModel'] as String?;
     } catch (_) {
       lastRecordPath = null;
       lastAudioPath = null;
       lastNoiseSampleRateHz = null;
+      lastDeviceManufacturer = null;
+      lastDeviceModel = null;
     }
     _parsedStream = null; // 다음 측정을 위해 이전 스트림 캐시를 비운다
   }

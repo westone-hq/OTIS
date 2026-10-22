@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/capture_config.dart';
@@ -7,6 +8,8 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/measurement_assembler.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+
+import '../../support/otis_1021_records.dart';
 
 /// 작성: 2026-10-07 01:44:43 · nada
 /// 변수: _unitCasesPath
@@ -398,5 +401,73 @@ void main() {
     ]); // 겹치는 시각 바로 뒤가 0 인 경계
     expect(exact[25], 60.0);
     expect(exact[26], 0.0);
+  });
+  group('기준선 구간 고르기 (2026-10-23)', () {
+    const conditioner = SignalConditioner(config: CaptureConfig()); // 기본 설정
+    // 256Hz 격자 4초. z(i) 로 Z 를 정한다
+    GridResampleResult zGrid(double Function(int i) z) => _grid(<GridSample>[
+      for (var i = 0; i < 1024; i++) GridSample(xMg: 0, yMg: 0, zMg: z(i)),
+    ]);
+
+    test('움직임이 없으면 처음 1초 그대로다', () {
+      final out = conditioner.condition(zGrid((_) => -3.0)); // 고정 오프셋만
+      expect(out.baselineSource, BaselineSource.start);
+      expect(out.baselineStartRow, 0);
+      expect(out.baselineRows, 256);
+      expect(out.baselineZMg, closeTo(-3.0, 1e-9));
+    });
+
+    test('0.8초에 움직이면 움직임 앞까지로 줄인다(0.3초 이상)', () {
+      final out = conditioner.condition(
+        zGrid((i) => i < 205 ? 0.0 : 20.0),
+      ); // 0.8초부터 20mg
+      expect(out.baselineSource, BaselineSource.startShortened);
+      expect(out.baselineStartRow, 0);
+      // 양방향 저역이라 움직임이 실제보다 조금 앞에서 잡힌다
+      expect(out.baselineRows!, inInclusiveRange(77, 204));
+      expect(out.baselineZMg!.abs(), lessThan(1.0), reason: '움직임 앞 평균');
+    });
+
+    test('0.3초 전에 움직였고 끝이 정지면 끝 1초에서 낸다', () {
+      final out = conditioner.condition(
+        zGrid((i) => i < 13 ? 0.0 : 20.0),
+      ); // 0.05초부터 끝까지 20mg
+      expect(out.baselineSource, BaselineSource.end);
+      expect(out.baselineStartRow, 1024 - 256);
+      expect(out.baselineZMg, closeTo(20.0, 1e-6));
+    });
+
+    test('끝도 움직이면 처음 1초 그대로 쓰고 오염으로 남긴다', () {
+      final out = conditioner.condition(
+        zGrid(
+          (i) => i < 13 ? 0.0 : 20.0 * math.sin(2 * math.pi * 0.5 * i / 256),
+        ),
+      ); // 0.05초부터 0.5Hz 로 계속 흔들림
+      expect(out.baselineSource, BaselineSource.contaminated);
+      expect(out.baselineStartRow, 0);
+      expect(out.baselineRows, 256);
+    });
+
+    test('실측 11건 — 2026-10-22 개발폰 하강만 0.86초로 줄인다', () {
+      final paths = <String, String>{
+        ...otis1021Records,
+        ...records1022,
+        'ride_reference': rideReferencePath,
+      }; // 기록 이름 → 경로
+      for (final entry in paths.entries) {
+        final out = conditioner.condition(
+          readEvimpGrid(
+            entry.value,
+            flipVertical: faceUpRecords.contains(entry.key),
+          ),
+        ); // 처리 결과
+        if (entry.key == 'dev_down_1022') {
+          expect(out.baselineSource, BaselineSource.startShortened);
+          expect(out.baselineRows! / 256, closeTo(0.86, 0.01));
+        } else {
+          expect(out.baselineSource, BaselineSource.start, reason: entry.key);
+        }
+      }
+    });
   });
 }

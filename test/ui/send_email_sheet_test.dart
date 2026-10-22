@@ -125,11 +125,17 @@ Future<void> _saveJob({
   String? notes,
   Worker? worker,
   String? placement,
+  String? deviceModel,
+  String? deviceCompensation,
 }) async {
   final repo = MeasurementRepository.instance; // 시험할 저장소
   // 이 측정의 폴더
   final dir = await repo.save(
-    _result(notes: notes, worker: worker, placement: placement),
+    _result(notes: notes, worker: worker, placement: placement).copyWith(
+      deviceManufacturer: deviceModel == null ? null : 'samsung',
+      deviceModel: deviceModel,
+      deviceCompensation: deviceCompensation,
+    ),
   );
   await File(
     '${dir.path}/${MeasurementRepository.reportFileName}',
@@ -464,6 +470,41 @@ void main() {
     final email = await _sendAndCapture(tester, sender);
 
     expect(email.body, contains('\n작업자: 김철수 (200001)\n거치: 화면 위\n'));
+  });
+
+  testWidgets('보정 표에 없는 기종이면 거치 아래에 미보정 기종 줄을 적는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(
+      () => _saveJob(
+        withRaw: true,
+        placement: 'faceDown',
+        deviceModel: 'SM-A536N',
+        deviceCompensation: 'none',
+      ),
+    );
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(email.body, contains('\n거치: 화면 아래\n미보정 기종: samsung SM-A536N\n'));
+  });
+
+  testWidgets('보정한 기종 · 예전 결과는 미보정 줄을 넣지 않는다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(
+      () => _saveJob(
+        withRaw: true,
+        deviceModel: 'SM-S901N',
+        deviceCompensation: 'lp25.0bw2zp',
+      ),
+    );
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+    expect(email.body, isNot(contains('미보정')));
   });
 
   testWidgets('판정하지 않은 예전 결과는 거치 줄을 뺀다', (tester) async {

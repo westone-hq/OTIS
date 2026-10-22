@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/domain/capture/device_response.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
+import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
 import 'package:vibration_checker/domain/report/motion_zones.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/report/travel_window.dart';
@@ -204,8 +207,38 @@ class MeasurementResult {
   /// 남긴다(2026-10-22). null 이면 정속 구간을 정하지 못했거나 그 전 결과다
   final double? steadySpeedMps;
 
+  /// 측정한 휴대폰 제조사(안드로이드 `Build.MANUFACTURER`, 예: "samsung").
+  /// null 이면 2026-10-23 전 결과, 외부 기록(오티스폰 EVIMP1)이거나 정지
+  /// 응답을 받지 못했다
+  final String? deviceManufacturer;
+
+  /// 측정한 휴대폰 기종 이름(안드로이드 `Build.MODEL`, 예: "SM-S901N").
+  /// 기종 응답 보정(`DeviceResponse`)을 고르는 열쇠다. null 의 뜻은
+  /// `deviceManufacturer` 와 같다
+  final String? deviceModel;
+
+  /// 수직 진동에 건 기종 응답 보정 필터 표시(예: "lp25.0bw2zp"). 보정 표에
+  /// 없는 기종이면 `DeviceResponse.noneLabel`("none") — 결과 화면 · 메일이
+  /// "미보정 기종" 으로 알린다. null 이면 보정을 정하기 전(2026-10-23 전)
+  /// 결과다
+  final String? deviceCompensation;
+
+  /// 운행 끝(속도 크기가 `CaptureConfig.zoneRunSpeedMps` 를 넘은 마지막
+  /// 행)부터 기록 끝까지의 시간 (초). `CaptureConfig.minimumStopMarginMs`
+  /// 보다 짧으면 결과 화면이 "정지 후 1초 이상 기다린 뒤 종료" 를 알린다.
+  /// null 이면 움직임이 없었거나 그 전 결과다
+  final double? stopMarginSec;
+
+  /// 가감속 구간(Jptp)을 운행 끝 뒤로 넓힐 때 기록 끝에 막혀 넓힐 수 있는
+  /// 데까지만 썼는지. null 이면 정속 구간을 정하지 못했거나 그 전 결과다
+  final bool? zJptpClippedAtEnd;
+
+  /// 신호 처리 기준선을 어디서 냈는지(`BaselineSource.name`). null 이면
+  /// 2026-10-23 전 결과다(늘 처음 1초)
+  final String? baselineSource;
+
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-22 15:00:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: MeasurementResult
   /// 목적: 측정 결과 값들을 그대로 담는 생성자.
   /// 인자: id — 결과 식별자
@@ -246,6 +279,12 @@ class MeasurementResult {
   ///       placement — 거치 방향 이름. 없으면 null
   ///       placementGravityZMg — 판정에 쓴 중력 Z 평균 (mg). 없으면 null
   ///       steadySpeedMps — 정속 구간 평균 속도 크기 (m/s). 없으면 null
+  ///       deviceManufacturer, deviceModel — 측정한 휴대폰 제조사 · 기종
+  ///       이름. 없으면 null
+  ///       deviceCompensation — 기종 응답 보정 표시. 없으면 null
+  ///       stopMarginSec — 운행 끝부터 기록 끝까지 (초). 없으면 null
+  ///       zJptpClippedAtEnd — Jptp 넓힘이 기록 끝에 막혔는지. 없으면 null
+  ///       baselineSource — 기준선 출처 이름. 없으면 null
   const MeasurementResult({
     required this.id,
     required this.jobNo,
@@ -293,10 +332,16 @@ class MeasurementResult {
     this.placement,
     this.placementGravityZMg,
     this.steadySpeedMps,
+    this.deviceManufacturer,
+    this.deviceModel,
+    this.deviceCompensation,
+    this.stopMarginSec,
+    this.zJptpClippedAtEnd,
+    this.baselineSource,
   });
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-22 15:00:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 결과의 값을
   ///       그대로 쓴다. 값을 null 로 되돌리는 데는 쓸 수 없다 — null 을
@@ -350,6 +395,12 @@ class MeasurementResult {
     String? placement,
     double? placementGravityZMg,
     double? steadySpeedMps,
+    String? deviceManufacturer,
+    String? deviceModel,
+    String? deviceCompensation,
+    double? stopMarginSec,
+    bool? zJptpClippedAtEnd,
+    String? baselineSource,
   }) {
     return MeasurementResult(
       id: id ?? this.id,
@@ -398,11 +449,17 @@ class MeasurementResult {
       placement: placement ?? this.placement,
       placementGravityZMg: placementGravityZMg ?? this.placementGravityZMg,
       steadySpeedMps: steadySpeedMps ?? this.steadySpeedMps,
+      deviceManufacturer: deviceManufacturer ?? this.deviceManufacturer,
+      deviceModel: deviceModel ?? this.deviceModel,
+      deviceCompensation: deviceCompensation ?? this.deviceCompensation,
+      stopMarginSec: stopMarginSec ?? this.stopMarginSec,
+      zJptpClippedAtEnd: zJptpClippedAtEnd ?? this.zJptpClippedAtEnd,
+      baselineSource: baselineSource ?? this.baselineSource,
     );
   }
 
   /// 작성: 2026-08-06 15:59:06 · 박건준
-  /// 수정: 2026-10-22 15:00:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: toMap
   /// 목적: 저장용 표로 바꾼다. 날짜는 ISO 8601(국제 표준 날짜 · 시각 표기)
   ///       문자열로, 재지 않은 값은 null 그대로 둔다.
@@ -448,6 +505,12 @@ class MeasurementResult {
       'placement': placement,
       'placementGravityZMg': placementGravityZMg,
       'steadySpeedMps': steadySpeedMps,
+      'deviceManufacturer': deviceManufacturer,
+      'deviceModel': deviceModel,
+      'deviceCompensation': deviceCompensation,
+      'stopMarginSec': stopMarginSec,
+      'zJptpClippedAtEnd': zJptpClippedAtEnd,
+      'baselineSource': baselineSource,
       'xSeries': xSeries,
       'ySeries': ySeries,
       'zSeries': zSeries,
@@ -460,7 +523,7 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-22 15:00:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
   ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
@@ -535,6 +598,12 @@ class MeasurementResult {
       placement: map['placement'] as String?,
       placementGravityZMg: (map['placementGravityZMg'] as num?)?.toDouble(),
       steadySpeedMps: (map['steadySpeedMps'] as num?)?.toDouble(),
+      deviceManufacturer: map['deviceManufacturer'] as String?,
+      deviceModel: map['deviceModel'] as String?,
+      deviceCompensation: map['deviceCompensation'] as String?,
+      stopMarginSec: (map['stopMarginSec'] as num?)?.toDouble(),
+      zJptpClippedAtEnd: map['zJptpClippedAtEnd'] as bool?,
+      baselineSource: map['baselineSource'] as String?,
       xSeries: toDoubleList(map['xSeries']),
       ySeries: toDoubleList(map['ySeries']),
       zSeries: toDoubleList(map['zSeries']),
@@ -632,4 +701,30 @@ class MeasurementResult {
   Placement? get placementKind =>
       // → 로직 이동: Placement.fromName()
       Placement.fromName(placement);
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: uncompensatedDevice
+  /// 목적: 보정 표에 없는 기종(또는 기종을 모르는 측정)이라 기종 응답 보정을
+  ///       걸지 않았는지. 결과 화면 · 메일이 "미보정 기종" 을 알린다. 보정을
+  ///       정하기 전(2026-10-23 전) 결과는 false 다.
+  bool get uncompensatedDevice =>
+      deviceCompensation == DeviceResponse.noneLabel;
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: stoppedTooSoon
+  /// 목적: 운행 끝 뒤 `CaptureConfig.minimumStopMarginMs` 를 못 채우고 측정을
+  ///       끝냈는지. 결과 화면이 "정지 후 1초 이상 기다린 뒤 종료" 를 알린다.
+  ///       여유를 모르는 결과(움직임 없음 · 그 전 결과)는 false 다.
+  bool get stoppedTooSoon {
+    final margin = stopMarginSec; // 정지 뒤 여유 (초), 없으면 null
+    return margin != null && margin * 1000 < CaptureConfig.minimumStopMarginMs;
+  }
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: baselineContaminated
+  /// 목적: 기준선 구간이 움직임에 섞였는데 줄이거나 끝 정지 구간으로 옮기지
+  ///       못했는지(`BaselineSource.contaminated`). 결과 화면이 "시작 후 2초
+  ///       기다린 뒤 출발" 을 알린다.
+  bool get baselineContaminated =>
+      baselineSource == BaselineSource.contaminated.name;
 }

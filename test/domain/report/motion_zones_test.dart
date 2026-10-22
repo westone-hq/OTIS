@@ -152,29 +152,36 @@ void main() {
   });
 
   group('수직 ptp · Jptp · A95 회귀 (지금 계산값 ±2%)', () {
-    // 수직 경로 = 가중 뒤 20Hz 4차 저역 양방향(2026-10-21 2차,
-    // `CaptureConfig.rideVerticalLowpassHz`). OTIS PDF · 원본 대비 ±15% 는
-    // 시험으로 걸지 않는다 — ride_reference 최대가 −14% 로 경계에 붙어 있다.
-    // 참고 표(CLAUDE.md 결정 이력 2026-10-21 2차):
-    //   기록       ptp / Jptp / A95   대 OTIS PDF(20.5·19.1… / 원본 6.1·3.6)
-    //   dev_up1    18.65 / 16.86 / 14.40   −9% / −1% / −6%   (OTIS 20.5/17.1/15.4)
-    //   dev_up2    20.75 / 16.86 / 14.70   +6% / −12% / −2%  (OTIS 19.6/19.1/15.0)
-    //   dev_down3  13.33 / 39.41 / 9.45    +1% / +21% / −1%  (OTIS 13.2/32.6/9.5)
-    //   ride_ref   5.26 / 18.90 / 3.66     −14% / 0% / +2%    (원본 6.1/18.9/3.6)
-    // Jptp 는 2026-10-22 부터 운행 앞뒤 0.4초를 넣는다(출발 충격,
-    // `CaptureConfig.zoneTransientPaddingMs`)
+    // 수직 경로 = 가중 뒤 기종 응답 보정(2026-10-23, `DeviceResponse`).
+    // dev_* 는 개발폰(갤럭시 S22)이라 2차 25Hz 저역을 걸고, otis_* ·
+    // ride_reference 는 외부 기록이라 걸지 않는다(그 전 2026-10-21 2차 ~
+    // 10-22 는 모든 기록에 4차 20Hz 저역).
+    // 참고 표(개발폰 ÷ 오티스폰 같은 운행 / OTIS PDF · 원본):
+    //   기록         ptp / Jptp / A95       OTIS PDF(원본)
+    //   1021 상승1   18.75 / 18.13 / 14.71   20.5 / 17.1 / 15.4
+    //   1021 상승2   21.28 / 17.11 / 14.75   19.6 / 19.1 / 15.0
+    //   1021 하강3   15.40 / 40.33 / 8.56    13.2 / 32.6 / 9.5
+    //   1022 상승    26.31 / 19.54 / 17.71   26.4 / 23.4 / 19.3
+    //   1022 하강    17.31 / 23.94 / 11.18   21.0 / 26.4 / 9.7
+    //   ride_ref     5.53 / 19.12 / 3.71     6.1 / 18.9 / 3.6
+    // Jptp 는 운행 앞뒤 0.4초를 넣는다(`CaptureConfig.zoneTransientPaddingMs`).
     // dev_down3 는 화면을 위로 놓고 기록돼 Z 를 뒤집어 읽는다(P2P 는 같다)
     const pinned = <String, (double, double, double)>{
-      'dev_up1': (18.65, 16.86, 14.40),
-      'dev_up2': (20.75, 16.86, 14.70),
-      'dev_down3': (13.33, 39.41, 9.45),
-      'otis_up1': (18.86, 16.30, 14.14),
-      'otis_up2': (18.38, 16.33, 14.24),
-      'otis_down3': (12.18, 37.89, 10.19),
-      'ride_reference': (5.26, 18.90, 3.66),
+      'dev_up1': (18.75, 18.13, 14.71),
+      'otis_up1': (19.33, 17.91, 14.21),
+      'dev_up2': (21.28, 17.11, 14.75),
+      'otis_up2': (19.56, 17.31, 14.33),
+      'dev_down3': (15.40, 40.33, 8.56),
+      'otis_down3': (14.68, 38.39, 8.50),
+      'dev_up_1022': (26.31, 19.54, 17.71),
+      'otis_up_1022': (25.68, 19.96, 17.06),
+      'dev_down_1022': (17.31, 23.94, 11.18),
+      'otis_down_1022': (19.37, 24.38, 10.42),
+      'ride_reference': (5.53, 19.12, 3.71),
     }; // 기록 → (ptp, Jptp, A95) mg
     final paths = <String, String>{
       ...otis1021Records,
+      ...records1022,
       'ride_reference': rideReferencePath,
     }; // 기록 이름 → 경로
 
@@ -183,6 +190,7 @@ void main() {
         final result = assembleRecord(
           paths[entry.key]!,
           flipVertical: faceUpRecords.contains(entry.key),
+          deviceModel: deviceModelOf(entry.key),
         ).result!;
         final (ptp, jptp, a95) = entry.value;
         expect(result.zPtp, closeTo(ptp, ptp * 0.02), reason: 'ptp');

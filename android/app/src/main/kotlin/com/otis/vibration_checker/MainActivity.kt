@@ -265,7 +265,7 @@ class MainActivity : FlutterActivity() {
                     }
                     /**
                      * 작성: 2026-08-17 15:43:39 · 박건준
-                     * 수정: 2026-10-22 12:00:00 · nada
+                     * 수정: 2026-10-23 10:00:00 · nada
                      * 함수: stopCapture
                      * 목적: Flutter의 sensor_channel.dart 가 보낸
                      *       "stopCapture" 요청에 응답한다. 센서·소음
@@ -277,6 +277,10 @@ class MainActivity : FlutterActivity() {
                      *         녹음하지 않았거나 실패했으면 null
                      *       - "noiseSampleRate" — 소음 마이크를 연 표본
                      *         속도(Hz, 48000 또는 44100). 열지 못했으면 null
+                     *       - "deviceManufacturer" · "deviceModel" — 이
+                     *         휴대폰 제조사 · 기종 이름(`Build.MANUFACTURER`
+                     *         · `Build.MODEL`). Dart 가 기종 응답 보정을
+                     *         고르고 결과에 남긴다(2026-10-23)
                      */
                     "stopCapture" -> {
                         // → 로직 이동: SensorStreamHandler.stop()
@@ -292,6 +296,8 @@ class MainActivity : FlutterActivity() {
                                 "recordPath" to recordPath,
                                 "audioPath" to audioPath,
                                 "noiseSampleRate" to noiseRate.takeIf { it > 0 },
+                                "deviceManufacturer" to Build.MANUFACTURER,
+                                "deviceModel" to Build.MODEL,
                             ),
                         )
                     }

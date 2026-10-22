@@ -1,5 +1,5 @@
 /// 작성: 2026-08-19 08:04:05 · 박건준
-/// 수정: 2026-10-10 11:54:43 · nada
+/// 수정: 2026-10-23 10:00:00 · nada
 /// 클래스: CaptureConfig
 /// 목적: 스마트폰 센서 데이터 수집에 쓰는 속도(Hz)와 불량 판정 기준(us)을 이 파일에서만 정의한다.
 ///       지표를 내기 전 신호 처리(기준선 0 맞춤 · 저역 필터 · 재표본)와
@@ -228,6 +228,35 @@ class CaptureConfig {
   static const int placementAlertDelayMs =
       defaultEdgeTrimMs + defaultBaselineWindowMs + placementAlertMarginMs;
 
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 변수: minimumStopMarginMs
+  /// 목적: 운행 끝(속도가 `zoneRunSpeedMps` 아래로 내려온 뒤)부터 기록 끝까지
+  ///       이보다 짧으면 결과 화면이 "정지 후 1초 이상 기다린 뒤 종료" 를
+  ///       알린다 (밀리초). 끝이 짧으면 양방향 필터의 끝 처리와 Jptp 정지 쪽
+  ///       넓힘(`zoneTransientPaddingMs`)이 기록 끝에 걸린다.
+  /// 근거: 측정 — 2026-10-22 서일대 4건의 정지 뒤 여유가 0.27 · 0.63 · 0.46 ·
+  ///       0.98초였고 개발폰 상승은 Jptp 넓힘이 기록 끝에 막혔다. 10-21 · ride
+  ///       7건은 3.6 ~ 9.6초. 2026-10-23 점검 지시 "1.0초 미만이면 경고"
+  static const int minimumStopMarginMs = 1000;
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 변수: baselineMotionAccelMps2
+  /// 목적: 기준선 구간 안에 움직임이 있는지 보는 가속도 문턱 (m/s²). 수직
+  ///       가속도에 저크 저역(`jerkLowpassHz`)을 양방향으로 건 값이 기준선
+  ///       구간 처음(`baselineMinimumMs`) 평균에서 이만큼 벗어나면 움직임이다.
+  /// 근거: 인용 — 2026-10-23 점검 지시 "1.6 Hz 가속도 |a| > 0.03 m/s²".
+  ///       정속 판정 문턱(`zoneSteadyAccelMps2`)과 같다
+  static const double baselineMotionAccelMps2 = 0.03;
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 변수: baselineMinimumMs
+  /// 목적: 기준선 구간을 움직임 앞까지 줄일 때 남겨야 하는 가장 짧은 길이
+  ///       (밀리초). 이보다 일찍 움직였으면 기록 끝 정지 구간으로 기준선을
+  ///       낸다.
+  /// 근거: 인용 — 2026-10-23 점검 지시 "기준선을 움직임 전까지로 줄이거나
+  ///       (최소 0.3초)"
+  static const int baselineMinimumMs = 300;
+
   /// 작성: 2026-08-19 08:04:05 · 박건준
   /// 변수: defaultTargetSampleRateHz
   /// 목적: targetSampleRateHz 기본값이다.
@@ -262,35 +291,41 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-15 점검 지시 "1 Hz 2차 버터워스 고역, 양방향"
   static const int rideVerticalHighpassOrder = 2;
 
-  /// 작성: 2026-10-21 22:40:00 · nada
-  /// 변수: rideVerticalLowpassHz
-  /// 목적: 수직(Z) 진동 경로 끝(가중 뒤)에 거는 저역 필터의 차단 주파수
-  ///       (Hz). 양방향(영위상)으로 건다. 개발폰 가속도계의 20Hz 위 잡음이
-  ///       수직 최대(정속 구간 반주기 P2P)를 키우는 것을 줄인다. 수평(X · Y)
-  ///       에는 걸지 않는다.
-  /// 근거: 측정 — 2026-10-21 서일대 동시 측정 3회(개발폰 · 오티스폰) 정속
-  ///       구간 대역별 RMS 비(개발폰 ÷ 오티스폰)가 1–20Hz 1.0~1.1배,
-  ///       20–40Hz 1.5배, 40–50Hz 5.8~6.6배다. 저역을 앱 경로 끝에 더해 본
-  ///       결과(개발폰 대 OTIS PDF ptp / Jptp / A95, ride_reference 대 원본
-  ///       최대 / A95):
-  ///         없음  1회 −6/+15/−4%  2회 +12/−3/−2%  3회 +33/−12/+14%  ride −9/+3%
-  ///         25Hz  1회 −8/+9/−4%   2회 +11/−9/−1%  3회 +19/−13/−9%  ride −12/+4%
-  ///         20Hz  1회 −9/−1/−6%   2회 +6/−12/−2%  3회 +1/−13/−1%   ride −14/+2%
-  ///         15Hz  1회 −8/−10/−6%  2회 −3/−17/−3%  3회 −3/−14/0%    ride −19/−4%
-  ///       15Hz 는 ride_reference 가 ±15% 밖이고, 25Hz 는 3회 ptp 가 +19%
-  ///       로 남아 20Hz 를 골랐다. 오티스폰 기록(ride_reference)은 진짜
-  ///       20~40Hz 성분이 깎여 원본 대비 최대가 −9% → −14% 가 됐다(±15%
-  ///       경계 가까이).
-  ///       미확인: 한 현장 3회 비교로 정한 값이다. 다른 현장 동시 측정으로
-  ///       다시 확인한다(docs/pending_checks.md)
-  static const double rideVerticalLowpassHz = 20.0;
-
-  /// 작성: 2026-10-21 22:40:00 · nada
-  /// 변수: rideVerticalLowpassOrder
-  /// 목적: `rideVerticalLowpassHz` 저역 필터의 차수. 버터워스이고 양방향으로
-  ///       건다.
-  /// 근거: 인용 — 2026-10-21 2차 점검 지시 "4차 버터워스 저역 20 Hz 양방향"
-  static const int rideVerticalLowpassOrder = 4;
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 변수: deviceResponseByModelPrefix
+  /// 목적: 기종 응답 보정 표. 기종 이름(`Build.MODEL`)이 열쇠의 글자로
+  ///       시작하면 그 필터를 가중한 수직(Z) 진동에 양방향으로 건다
+  ///       (`DeviceResponse`). 표에 없는 기종 · 기종을 모르는 기록(오티스폰
+  ///       EVIMP1 등 외부 기록)은 보정하지 않는다. 수평(X · Y)은 보정하지
+  ///       않는다.
+  ///       - `SM-S901` — 갤럭시 S22(국내 SM-S901N, 해외 B · U · E 등).
+  ///         2026-10-21 · 10-22 개발폰. S22+(SM-S906) · Ultra(SM-S908)는
+  ///         다른 기종이라 넣지 않는다
+  ///       2026-10-21 2차의 수직 20Hz 4차 저역(+zlp(20.0bw4zp))을 2026-10-23 에
+  ///       이 표로 바꿨다. 그 저역은 오티스폰 기록에도 걸려, 서일대 하강
+  ///       정속 구간의 24Hz 기계 진동(두 폰 모두에 있다)을 약 80% 깎아 하강
+  ///       수직 최대가 OTIS 21.0 대비 14.3(−32%)이 됐다.
+  /// 근거: 측정 — 2026-10-21 · 10-22 서일대 동시 측정 5쌍(상승1 · 상승2 ·
+  ///       하강3 · 10-22 상승 · 하강). 정속 구간 대역별 진폭비(개발폰 ÷
+  ///       오티스폰)가 1–15Hz 1.0, 15–20Hz 0.8–1.3, 20–26Hz 1.2–1.5, 26–35Hz
+  ///       1.1–1.9, 35–45Hz 1.2–4.1, 45–50Hz 10–12 로 주파수를 따라 완만하게
+  ///       오른다. 48Hz 봉우리는 운행 중 수직에만 8–13mg(오티스폰 0.9mg)로
+  ///       나온다. 앱 경로로 개발폰(보정) ÷ 오티스폰(보정 없음) 수직 최대 ·
+  ///       A95 · Jptp 최악 오차:
+  ///         없음 19/27/11%   4차 20Hz 26/20/6%   4차 25Hz 11/9/6%
+  ///         2차 25Hz 11/7/5%   48Hz 노치 Q4 + 2차 30Hz 10/7/6%
+  ///       노치 + 2차 30Hz 와 2차 25Hz 는 사실상 같다(차이 1%p 는 어떤 필터로도
+  ///       줄지 않는 10-21 상승2 최대 +9 ~ +13% 에서 나온다). 48Hz 는 하강
+  ///       24Hz 의 두 배라 이 승강기의 진동일 수 있어 노치는 현장에 과적합될
+  ///       위험이 있고, 완만히 오르는 진폭비에는 완만한 저역이 맞아 2차 25Hz
+  ///       를 골랐다. 하강3(화면 위 거치 추정)을 뺀 4쌍도 같은 순위였다.
+  ///       수평은 보정 없이 ±8%, 신호등 5/5 라 걸지 않는다(2026-10-23 리뷰)
+  ///       미확인: 근거가 서일대 승강기 한 대다. 다른 건물에서 다시 확인한다
+  ///       (docs/pending_checks.md)
+  static const Map<String, DeviceResponseFilter> deviceResponseByModelPrefix =
+      <String, DeviceResponseFilter>{
+        'SM-S901': DeviceResponseFilter(order: 2, lowpassHz: 25.0),
+      };
 
   /// 작성: 2026-10-15 16:50:04 · nada
   /// 변수: travelEdgeExclusionM
@@ -504,4 +539,28 @@ class CaptureConfig {
   /// 반환: 최소 측정 길이 (밀리초). 기본값이면 2000
   /// 식: 2 x edgeTrimMs + baselineWindowMs
   int get minimumRecordMs => 2 * edgeTrimMs + baselineWindowMs;
+}
+
+/// 작성: 2026-10-23 10:00:00 · nada
+/// 클래스: DeviceResponseFilter
+/// 목적: 기종 응답 보정 필터 하나(버터워스 저역, 양방향). 보정 표
+///       (`CaptureConfig.deviceResponseByModelPrefix`)의 값이다.
+class DeviceResponseFilter {
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: DeviceResponseFilter
+  /// 목적: 필터 차수와 차단 주파수를 담는다.
+  /// 인자: order — 버터워스 차수 (짝수)
+  ///       lowpassHz — 저역 차단 주파수 (Hz)
+  const DeviceResponseFilter({required this.order, required this.lowpassHz});
+
+  /// 버터워스 차수. 양방향으로 걸어 실제 기울기는 두 배다
+  final int order;
+
+  /// 저역 차단 주파수 (Hz)
+  final double lowpassHz;
+
+  /// 작성: 2026-10-23 10:00:00 · nada
+  /// 함수: label
+  /// 목적: 결과 파일 · 집계 파일에 남길 필터 표시(예: "lp25.0bw2zp").
+  String get label => 'lp${lowpassHz}bw${order}zp';
 }

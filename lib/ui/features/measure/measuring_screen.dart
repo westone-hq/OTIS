@@ -330,6 +330,8 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       measuredAt: DateTime.now(),
       placement: _capture.placement,
       noiseSampleRateHz: _capture.noiseSampleRateHz,
+      deviceManufacturer: _capture.deviceManufacturer,
+      deviceModel: _capture.deviceModel,
     ); // 저장 결과
     if (!outcome.isSuccess) {
       // → 로직 이동: recordFailureMessage()

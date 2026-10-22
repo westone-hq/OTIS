@@ -7,6 +7,7 @@ import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/noise_offset.dart';
+import 'package:vibration_checker/domain/capture/device_response.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/capture/ride_weighting.dart';
 import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
@@ -168,6 +169,7 @@ class MeasurementRecorder {
   }
 
   /// 작성: 2026-10-07 02:10:57 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: _condition
   /// 목적: 격자에 지표 계산 전 신호 처리를 하고, 그 결과를 집계 파일 끝에
   ///       덧붙인다.
@@ -180,12 +182,14 @@ class MeasurementRecorder {
   /// 인자: grid — 격자 환산에 성공한 격자
   ///       conditioner — 격자를 만든 수집 설정을 받은 처리기
   ///       metaPath — 결과를 덧붙일 집계 파일 경로
-  /// 반환: 처리한 격자. 실패면 격자는 null 이고 원인 종류와 사유가 있다
+  /// 반환: 처리한 격자와 기준선 출처. 실패면 격자는 null 이고 원인 종류와
+  ///       사유가 있다
   static Future<
     ({
       GridResampleResult? grid,
       ConditioningFailure? cause,
       String? failureReason,
+      BaselineSource? baselineSource,
     })
   >
   _condition(
@@ -207,6 +211,7 @@ class MeasurementRecorder {
         grid: null,
         cause: ConditioningFailure.invalidConfig,
         failureReason: '$e',
+        baselineSource: null,
       );
     }
     // → 로직 이동: _appendMeta()
@@ -218,11 +223,17 @@ class MeasurementRecorder {
       ),
     );
     return conditioned.isSuccess
-        ? (grid: conditioned.grid, cause: null, failureReason: null)
+        ? (
+            grid: conditioned.grid,
+            cause: null,
+            failureReason: null,
+            baselineSource: conditioned.baselineSource,
+          )
         : (
             grid: null,
             cause: conditioned.failureCause,
             failureReason: conditioned.failureReason,
+            baselineSource: null,
           );
   }
 
@@ -249,7 +260,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-22 12:00:00 · nada
+  /// 수정: 2026-10-23 10:00:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -272,7 +283,7 @@ class MeasurementRecorder {
   ///          지표, `MeasurementAssembler`), 가중 · 운행 구간을 집계 파일에
   ///          덧붙인 뒤(운동을 적분한 움직인 구간도 함께) 처리 방식
   ///          (`SignalConditioner.methodLabel` + `RideWeighting.methodLabel`
-  ///          + `MeasurementAssembler.verticalLowpassMethodLabel`
+  ///          + `DeviceResponse.methodLabel()`
   ///          + `MeasurementAssembler.kinematicsMethodLabel` +
   ///          `MeasurementAssembler.jerkMethodLabel` +
   ///          `MeasurementAssembler.accelChartMethodLabel` +
@@ -298,6 +309,9 @@ class MeasurementRecorder {
   ///       (`CaptureSession.placement`). 판정 전에 끝났으면 null
   ///       noiseSampleRateHz — 소음 마이크를 연 표본 속도
   ///       (`CaptureSession.noiseSampleRateHz`). 못 열었으면 null
+  ///       deviceManufacturer, deviceModel — 측정한 휴대폰 제조사 · 기종
+  ///       이름(`CaptureSession.deviceModel` 등). 기종 응답 보정을 고른다.
+  ///       모르면 null(보정 없음)
   /// 반환: 저장 결과. 파일을 쓰다 난 예외는 `RecordFailure.ioError` 로
   ///       바꿔 돌려준다
   static Future<RecordOutcome> record({
@@ -308,6 +322,8 @@ class MeasurementRecorder {
     required DateTime measuredAt,
     PlacementReading? placement,
     int? noiseSampleRateHz,
+    String? deviceManufacturer,
+    String? deviceModel,
   }) async {
     if (site == null || site.validate().isNotEmpty) {
       return const RecordOutcome.failure(RecordFailure.siteMissing);
@@ -393,6 +409,8 @@ class MeasurementRecorder {
         id: id,
         measuredAt: measuredAt,
         worker: worker,
+        deviceManufacturer: deviceManufacturer,
+        deviceModel: deviceModel,
       ); // 측정 결과 모델로 바꾼 결과. 실패했으면 사유만 들어 있다
       if (!assembled.isSuccess) {
         return RecordOutcome.failure(
@@ -429,9 +447,11 @@ class MeasurementRecorder {
         assembled.result!.copyWith(
           placement: placement?.placement.name,
           placementGravityZMg: placement?.gravityZMg,
+          baselineSource: conditioned.baselineSource?.name,
           signalConditioning:
               '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
-              '+${MeasurementAssembler.verticalLowpassMethodLabel}'
+              // → 로직 이동: DeviceResponse.methodLabel()
+              '+${DeviceResponse.methodLabel(deviceModel)}'
               '+${MeasurementAssembler.kinematicsMethodLabel}'
               '+${MeasurementAssembler.jerkMethodLabel}'
               '+${MeasurementAssembler.accelChartMethodLabel}'

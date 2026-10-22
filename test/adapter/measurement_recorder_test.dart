@@ -501,7 +501,7 @@ void main() {
       expect(saved?.sampleRate, 100.0);
       expect(
         saved?.signalConditioning,
-        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+zlp(20.0bw4zp)'
+        'baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+devcomp(unknown,none)'
         '+motion(v>0.05,pad500ms)+jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)'
         '+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)+noise(A,fast,+105.2)',
       );
@@ -550,6 +550,41 @@ void main() {
       expect(saved.motionZones, isNull);
       expect(saved.motionZonesFailure, isNotNull);
       expect(saved.zJptp, isNull);
+      // 기종을 모르는 측정은 보정 없음으로 적는다(2026-10-23)
+      expect(meta, contains('deviceModel: unknown'));
+      expect(meta, contains('deviceCompensation: none'));
+      expect(saved.deviceCompensation, 'none');
+      // 무작위 값 격자는 움직임이 없어 정지 뒤 여유를 모른다
+      expect(meta, contains('stopMarginSec: none'));
+      expect(saved.stopMarginSec, isNull);
+      expect(saved.baselineSource, isNotNull);
+      expect(meta, contains('baselineSource: ${saved.baselineSource}'));
+    });
+
+    test('개발폰 기종이면 처리 방식 · 결과 · 집계에 보정을 남긴다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(count: 1024),
+        site: _site,
+        nativeRecordPath: null,
+        noiseAudioPath: null,
+        measuredAt: measuredAt,
+        deviceManufacturer: 'samsung',
+        deviceModel: 'SM-S901N',
+      ); // 저장 결과
+      expect(outcome.isSuccess, isTrue, reason: '${outcome.detail}');
+      final saved = await MeasurementRepository.instance.load(outcome.id!);
+      expect(
+        saved!.signalConditioning,
+        contains('+iso18738(wd,zhp1wk)+devcomp(SM-S901N,lp25.0bw2zp)+motion('),
+      );
+      expect(saved.deviceManufacturer, 'samsung');
+      expect(saved.deviceModel, 'SM-S901N');
+      expect(saved.deviceCompensation, 'lp25.0bw2zp');
+      expect(saved.uncompensatedDevice, isFalse);
+      final meta = await metaText(); // 집계 파일 내용
+      expect(meta, contains('deviceManufacturer: samsung'));
+      expect(meta, contains('deviceModel: SM-S901N'));
+      expect(meta, contains('deviceCompensation: lp25.0bw2zp'));
     });
 
     test('처리 설정이 잘못되면 컨디셔닝 실패로 돌려주고 값 파일은 남긴다', () async {

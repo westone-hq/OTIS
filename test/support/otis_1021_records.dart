@@ -23,6 +23,35 @@ const Map<String, String> otis1021Records = <String, String>{
   'otis_down3': 'docs/reference/OITS1 (1).txt',
 };
 
+/// 작성: 2026-10-23 10:00:00 · nada
+/// 변수: records1022
+/// 목적: 2026-10-22 서일대 동시 측정 원시데이터(EVIMP1 256Hz) 4건. 원래 파일
+///       이름(우리꺼 · 오티스 상승 / 하강)에서 첫 데이터 행을 대조해 옮겼다.
+///       개발폰은 2026-10-21 과 같은 갤럭시 S22 다(`devPhoneModel`).
+const Map<String, String> records1022 = <String, String>{
+  'dev_up_1022': 'docs/reference/dev_up_1022.txt',
+  'otis_up_1022': 'docs/reference/otis_up_1022.txt',
+  'dev_down_1022': 'docs/reference/dev_down_1022.txt',
+  'otis_down_1022': 'docs/reference/otis_down_1022.txt',
+};
+
+/// 작성: 2026-10-23 10:00:00 · nada
+/// 변수: devPhoneModel
+/// 목적: 2026-10-21 · 10-22 개발폰 기종 이름(`Build.MODEL`, 갤럭시 S22 국내판).
+///       dev_* 기록을 앱처럼 기종 응답 보정을 걸어 계산할 때 넘긴다.
+/// 근거: 인용 — 2026-10-23 사용자 답 "S 22". 기록 파일에는 기종이 없어
+///       국내판 이름을 쓴다(보정 표는 SM-S901 로 시작하는 이름을 모두 잡는다)
+const String devPhoneModel = 'SM-S901N';
+
+/// 작성: 2026-10-23 10:00:00 · nada
+/// 함수: deviceModelOf
+/// 목적: 기록 이름으로 기종 이름을 고른다. dev_* 는 개발폰, 나머지(오티스폰 ·
+///       ride_reference)는 외부 기록이라 기종을 모른다.
+/// 인자: name — 기록 이름 (`otis1021Records` · `records1022` 열쇠)
+/// 반환: 기종 이름, 모르면 null(기종 응답 보정 없음)
+String? deviceModelOf(String name) =>
+    name.startsWith('dev_') ? devPhoneModel : null;
+
 /// 작성: 2026-10-21 10:05:00 · nada
 /// 변수: rideReferencePath
 /// 목적: 원본 리포트(H6N1AP65)를 만든 레퍼런스폰 기록 경로.
@@ -82,18 +111,21 @@ GridResampleResult readEvimpGrid(String path, {bool flipVertical = false}) {
 }
 
 /// 작성: 2026-10-21 10:05:00 · nada
-/// 수정: 2026-10-21 15:20:00 · nada
+/// 수정: 2026-10-23 10:00:00 · nada
 /// 함수: assembleRecord
 /// 목적: 원시데이터 한 건을 앱 저장 절차와 같은 길(신호 처리 → 조립)로
 ///       측정 결과로 바꾼다.
 /// 인자: path — 저장소 루트 기준 EVIMP1 파일 경로
 ///       site — 현장 정보. 안 주면 상승 1 → 8층 시험용 현장
 ///       flipVertical — true 면 Z 부호를 뒤집어 읽는다(`faceUpRecords`)
+///       deviceModel — 기종 이름(`deviceModelOf()`). 안 주면 기종 응답 보정
+///       없음
 /// 반환: 조립 결과(측정 결과와 움직인 구간)
 MeasurementAssembleResult assembleRecord(
   String path, {
   SiteInfo? site,
   bool flipVertical = false,
+  String? deviceModel,
 }) {
   return MeasurementAssembler.assemble(
     grid: const SignalConditioner(
@@ -114,5 +146,6 @@ MeasurementAssembleResult assembleRecord(
         ),
     id: 'id',
     measuredAt: DateTime.utc(2026, 10, 21),
+    deviceModel: deviceModel,
   );
 }

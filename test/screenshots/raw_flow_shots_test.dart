@@ -13,6 +13,7 @@ import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration_checker/domain/capture/device_response.dart';
 import 'package:vibration_checker/adapter/login_store.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
@@ -229,7 +230,7 @@ Future<MeasurementResult> _recordFromRaw(
   final result = assembled.result!.copyWith(
     signalConditioning:
         '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
-        '+${MeasurementAssembler.verticalLowpassMethodLabel}'
+        '+${DeviceResponse.methodLabel(null)}'
         '+${MeasurementAssembler.kinematicsMethodLabel}'
         '+${MeasurementAssembler.jerkMethodLabel}'
         '+${MeasurementAssembler.accelChartMethodLabel}'

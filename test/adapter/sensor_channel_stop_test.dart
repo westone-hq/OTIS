@@ -27,6 +27,8 @@ void main() {
           'recordPath': '/r.txt',
           'audioPath': '/n.m4a',
           'noiseSampleRate': 48000,
+          'deviceManufacturer': 'samsung',
+          'deviceModel': 'SM-S901N',
         };
       }
       return null;
@@ -36,6 +38,8 @@ void main() {
     expect(manager.lastRecordPath, '/r.txt');
     expect(manager.lastAudioPath, '/n.m4a');
     expect(manager.lastNoiseSampleRateHz, 48000);
+    expect(manager.lastDeviceManufacturer, 'samsung');
+    expect(manager.lastDeviceModel, 'SM-S901N');
   });
 
   test('마이크를 못 열었으면 표본 속도가 null 이다', () async {
@@ -57,9 +61,11 @@ void main() {
       throw PlatformException(code: 'x');
     });
     final manager = SensorChannelManager()
-      ..lastNoiseSampleRateHz = 44100; // 앞 측정 값이 남은 통로
+      ..lastNoiseSampleRateHz = 44100
+      ..lastDeviceModel = 'SM-S901N'; // 앞 측정 값이 남은 통로
     await manager.stopCapture();
     expect(manager.lastRecordPath, isNull);
     expect(manager.lastNoiseSampleRateHz, isNull);
+    expect(manager.lastDeviceModel, isNull);
   });
 }

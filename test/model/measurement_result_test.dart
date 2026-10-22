@@ -214,6 +214,46 @@ void main() {
     expect(old.steadySpeedMps, isNull);
   });
 
+  test('기종 · 보정 · 정지 뒤 여유 · 기준선 출처가 왕복에서 남고 예전 파일은 '
+      '경고를 띄우지 않는다', () {
+    final back = MeasurementResult.fromJson(
+      jsonEncode(
+        _result()
+            .copyWith(
+              deviceManufacturer: 'samsung',
+              deviceModel: 'SM-A536N',
+              deviceCompensation: 'none',
+              stopMarginSec: 0.46,
+              zJptpClippedAtEnd: true,
+              baselineSource: 'contaminated',
+            )
+            .toMap(),
+      ),
+    ); // 왕복한 결과
+    expect(back.deviceManufacturer, 'samsung');
+    expect(back.deviceModel, 'SM-A536N');
+    expect(back.deviceCompensation, 'none');
+    expect(back.stopMarginSec, 0.46);
+    expect(back.zJptpClippedAtEnd, isTrue);
+    expect(back.baselineSource, 'contaminated');
+    expect(back.uncompensatedDevice, isTrue);
+    expect(back.stoppedTooSoon, isTrue);
+    expect(back.baselineContaminated, isTrue);
+
+    final old = MeasurementResult.fromJson(
+      jsonEncode(_result().toMap()),
+    ); // 2026-10-23 전 형태(필드 없음)
+    expect(old.deviceCompensation, isNull);
+    expect(old.uncompensatedDevice, isFalse);
+    expect(old.stoppedTooSoon, isFalse);
+    expect(old.baselineContaminated, isFalse);
+    expect(
+      _result().copyWith(stopMarginSec: 1.0).stoppedTooSoon,
+      isFalse,
+      reason: '1초면 경고하지 않는다',
+    );
+  });
+
   test('측정 일시가 없거나 깨졌으면 지금 시각으로 채우지 않고 실패한다', () {
     final missing = _result().toMap()..remove('dateTime'); // 일시 없음
     final broken = _result().toMap()..['dateTime'] = '어제쯤'; // 일시 깨짐
