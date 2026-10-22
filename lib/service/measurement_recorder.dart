@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/adapter/storage/vibration_file_writer.dart';
 import 'package:vibration_checker/domain/analysis/device_response.dart';
+import 'package:vibration_checker/domain/analysis/kinematics.dart';
 import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
 import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
@@ -259,7 +260,7 @@ class MeasurementRecorder {
   static const int _minimumSamples = 2;
 
   /// 작성: 2026-10-04 13:29:41 · nada
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 22:40:00 · nada
   /// 함수: record
   /// 목적: 측정 한 건을 저장한다. 순서대로 진행한다.
   ///       1. 현장 정보와 표본 수를 확인한다. 모자라면 파일을 만들기
@@ -283,9 +284,9 @@ class MeasurementRecorder {
   ///          덧붙인 뒤(운동을 적분한 움직인 구간도 함께) 처리 방식
   ///          (`SignalConditioner.methodLabel` + `RideWeighting.methodLabel`
   ///          + `DeviceResponse.methodLabel()`
-  ///          + `MeasurementAssembler.kinematicsMethodLabel` +
-  ///          `MeasurementAssembler.jerkMethodLabel` +
-  ///          `MeasurementAssembler.accelChartMethodLabel` +
+  ///          + `Kinematics.kinematicsMethodLabel` +
+  ///          `Kinematics.jerkMethodLabel` +
+  ///          `Kinematics.accelChartMethodLabel` +
   ///          `MotionZones.methodLabel` + `noiseMethodLabel()`)
   ///          과 거치 방향을 실어
   ///          저장소에 저장한다. 로그인한
@@ -451,9 +452,9 @@ class MeasurementRecorder {
               '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
               // → 로직 이동: DeviceResponse.methodLabel()
               '+${DeviceResponse.methodLabel(deviceModel)}'
-              '+${MeasurementAssembler.kinematicsMethodLabel}'
-              '+${MeasurementAssembler.jerkMethodLabel}'
-              '+${MeasurementAssembler.accelChartMethodLabel}'
+              '+${Kinematics.kinematicsMethodLabel}'
+              '+${Kinematics.jerkMethodLabel}'
+              '+${Kinematics.accelChartMethodLabel}'
               '+${MotionZones.methodLabel}'
               // → 로직 이동: noiseMethodLabel()
               '+${noiseMethodLabel(noiseSampleRateHz)}',

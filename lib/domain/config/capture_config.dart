@@ -344,11 +344,12 @@ class CaptureConfig {
   static const double minimumTravelM = 1.0;
 
   /// 작성: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-22 22:40:00 · nada
   /// 변수: motionSpeedThresholdMps
   /// 목적: 운행 거리 · 최대 속도를 적분할 "움직인 구간" 을 찾는 속도 문턱
   ///       (m/s). 전체를 한 번 적분한 대략 속도가 이 값을 넘는 첫 순간부터
   ///       마지막 순간까지를 움직인 구간으로 본다
-  ///       (`MeasurementAssembler._deriveKinematics()`).
+  ///       (`Kinematics.derive()`).
   /// 근거: 측정 — 2026-10-20 1분 정지 기록 2건(오티스폰 · 테스트폰, 원본은
   ///       분석 뒤 삭제)에서 가만히 있는 동안 적분 속도가
   ///       떠다닌 최대가 0.022 · 0.023 m/s 다. 그 두 배 이상으로 잡아 정지

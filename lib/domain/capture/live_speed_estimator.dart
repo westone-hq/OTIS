@@ -3,11 +3,12 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 
 /// 작성: 2026-10-10 11:54:43 · nada
+/// 수정: 2026-10-22 22:40:00 · nada
 /// 클래스: LiveSpeedEstimator
 /// 목적: 측정 중에 들어오는 센서 이벤트로 승강기 속도를 그때그때 어림한다.
 ///       측정 화면에 보여 주기만 하고 저장 · 리포트에는 쓰지 않는다.
 ///
-///       저장하는 속도(`MeasurementAssembler._deriveKinematics()`)는 측정이
+///       저장하는 속도(`Kinematics.derive()`)는 측정이
 ///       끝난 뒤 전체 평균과 두 끝을 잇는 직선을 빼 적분 오차를 없앤다.
 ///       끝을 모르는 측정 중에는 그렇게 할 수 없어, 아래처럼 따로 어림한다.
 ///       그래서 두 값은 다를 수 있다.

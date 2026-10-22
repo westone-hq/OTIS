@@ -19,6 +19,7 @@ import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/adapter/update/update_checker.dart';
 import 'package:vibration_checker/adapter/update/update_installer.dart';
 import 'package:vibration_checker/domain/analysis/device_response.dart';
+import 'package:vibration_checker/domain/analysis/kinematics.dart';
 import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
 import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
@@ -231,9 +232,9 @@ Future<MeasurementResult> _recordFromRaw(
     signalConditioning:
         '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
         '+${DeviceResponse.methodLabel(null)}'
-        '+${MeasurementAssembler.kinematicsMethodLabel}'
-        '+${MeasurementAssembler.jerkMethodLabel}'
-        '+${MeasurementAssembler.accelChartMethodLabel}'
+        '+${Kinematics.kinematicsMethodLabel}'
+        '+${Kinematics.jerkMethodLabel}'
+        '+${Kinematics.accelChartMethodLabel}'
         '+${MotionZones.methodLabel}'
         '+${noiseMethodLabel(48000)}',
   ); // 저장 절차와 같이 처리 방식을 실은 측정 결과

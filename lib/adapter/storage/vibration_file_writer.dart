@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
+import 'package:vibration_checker/domain/analysis/kinematics.dart';
 import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
@@ -334,11 +334,12 @@ class VibrationFileWriter {
       '${lineEnding}conditioningFailureReason: $reason$lineEnding';
 
   /// 작성: 2026-10-20 14:05:12 · nada
+  /// 수정: 2026-10-22 22:40:00 · nada
   /// 함수: encodeMotionMeta
   /// 목적: 운행 거리 · 최대 속도를 적분한 움직인 구간을 집계 파일 끝에
   ///       덧붙일 문자열로 만든다. 거리가 이상할 때 어느 구간을 적분했는지
   ///       집계 파일만 보고 알 수 있게 한다.
-  ///       - 적분 방식 한 줄(`MeasurementAssembler.kinematicsMethodLabel`)
+  ///       - 적분 방식 한 줄(`Kinematics.kinematicsMethodLabel`)
   ///       - 구간 시작 · 끝 (초). 정지 측정이면 그 사실 한 줄
   ///       - 구간 여유가 기록 앞 · 끝에서 잘렸으면 그 사실. 승강기가 서기
   ///         전에 측정을 끝냈거나 움직이는 중에 시작했으면 거리가 작게 나올
@@ -352,7 +353,7 @@ class VibrationFileWriter {
       ..write(text)
       ..write(lineEnding);
 
-    line('kinematics: ${MeasurementAssembler.kinematicsMethodLabel}');
+    line('kinematics: ${Kinematics.kinematicsMethodLabel}');
     if (motion == null) {
       line('motionWindow: none');
       line('# 문턱을 넘는 움직임이 없어 운행 거리 · 최대 속도를 0 으로 둔다.');
