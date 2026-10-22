@@ -14,7 +14,7 @@
 - Dart 파일 머리에 `///` 금지 — 바로 아래 첫 선언의 문서 주석으로 붙어버린다.
 - 다만 `import` 가 하나도 없어 **첫 선언이 1행부터 시작하는 파일**은, 1행의 `///`
   가 곧 그 선언의 문서 주석이므로 위반이 아니다 (`capture_config.dart`,
-  `native_event.dart`, `noise_config.dart`, `sos_section.dart`).
+  `native_event.dart`, `noise_config.dart`, `report_layout.dart`).
 - 라이선스 · 자동생성 표시처럼 도구가 요구하는 줄만 예외로 남긴다.
 
 ---

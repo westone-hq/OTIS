@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/dsp/analog_biquad.dart';
@@ -197,16 +196,18 @@ abstract final class RideWeighting {
   }
 
   /// 작성: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-23 00:00:00 · nada
   /// 함수: horizontal
   /// 목적: 수평(X · Y) 한 축에 Wd 가중을 한 방향으로 건다.
   /// 인자: series — 한 축 진동 시계열 (mg)
   ///       sampleRateHz — 표본 속도 (Hz)
   /// 반환: 가중한 시계열 (mg, 같은 길이)
   static List<double> horizontal(List<double> series, double sampleRateHz) =>
-      // → 로직 이동: sosfilt()
-      sosfilt(wd(sampleRateHz), series);
+      // → 로직 이동: SosSection.sosfilt()
+      SosSection.sosfilt(wd(sampleRateHz), series);
 
   /// 작성: 2026-10-15 16:50:04 · nada
+  /// 수정: 2026-10-23 00:00:00 · nada
   /// 함수: vertical
   /// 목적: 수직(Z) 진동에 1Hz 고역(양방향)을 건 뒤 Wk 가중을 한 방향으로
   ///       건다. 고역이 승강기 가감속을 빼므로 차트에서도 가감속 경사가
@@ -220,35 +221,7 @@ abstract final class RideWeighting {
     final highpass = _verticalHighpass(sampleRateHz); // 가감속을 빼는 고역 구간
     // → 로직 이동: Butterworth.filtfilt()
     final steady = Butterworth.filtfilt(highpass, series); // 가감속을 뺀 신호
-    return sosfilt(wk(sampleRateHz), steady); // → 로직 이동: sosfilt()
-  }
-
-  /// 작성: 2026-10-15 16:50:04 · nada
-  /// 함수: sosfilt
-  /// 목적: 2차 구간들을 차례로 한 방향(앞에서 뒤로)으로 건다. 모든 구간의
-  ///       내부 상태는 0 에서 출발한다 — 받는 신호가 기준선 0 맞춤
-  ///       (`SignalConditioner`)을 거쳐 0 근처에서 시작하고, 출발 직후는
-  ///       운행 구간(`TravelWindow`) 밖이라 지표에 들지 않는다.
-  /// 인자: sections — 걸 2차 구간 목록
-  ///       x — 거를 신호
-  /// 반환: 거른 신호 (같은 길이)
-  /// 식: 직접형 II 전치 구조
-  ///     y = b0 x + s0,  s0 ← b1 x - a1 y + s1,  s1 ← b2 x - a2 y
-  /// 근거: 표준 — SciPy 1.18.1 `sosfilt()`(zi 없이) · `lfilter()` 와 같은
-  ///       계산
-  static List<double> sosfilt(List<SosSection> sections, List<double> x) {
-    final data = Float64List.fromList(x); // 거르며 덮어쓸 신호
-    for (final s in sections) {
-      var s0 = 0.0; // 내부 상태 첫째 칸
-      var s1 = 0.0; // 내부 상태 둘째 칸
-      for (var i = 0; i < data.length; i++) {
-        final input = data[i]; // 이 구간에 들어온 값
-        final y = s.b0 * input + s0; // 이 구간이 내보내는 값
-        s0 = s.b1 * input - s.a1 * y + s1;
-        s1 = s.b2 * input - s.a2 * y;
-        data[i] = y;
-      }
-    }
-    return data;
+    // → 로직 이동: SosSection.sosfilt()
+    return SosSection.sosfilt(wk(sampleRateHz), steady);
   }
 }

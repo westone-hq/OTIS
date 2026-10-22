@@ -103,7 +103,7 @@ void main() {
         n,
         (i) => math.sin(2 * math.pi * hz * i / fs),
       ); // 사인 입력
-      final y = RideWeighting.sosfilt(sections, x); // 출력
+      final y = SosSection.sosfilt(sections, x); // 출력
       var peak = 0.0; // 뒤 절반의 최대 크기
       for (var i = n ~/ 2; i < n; i++) {
         peak = math.max(peak, y[i].abs());
