@@ -96,7 +96,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-07 01:36:03 · nada
+  /// 수정: 2026-10-23 14:00:00 · nada
   /// 함수: build
   /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다.
   ///       - 상단 헤더 — 제목과 닫기 버튼
@@ -163,7 +163,11 @@ class PlacementSheet extends StatelessWidget {
                       '출입구를 바라보고 섰을 때 휴대폰 위쪽이 왼쪽입니다',
                     ),
                     _buildStepItem(3, '측정이 시작되면 엘리베이터를 움직이세요'),
-                    _buildStepItem(4, '엘리베이터가 완전히 멈추면 볼륨키를 눌러 측정을 끝내세요'),
+                    _buildStepItem(
+                      4,
+                      '엘리베이터가 멈춘 뒤 1초 기다렸다가 볼륨키를 눌러 측정을 '
+                      '끝내세요',
+                    ),
                     const SizedBox(height: AppDims.gap),
 
                     // 주의 배너: 색 + 아이콘 + 텍스트 3중 표시
