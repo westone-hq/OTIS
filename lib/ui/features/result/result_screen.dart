@@ -8,6 +8,7 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_card.dart';

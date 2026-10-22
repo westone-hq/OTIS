@@ -13,7 +13,7 @@ import 'package:vibration_checker/domain/auth/login_session.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/noise_config.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
 /// 작성: 2026-10-04 13:29:41 · nada

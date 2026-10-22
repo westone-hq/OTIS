@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 

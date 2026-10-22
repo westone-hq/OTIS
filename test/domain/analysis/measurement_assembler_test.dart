@@ -13,7 +13,7 @@ import 'package:vibration_checker/domain/dsp/butterworth.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 
 /// 작성: 2026-09-15 19:14:22 · nada
 /// 변수: _fixturePath

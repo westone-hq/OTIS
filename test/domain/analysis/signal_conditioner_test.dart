@@ -10,7 +10,7 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/dsp/butterworth.dart';
 import 'package:vibration_checker/domain/dsp/polyphase_resampler.dart';
 import 'package:vibration_checker/domain/dsp/sos_section.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 
 import '../../support/reference_records.dart';
 

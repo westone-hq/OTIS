@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 
 import '../support/pdf_probe.dart';
 import '../support/reference_records.dart';

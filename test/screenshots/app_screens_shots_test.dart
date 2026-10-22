@@ -23,6 +23,7 @@ import 'package:vibration_checker/domain/auth/worker.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';

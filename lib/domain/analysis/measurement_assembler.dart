@@ -10,7 +10,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/dsp/butterworth.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 
 /// 작성: 2026-09-15 13:08:37 · nada
 /// 클래스: MeasurementAssembleResult

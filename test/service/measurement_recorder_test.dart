@@ -12,7 +12,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/service/measurement_recorder.dart';
 
 /// 작성: 2026-10-04 13:36:00 · nada

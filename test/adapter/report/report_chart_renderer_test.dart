@@ -20,7 +20,7 @@ import 'package:vibration_checker/domain/report/chart_series.dart';
 import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 
 import '../../support/pdf_probe.dart';
 

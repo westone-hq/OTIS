@@ -4,7 +4,7 @@ import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 
 /// 작성: 2026-10-21 10:05:00 · nada
 /// 변수: otis1021Records
