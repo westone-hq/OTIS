@@ -63,12 +63,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
   bool _loadFailed = false;
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
+  /// 수정: 2026-10-22 12:20:00 · nada
   /// 함수: initState
-  /// 목적: 이 화면이 나타날 때 한 번, 저장된 결과 목록을 불러온다.
+  /// 목적: 이 화면이 나타날 때 한 번 저장된 결과 목록을 불러오고, 그 뒤로는
+  ///       측정 폴더가 바뀔 때마다(`MeasurementRepository.changes`) 다시
+  ///       읽는다. 이 화면에서 연 결과 화면이 재실행으로 바뀌어 끼워져도 새
+  ///       결과가 목록에 들어온다.
   @override
   void initState() {
     super.initState();
     _loadItems(); // → 로직 이동: _loadItems()
+    MeasurementRepository.instance.changes.addListener(_loadItems);
+  }
+
+  /// 작성: 2026-10-22 12:20:00 · nada
+  /// 함수: dispose
+  /// 목적: 측정 폴더 변경 듣기를 끊는다. 저장소는 앱 전역 하나라 끊지 않으면
+  ///       사라진 화면을 계속 부른다.
+  @override
+  void dispose() {
+    MeasurementRepository.instance.changes.removeListener(_loadItems);
+    super.dispose();
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
@@ -99,13 +114,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-10-04 18:38:14 · nada
+  /// 수정: 2026-10-22 12:20:00 · nada
   /// 함수: _open
-  /// 목적: 고른 측정의 결과 화면을 연다. 결과 화면에서 테스트를 다시
-  ///       재면 새 결과가 생기므로, 돌아오면 목록을 새로 읽는다.
+  /// 목적: 고른 측정의 결과 화면을 연다. 결과 화면에서 테스트를 다시 재
+  ///       새 결과가 생기면 저장소 변경 알림(`initState()`)이 목록을 새로
+  ///       읽는다 — 돌아온 뒤에 읽던 방식은 재실행이 결과 화면을 바꿔 끼우는
+  ///       순간 끝나 새 결과를 놓쳤다.
   /// 인자: item — 열 측정 결과
-  Future<void> _open(MeasurementResult item) async {
-    await context.push('/result/${item.id}'); // → 로직 이동: ResultScreen.build()
-    if (mounted) _loadItems(); // → 로직 이동: _loadItems()
+  void _open(MeasurementResult item) {
+    context.push('/result/${item.id}'); // → 로직 이동: ResultScreen.build()
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
