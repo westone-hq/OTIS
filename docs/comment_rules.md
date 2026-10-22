@@ -241,7 +241,7 @@ routerConfig: appRouter, // → 로직 이동: appRouter
 ```
 
 - 대상 이름만 짧게. 설명 문장 금지.
-- **함수 · 메서드는 `()` 를 붙인다** (`_startMeasure()`, `SensorChannelManager.stopCapture()`, `HomeScreen.build()`). 함수가 아닌 대상 — 객체, 프로퍼티, Kotlin `when` case — 은 괄호 없이 이름만 (`appRouter`, `MeasurementSession.instance.currentSite`, `MainActivity.checkAvailable`).
+- **함수 · 메서드는 `()` 를 붙인다** (`_startMeasure()`, `SensorChannelManager.stopCapture()`, `HomeScreen.build()`). 함수가 아닌 대상 — 객체, 프로퍼티, Kotlin `when` case — 은 괄호 없이 이름만 (`appRouter`, `MeasurementSession.instance.currentSite`, `SensorMethodHandler.checkAvailable`).
 - **호출부마다 하나씩 단다.** 같은 대상을 세 곳에서 부르면 표시도 세 개다. 한 곳만 달면 다이어그램에서 갈래가 사라진다.
 - 표시한 대상은 **실제로 실행될 수 있어야 한다.** 부르는 곳이 없거나 조건상 절대 도달하지 못하는 경로에는 달지 않는다. 그런 코드는 7장에 따라 삭제한다.
 - 대상 이름은 코드의 실제 식별자 그대로 쓴다. 한국어 별칭은 명칭 통일표에서 따로 관리한다.

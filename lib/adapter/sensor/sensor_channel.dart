@@ -18,14 +18,14 @@ import 'package:vibration_checker/domain/config/noise_config.dart';
 ///         묶은 덩어리)로 받는다
 class SensorChannelManager {
   /// 작성: 2026-07-10 11:01:05 · 박건준
-  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 수정: 2026-10-22 23:30:00 · nada
   /// 변수: _methodChannel
   /// 목적: Flutter ↔ 안드로이드가 요청 하나 · 응답 하나를 주고받는 통로.
   ///       양쪽은 이 문자열 하나만으로 서로를 찾는다 — Dart 코드와 코틀린
   ///       코드 사이에는 컴파일러가 대신 검사해주는 연결이 없어서, 한쪽
   ///       문자열만 바뀌면 컴파일은 그대로 되지만 실행할 때 요청이 반대편에
   ///       닿지 않고 조용히 실패한다(예외 없이 응답만 안 옴). 이름을 바꿀
-  ///       일이 생기면 `MainActivity.kt`에 등록된 문자열도 반드시 같이
+  ///       일이 생기면 `SensorMethodHandler.kt`에 등록된 문자열도 반드시 같이
   ///       바꿔야 한다.
   static const MethodChannel _methodChannel = MethodChannel(
     'com.otis.vibration_checker/sensors_method',
@@ -175,6 +175,7 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
+  /// 수정: 2026-10-22 23:30:00 · nada
   /// 함수: checkSensorsAvailable
   /// 목적: 이 기기에 가속도 · 중력 센서가 실제로 있는지 안드로이드에
   ///       물어봐서 확인한다.
@@ -185,7 +186,7 @@ class SensorChannelManager {
   /// 반환: 센서를 실제로 쓸 수 있으면 true. 확인 요청이 실패하면 false
   Future<bool> checkSensorsAvailable() async {
     try {
-      // → 로직 이동: MainActivity.checkAvailable
+      // → 로직 이동: SensorMethodHandler.checkAvailable
       final bool? available = await _methodChannel.invokeMethod<bool>(
         'checkAvailable',
       ); // 안드로이드가 돌려준 값. 요청 자체가 실패하면 null
@@ -204,14 +205,14 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-09-15 13:30:00 · 박희정
+  /// 수정: 2026-10-22 23:30:00 · nada
   /// 함수: requestAudioPermission
   /// 목적: 안드로이드에게 마이크(RECORD_AUDIO) 권한을 요청한다.
   ///       이미 승인돼 있으면 즉시 true, 거부되면 false를 돌려준다.
   /// 반환: 마이크 사용이 가능하면 true
   Future<bool> requestAudioPermission() async {
     try {
-      // → 로직 이동: MainActivity.requestAudioPermission
+      // → 로직 이동: SensorMethodHandler.requestAudioPermission
       final bool? granted = await _methodChannel.invokeMethod<bool>(
         'requestAudioPermission',
       ); // 허용 여부. 응답이 비었으면 null
@@ -229,7 +230,7 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 23:30:00 · nada
   /// 함수: startCapture
   /// 목적: 안드로이드에게 센서·소음 데이터를 쏴 달라고 명령을 내린다.
   ///       시작 전에 이전 측정 기록(폐기 개수 · 오류 문구 · 원본 기록과
@@ -251,7 +252,7 @@ class SensorChannelManager {
     lastDeviceManufacturer = null;
     lastDeviceModel = null;
     try {
-      // → 로직 이동: MainActivity.startCapture
+      // → 로직 이동: SensorMethodHandler.startCapture
       await _methodChannel.invokeMethod('startCapture', {
         'calibrationOffset': calibrationOffsetDba,
         'micDbfsToDbaOffset': micDbfsToDbaOffset,
@@ -263,7 +264,7 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · nada
+  /// 수정: 2026-10-22 23:30:00 · nada
   /// 함수: stopCapture
   /// 목적: 안드로이드에게 그만 보내고 지금까지 모은 걸 파일로 저장해
   ///       경로를 알려달라고 명령을 내린다. `_stopReplyLimit` 안에 응답이
@@ -276,7 +277,7 @@ class SensorChannelManager {
   ///       null 을 담는다
   Future<void> stopCapture() async {
     try {
-      // → 로직 이동: MainActivity.stopCapture
+      // → 로직 이동: SensorMethodHandler.stopCapture
       final reply = await _methodChannel
           .invokeMapMethod<String, Object?>('stopCapture')
           .timeout(_stopReplyLimit); // 두 경로 · 표본 속도를 담은 응답
@@ -296,6 +297,7 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-10-22 09:30:00 · nada
+  /// 수정: 2026-10-22 23:30:00 · nada
   /// 함수: playPlacementAlert
   /// 목적: 거치가 "화면 아래" 가 아닐 때 측정 중에 경고음 한 번과 진동을
   ///       울려 달라고 안드로이드에 요청한다. 휴대폰이 엎어져 있어 화면
@@ -304,7 +306,7 @@ class SensorChannelManager {
   ///       경고를 못 울려도 측정과 결과 화면 경고는 그대로다
   Future<void> playPlacementAlert() async {
     try {
-      // → 로직 이동: MainActivity.playPlacementAlert
+      // → 로직 이동: SensorMethodHandler.playPlacementAlert
       await _methodChannel.invokeMethod('playPlacementAlert');
     } catch (error, stack) {
       developer.log(
@@ -317,7 +319,7 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-10-01 13:04:31 · 박희정
-  /// 수정: 2026-10-04 13:44:32 · nada
+  /// 수정: 2026-10-22 23:30:00 · nada
   /// 함수: setVolumeKeyCaptureEnabled
   /// 목적: 볼륨키를 측정 종료 입력으로 가로챌지 안드로이드에 알린다. 측정
   ///       중에만 켜 두고, 끝나면 꺼서 볼륨키 본래 동작(소리 크기 조절)을
@@ -327,7 +329,7 @@ class SensorChannelManager {
   ///       볼륨키를 못 가로채도 화면의 완료 버튼으로 끝낼 수 있다
   Future<void> setVolumeKeyCaptureEnabled(bool enabled) async {
     try {
-      // → 로직 이동: MainActivity.setVolumeKeyCaptureEnabled
+      // → 로직 이동: SensorMethodHandler.setVolumeKeyCaptureEnabled
       await _methodChannel.invokeMethod('setVolumeKeyCaptureEnabled', {
         'enabled': enabled,
       });

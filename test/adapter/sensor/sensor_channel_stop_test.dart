@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 
 /// 작성: 2026-10-22 12:00:00 · nada
+/// 수정: 2026-10-22 23:30:00 · nada
 /// 변수: _channel
-/// 목적: 안드로이드 `MainActivity.METHOD_CHANNEL` 과 같은 통로 이름.
+/// 목적: 안드로이드 `SensorMethodHandler.METHOD_CHANNEL` 과 같은 통로 이름.
 const MethodChannel _channel = MethodChannel(
   'com.otis.vibration_checker/sensors_method',
 );
