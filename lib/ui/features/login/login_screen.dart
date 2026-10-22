@@ -108,9 +108,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// 작성: 2026-10-18 09:41:12 · nada
+  /// 수정: 2026-10-22 12:50:00 · nada
   /// 함수: build
   /// 목적: 사번 → 비밀번호 입력칸을 세로로 두고 아래에 "로그인" 버튼을
-  ///       고정한다. 뒤로 갈 화면이 없어 앱바에 뒤로 버튼을 두지 않는다.
+  ///       고정한다. 버튼은 키보드가 열리면 그 위로 올라온다. 뒤로 갈 화면이
+  ///       없어 앱바에 뒤로 버튼을 두지 않는다.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -175,7 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
       bottomNavigationBar: AppBottomBar(
-        // 화면 아래 고정 "로그인" 버튼
+        // 화면 아래 고정 "로그인" 버튼. 사번 · 비밀번호를 넣는 동안 키보드에
+        // 가려지지 않게 키보드 위로 올린다(2026-10-22 에뮬레이터 확인)
+        liftAboveKeyboard: true,
         child: ElevatedButton(
           onPressed: _busy ? null : _submit, // → 로직 이동: _submit()
           child: Text(_busy ? '확인 중…' : '로그인'),

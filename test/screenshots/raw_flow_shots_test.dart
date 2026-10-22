@@ -443,8 +443,8 @@ void main() {
       // 측정 화면 — 카운트다운 → 수집 중. 현재 속도는 정속 구간까지
       // (앞 12초) 흘려보낸 값으로 나온다
       sensors.events = _eventsFromRaw(_readGrid(raw!), 12);
-      await tester.ensureVisible(find.text('볼륨키로 측정 시작'));
-      await tester.tap(find.text('볼륨키로 측정 시작'));
+      await tester.ensureVisible(find.text('측정 시작'));
+      await tester.tap(find.text('측정 시작'));
       await settle(tester, rounds: 20);
       if (first) await shot('${run.label}_측정_카운트다운');
       for (var second = 0; second < 8; second++) {

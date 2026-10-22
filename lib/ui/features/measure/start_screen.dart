@@ -206,14 +206,17 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-05 10:03:35 · nada
+  /// 수정: 2026-10-22 12:50:00 · nada
   /// 함수: build
   /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
   ///       - `appBar` — 제목만 있는 간단한 상단 바
   ///       - `body` — 스크롤 가능한 안내 영역. 거치 안내 카드 → 대기
-  ///         시간 선택 카드 4개 → 선택한 시간 요약 문구 순으로 보여준다
+  ///         시간 선택 카드 4개 → 선택한 시간 요약 문구(측정은 볼륨키로
+  ///         끝낸다는 안내 포함) 순으로 보여준다
   ///       - `bottomNavigationBar` — 센서를 못 쓰면 오류 안내를 보여주고,
-  ///         그 아래 "볼륨키로 측정 시작" 버튼 하나를 둔다
+  ///         그 아래 "측정 시작" 버튼 하나를 둔다. 볼륨키로 시작하는 기능은
+  ///         없다 — 예전 문구 "볼륨키로 측정 시작" 이 볼륨키로 시작한다는
+  ///         뜻으로 읽혀 2026-10-22 에 바꿨다
   /// 인자: context — 이 화면이 어디에 놓이는지 알려주는 값
   /// 반환: 측정 준비 화면 전체를 담는 위젯
   @override
@@ -292,7 +295,8 @@ class _StartScreenState extends State<StartScreen> {
 
           // 선택 요약 텍스트
           Text(
-            '버튼을 누르면 $_selectedSeconds초 후 측정이 시작됩니다',
+            '버튼을 누르면 $_selectedSeconds초 후 측정이 시작됩니다\n'
+            '운행이 끝나면 볼륨키로 측정을 끝냅니다',
             textAlign: TextAlign.center,
             style: AppText.caption,
           ),
@@ -315,8 +319,8 @@ class _StartScreenState extends State<StartScreen> {
             ElevatedButton.icon(
               // → 로직 이동: _startMeasuring()
               onPressed: canStart && !_starting ? _startMeasuring : null,
-              icon: const Icon(Icons.volume_up_outlined),
-              label: const Text('볼륨키로 측정 시작'),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('측정 시작'),
             ),
           ],
         ),

@@ -94,4 +94,25 @@ void main() {
 
     expect(find.text('사번을 입력하세요.'), findsOneWidget);
   });
+
+  testWidgets('키보드가 열려도 로그인 버튼은 키보드 위에 보인다', (tester) async {
+    // 2026-10-22 에뮬레이터: 키보드가 열리면 아래 고정 버튼이 키보드에 가려졌다
+    const keyboardPx = 900.0; // 키보드 높이 (물리 픽셀)
+    tester.view.viewInsets = const FakeViewPadding(bottom: keyboardPx);
+    addTearDown(tester.view.resetViewInsets);
+    await _pumpLogin(tester);
+
+    final screenBottom =
+        tester.view.physicalSize.height /
+        tester.view.devicePixelRatio; // 화면 아래 끝 (논리 픽셀)
+    final keyboardTop =
+        screenBottom - keyboardPx / tester.view.devicePixelRatio; // 키보드 위 끝
+    final button = tester.getRect(
+      find.widgetWithText(ElevatedButton, '로그인'),
+    ); // 로그인 버튼 자리
+    expect(button.bottom, lessThanOrEqualTo(keyboardTop));
+
+    await _submit(tester, 't00001', 'T00001');
+    expect(find.text('홈 화면'), findsOneWidget, reason: '가려지지 않아 누를 수 있다');
+  });
 }
