@@ -37,6 +37,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
 | `docs/reference/sample_evimp.pdf` | 원본 TUNE 리포트. 코드 주석의 `근거:` 가 가리킨다 |
 | `docs/reference/H6N1AP65.pdf` | 원본 TUNE 리포트(실제 현장). 머리말 표기(하중 · 제품 · 주소)의 근거. **H6N1AP65.pdf 는 저장소 밖 보관**(`.gitignore`) — 실제 엔지니어명 · 현장명이 들어 있다. 시험 픽스처로 쓰지 않는다 |
 | `docs/noise_otis_offset_notes.md` | 소음 dBA 오프셋 · OTIS 차이 · 남은 과제 |
+| `docs/otis_parity_experiment.md` | 오티스폰 원시데이터 → 앱 경로 vs OTIS PDF 수직 값, 계산 방식을 한 가지씩 바꾼 실험 표(2026-10-22) |
 | `docs/release.md` | 릴리스 서명 키 보관 · `android/key.properties` · 서명 확인(인증서 지문). 키가 없으면 릴리스 빌드가 멈춘다 |
 | `assets/workers/workers.json` | 로그인 작업자 명단(사번 · 성명 · 업체명 · 관리팀). OTIS 명단 엑셀(`설치 업체 List_*.xlsx`, 저장소 밖 · `.gitignore`)에서 `tool/import_workers.py` 로 만든다(아나콘다 파이썬, openpyxl). 실명이 평문으로 공개 저장소 · APK 에 들어간다(2026-10-18 사용자 결정) |
 | `assets/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
@@ -126,7 +127,7 @@ flutter test --tags screenshot --run-skipped test/screenshots
   에서 측정되었습니다."(`ReportMetric.remarkLines`). 다른 행은 문구가 없다.
   OTIS 대비 개발폰 3건: ptp −6 · +12 · +33%(하강, 오티스폰 원시데이터도
   +11%), Jptp +15 · −3 · −12%.
-- 결과 화면 경고(2026-10-23, `resultWarnings()`, 판정은 결과 모델 게터): 거치
+- 결과 화면 경고(2026-10-22, `resultWarnings()`, 판정은 결과 모델 게터): 거치
   경고 다음에 정지 뒤 여유가 1초 미만이면 "정지 후 1초 이상 기다린 뒤
   종료하세요 — 끝부분 값이 부정확할 수 있습니다"(`stoppedTooSoon`), 기준선
   구간을 줄이지도 옮기지도 못했으면 "시작 후 2초 기다린 뒤 출발하세요"
@@ -288,7 +289,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   (못 정하면 `zonesFailureReason`) 줄과 `stopMarginSec` 이 붙는다. 가중 줄
   아래에 `deviceManufacturer` · `deviceModel` · `deviceCompensation`, 신호 처리
   줄에 `baselineSource` · `baselineStartSec` · `baselineSec` 이 있다
-  (2026-10-23).
+  (2026-10-22).
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
   (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+devcomp(SM-S901N,lp25.0bw2zp)+motion(v>0.05,pad500ms)
   +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)
@@ -303,7 +304,7 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   가 없는 2026-10-21 전 결과의 `zPtp` 는 운행 구간 전체 최대이고 Jptp ·
   위치가 없다. 2026-10-21 2차 ~ 10-22 결과는 `+devcomp` 자리에 `+zlp(20.0bw4zp)`
   가 있고 모든 기록의 수직에 20Hz 4차 저역을 건 값이다(그대로 읽는다). 그
-  전 결과는 둘 다 없고 수직 저역이 없다. 2026-10-23 부터 기종
+  전 결과는 둘 다 없고 수직 저역이 없다. 2026-10-22 부터 기종
   (`deviceManufacturer` · `deviceModel`), 보정(`deviceCompensation`, 표에 없는
   기종이면 "none"), 정지 뒤 여유(`stopMarginSec`), Jptp 넓힘 막힘
   (`zJptpClippedAtEnd`), 기준선 출처(`baselineSource`)를 싣는다. `+motion` 이 없는
@@ -485,8 +486,8 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     −2 ~ +10% 이고 저역을 걸면 3회 A95 가 +21% 로 벌어져 걸지 않는다. 2회
     ptp 차이(+6 ~ +13%)는 어느 차단에서도 줄지 않아 잡음이 아니다. 한
     현장 3회 비교로 정한 값이라 다른 현장 동시 측정으로 다시 확인한다
-    (`docs/pending_checks.md`) — **2026-10-23 되돌림**, 아래 항목
-  - 2026-10-23: 수직 20Hz 저역을 지우고 **기종 응답 보정**으로 바꾼다
+    (`docs/pending_checks.md`) — **2026-10-22 되돌림**, 아래 항목
+  - 2026-10-22: 수직 20Hz 저역을 지우고 **기종 응답 보정**으로 바꾼다
     (`DeviceResponse`, `CaptureConfig.deviceResponseByModelPrefix`). 보정 표에
     있는 기종(지금은 개발폰 갤럭시 S22, `SM-S901…` → 2차 25Hz 저역 양방향)의
     기록에만 수직에 걸고, 오티스폰 · ride_reference 같은 외부 기록과 표에
@@ -507,6 +508,8 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
     (계산 방식 차이의 하한, 10-22 상승 A95 −12%, 10-21 하강3 Jptp +18%).
     ride_reference 수직 최대는 다시 5.53(원본 6.1 대비 −9%). 근거가 서일대
     한 대라 다른 건물에서 재확인한다(`docs/pending_checks.md`)
+  - OTIS PDF 대비 수직 ±15% 는 계산 방식 조정으로 줄지 않음(2026-10-22 실험)
+    — 내부 신호 차이 추정(`docs/otis_parity_experiment.md`, pending 21)
   - 2026-10-21 2차: `raw.txt`(EVIMP1 내보내기)는 축별로 내보내는 행 전체의
     평균을 빼고 쓴다(`VibrationFileWriter.encode()`, 뺀 값은 meta.txt
     `rawExportMeanX/Y/Zmg`). 오티스폰 EVIMP1 내보내기(otis_* · ride_reference)

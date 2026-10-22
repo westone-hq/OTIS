@@ -206,7 +206,7 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-22 12:50:00 · nada
+  /// 수정: 2026-10-22 20:00:00 · nada
   /// 함수: build
   /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
   ///       - `appBar` — 제목만 있는 간단한 상단 바
@@ -296,7 +296,7 @@ class _StartScreenState extends State<StartScreen> {
           // 선택 요약 텍스트
           Text(
             '버튼을 누르면 $_selectedSeconds초 후 측정이 시작됩니다\n'
-            '운행이 끝나면 볼륨키로 측정을 끝냅니다',
+            '운행이 멈춘 뒤 1초 기다렸다가 볼륨키로 끝냅니다',
             textAlign: TextAlign.center,
             style: AppText.caption,
           ),
