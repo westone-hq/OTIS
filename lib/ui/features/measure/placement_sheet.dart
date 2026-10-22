@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 
 /// 작성: 2026-10-04 13:37:23 · nada
 /// 클래스: _DiagramSize

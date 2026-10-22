@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_card.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_layout.dart';
-import '../../core/widgets/app_notice.dart';
-import 'mic_permission.dart';
-import 'placement_sheet.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_card.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
+import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
+import 'package:vibration_checker/ui/features/measure/placement_sheet.dart';
 
 /// 작성: 2026-08-17 13:31:30 · 박건준
 /// 수정: 2026-10-04 13:37:23 · nada

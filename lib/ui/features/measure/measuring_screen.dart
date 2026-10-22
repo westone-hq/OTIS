@@ -2,17 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:vibration_checker/adapter/capture_session.dart';
 import 'package:vibration_checker/adapter/measurement_recorder.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_layout.dart';
-import '../../core/widgets/app_notice.dart';
-import 'record_failure_message.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
+import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/features/measure/record_failure_message.dart';
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
 /// 수정: 2026-10-04 13:33:18 · nada

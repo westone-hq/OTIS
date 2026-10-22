@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vibration_checker/adapter/login_store.dart';
-
-import 'ui/core/router.dart';
-import 'ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/router.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
 
 /// 작성: 2026-08-17 11:15:41 · 박건준
 /// 수정: 2026-10-18 09:41:12 · nada

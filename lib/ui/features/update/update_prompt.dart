@@ -5,10 +5,9 @@ import 'package:vibration_checker/adapter/update_checker.dart';
 import 'package:vibration_checker/adapter/update_installer.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-10-13 14:18:51 · nada
 /// 클래스: UpdatePrompt

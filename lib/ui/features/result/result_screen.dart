@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-
 import 'package:vibration_checker/adapter/measurement_repository.dart';
 import 'package:vibration_checker/adapter/sensor_channel.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
@@ -10,15 +9,14 @@ import 'package:vibration_checker/domain/report/report_thresholds.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_card.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_layout.dart';
-import '../../core/widgets/app_notice.dart';
-import '../../core/widgets/app_snack_bar.dart';
-import '../measure/mic_permission.dart';
-import '../shared/send_email_sheet.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_card.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
+import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
+import 'package:vibration_checker/ui/features/shared/send_email_sheet.dart';
 
 /// 작성: 2026-10-04 18:15:24 · nada
 /// 클래스: _Metric

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'package:vibration_checker/adapter/sensor_channel.dart';
-
-import '../../core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 
 /// 작성: 2026-10-04 18:15:24 · nada
 /// 수정: 2026-10-13 14:15:29 · nada

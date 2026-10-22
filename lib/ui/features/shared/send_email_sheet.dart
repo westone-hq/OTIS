@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/model/measurement_result.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_layout.dart';
-import '../../core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
+import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-08-19 10:33:43 · 박건준
 /// 수정: 2026-10-04 18:15:24 · nada

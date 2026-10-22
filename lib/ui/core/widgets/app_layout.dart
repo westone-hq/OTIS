@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../theme.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
 
 /// 작성: 2026-10-04 13:37:23 · nada
 /// 클래스: AppScrollBody

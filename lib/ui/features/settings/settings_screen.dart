@@ -4,14 +4,12 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:vibration_checker/adapter/login_store.dart';
 import 'package:vibration_checker/adapter/prefs_store.dart';
 import 'package:vibration_checker/domain/session/login_session.dart';
-
-import '../update/update_prompt.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_card.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_layout.dart';
-import '../../core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_card.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
+import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
 /// 수정: 2026-10-18 09:41:12 · nada

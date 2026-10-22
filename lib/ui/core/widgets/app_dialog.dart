@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
 
 /// 작성: 2026-08-06 15:59:06 · 박건준
 /// 클래스: AppDialogButton
