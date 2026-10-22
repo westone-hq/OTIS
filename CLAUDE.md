@@ -130,6 +130,9 @@ flutter test --tags screenshot --run-skipped test/screenshots
   그 한 건만 "읽을 수 없는 결과" 로 보여 주고 지울 수 있게 한다
   (`MeasurementRepository.listEntries()`, 2026-10-15). 측정 일시를 "지금"
   으로 채워 읽지 않는다(`MeasurementResult.fromMap` 은 `FormatException`).
+  목록은 저장 · 삭제 · 정리 때마다 오르는 `MeasurementRepository.changes` 를
+  듣고 다시 읽는다(2026-10-22) — 목록에서 연 결과 화면이 테스트 재실행으로
+  측정 화면과 바뀌어 끼워지면, 돌아온 뒤 다시 읽는 방식은 새 결과를 놓쳤다.
 - 리포트 값 칸 소수 자리: 최대 속도 둘째 자리(1.74m/s), 나머지 첫째 자리,
   100 이상은 정수(`ReportMetric._decimalsByUnit`, 결과 화면도
   `ReportMetric.decimalsFor()` 로 같은 자리). 최대 속도는 반올림 단위 없이
@@ -152,7 +155,9 @@ flutter test --tags screenshot --run-skipped test/screenshots
   `CaptureConfig.placementWindowMs` · `placementFaceDownMaxMg` −940 ·
   `placementFaceUpMinMg` +940 — 화면 아래 / 화면 위 / 기울어짐). 화면 아래가
   아니면 측정 중에 경고음 200ms + 진동 300ms 를 한 번 울린다
-  (`MainActivity.playPlacementAlert`, `VIBRATE` 권한, 측정은 계속). result.json
+  (`MainActivity.playPlacementAlert`, `VIBRATE` 권한, 측정은 계속. 진동은 알람
+  용도 — 용도 없이 내면 "터치" 로 기록돼 터치 진동을 끈 기기에서 막힐 수
+  있다, 2026-10-22). result.json
   `placement` · `placementGravityZMg`, meta.txt `placement` ·
   `placementGravityZmg`(판정 전에 끝나면 `placement: unknown`)에 남기고,
   결과 화면은 화면 위 · 기울어진 결과에 재측정 권고 경고를, 메일 본문은

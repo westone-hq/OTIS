@@ -4,10 +4,12 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -453,13 +455,19 @@ class MainActivity : FlutterActivity() {
 
     /**
      * 작성: 2026-10-22 09:30:00 · nada
+     * 수정: 2026-10-22 12:20:00 · nada
      * 함수: playPlacementAlert
      * 목적: 경고음(`ToneGenerator`, 알람 소리 통로)을 `PLACEMENT_BEEP_MS` 울리고
      *       진동을 `PLACEMENT_VIBRATE_MS` 준다. 휴대폰이 엎어져 있어 화면
      *       안내를 볼 수 없을 때 쓰는 신호다. 소리 · 진동 장치를 못 열어도
      *       기록만 남기고 넘어간다 — 경고 때문에 측정이 멈추면 안 된다.
      *       경고음은 소음 마이크와 녹음(noise.m4a)에, 진동은 가속도계에 들어
-     *       가지만 수집 시작 약 1초 뒤(운행 전 정지 구간)라 지표 구간 밖이다.
+     *       가지만 수집 시작 1.7초 뒤(기준선 구간 뒤, 운행 전 정지 구간)라 지표
+     *       구간 밖이다.
+     *       진동은 알람 용도로 낸다(Android 13 부터 `VibrationAttributes`, 그
+     *       전 8 ~ 12 는 `AudioAttributes`). 용도를 주지 않으면 "터치" 용도로
+     *       기록돼(2026-10-22 에뮬레이터 `dumpsys vibrator_manager` 의
+     *       `usage: TOUCH`), 기기의 터치 진동 설정을 끈 휴대폰에서 막힐 수 있다.
      */
     private fun playPlacementAlert() {
         try {
@@ -482,12 +490,25 @@ class MainActivity : FlutterActivity() {
                     getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                 }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(
+                val effect = // 한 번 진동
                     VibrationEffect.createOneShot(
                         PLACEMENT_VIBRATE_MS,
                         VibrationEffect.DEFAULT_AMPLITUDE,
-                    ),
-                )
+                    )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    vibrator.vibrate(
+                        effect,
+                        VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM),
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(
+                        effect,
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .build(),
+                    )
+                }
             } else {
                 @Suppress("DEPRECATION")
                 vibrator.vibrate(PLACEMENT_VIBRATE_MS)

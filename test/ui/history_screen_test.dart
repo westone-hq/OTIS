@@ -95,10 +95,22 @@ Widget _app() {
         path: '/result/:id',
         builder: (_, s) => ResultScreen(id: s.pathParameters['id']!),
       ),
+      // 테스트 재실행이 결과 화면과 바꿔 끼우는 측정 화면 자리
+      GoRoute(
+        path: '/measuring',
+        builder: (_, _) => const Scaffold(body: Text('측정 중')),
+      ),
     ],
   ); // 시험용 화면 경로
+  _router = router;
   return MaterialApp.router(routerConfig: router);
 }
+
+/// 작성: 2026-10-22 12:20:00 · nada
+/// 변수: _router
+/// 목적: `_app()` 이 만든 경로 관리자. 재실행처럼 화면을 바꿔 끼우는 시험이
+///       직접 부른다.
+late GoRouter _router;
 
 /// 작성: 2026-10-04 18:38:14 · nada
 /// 함수: main
@@ -177,6 +189,27 @@ void main() {
     await _settle(tester);
 
     expect(find.text('J-NEW · 현장'), findsNothing);
+    expect(find.text('J-OLD · 현장'), findsOneWidget);
+  });
+
+  testWidgets('결과 화면에서 재실행해 새 결과가 생기면 돌아온 목록에 보인다', (tester) async {
+    // 2026-10-22 에뮬레이터: 목록 → 결과 → 재실행(결과 화면을 측정 화면으로
+    // 바꿔 끼움) → 새 결과 저장 → 뒤로 오면 새 결과가 목록에 없었다
+    await tester.pumpWidget(_app());
+    await _settle(tester);
+    await tester.tap(find.text('J-OLD · 현장'));
+    await _settle(tester);
+    _router.pushReplacement('/measuring');
+    await _settle(tester);
+    await tester.runAsync(
+      () => MeasurementRepository.instance.save(
+        _result('20260115-080000', 'J-RERUN', DateTime(2026, 1, 15, 8)),
+      ),
+    );
+    _router.pop();
+    await _settle(tester);
+
+    expect(find.text('J-RERUN · 현장'), findsOneWidget);
     expect(find.text('J-OLD · 현장'), findsOneWidget);
   });
 }

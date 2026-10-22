@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
@@ -149,6 +150,13 @@ class MeasurementRepository {
   ///       하나만 쓰도록 강제한다.
   MeasurementRepository._();
 
+  /// 저장 · 삭제 · 정리로 측정 폴더가 바뀔 때마다 1씩 오르는 번호. 저장 결과
+  /// 목록이 듣고 다시 읽는다. 목록이 연 결과 화면이 "테스트 재실행" 으로 측정
+  /// 화면과 바뀌어 끼워지면(`pushReplacement`) 목록 쪽 `push` 가 새 결과를
+  /// 저장하기 전에 끝나, 돌아와도 다시 읽을 때가 없었다(2026-10-22 에뮬레이터
+  /// 확인).
+  final ValueNotifier<int> changes = ValueNotifier<int>(0);
+
   /// 작성: 2026-08-18 23:29:46 · 박건준
   /// 수정: 2026-09-27 09:30:00 · nada
   /// 함수: getBaseDirectory
@@ -188,11 +196,11 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-26 09:30:00 · nada
+  /// 수정: 2026-10-22 12:20:00 · nada
   /// 함수: save
   /// 목적: 새롭게 계산된 측정 결과를 기기에 저장한다. 결과 전부를 담은
   ///       파일과, 목록이 읽을 요약 파일을 함께 쓴다. 같은 식별자로 다시
-  ///       저장하면 덮어쓴다.
+  ///       저장하면 덮어쓴다. 다 쓰면 `changes` 를 올린다.
   /// 인자: result — 저장할 측정 결과
   /// 반환: 저장된 파일이 위치한 디렉터리
   Future<Directory> save(MeasurementResult result) async {
@@ -203,6 +211,7 @@ class MeasurementRepository {
     await File('${dir.path}/$resultFileName').writeAsString(jsonEncode(map));
     // → 로직 이동: _writeSummary()
     await _writeSummary(dir, map);
+    changes.value++;
     return dir;
   }
 
@@ -357,6 +366,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-10-15 22:22:45 · nada
+  /// 수정: 2026-10-22 12:20:00 · nada
   /// 함수: pruneOldest
   /// 목적: 측정 결과가 `maxStoredMeasurements` 개를 넘으면 오래된 것부터
   ///       폴더째 지운다. 폴더 이름(측정 ID, `yyyyMMdd-HHmmss` 한국 시간)을
@@ -394,11 +404,12 @@ class MeasurementRepository {
       await dir.delete(recursive: true);
       deleted.add(id);
     }
+    if (deleted.isNotEmpty) changes.value++;
     return deleted;
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-26 09:30:00 · nada
+  /// 수정: 2026-10-22 12:20:00 · nada
   /// 함수: delete
   /// 목적: 특정 ID의 측정 결과를 기기에서 완전히 삭제한다. 측정 한 건이
   ///       폴더 하나이므로 폴더째 지운다 — 리포트와 원본까지 함께 사라진다.
@@ -410,6 +421,7 @@ class MeasurementRepository {
     final dir = Directory('${base.path}/$id'); // 지울 폴더
     if (!await dir.exists()) return false;
     await dir.delete(recursive: true);
+    changes.value++;
     return true;
   }
 
