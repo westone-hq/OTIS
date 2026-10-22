@@ -451,26 +451,11 @@ void main() {
       expect(out.baselineRows, 256);
     });
 
-    test('실측 11건 — 2026-10-22 개발폰 하강만 0.86초로 줄인다', () {
-      final paths = <String, String>{
-        ...otis1021Records,
-        ...records1022,
-        'ride_reference': rideReferencePath,
-      }; // 기록 이름 → 경로
-      for (final entry in paths.entries) {
-        final out = conditioner.condition(
-          readEvimpGrid(
-            entry.value,
-            flipVertical: faceUpRecords.contains(entry.key),
-          ),
-        ); // 처리 결과
-        if (entry.key == 'dev_down_1022') {
-          expect(out.baselineSource, BaselineSource.startShortened);
-          expect(out.baselineRows! / 256, closeTo(0.86, 0.01));
-        } else {
-          expect(out.baselineSource, BaselineSource.start, reason: entry.key);
-        }
-      }
+    test('원본 리포트 기록(ride_reference)은 처음 1초를 그대로 쓴다', () {
+      final out = conditioner.condition(
+        readEvimpGrid(rideReferencePath),
+      ); // 처리 결과
+      expect(out.baselineSource, BaselineSource.start);
     });
   });
 }

@@ -48,16 +48,16 @@ class ReportLayout {
   static const String boldFontAsset = '${assetDirectory}NanumGothic-Bold.ttf';
 
   /// 작성: 2026-09-25 09:30:00 · nada
+  /// 수정: 2026-10-23 01:10:00 · nada
   /// 변수: textBaselineDropRatio
   /// 목적: 글자 크기 대비, 글자 덩이의 세로 한가운데에서 앉는 선까지
   ///       내려야 하는 몫. 서식의 세로 좌표가 글자의 수직 중심이라, 찍기
   ///       전에 이만큼 내려야 한다.
-  /// 근거: 인용 — 파이썬 프로토타입
-  ///       `pdf_report_dev/tune_report/render.py` 의 92행이 원본 리포트와
-  ///       글자 자리를 맞춰 찾은 값이다. 1쪽과 차트 쪽, 프로토타입이 모두
-  ///       같은 몫을 써야 같은 자리에 찍히므로 이 값은 구현들 사이의
-  ///       약속이며, 바꾸면 참조 PDF
-  ///       (`docs/reference/sample_evimp.pdf`)와 글자 자리가 갈라진다
+  /// 근거: 인용 — 파이썬 프로토타입(2026-10-23 저장소에서 지움, 커밋
+  ///       6bd171a 의 `pdf_report_dev/tune_report/render.py` 92행)이 원본
+  ///       리포트와 글자 자리를 맞춰 찾은 값이다. 1쪽과 차트 쪽이 모두
+  ///       같은 몫을 써야 같은 자리에 찍히므로 이 값은 두 렌더러 사이의
+  ///       약속이며, 바꾸면 원본 리포트와 글자 자리가 갈라진다
   static const double textBaselineDropRatio = 0.36;
 
   /// 작성: 2026-09-25 09:30:00 · nada

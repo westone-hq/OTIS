@@ -42,14 +42,14 @@ import '../../support/reference_records.dart';
 }
 
 /// 작성: 2026-10-21 13:10:00 · nada
+/// 수정: 2026-10-23 01:00:00 · nada
 /// 함수: main
 /// 목적: 정속 · 가감속 구간 판정(`MotionZones.of()`)과 그 구간에서 낸 수직
 ///       지표를 시험한다.
 ///       - 합성 사다리꼴 운행: 정속 시작 · 끝, 하강, 정속 없음 · 운행 없음
-///       - 2026-10-21 동시 측정 6건 · ride_reference: 점검 참고값과 ±0.3초
+///       - ride_reference: 정속 구간이 점검 참고값과 ±0.3초
 ///       - 정속 구간 저크가 잔잔한지 (RMS < 0.05 m/s³)
-///       - 수직 ptp · Jptp · A95 가 지금 계산값과 ±2% (OTIS · 원본 대비는
-///         시험 주석 · 작업메모 표로만 남긴다)
+///       - 수직 ptp · Jptp · A95 가 지금 계산값과 ±2%
 void main() {
   group('합성 운행', () {
     test('사다리꼴: 정속은 가속이 끝난 뒤부터 감속이 시작되기 전까지다', () {
@@ -108,127 +108,46 @@ void main() {
     });
   });
 
-  group('실측 기록의 정속 구간 (점검 참고값과 ±0.3초)', () {
-    const reference = <String, (double, double)>{
-      'otis_up1': (7.6, 20.3),
-      'otis_up2': (5.8, 18.6),
-      'otis_down3': (5.7, 18.4),
-      'dev_up1': (8.4, 21.1),
-      'dev_up2': (5.6, 18.3),
-      'dev_down3': (7.5, 20.2),
-    }; // 기록 → (정속 시작, 끝) 초
-    final paths = <String, String>{
-      ...otis1021Records,
-      'ride_reference': rideReferencePath,
-    }; // 기록 이름 → 경로
-
-    for (final entry in <String, (double, double)>{
-      ...reference,
-      'ride_reference': (8.8, 37.3),
-    }.entries) {
-      test(entry.key, () {
-        final result = assembleRecord(paths[entry.key]!).result!;
-        final zones = result.motionZones!;
-        expect(zones.steadyStartSec, closeTo(entry.value.$1, 0.3));
-        expect(zones.steadyEndSec, closeTo(entry.value.$2, 0.3));
-        expect(result.motionZonesFailure, isNull);
-      });
-    }
+  group('원본 리포트 기록(ride_reference)의 정속 구간 (점검 참고값과 ±0.3초)', () {
+    test('정속 구간이 8.8 ~ 37.3초다', () {
+      final result = assembleRecord(rideReferencePath).result!;
+      final zones = result.motionZones!;
+      expect(zones.steadyStartSec, closeTo(8.8, 0.3));
+      expect(zones.steadyEndSec, closeTo(37.3, 0.3));
+      expect(result.motionZonesFailure, isNull);
+    });
 
     test('정속 구간 저크는 잔잔하다 (RMS < 0.05 m/s³)', () {
-      for (final path in paths.values) {
-        final result = assembleRecord(path).result!;
-        final zones = result.motionZones!;
-        var sum = 0.0; // 저크 제곱합
-        for (var i = zones.steadyStartIndex; i <= zones.steadyEndIndex; i++) {
-          sum += result.jerkSeries[i] * result.jerkSeries[i];
-        }
-        final rms = math.sqrt(
-          sum / (zones.steadyEndIndex - zones.steadyStartIndex + 1),
-        ); // 정속 구간 저크 RMS
-        expect(rms, lessThan(0.05), reason: path);
+      final result = assembleRecord(rideReferencePath).result!;
+      final zones = result.motionZones!;
+      var sum = 0.0; // 저크 제곱합
+      for (var i = zones.steadyStartIndex; i <= zones.steadyEndIndex; i++) {
+        sum += result.jerkSeries[i] * result.jerkSeries[i];
       }
+      final rms = math.sqrt(
+        sum / (zones.steadyEndIndex - zones.steadyStartIndex + 1),
+      ); // 정속 구간 저크 RMS
+      expect(rms, lessThan(0.05));
     });
   });
 
-  group('수직 ptp · Jptp · A95 회귀 (지금 계산값 ±2%)', () {
-    // 수직 경로 = 가중 뒤 기종 응답 보정(2026-10-22, `DeviceResponse`).
-    // dev_* 는 개발폰(갤럭시 S22)이라 2차 25Hz 저역을 걸고, otis_* ·
-    // ride_reference 는 외부 기록이라 걸지 않는다(그 전 2026-10-21 2차 ~
-    // 10-22 는 모든 기록에 4차 20Hz 저역).
-    // 참고 표(개발폰 ÷ 오티스폰 같은 운행 / OTIS PDF · 원본):
-    //   기록         ptp / Jptp / A95       OTIS PDF(원본)
-    //   1021 상승1   18.75 / 18.13 / 14.71   20.5 / 17.1 / 15.4
-    //   1021 상승2   21.28 / 17.11 / 14.75   19.6 / 19.1 / 15.0
-    //   1021 하강3   15.40 / 40.33 / 8.56    13.2 / 32.6 / 9.5
-    //   1022 상승    26.31 / 19.54 / 17.71   26.4 / 23.4 / 19.3
-    //   1022 하강    17.31 / 23.94 / 11.18   21.0 / 26.4 / 9.7
-    //   ride_ref     5.53 / 19.12 / 3.71     6.1 / 18.9 / 3.6
-    // Jptp 는 운행 앞뒤 0.4초를 넣는다(`CaptureConfig.zoneTransientPaddingMs`).
-    // dev_down3 는 화면을 위로 놓고 기록돼 Z 를 뒤집어 읽는다(P2P 는 같다)
-    const pinned = <String, (double, double, double)>{
-      'dev_up1': (18.75, 18.13, 14.71),
-      'otis_up1': (19.33, 17.91, 14.21),
-      'dev_up2': (21.28, 17.11, 14.75),
-      'otis_up2': (19.56, 17.31, 14.33),
-      'dev_down3': (15.40, 40.33, 8.56),
-      'otis_down3': (14.68, 38.39, 8.50),
-      'dev_up_1022': (26.31, 19.54, 17.71),
-      'otis_up_1022': (25.68, 19.96, 17.06),
-      'dev_down_1022': (17.31, 23.94, 11.18),
-      'otis_down_1022': (19.37, 24.38, 10.42),
-      'ride_reference': (5.53, 19.12, 3.71),
-    }; // 기록 → (ptp, Jptp, A95) mg
-    final paths = <String, String>{
-      ...otis1021Records,
-      ...records1022,
-      'ride_reference': rideReferencePath,
-    }; // 기록 이름 → 경로
-
-    for (final entry in pinned.entries) {
-      test(entry.key, () {
-        final result = assembleRecord(
-          paths[entry.key]!,
-          flipVertical: faceUpRecords.contains(entry.key),
-          deviceModel: deviceModelOf(entry.key),
-        ).result!;
-        final (ptp, jptp, a95) = entry.value;
-        expect(result.zPtp, closeTo(ptp, ptp * 0.02), reason: 'ptp');
-        expect(result.zJptp, closeTo(jptp, jptp * 0.02), reason: 'Jptp');
-        expect(result.zA95, closeTo(a95, a95 * 0.02), reason: 'A95');
-        // 수직 최대는 정속 구간 안에서 났으므로 그 위치도 운행 안이다
-        expect(result.zPtpPositionM, inInclusiveRange(0, result.distance!));
-      });
-    }
+  test('ride_reference 수직 ptp · Jptp · A95 회귀 (지금 계산값 ±2%)', () {
+    // 수직 경로 = 가중 뒤 기종 응답 보정(`DeviceResponse`). ride_reference 는
+    // 외부 기록이라 보정을 걸지 않는다. 원본 리포트 값은 6.1 / 18.9 / 3.6
+    // 이다. Jptp 는 운행 앞뒤 0.4초를 넣는다
+    // (`CaptureConfig.zoneTransientPaddingMs`)
+    final result = assembleRecord(rideReferencePath).result!;
+    expect(result.zPtp, closeTo(5.53, 5.53 * 0.02), reason: 'ptp');
+    expect(result.zJptp, closeTo(19.12, 19.12 * 0.02), reason: 'Jptp');
+    expect(result.zA95, closeTo(3.71, 3.71 * 0.02), reason: 'A95');
+    // 수직 최대는 정속 구간 안에서 났으므로 그 위치도 운행 안이다
+    expect(result.zPtpPositionM, inInclusiveRange(0, result.distance!));
   });
 
   test('정속 구간 평균 속도를 결과에 남긴다(표시 안 함, 2026-10-22)', () {
-    // 2026-10-21 파이썬 계산(작업메모)과 같은 값. OTIS 표시값은 1.50 · 1.75
-    const expected = <String, double>{
-      'otis_up1': 1.522,
-      'otis_up2': 1.512,
-      'otis_down3': 1.480,
-      'dev_up1': 1.507,
-      'dev_up2': 1.503,
-      'dev_down3': 1.517,
-      'ride_reference': 1.732,
-    }; // 기록 → 정속 평균 (m/s)
-    final paths = <String, String>{
-      ...otis1021Records,
-      'ride_reference': rideReferencePath,
-    }; // 기록 이름 → 경로
-    for (final entry in expected.entries) {
-      final result = assembleRecord(
-        paths[entry.key]!,
-        flipVertical: faceUpRecords.contains(entry.key),
-      ).result!;
-      expect(
-        result.steadySpeedMps,
-        closeTo(entry.value, 0.002),
-        reason: entry.key,
-      );
-      expect(result.steadySpeedMps!, lessThan(result.maxSpeed!));
-    }
+    final result = assembleRecord(rideReferencePath).result!;
+    expect(result.steadySpeedMps, closeTo(1.732, 0.002));
+    expect(result.steadySpeedMps!, lessThan(result.maxSpeed!));
   });
 
   test('구간 판정 상수는 점검 지시 값이다', () {

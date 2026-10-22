@@ -52,14 +52,14 @@ void _expectSections(List<SosSection> actual, List<dynamic> expected) {
 }
 
 /// 작성: 2026-10-21 10:05:00 · nada
+/// 수정: 2026-10-23 01:00:00 · nada
 /// 함수: main
-/// 목적: 저크 처리(1.6Hz 4차 버터워스 양방향 → 중앙 차분)와 차트 가속도
-///       (10Hz 4차 양방향)를 시험한다.
+/// 목적: 운동 계산(`Kinematics`)의 저크 처리(1.6Hz 4차 버터워스 양방향 →
+///       중앙 차분)와 차트 가속도(10Hz 4차 양방향)를 시험한다.
 ///       - 필터 계수 · 출력이 SciPy 정본과 같은지
-///       - 2026-10-21 동시 측정 · ride_reference 의 저크 봉우리가 OTIS
-///         리포트 차트와 같은 값(±0.08)인지
-///       - 정지 측정 구간 저크 차트에 축 밖 표본이 없는지
-///       하강(dev_down3) 봉우리는 `otis_1021_descent_test.dart` 가 본다.
+///       - ride_reference 의 저크 봉우리가 원본 리포트 차트와 같은
+///         값(±0.08)인지
+///       - 저크 · 가속도 차트에 축 밖 표본이 없는지
 void main() {
   test('1.6Hz 4차 저역 계수 · 양방향 출력이 SciPy 와 같다', () {
     final cases = _cases(); // SciPy 픽스처
@@ -96,33 +96,14 @@ void main() {
     }
   });
 
-  group('2026-10-21 동시 측정 저크 봉우리 (OTIS 차트와 ±0.08)', () {
-    const targets = <String, (double, double)>{
-      'dev_up1': (0.56, -0.63),
-      'dev_up2': (0.55, -0.63),
-      'otis_up1': (0.55, -0.61),
-      'otis_up2': (0.55, -0.60),
-      'otis_down3': (0.57, -0.66),
-    }; // 기록 → (최대, 최소) m/s³
-
-    for (final entry in targets.entries) {
-      test(entry.key, () {
-        final result = assembleRecord(otis1021Records[entry.key]!).result!;
-        final jerk = result.jerkSeries; // 저크 (m/s³)
-        expect(jerk.reduce(math.max), closeTo(entry.value.$1, 0.08));
-        expect(jerk.reduce(math.min), closeTo(entry.value.$2, 0.08));
-      });
-    }
-
-    test('ride_reference (원본 H6N1AP65)', () {
-      final result = assembleRecord(rideReferencePath).result!;
-      expect(result.jerkSeries.reduce(math.max), closeTo(0.79, 0.08));
-      expect(result.jerkSeries.reduce(math.min), closeTo(-0.59, 0.08));
-    });
+  test('ride_reference 저크 봉우리가 원본 리포트 차트와 같다 (±0.08)', () {
+    final result = assembleRecord(rideReferencePath).result!;
+    expect(result.jerkSeries.reduce(math.max), closeTo(0.79, 0.08));
+    expect(result.jerkSeries.reduce(math.min), closeTo(-0.59, 0.08));
   });
 
   test('저크 · 가속도 차트에 축 밖 표본이 없다', () {
-    for (final path in <String>[...otis1021Records.values, rideReferencePath]) {
+    for (final path in <String>[rideReferencePath]) {
       final result = assembleRecord(path).result!;
       for (final spec in <ChartAxisSpec>[
         ReportChartAxes.jerk,

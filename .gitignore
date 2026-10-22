@@ -47,20 +47,9 @@ app.*.map.json
 # Explanations for local use only
 script_explanations/
 
-# --- TUNE 리포트 계층 ---
-
-# 프로토타입의 자산·산출물은 저장소 다른 곳에 정본이 있다.
-# assets/report/ 와 docs/reference/ 에 이미 있으므로 사본을 두 번 담지 않는다.
-# 파이썬 소스와 README 는 재생성 능력을 잃지 않도록 커밋한다.
-pdf_report_dev/assets/
-pdf_report_dev/out/
-pdf_report_dev/*.pdf
-pdf_report_dev/**/__pycache__/
-pdf_report_dev/**/*.pyc
-
 # 원본 TUNE 리포트(실제 현장 리포트). 엔지니어명 · 현장명이 들어 있어
-# 저장소에 올리지 않고 로컬에만 둔다. 코드 주석은 파일 이름만 인용한다
-docs/reference/H6N1AP65.pdf
+# 어디에 두든 저장소에 올리지 않는다
+H6N1AP65.pdf
 
 # OTIS 작업자 명단 엑셀 원본. 앱은 tool/import_workers.py 가 만든
 # assets/workers/workers.json 만 읽는다 (2026-10-18)

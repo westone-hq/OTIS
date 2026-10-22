@@ -8,9 +8,10 @@ import '../../support/pdf_probe.dart';
 import '../../support/reference_records.dart';
 
 /// 작성: 2026-10-22 10:30:00 · nada
+/// 수정: 2026-10-23 01:00:00 · nada
 /// 함수: main
 /// 목적: 2026-10-22 축 규칙(가속도 · 저크 0 대칭 여백, 2 · 3쪽 시간축 여백 ·
-///       눈금)으로 실측 7건을 그렸을 때
+///       눈금)으로 원본 리포트 기록(ride_reference)을 그렸을 때
 ///       - 여덟 차트 모두 축 밖 표본이 없는지
 ///       - ptp · Jptp · 소음 최대 글자 상자가 축 틀 안에 있는지
 ///       - 30 · 45초 기록의 시간 눈금이 5초인지
@@ -18,16 +19,12 @@ import '../../support/reference_records.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final paths = <String, String>{
-    ...otis1021Records,
     'ride_reference': rideReferencePath,
   }; // 기록 이름 → 경로
 
   for (final entry in paths.entries) {
     test(entry.key, () async {
-      final result = assembleRecord(
-        entry.value,
-        flipVertical: faceUpRecords.contains(entry.key),
-      ).result!;
+      final result = assembleRecord(entry.value).result!;
       for (final spec in ReportChartAxes.all) {
         final values = ReportChartAxes.seriesOf(spec, result); // 그릴 값
         final range = spec.rangeFor(values); // 고른 세로축

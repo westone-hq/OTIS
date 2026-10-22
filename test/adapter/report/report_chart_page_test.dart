@@ -85,12 +85,14 @@ MeasurementResult _result({List<double> noiseSeries = const <double>[]}) {
 }
 
 /// 작성: 2026-09-23 09:40:00 · nada
+/// 수정: 2026-10-23 01:10:00 · nada
 /// 함수: main
 /// 목적: 차트 쪽 렌더링을 시험한다. 쪽 구성이 원본 차례와 같은지, 만들어진
 ///       PDF 의 축 틀이 서식 좌표에서 계산한 자리와 맞는지를 본다.
 ///
 ///       참조 PDF 와 대조하지 않는 까닭
-///         `docs/reference/sample_evimp.pdf` 는 축별 계수를 나누기 전 단일
+///         `sample_evimp.pdf`(2026-10-23 저장소에서 지움, 커밋 6bd171a)
+///         는 축별 계수를 나누기 전 단일
 ///         계수로 그려진 옛 산출물이라 아래쪽으로 갈수록 최대 0.1035pt 씩
 ///         벌어진다. 새로 받을 수도 없다. 남는 잔차(가로 -0.0004 · 폭
 ///         -0.0022 · 높이 +0.0100pt)도 렌더러가 아니라 그 PDF 를 만든
@@ -98,8 +100,7 @@ MeasurementResult _result({List<double> noiseSeries = const <double>[]}) {
 ///         않는다. 참조가 알려 줄 수 있는 것은 이미 다 확인했다.
 ///         지금은 `ReportLayout` 이 옮겨 둔 서식 좌표와 쪽 크기에서 곧바로
 ///         계산해 0.001pt 로 대조한다. 참조보다 백 배 촘촘하고, 좌표가
-///         바뀌면 기대값도 따라 바뀐다. `sample_evimp.pdf` 는 눈으로 볼
-///         때만 쓰는 참고물로 남긴다.
+///         바뀌면 기대값도 따라 바뀐다.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
