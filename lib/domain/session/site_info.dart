@@ -30,7 +30,7 @@ enum SiteFieldError {
 }
 
 /// 작성: 2026-07-04 15:04:38 · 박건준
-/// 수정: 2026-10-11 16:58:59 · 박건준
+/// 수정: 2026-10-23 14:00:00 · 박건준
 /// 클래스: SiteInfo
 /// 목적: 측정 현장 정보. 홈 화면에서 입력받아 `MeasurementSession` 에
 ///       싣고, 저장할 때 `MeasurementAssembler` 가 측정 결과로 옮긴다.
@@ -131,7 +131,9 @@ class SiteInfo {
   /// 현장 주소. 입력하지 않았으면 빈 문자열
   final String address;
 
-  /// 최하층. 숫자 문자열 (예: "1", "-1")
+  /// 최하층. 숫자 문자열 (예: "1"). 홈 입력칸(`FloorFields`)이 숫자만 받아
+  /// 지하층은 넣을 수 없다 — 지하층 표기(-1 / B1)는 OTIS 확인 뒤 정한다
+  /// (`docs/pending_checks.md`). 검사(`validate()`)는 정수면 받는다
   final String bottomFloor;
 
   /// 최상층. 숫자 문자열 (예: "8")

@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/domain/auth/login_session.dart';
@@ -11,12 +14,16 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
+import 'package:vibration_checker/domain/mail/mail_composer.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
+import 'package:vibration_checker/service/mail_service.dart';
 import 'package:vibration_checker/service/measurement_recorder.dart';
 
 /// 작성: 2026-10-04 13:36:00 · 박건준
+/// 수정: 2026-10-23 11:30:00 · 박건준
 /// 클래스: _TempPathProvider
-/// 목적: 저장소의 기준 폴더를 시험마다 새로 만든 임시 폴더로 바꿔 끼운다.
+/// 목적: 저장소의 기준 폴더와 메일 첨부 사본 폴더를 시험마다 새로 만든 임시
+///       폴더로 바꿔 끼운다.
 class _TempPathProvider extends PathProviderPlatform {
   /// 임시 폴더 경로
   final String root;
@@ -38,7 +45,22 @@ class _TempPathProvider extends PathProviderPlatform {
   /// 목적: 앱 문서 폴더 자리 대신 임시 폴더를 돌려준다.
   @override
   Future<String?> getApplicationDocumentsPath() async => root;
+
+  /// 작성: 2026-10-23 11:30:00 · 박건준
+  /// 함수: getTemporaryPath
+  /// 목적: 앱 임시 폴더 자리 대신 임시 폴더를 돌려준다. 메일 첨부 사본
+  ///       (`MeasurementRepository.mailAttachmentCopy()`)이 쓴다.
+  @override
+  Future<String?> getTemporaryPath() async => root;
 }
+
+/// 작성: 2026-10-23 11:30:00 · 박건준
+/// 변수: _sensorsMethod
+/// 목적: 안드로이드 `SensorMethodHandler.METHOD_CHANNEL` 과 같은 통로 이름.
+///       마이크 쪽이 응답하지 않는 정지를 흉내 낸다.
+const MethodChannel _sensorsMethod = MethodChannel(
+  'com.otis.vibration_checker/sensors_method',
+);
 
 /// 작성: 2026-10-04 13:36:00 · 박건준
 /// 수정: 2026-10-11 17:28:28 · 박건준
@@ -374,6 +396,29 @@ void main() {
       expect(meta, contains('noiseAudioPath: null'));
     });
 
+    test('저장 절차가 쓴 집계 파일의 모든 줄이 CRLF 로 끝난다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: '${temp.path}/missing_native.txt', // 복사 실패 줄
+        noiseAudioPath: null, // 녹음 없음 줄
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.isSuccess, isTrue);
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('rawRecordCopyFailed'));
+      expect(meta, contains('noiseAudioPath: null'));
+      expect(meta, endsWith('\r\n'));
+      final rest = meta.replaceAll('\r\n', ''); // CRLF 를 뺀 나머지
+      expect(rest, isNot(contains('\n')), reason: 'LF 만 있는 줄');
+      expect(rest, isNot(contains('\r')), reason: 'CR 만 있는 줄');
+    });
+
     test('원본 복사가 실패해도 저장은 성공하고 집계 파일에 적는다', () async {
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(),
@@ -644,6 +689,103 @@ void main() {
         ).readAsString(),
         'accel 1 0 0 1000 3906\n',
       );
+    });
+  });
+  group('마이크 쪽이 응답하지 않는 정지 (2026-10-23)', () {
+    final messenger = // 시험용 통로
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
+    tearDown(() => messenger.setMockMethodCallHandler(_sensorsMethod, null));
+
+    // 저장 결과의 집계 파일과 메일 본문을 읽는다
+    Future<({String meta, String body})> metaAndMail(
+      RecordOutcome outcome,
+    ) async {
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      // → 로직 이동: MailService.buildJobEmail()
+      final email = await MailService.buildJobEmail(
+        jobId: outcome.id!,
+        items: {MailItem.raw, MailItem.noise},
+        recipients: const ['a@b.com'],
+      ); // 녹음까지 고른 메일
+      return (meta: meta, body: email.body);
+    }
+
+    test('정지 응답이 끝내 오지 않아도 한도 뒤 녹음 없이 저장까지 끝난다', () async {
+      messenger.setMockMethodCallHandler(_sensorsMethod, (call) async {
+        if (call.method == 'stopCapture') {
+          return Completer<Object?>().future; // 끝내 응답하지 않는다
+        }
+        return null;
+      });
+      final manager = SensorChannelManager(
+        stopReplyLimit: const Duration(milliseconds: 50),
+      ); // 응답 한도를 짧게 넣은 통로 (앱 값 4.5초)
+      // → 로직 이동: SensorChannelManager.stopCapture()
+      await manager.stopCapture().timeout(const Duration(seconds: 2));
+      expect(manager.lastAudioPath, isNull);
+
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: manager.lastRecordPath,
+        noiseAudioPath: manager.lastAudioPath,
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.isSuccess, isTrue);
+      final read = await metaAndMail(outcome); // 집계 · 메일 본문
+      expect(read.meta, contains('noiseAudioPath: null'));
+      expect(
+        read.body,
+        contains(
+          MailComposer.missingLine(
+            MailItem.noise,
+            MeasurementRepository.noiseAudioFileName,
+          ),
+        ),
+      );
+    });
+
+    test('마이크 스레드가 한도를 넘겨 녹음 경로만 빠진 응답이면 원본은 옮기고 녹음은 누락으로 적는다', () async {
+      final native = File('${temp.path}/native_source.txt'); // 원본 자리
+      await native.writeAsString('accel 1 0 0 1000 3906\n');
+      messenger.setMockMethodCallHandler(_sensorsMethod, (call) async {
+        if (call.method == 'stopCapture') {
+          return <String, Object?>{
+            'recordPath': native.path,
+            'audioPath': null, // `NoiseCaptureHandler.abandonCapture()` 길
+            'noiseSampleRate': 48000,
+          };
+        }
+        return null;
+      });
+      final manager = SensorChannelManager(); // 시험할 통로
+      await manager
+          .stopCapture(); // → 로직 이동: SensorChannelManager.stopCapture()
+
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: manager.lastRecordPath,
+        noiseAudioPath: manager.lastAudioPath,
+        measuredAt: measuredAt,
+        noiseSampleRateHz: manager.lastNoiseSampleRateHz,
+      ); // 저장 결과
+
+      expect(outcome.isSuccess, isTrue);
+      expect(
+        outcome.savedPaths.last,
+        endsWith(MeasurementRepository.nativeRawFileName),
+      );
+      final read = await metaAndMail(outcome); // 집계 · 메일 본문
+      expect(read.meta, contains('noiseAudioPath: null'));
+      expect(read.body, contains('누락: noise.m4a'));
+      expect(read.body, isNot(contains('누락: raw.txt')));
     });
   });
 }

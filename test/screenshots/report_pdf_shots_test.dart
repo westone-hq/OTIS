@@ -3,6 +3,7 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
@@ -75,12 +76,16 @@ MeasurementResult _reference() {
 }
 
 /// 작성: 2026-10-15 16:50:04 · 박건준
+/// 수정: 2026-10-23 12:30:00 · 박건준
 /// 함수: main
 /// 목적: 리포트 PDF 세 가지를 만든다. 예전 커밋에서도 이 파일을 돌려 변경
 ///       전 PDF 를 얻는다. 파일 이름 머리는 `SHOT_PREFIX`.
 ///       - a 실측 — ride_reference
 ///       - b 신호등 — 같은 자료에서 지표만 바꿔 초록 · 노랑 · 빨강이 다 나옴
 ///       - c 예전 결과 — 진동 · 소음 지표가 없는(미측정) 처리 전 결과
+///       - d · e 정지 — 거의 움직이지 않은 기록. 3쪽 가속도 · 저크 최대
+///         절댓값이 d 0.01 · 0.001, e 0.024 · 0.03 이다(2026-10-23 눈금 겹침
+///         확인)
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final prefix = Platform.environment['SHOT_PREFIX'] ?? '후'; // 전 · 후 표시
@@ -117,11 +122,30 @@ void main() {
       jerkSeries: real.jerkSeries,
       sampleRate: real.sampleRate,
     ); // 지표가 없는 예전 결과
+    // 최대 절댓값이 `peak` 인 흔들림(m/s², m/s³). 마지막 표본이 `-peak` 다
+    List<double> wave(int length, double peak) => <double>[
+      for (var i = 0; i < length - 1; i++)
+        0.8 * peak * math.sin(2 * math.pi * i / 37),
+      -peak,
+    ];
+    // 위치 · 속도가 0 이고 가속도 · 저크가 아주 작은 정지 결과
+    MeasurementResult still(double accelPeak, double jerkPeak) =>
+        legacy.copyWith(
+          id: 'still',
+          distance: 0.0,
+          maxSpeed: 0.0,
+          positionSeries: List<double>.filled(real.accelSeries.length, 0.0),
+          speedSeries: List<double>.filled(real.accelSeries.length, 0.0),
+          accelSeries: wave(real.accelSeries.length, accelPeak),
+          jerkSeries: wave(real.jerkSeries.length, jerkPeak),
+        );
 
     for (final entry in <String, MeasurementResult>{
       'a_실측': real,
       'b_신호등': colors,
       'c_예전결과': legacy,
+      'd_정지_acc0.01_jerk0.001': still(0.01, 0.001),
+      'e_정지_acc0.024_jerk0.03': still(0.024, 0.03),
     }.entries) {
       final builder = await TuneReportBuilder.load(); // 리포트 한 부
       File(

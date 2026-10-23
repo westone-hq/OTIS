@@ -59,16 +59,16 @@ class CaptureSession {
   static const Duration _slowStepLimit = Duration(milliseconds: 500);
 
   /// 작성: 2026-10-05 10:00:11 · 박건준
-  /// 수정: 2026-10-18 10:12:30 · 박건준
+  /// 수정: 2026-10-23 11:30:00 · 박건준
   /// 변수: _stopCaptureLimit
   /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 정지는 안드로이드가 원본
   ///       기록 · 현장 소음 녹음 파일을 닫고 경로를 돌려주는 단계라 다른
   ///       정리보다 길게 기다린다. 이 한도가 `SensorChannelManager.stopCapture()`
   ///       자신의 한도보다 짧으면 경로를 받기 전에 끊겨 원본 사본과 녹음이
   ///       빠진다.
-  /// 근거: 인용 — `SensorChannelManager` 의 응답 한도(3.5초, 그 근거를
+  /// 근거: 인용 — `SensorChannelManager` 의 응답 한도(4.5초, 그 근거를
   ///       본다)보다 길게 둔다
-  static const Duration _stopCaptureLimit = Duration(seconds: 4);
+  static const Duration _stopCaptureLimit = Duration(seconds: 5);
 
   /// 작성: 2026-10-04 13:29:41 · 박건준
   /// 변수: _wakelockOnLimit

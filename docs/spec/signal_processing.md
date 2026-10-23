@@ -46,7 +46,9 @@ GridResampler.resample()        256Hz 격자, 두 센서가 겹친 구간 앞뒤
   (못 정하면 `zonesFailureReason`) 줄과 `stopMarginSec` 이 붙는다. 가중 줄
   아래에 `deviceManufacturer` · `deviceModel` · `deviceCompensation`, 신호 처리
   줄에 `baselineSource` · `baselineStartSec` · `baselineSec` 이 있다
-  (2026-10-22).
+  (2026-10-22). 모든 줄은 raw.txt 와 같은 CRLF 로 끝난다 — 원본 · 녹음
+  파일 옮기기 줄(`rawRecordPath` · `noiseAudioPath` · `…CopyFailed` 등)도
+  같다(2026-10-23).
 - **result.json**: `signalConditioning` 에 처리 방식 문자열
   (`baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)+devcomp(SM-S901N,lp25.0bw2zp)+motion(v>0.05,pad500ms)
   +jerk(lp1.6bw4zp)+acc(lp10.0bw4zp)+zones(v>0.05,pk0.5,a<0.03,min1000ms,jpad400ms)

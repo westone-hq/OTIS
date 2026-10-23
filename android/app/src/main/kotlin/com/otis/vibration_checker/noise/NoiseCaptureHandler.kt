@@ -164,6 +164,19 @@ class NoiseCaptureHandler(private val context: Context) {
          */
         private const val HOP_HZ = 512
 
+        /**
+         * 작성: 2026-10-23 11:30:00 · 박건준
+         * 변수: CAPTURE_THREAD_JOIN_LIMIT_MS
+         * 목적: 측정을 멈출 때 녹음 스레드가 끝나길 기다리는 한도 (밀리초).
+         *       넘기면 녹음만 포기하고 정지를 마친다(`stop()`) — 한도 없이
+         *       기다리면 스레드가 멈춘 기기에서 측정을 끝낼 수 없다.
+         * 근거: 미정 — 녹음을 멈추면 읽기가 풀려 스레드는 홉 하나(약 2ms)
+         *       안에 끝난다. 오래 걸리는 곳은 압축기 입력 칸 기다림인데,
+         *       그 한도가 1초(`NoiseAudioEncoder` 의 `MAX_WAIT_TRIES` x
+         *       `TIMEOUT_US`)라 같은 값을 둔다. 그보다 길면 압축기도 이미
+         *       멈춘 것이다
+         */
+        private const val CAPTURE_THREAD_JOIN_LIMIT_MS = 1000L
     }
 
     /**
@@ -188,6 +201,14 @@ class NoiseCaptureHandler(private val context: Context) {
     private var captureThread: Thread? = null
 
     /**
+     * 몇 번째로 시작한 녹음 스레드인지. `start()` 가 하나씩 올린다. 녹음
+     * 스레드는 자기 번호와 다르면 멈춘다 — 포기한 앞 스레드(`abandonCapture()`)
+     * 가 뒤늦게 풀려도 다음 측정의 `isRecording` 을 보고 이어 돌지 않게 한다
+     */
+    @Volatile
+    private var captureGeneration = 0
+
+    /**
      * 이번 측정에서 실제로 연 마이크 표본 속도(Hz). 48000 을 못 열면 44100.
      * 열지 못했거나 측정 전이면 0. `stop()` 뒤에도 다음 `start()` 까지 남겨
      * Flutter 가 정지 응답으로 받아 가게 한다
@@ -205,13 +226,18 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-22 12:00:00 · 박건준
+     * 수정: 2026-10-23 12:00:00 · 박건준
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다
      *       — 그때 닫힌 앞 녹음은 받아 갈 곳이 없어 지운다.
      *       권한이 없거나 AudioRecord 초기화에 실패하면 예외 없이 0.0으로 둔다.
      *       현장 소음 녹음(`openAudioEncoder()`)도 함께 켜고, 녹음 스레드가
      *       읽은 표본을 그대로 넣는다. 녹음이 실패하면 녹음만 포기한다.
+     *       녹음 스레드는 이번에 연 녹음기 · 압축기만 쓰고 자기 번호
+     *       (`captureGeneration`)가 바뀌면 멈춘다 — 정지 한도를 넘겨 포기한
+     *       앞 스레드가 다음 측정의 녹음기를 건드리지 않게 한다. 녹음
+     *       스레드에서 예외가 나도 앱을 죽이지 않고 기록한 뒤 소음을
+     *       미측정(0.0)으로 둔다.
      *
      *       창이 가득 차기 전에는 값을 내지 않고 0.0을 내보낸다. 덜 찬 창의
      *       RMS는 0에서 실제 크기로 천천히 올라오는 경사라서 값이 아니다.
@@ -274,6 +300,7 @@ class NoiseCaptureHandler(private val context: Context) {
                 return
             }
             audioRecord = opened.first
+            val record = opened.first // 녹음 스레드가 읽는 녹음기. 필드를 비워도 이것을 쓴다
             val sampleRate = opened.second // 이번 측정의 표본 속도(Hz)
             activeSampleRate = sampleRate
             // → 로직 이동: weightingFor()
@@ -284,11 +311,14 @@ class NoiseCaptureHandler(private val context: Context) {
                 (sampleRate / HOP_HZ).coerceAtLeast(1)
 
             isRecording = true
-            audioRecord?.startRecording()
+            val generation = ++captureGeneration // 이 녹음 스레드의 번호
+            record.startRecording()
             // → 로직 이동: openAudioEncoder()
             audioEncoder = openAudioEncoder(sampleRate)
+            val startEncoder = audioEncoder // 이 녹음 스레드가 넣을 압축기, 없으면 null
 
             captureThread = Thread {
+                var encoder = startEncoder // 표본을 넣을 압축기. 포기하면 null
                 val hopBuffer = ShortArray(hopSamples) // 한 번에 읽어 올 표본
                 // A 가중 필터 세 단의 상태(단마다 지연 값 두 개). 측정마다 0 에서
                 // 시작한다
@@ -304,9 +334,9 @@ class NoiseCaptureHandler(private val context: Context) {
 
                 var fastWeightedMeanSquare: Double? = // Fast 평활 상태. 첫 창은 null
                     null
-                while (isRecording) {
+                while (isRecording && captureGeneration == generation) {
                     val read = // 이번에 실제로 읽은 표본 수
-                        audioRecord?.read(hopBuffer, 0, hopSamples) ?: 0
+                        record.read(hopBuffer, 0, hopSamples)
                     if (read <= 0) {
                         try {
                             Thread.sleep(5)
@@ -316,15 +346,17 @@ class NoiseCaptureHandler(private val context: Context) {
                         continue
                     }
 
-                    audioEncoder?.let { encoder ->
+                    encoder?.let { feeding ->
                         try {
                             // → 로직 이동: NoiseAudioEncoder.feed()
-                            encoder.feed(hopBuffer, read)
+                            feeding.feed(hopBuffer, read)
                         } catch (e: Exception) {
                             Log.e(TAG, "noise audio encode failed; recording dropped", e)
                             // → 로직 이동: NoiseAudioEncoder.abort()
-                            encoder.abort()
-                            audioEncoder = null
+                            feeding.abort()
+                            encoder = null
+                            // 다음 측정의 압축기는 건드리지 않는다
+                            if (audioEncoder === feeding) audioEncoder = null
                         }
                     }
 
@@ -347,7 +379,7 @@ class NoiseCaptureHandler(private val context: Context) {
                     if (filled < windowSamples) {
                         // 덜 찬 창의 RMS는 값이 아니라 경사다. 미측정 표시인
                         // 0.0을 내보내고 다음 홉을 기다린다
-                        latestDba = 0.0
+                        if (captureGeneration == generation) latestDba = 0.0
                         continue
                     }
 
@@ -368,7 +400,9 @@ class NoiseCaptureHandler(private val context: Context) {
                     val dba = // 소음 크기. 0~130 으로 자른다
                         (dbfs + micDbfsToDbaOffset + calibrationOffsetDba)
                             .coerceIn(0.0, 130.0)
-                    // 참고 EVIMP1 처럼 소수 셋째 자리까지 남긴다
+                    // 참고 EVIMP1 처럼 소수 셋째 자리까지 남긴다. 포기한 앞
+                    // 스레드는 다음 측정 값을 덮어쓰지 않는다
+                    if (captureGeneration != generation) break
                     latestDba = (dba * 1000.0).roundToInt() / 1000.0
 
                     val nowMs = System.currentTimeMillis() // 지금 시각(밀리초)
@@ -384,6 +418,12 @@ class NoiseCaptureHandler(private val context: Context) {
                 }
             }.apply {
                 name = "OTIS_NoiseCaptureThread"
+                // 녹음 스레드에서 난 예외가 앱을 죽이지 않게 받아 기록만 한다.
+                // 그 뒤 소음은 미측정(0.0)이다 — 마지막 값이 계속 붙지 않게 한다
+                setUncaughtExceptionHandler { _, e ->
+                    Log.e(TAG, "noise capture thread failed", e)
+                    if (captureGeneration == generation) latestDba = 0.0
+                }
                 start()
             }
         } catch (e: SecurityException) {
@@ -510,7 +550,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-18 10:12:30 · 박건준
+     * 수정: 2026-10-23 11:30:00 · 박건준
      * 함수: stop
      * 목적: 소음 측정을 멈추고 마이크 자원을 반납한다. latestDba도 0.0으로 돌린다.
      *       순서를 지킨다. 녹음을 먼저 멈춰 녹음 스레드의 읽기를 풀고, 그
@@ -518,20 +558,30 @@ class NoiseCaptureHandler(private val context: Context) {
      *       녹음기를 다른 스레드에서 반납하면 앱이 죽을 수 있다.
      *       현장 소음 녹음 파일도 스레드가 끝난 뒤에 닫는다 — 표본을 넣는
      *       스레드와 닫는 스레드가 겹치지 않게 한다.
-     * 반환: 닫은 현장 소음 녹음(M4A) 경로. 녹음하지 않았거나 실패했으면 null
+     *       스레드가 `CAPTURE_THREAD_JOIN_LIMIT_MS` 안에 끝나지 않으면 녹음만
+     *       포기하고 녹음 경로 없이 돌아간다(`abandonCapture()`). Flutter 는
+     *       녹음이 실패한 측정과 같이 저장한다 — 집계 파일에
+     *       `noiseAudioPath: null`, 메일 본문에 "누락:" 줄이 남는다.
+     * 반환: 닫은 현장 소음 녹음(M4A) 경로. 녹음하지 않았거나 실패했거나 녹음
+     *       스레드가 한도 안에 끝나지 않았으면 null
      */
     fun stop(): String? {
         isRecording = false
         val record = audioRecord // 멈추고 반납할 녹음기, 없으면 null
+        val thread = captureThread // 끝나길 기다릴 녹음 스레드, 없으면 null
         try {
             if (record?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
                 record.stop() // 먼저 read를 풀고 기록 스레드를 기다린다.
             }
-            captureThread?.join()
+            thread?.join(CAPTURE_THREAD_JOIN_LIMIT_MS)
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping noise capture", e)
         }
         captureThread = null
+        if (thread != null && thread.isAlive) {
+            abandonCapture(thread, record) // → 로직 이동: abandonCapture()
+            return null
+        }
         record?.release()
         audioRecord = null
         latestDba = 0.0
@@ -539,6 +589,48 @@ class NoiseCaptureHandler(private val context: Context) {
         val audioPath = audioEncoder?.finish() // 닫은 녹음 경로, 없으면 null
         audioEncoder = null
         return audioPath
+    }
+
+    /**
+     * 작성: 2026-10-23 11:30:00 · 박건준
+     * 수정: 2026-10-23 12:00:00 · 박건준
+     * 함수: abandonCapture
+     * 목적: 한도 안에 끝나지 않은 녹음 스레드를 두고 정지를 마친다. 녹음기 ·
+     *       압축기를 지금 반납하지 않는다 — 그 스레드가 아직 읽거나 넣는
+     *       중이라 반납하면 앱이 죽을 수 있다. 필드만 비워 스레드가 다음
+     *       차례에 멈추게 하고(`isRecording` 은 이미 false), 반납과 쓰다 만
+     *       녹음 파일 지우기는 그 스레드가 끝나길 기다리는 정리 스레드에
+     *       맡긴다. 다음 측정은 새 녹음기로 시작할 수 있다.
+     *       그 스레드가 끝내 풀리지 않으면 앞 녹음기는 반납되지 않은 채
+     *       남는다. 다음 `start()` 가 새 녹음기를 열지 못하면 앞 측정과
+     *       같이 마이크 없이 잰다(`activeSampleRate` 0 · `latestDba` 0.0 ·
+     *       녹음 없음) — 앱은 그대로이고 결과는 소음 "—", 메일은 "누락:" 이다.
+     * 인자: thread — 끝나지 않은 녹음 스레드
+     *       record — 그 스레드가 쓰던 녹음기, 없으면 null
+     */
+    private fun abandonCapture(thread: Thread, record: AudioRecord?) {
+        val encoder = audioEncoder // 그 스레드가 표본을 넣던 압축기, 없으면 null
+        audioRecord = null
+        audioEncoder = null
+        latestDba = 0.0
+        Log.w(TAG, "noise capture thread did not stop in time; recording dropped")
+        Thread {
+            try {
+                thread.join()
+            } catch (_: InterruptedException) {
+                return@Thread
+            }
+            try {
+                record?.release()
+            } catch (e: Exception) {
+                Log.e(TAG, "release failed after abandon", e)
+            }
+            encoder?.abort() // → 로직 이동: NoiseAudioEncoder.abort()
+        }.apply {
+            name = "OTIS_NoiseCaptureCleanup"
+            isDaemon = true
+            start()
+        }
     }
 }
 

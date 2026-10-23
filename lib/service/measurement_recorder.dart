@@ -121,7 +121,7 @@ class MeasurementRecorder {
   MeasurementRecorder._();
 
   /// 작성: 2026-10-05 10:03:35 · 박건준
-  /// 수정: 2026-10-18 10:12:30 · 박건준
+  /// 수정: 2026-10-23 13:00:00 · 박건준
   /// 함수: _moveNativeFile
   /// 목적: 안드로이드가 앱 저장 공간 맨 위에 따로 남긴 파일(원본 기록,
   ///       현장 소음 녹음)을 이번 측정 폴더로 옮긴다.
@@ -129,7 +129,8 @@ class MeasurementRecorder {
   ///         측정할 때마다 앱 저장 공간에 쌓인다
   ///       - 파일이 없거나 복사 · 삭제가 실패하면 그 사실을 집계 파일 끝에
   ///         `label` 을 머리로 한 줄 적고 넘어간다. 두 파일 모두 확인 ·
-  ///         청취용 자료라 이것 때문에 저장 전체를 실패로 알리지 않는다
+  ///         청취용 자료라 이것 때문에 저장 전체를 실패로 알리지 않는다.
+  ///         줄 끝은 집계 파일의 다른 줄과 같다(`MetaWriter.lineEnding`)
   /// 인자: sourcePath — 안드로이드가 남긴 파일 경로, 없으면 null
   ///       jobDirPath — 이번 측정 폴더 경로
   ///       fileName — 측정 폴더 안에서 쓸 이름
@@ -143,9 +144,15 @@ class MeasurementRecorder {
     required String metaPath,
     required String label,
   }) async {
-    final meta = File(metaPath); // 사실을 덧붙일 집계 파일
+    // 집계 파일 끝에 한 줄을 덧붙인다. 예외 문구 안 줄바꿈은 빈칸으로 바꿔
+    // 한 줄로 남긴다
+    Future<void> note(String text) => File(metaPath).writeAsString(
+      '${text.replaceAll(RegExp(r'[\r\n]+'), ' ')}${MetaWriter.lineEnding}',
+      mode: FileMode.append,
+    );
+
     if (sourcePath == null) {
-      await meta.writeAsString('${label}Path: null\n', mode: FileMode.append);
+      await note('${label}Path: null');
       return null;
     }
     final copyPath = '$jobDirPath/$fileName'; // 사본 경로
@@ -153,20 +160,14 @@ class MeasurementRecorder {
       await File(sourcePath).copy(copyPath);
     } catch (e) {
       debugPrint('$label 복사 실패: $e');
-      await meta.writeAsString(
-        '${label}CopyFailed: $e\n',
-        mode: FileMode.append,
-      );
+      await note('${label}CopyFailed: $e');
       return null;
     }
     try {
       await File(sourcePath).delete();
     } catch (e) {
       debugPrint('$label 삭제 실패: $e');
-      await meta.writeAsString(
-        '${label}DeleteFailed: $sourcePath\n',
-        mode: FileMode.append,
-      );
+      await note('${label}DeleteFailed: $sourcePath');
     }
     return copyPath;
   }

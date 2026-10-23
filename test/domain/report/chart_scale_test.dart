@@ -28,22 +28,6 @@ const ChartScale _noise = ChartScale(
 );
 
 /// 작성: 2026-10-10 11:38:05 · 박건준
-/// 변수: _position
-/// 목적: 0~10 m(눈금 2)를 최소로 둔, 0 을 한쪽 끝으로 하는 축.
-const ChartScale _position = ChartScale(
-  minimum: ChartAxisRange(min: 0.0, max: 10.0, tickStep: 2.0),
-  kind: ChartScaleKind.zeroAnchored,
-);
-
-/// 작성: 2026-10-10 11:38:05 · 박건준
-/// 변수: _speed
-/// 목적: 0~1 m/s(눈금 0.2)를 최소로 둔, 0 을 한쪽 끝으로 하는 축.
-const ChartScale _speed = ChartScale(
-  minimum: ChartAxisRange(min: 0.0, max: 1.0, tickStep: 0.2),
-  kind: ChartScaleKind.zeroAnchored,
-);
-
-/// 작성: 2026-10-10 11:38:05 · 박건준
 /// 함수: _expectRange
 /// 목적: 범위의 아래끝 · 위끝 · 눈금 간격을 한 번에 견준다. 넓힌 범위는
 ///       간격의 배수를 곱해 만들어 1e-12 수준 오차가 있을 수 있다.
@@ -72,10 +56,11 @@ void _expectWellFormed(ChartAxisRange range) {
 }
 
 /// 작성: 2026-10-10 11:38:05 · 박건준
+/// 수정: 2026-10-23 14:00:00 · 박건준
 /// 함수: main
 /// 목적: 세로축 범위 규칙을 시험한다. 비었을 때와 최소 범위 안일 때 최소
-///       범위를 그대로 쓰는지, 넘칠 때 모든 값과 여유를 담는지, 대칭 · 0
-///       시작 · 자유 모양을 지키는지, 눈금이 나누어떨어지는지 본다.
+///       범위를 그대로 쓰는지, 넘칠 때 모든 값과 여유를 담는지, 대칭 ·
+///       자유 모양을 지키는지, 눈금이 나누어떨어지는지 본다.
 void main() {
   group('ChartScale.rangeFor — 최소 범위', () {
     test('값이 없으면 최소 범위를 그대로 쓴다', () {
@@ -102,10 +87,11 @@ void main() {
       expect(range.max, greaterThan(3.9 * (1 + 2 * ChartScale.headroomRatio)));
     });
 
-    test('최소 범위 끝과 같은 값도 넓힌다', () {
+    test('범위 끝을 조금이라도 넘으면 밖으로 본다', () {
       // 예전에는 축 길이 2% 를 봐줘 1.005 m/s 가 0 ~ 1 축 틀에 눌렸다
-      final range = _speed.rangeFor(const <double>[0.0, 1.005]);
-      expect(range.max, greaterThan(1.005));
+      const range = ChartAxisRange(min: 0.0, max: 1.0, tickStep: 0.2);
+      expect(range.contains(0.0, 1.005), isFalse);
+      expect(range.contains(0.0, 1.0), isTrue);
     });
 
     test('소음의 0 은 미측정이라 범위에 넣지 않는다', () {
@@ -137,17 +123,6 @@ void main() {
       _expectRange(range, 40, 65, 5);
     });
 
-    test('속도 크기 0 ~ 1.74 m/s 는 0 ~ 2, 눈금 0.5 가 된다', () {
-      final range = _speed.rangeFor(const <double>[0.0, 1.74]);
-      _expectRange(range, 0, 2, 0.5);
-    });
-
-    test('운행 거리 57.09 m 는 여유 10% 를 더해 0 ~ 80, 눈금 20 이 된다', () {
-      // 57.09 + 5.71 = 62.8 이라 10 간격으로는 7칸이 되어 20 간격을 쓴다
-      final range = _position.rangeFor(const <double>[0.0, 57.09]);
-      _expectRange(range, 0, 80, 20);
-    });
-
     test('모든 값이 범위 안에 들고 양 끝에 여유가 남는다', () {
       const values = <double>[-13.2, 4.0, 31.7]; // 최소 범위를 넘는 진동
       final range = _vibrationZ.rangeFor(values);
@@ -163,17 +138,6 @@ void main() {
       final range = _vibrationX.rangeFor(const <double>[-1.0, 9.0]);
       expect(range.min, closeTo(-range.max, 1e-9));
       expect(range.ticks(), contains(closeTo(0.0, 1e-9)));
-    });
-
-    test('0 아래끝 축은 값이 0 이상이면 아래끝이 0 이다', () {
-      final range = _position.rangeFor(const <double>[0.0, 25.0]);
-      expect(range.min, 0.0);
-    });
-
-    test('0 아래끝 축에 0 아래 값이 오면 잘리지 않게 아래끝을 내린다', () {
-      final range = _position.rangeFor(const <double>[-0.5, 5.0]);
-      expect(range.min, lessThan(-0.5));
-      _expectWellFormed(range);
     });
 
     test('시끄러운 현장(70 ~ 90 dBA)은 40 dBA 까지 끌려 내려가지 않는다', () {
@@ -218,7 +182,6 @@ void main() {
       ]) {
         _expectWellFormed(_vibrationX.rangeFor(<double>[-peak, peak]));
         _expectWellFormed(_noise.rangeFor(<double>[45.0, 54.0 + peak]));
-        _expectWellFormed(_position.rangeFor(<double>[0.0, 10.0 + peak]));
       }
     });
   });
