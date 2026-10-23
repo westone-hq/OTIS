@@ -141,7 +141,9 @@ class MeasurementResult {
   final List<double> ySeries;
 
   /// Z축 진동 시계열 (mg). 2026-10-15 부터는 1Hz 고역 + Wk 가중 뒤
-  /// 값이라 가감속 경사가 없다. 가감속은 `accelSeries` 에 있다
+  /// 값이라 가감속 경사가 없다. 가감속은 `accelSeries` 에 있다. 2026-10-22
+  /// 부터는 보정 표에 있는 기종이면 그 뒤에 기종 응답 보정(양방향 저역,
+  /// `DeviceResponse`, `deviceCompensation`)까지 건 값이다
   final List<double> zSeries;
 
   /// 소음 시계열 (dBA)
@@ -171,11 +173,14 @@ class MeasurementResult {
   /// 실측 샘플레이트 (Hz)
   final double sampleRate;
 
-  /// 지표 계산 전 신호 처리 방식 (`SignalConditioner.methodLabel` 뒤에
-  /// `RideWeighting.methodLabel`, 예:
-  /// `baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)`). null 이면 이 처리가
-  /// 들어가기 전의 예전 측정이라 지표가 처리 전 원시 시계열에서 나왔다.
-  /// 화면에는 보이지 않는다
+  /// 지표를 낸 처리 방식. `SignalConditioner.methodLabel` 뒤에
+  /// `RideWeighting.methodLabel` · `DeviceResponse.methodLabel()` ·
+  /// `Kinematics` 의 적분 · 저크 · 차트 가속도 표시 · `MotionZones.methodLabel`
+  /// · `noiseMethodLabel()` 을 `+` 로 잇는다(`MeasurementRecorder.record()`,
+  /// 조각 뜻은 `docs/spec/signal_processing.md`). 예전 결과는 앞 조각만
+  /// 있다(예: `baseline+lp40bw4zp+rs100+iso18738(wd,zhp1wk)`). null 이면 이
+  /// 처리가 들어가기 전의 예전 측정이라 지표가 처리 전 원시 시계열에서
+  /// 나왔다. 화면에는 보이지 않는다
   final String? signalConditioning;
 
   /// 진동 · 소음 지표를 낸 운행 구간. 정하지 못했으면(`travelWindowFailure`)
@@ -523,10 +528,11 @@ class MeasurementResult {
   }
 
   /// 작성: 2026-07-04 15:52:54 · 박건준
-  /// 수정: 2026-10-22 19:00:00 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: MeasurementResult.fromMap
   /// 목적: 저장돼 있던 Map 데이터로 측정 결과를 복원한다. 예전 파일에 남은
-  ///       정속 구간 · 진단용 열쇠는 읽지 않고 넘긴다.
+  ///       옛 정속 구간 자리(2026-10-04 에 지운 필드) · 진단용 열쇠는 읽지
+  ///       않고 넘긴다.
   ///       값이 없는 항목은 기본값으로 채우되, 진동 P2P · 소음 최대 ·
   ///       운행 거리 · 최대 속도는 채우지 않고 null 로 둔다. 재지 않은
   ///       값을 0 으로 채우면 실제 측정값과 구분할 수 없게 된다.
@@ -539,7 +545,9 @@ class MeasurementResult {
   ///       운행 구간 · 그 실패 사유도 같다. 2026-10-15 이전 파일에는 없다.
   ///       수직 가감속 최대 · 최대 위치 · 정속 구간 · 그 실패 사유도 같다.
   ///       2026-10-21 이전 파일에는 없다. 거치 방향 · 그 중력 Z 평균도 같다.
-  ///       2026-10-22 이전 파일에는 없다. 정속 구간 평균 속도도 같다.
+  ///       2026-10-22 이전 파일에는 없다. 정속 구간 평균 속도 · 휴대폰
+  ///       제조사 · 기종 · 기종 응답 보정 · 정지 뒤 여유 · Jptp 넓힘 막힘 ·
+  ///       기준선 출처도 같다.
   ///       측정 일시는 채우지 않는다 — 없거나 읽을 수 없으면 "지금" 으로
   ///       대신하지 않고 실패를 올린다. 대신 넣으면 예전 결과가 방금 잰
   ///       것처럼 보이고 목록 차례도 틀어진다(관통 원칙 1 · 4).

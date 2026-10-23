@@ -246,9 +246,11 @@ class ReportChartPageRenderer {
 }
 
 /// 작성: 2026-09-23 09:40:00 · 박건준
+/// 수정: 2026-10-23 11:00:00 · 박건준
 /// 함수: renderReportChartPages
-/// 목적: 차트 쪽 두 장만 담은 PDF 한 부를 만든다. 아직 1쪽과 이어 붙이는
-///       곳이 없어서 차트 쪽만 따로 확인할 때 쓴다.
+/// 목적: 차트 쪽 두 장만 담은 PDF 한 부를 만든다. 앱은 세 쪽을 이어 붙인
+///       `TuneReportBuilder` 를 쓰고, 이 함수는 시험이 차트 쪽만 따로 확인할
+///       때 쓴다.
 /// 인자: result — 값을 가져올 측정 결과
 /// 반환: PDF 파일 내용
 Future<Uint8List> renderReportChartPages({

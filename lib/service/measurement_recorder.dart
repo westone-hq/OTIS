@@ -39,6 +39,7 @@ enum RecordFailure {
 }
 
 /// 작성: 2026-10-04 13:29:41 · 박건준
+/// 수정: 2026-10-23 11:00:00 · 박건준
 /// 클래스: RecordOutcome
 /// 목적: `MeasurementRecorder.record()` 의 결과. 성공이면 측정 ID 와
 ///       저장한 파일 목록을, 실패면 사유를 담는다. 성공과 실패를 같은 형태로
@@ -47,10 +48,11 @@ enum RecordFailure {
 ///       문자열을 비교하지 않고 문구를 고르게 한다.
 class RecordOutcome {
   /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: RecordOutcome.success
   /// 목적: 저장에 성공한 결과를 만든다.
   /// 인자: id — 저장한 측정 ID. 결과 화면이 이 ID 로 측정 결과를 읽는다
-  ///       savedPaths — 저장한 파일 경로. 메일 첨부 순서 그대로다
+  ///       savedPaths — 저장한 파일 경로 (`savedPaths` 필드 차례)
   const RecordOutcome.success({
     required String this.id,
     required this.savedPaths,
@@ -95,9 +97,10 @@ class RecordOutcome {
   /// 저장한 측정 ID (`yyyyMMdd-HHmmss`). 실패면 null
   final String? id;
 
-  /// 저장한 파일 경로 목록. 리포트를 맨 앞에 둬 메일 첨부 목록에서 먼저
-  /// 보이게 한다. 리포트 · 안드로이드 원본 사본 · 현장 소음 녹음은 못
-  /// 만들었으면 빠진다. 실패면 빈 목록
+  /// 저장한 파일 경로 목록. 리포트 · 값 파일 · 집계 · 안드로이드 원본 사본
+  /// · 현장 소음 녹음 차례다. 리포트 · 원본 사본 · 녹음은 못 만들었으면
+  /// 빠진다. 시험이 저장된 파일을 확인하는 데 쓴다 — 메일은 `MailService`
+  /// 가 저장소에서 파일을 다시 찾는다. 실패면 빈 목록
   final List<String> savedPaths;
 
   /// 작성: 2026-10-04 13:29:41 · 박건준

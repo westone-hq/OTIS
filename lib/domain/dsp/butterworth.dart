@@ -4,12 +4,13 @@ import 'dart:typed_data';
 import 'package:vibration_checker/domain/dsp/sos_section.dart';
 
 /// 작성: 2026-10-07 01:44:43 · 박건준
-/// 수정: 2026-10-15 16:50:04 · 박건준
+/// 수정: 2026-10-23 11:00:00 · 박건준
 /// 클래스: Butterworth
 /// 목적: 버터워스 필터(통과 대역이 평평한 필터)를 설계하고, 앞으로 한 번 ·
 ///       뒤로 한 번 걸러 위상 지연이 없게 한다(양방향, 영위상). 저역은
-///       지표 전 신호 처리(`SignalConditioner`)가, 고역은 수직 진동
-///       가중(`RideWeighting.vertical()`)이 쓴다.
+///       지표 전 신호 처리(`SignalConditioner`) · 저크와 차트 가속도
+///       (`Kinematics`) · 기종 응답 보정(`DeviceResponse`)이, 고역은 수직
+///       진동 가중(`RideWeighting.vertical()`)이 쓴다.
 ///       한 방향으로만 거르면 신호가 늦어지고 봉우리 모양이 비틀어져
 ///       최대 P2P 가 달라진다.
 ///       결과는 SciPy 1.18.1 의 `butter(..., output='sos')` ·
@@ -162,6 +163,7 @@ abstract final class Butterworth {
       3 * (2 * sections.length + 1);
 
   /// 작성: 2026-10-07 01:44:43 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: filtfilt
   /// 목적: 2차 구간 목록을 앞으로 한 번, 뒤로 한 번 걸어 위상 지연 없이
   ///       거른다. SciPy `sosfiltfilt(padtype='odd')` 의 순서를 따른다.
@@ -179,8 +181,10 @@ abstract final class Butterworth {
     // → 로직 이동: padLength()
     final edge = padLength(sections); // 한쪽 끝에 덧붙이는 표본 수
     final n = x.length; // 입력 표본 수
-    // 부르는 쪽(`SignalConditioner.condition()`)이 이보다 짧은 격자를 먼저
-    // 사유와 함께 돌려보내므로 여기 오는 입력은 늘 이보다 길다
+    // 부르는 쪽이 이보다 짧은 입력을 먼저 걸러 여기 오는 입력은 늘 이보다
+    // 길다 — `SignalConditioner.condition()` 은 사유와 함께 돌려보내고, 지표
+    // 단계는 `MeasurementAssembler.assemble()` 이 `Kinematics.minimumRows` ·
+    // `RideWeighting.canApply()` 로 먼저 본다
     assert(n > edge, '입력 $n 표본이 덧붙임 길이 $edge 보다 길어야 한다');
 
     final ext = Float64List(n + 2 * edge); // 양 끝을 늘린 신호

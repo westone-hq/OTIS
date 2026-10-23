@@ -82,10 +82,13 @@ class SensorMethodHandler(
 
         /**
          * 작성: 2026-10-22 09:30:00 · 박건준
+         * 수정: 2026-10-23 11:00:00 · 박건준
          * 변수: PLACEMENT_BEEP_MS
          * 목적: 거치 경고음 길이 (밀리초). 짧게 한 번 울린다.
          * 근거: 미정 — 엎어 둔 휴대폰에서 알아들을 만한 길이로 골랐다.
-         *       경고는 수집 시작 약 1초 뒤라 지표 구간 밖이다
+         *       경고는 수집 시작 1.7초 뒤(기준선 구간 뒤)이고 이미 운행
+         *       중이면 울리지 않아(`CaptureSession._watchPlacement()`) 지표
+         *       구간 밖이다
          */
         private const val PLACEMENT_BEEP_MS = 200
 

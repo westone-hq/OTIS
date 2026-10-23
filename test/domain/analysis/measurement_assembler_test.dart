@@ -225,7 +225,8 @@ void main() {
 
     test('격자 행을 가중해 시계열로 싣고 현장 정보를 옮긴다', () {
       // 최소 16행이면 가중을 걸 수 있는 길이라 시계열은 격자 값에 가중을
-      // 건 값이다(지표를 낸 그 값, CLAUDE.md "result.json")
+      // 건 값이다(지표를 낸 그 값, `docs/spec/signal_processing.md`
+      // "result.json")
       final xs = [for (var i = 0; i < 16; i++) i + 1.0]; // X (mg)
       final ys = [for (var i = 0; i < 16; i++) -(i + 2.0)]; // Y (mg)
       final zs = [for (var i = 0; i < 16; i++) (i % 3).toDouble()]; // Z (mg)

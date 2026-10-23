@@ -112,8 +112,9 @@ class CaptureConfig {
   final int baselineWindowMs;
 
   /// 작성: 2026-10-05 10:00:11 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 변수: defaultEdgeTrimMs
-  /// 목적: edgeTrimMs 기본값이다.
+  /// 목적: `edgeTrimMs` 기본값이다.
   static const int defaultEdgeTrimMs = 500;
 
   /// 작성: 2026-10-07 01:44:43 · 박건준
@@ -261,18 +262,21 @@ class CaptureConfig {
   static const int baselineMinimumMs = 300;
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 변수: defaultTargetSampleRateHz
-  /// 목적: targetSampleRateHz 기본값이다.
+  /// 목적: `targetSampleRateHz` 기본값이다.
   static const int defaultTargetSampleRateHz = 256;
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 변수: defaultNormalIntervalMinUs
-  /// 목적: normalIntervalMinUs 기본값이다.
+  /// 목적: `normalIntervalMinUs` 기본값이다.
   static const int defaultNormalIntervalMinUs = 1950;
 
   /// 작성: 2026-08-19 08:04:05 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 변수: defaultNormalIntervalMaxUs
-  /// 목적: normalIntervalMaxUs 기본값이다.
+  /// 목적: `normalIntervalMaxUs` 기본값이다.
   static const int defaultNormalIntervalMaxUs = 7900;
 
   /// 작성: 2026-10-15 16:50:04 · 박건준

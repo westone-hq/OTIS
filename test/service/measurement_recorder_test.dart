@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/domain/auth/login_session.dart';
@@ -109,8 +108,6 @@ void main() {
   setUp(() async {
     temp = await Directory.systemTemp.createTemp('otis_recorder_test');
     PathProviderPlatform.instance = _TempPathProvider(temp.path);
-    // 저장할 때 설정의 엔지니어 이름을 읽는다. 기본은 비어 있는 설정
-    SharedPreferences.setMockInitialValues({});
   });
 
   tearDown(() async {

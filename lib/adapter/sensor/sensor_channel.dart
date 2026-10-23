@@ -42,15 +42,16 @@ class SensorChannelManager {
   );
 
   /// 작성: 2026-10-05 10:00:11 · 박건준
-  /// 수정: 2026-10-18 10:12:30 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 변수: _stopReplyLimit
   /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 넘기면 원본 기록 · 현장
   ///       소음 녹음 경로를 받지 못해 측정 폴더에 원본 사본
   ///       (`native_raw.txt`)과 녹음(`noise.m4a`)이 빠진다.
   /// 근거: 인용 — 안드로이드 `SensorStreamHandler.stop()` 이 센서 스레드를
-  ///       최대 500ms, `NoiseCaptureHandler.stop()` 이 마이크 스레드를 최대
-  ///       300ms 기다리고, 녹음 파일을 닫는 `NoiseAudioEncoder.finish()` 가
-  ///       압축기를 최대 2초(입력 칸 1초 + 끝 조각 1초) 기다린다. 셋의
+  ///       최대 500ms 기다리고, `NoiseCaptureHandler.stop()` 은 녹음을 멈춰
+  ///       읽기를 푼 뒤 마이크 스레드가 끝나길 기다린다(한도 없음, 읽기가
+  ///       풀리면 곧 끝난다). 녹음 파일을 닫는 `NoiseAudioEncoder.finish()`
+  ///       는 압축기를 최대 2초(입력 칸 1초 + 끝 조각 1초) 기다린다. 이들의
   ///       합보다 넉넉히 잡았다
   static const Duration _stopReplyLimit = Duration(milliseconds: 3500);
 
@@ -264,7 +265,7 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-08-17 15:35:02 · 박건준
-  /// 수정: 2026-10-22 23:30:00 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: stopCapture
   /// 목적: 안드로이드에게 그만 보내고 지금까지 모은 걸 파일로 저장해
   ///       경로를 알려달라고 명령을 내린다. `_stopReplyLimit` 안에 응답이
@@ -280,7 +281,7 @@ class SensorChannelManager {
       // → 로직 이동: SensorMethodHandler.stopCapture
       final reply = await _methodChannel
           .invokeMapMethod<String, Object?>('stopCapture')
-          .timeout(_stopReplyLimit); // 두 경로 · 표본 속도를 담은 응답
+          .timeout(_stopReplyLimit); // 두 경로 · 표본 속도 · 기종을 담은 응답
       lastRecordPath = reply?['recordPath'] as String?;
       lastAudioPath = reply?['audioPath'] as String?;
       lastNoiseSampleRateHz = reply?['noiseSampleRate'] as int?;

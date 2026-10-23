@@ -149,23 +149,27 @@ class MotionZones {
   };
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: MotionZones.fromMap
   /// 목적: `toMap()` 이 만든 표에서 구간을 되살린다.
   /// 인자: map — 결과 파일에서 읽은 표
-  /// 반환: 되살린 구간. 첨자가 빠졌으면 `FormatException`
+  /// 반환: 되살린 구간. 첨자나 표본 주기가 빠졌으면 `FormatException`
   factory MotionZones.fromMap(Map<String, dynamic> map) {
+    // 열쇠 하나의 첨자를 읽는다. 정수가 아니면 사유를 올린다
     int index(String key) {
       final value = map[key]; // 첨자 값
       if (value is! int) throw FormatException('구간 첨자 $key 가 없다: $value');
       return value;
     }
 
+    final rate = map['sampleRate']; // 표본 주기 (Hz)
+    if (rate is! num) throw FormatException('구간 sampleRate 가 없다: $rate');
     return MotionZones(
       runStartIndex: index('runStartIndex'),
       runEndIndex: index('runEndIndex'),
       steadyStartIndex: index('steadyStartIndex'),
       steadyEndIndex: index('steadyEndIndex'),
-      sampleRate: (map['sampleRate'] as num).toDouble(),
+      sampleRate: rate.toDouble(),
     );
   }
 

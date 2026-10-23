@@ -142,13 +142,13 @@ class NoiseCaptureHandler(private val context: Context) {
 
         /**
          * 작성: 2026-10-12 17:20:16 · 박희정
-         * 수정: 2026-10-22 16:20:00 · 박건준
+         * 수정: 2026-10-23 11:00:00 · 박건준
          * 변수: FAST_TIME_WEIGHT_SEC
          * 목적: 소음 RMS에 적용하는 지수평활의 시간 상수(초). 홉마다 새로
          *       들어오는 평균 제곱값을 이 상수로 평활해, 소음계의 "Fast"
-         *       응답과 비슷한 반응 속도를 낸다. 2026-10-22 에 잠시 Slow(1초)로
-         *       바꿨다가 같은 날 되돌렸다 — 소음 평균은 이 Fast 값으로 내고,
-         *       최대만 Dart 가 이 값에 1초 평활을 더해 낸다(`NoiseSlow`).
+         *       응답과 비슷한 반응 속도를 낸다. 소음 평균 · 최대 모두 이 Fast
+         *       값으로 낸다. 2026-10-22 에 잠시 Slow(1초)로 바꿨다가 같은 날
+         *       되돌렸다(`kNoiseTimeWeightSec` 근거).
          * 근거: 표준 — IEC 61672-1 의 "Fast" 시간가중 시정수(0.125초)
          */
         private const val FAST_TIME_WEIGHT_SEC = 0.125
