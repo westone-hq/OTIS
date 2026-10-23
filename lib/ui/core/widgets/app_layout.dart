@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
 
-import '../theme.dart';
-
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 클래스: AppScrollBody
 /// 목적: 화면 본문의 공통 틀. 시스템 영역(상태 표시줄 · 노치)을 피하고,
 ///       화면 여백을 두고, 넓은 화면에서는 폭을 `AppDims.contentMaxWidth`
@@ -11,13 +10,13 @@ class AppScrollBody extends StatelessWidget {
   /// 위에서 아래로 쌓을 내용
   final List<Widget> children;
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: AppScrollBody
   /// 목적: 본문에 쌓을 내용을 받는다.
   /// 인자: children — 위에서 아래로 쌓을 위젯 목록
   const AppScrollBody({super.key, required this.children});
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: build
   /// 목적: 여백 · 최대 폭 · 스크롤을 입힌 세로 목록을 그린다.
   @override
@@ -45,8 +44,8 @@ class AppScrollBody extends StatelessWidget {
   }
 }
 
-/// 작성: 2026-10-04 13:37:23 · nada
-/// 수정: 2026-10-22 12:50:00 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
+/// 수정: 2026-10-22 12:50:00 · 박건준
 /// 클래스: AppBottomBar
 /// 목적: 화면 아래에 고정하는 주 행동 영역. 시스템 영역을 피하고 화면
 ///       여백을 둔다. `Scaffold.bottomNavigationBar` 자리에 넣는다.
@@ -61,8 +60,8 @@ class AppBottomBar extends StatelessWidget {
   /// 버튼까지 올라오면 입력칸이 보이는 자리가 그만큼 줄어든다
   final bool liftAboveKeyboard;
 
-  /// 작성: 2026-10-04 13:37:23 · nada
-  /// 수정: 2026-10-22 12:50:00 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
+  /// 수정: 2026-10-22 12:50:00 · 박건준
   /// 함수: AppBottomBar
   /// 목적: 아래 영역에 놓을 내용을 받는다.
   /// 인자: child — 아래 영역 내용
@@ -73,8 +72,8 @@ class AppBottomBar extends StatelessWidget {
     this.liftAboveKeyboard = false,
   });
 
-  /// 작성: 2026-10-04 13:37:23 · nada
-  /// 수정: 2026-10-22 12:50:00 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
+  /// 수정: 2026-10-22 12:50:00 · 박건준
   /// 함수: build
   /// 목적: 시스템 영역을 피해 여백을 두고 내용을 놓는다. `liftAboveKeyboard`
   ///       면 키보드 높이만큼 아래를 띄운다 — 키보드가 열리면 시스템 영역
@@ -97,7 +96,7 @@ class AppBottomBar extends StatelessWidget {
   }
 }
 
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 함수: showAppSheet
 /// 목적: 앱 공통 모양의 바텀 시트(bottom sheet, 화면 아래에서 위로
 ///       올라오는 패널)를 띄운다. 위쪽 두 모서리만 둥글게 깎고, 시트가

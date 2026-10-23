@@ -4,14 +4,16 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
+import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
-/// 작성: 2026-09-16 09:12:40 · nada
+/// 작성: 2026-09-16 09:12:40 · 박건준
+/// 수정: 2026-10-23 11:00:00 · 박건준
 /// 클래스: ReportPage1Renderer
 /// 목적: TUNE 리포트 1쪽을 PDF 로 그린다. 서식 이미지를 A4 전면에 깔고 그
 ///       위에 값을 얹는다. 자리는 `ReportLayout` 이, 값과 판정은
@@ -22,10 +24,10 @@ import 'package:vibration_checker/model/measurement_result.dart';
 ///         서식 이미지에는 예전 리포트의 값이 일부 인쇄된 채로 남아 있다.
 ///         그 위에 새 값을 쓰면 두 글자가 겹쳐 보이므로, 쓰기 전에 그 행의
 ///         줄무늬 색으로 덮는다.
-///         - 적색 기준 칸 전체와 마지막 두 행의 황색 `0`
+///         - 황색 · 적색 기준 칸 전체. 덮은 뒤 지표의 기준을 다시 찍는다
+///           (`ReportThresholds`, 2026-10-15)
 ///         - 1행 신호등 자리에 지워지다 만 원
-///
-///       황색 칸은 덮기만 하고 비운다. 요구사항에 황색 단계가 없다.
+///         - 황색 · 적색 문구를 적는 행의 설명 라벨 · 값 자리(`_drawRemark()`)
 class ReportPage1Renderer {
   /// 그림을 얹을 PDF 문서
   final PdfDocument document;
@@ -36,7 +38,7 @@ class ReportPage1Renderer {
   /// 서식 좌표에 글자를 찍는 도구
   final ReportTextWriter textWriter;
 
-  /// 작성: 2026-09-16 09:12:40 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
   /// 함수: ReportPage1Renderer
   /// 목적: 문서와 미리 읽어 둔 자산을 그대로 담는 생성자. 직접 부르지 말고
   ///       `load()` 를 쓴다.
@@ -50,7 +52,7 @@ class ReportPage1Renderer {
     required this.textWriter,
   });
 
-  /// 작성: 2026-09-16 09:12:40 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
   /// 함수: load
   /// 목적: 글꼴 두 벌과 서식 이미지를 자산에서 읽어 렌더러를 만든다.
   ///       자산 읽기는 느리고 한 번이면 되므로 그리기와 떼어 둔다.
@@ -64,7 +66,7 @@ class ReportPage1Renderer {
       ReportLayout.boldFontAsset,
     ); // 굵은 글꼴 원본
     final backgroundBytes = await rootBundle.load(
-      ReportPage1.background,
+      ReportPage1Layout.background,
     ); // 서식 이미지 원본
 
     final regular = PdfTtfFont(document, regularBytes); // 본문 글꼴
@@ -79,13 +81,14 @@ class ReportPage1Renderer {
     );
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: draw
   /// 목적: 1쪽을 문서에 더한다. 순서대로 그린다.
   ///       1. 서식 이미지를 A4 전면에 깐다
   ///       2. 머리말 11칸을 찍는다
   ///       3. Performance Metrics 8행을 찍는다. 행마다 서식에 남은 자국을
-  ///          덮고, 신호등 · 값 · 적색 기준을 올린다
+  ///          덮고, 신호등 · 값 · 황색 · 적색 기준을 올린다
   ///       4. 분석 자료 7행의 신호등을 회색으로 찍는다
   /// 인자: result — 값을 가져올 측정 결과
   ///       debug — true 면 모든 자리에 십자 표식과 키 이름을 함께 찍는다.
@@ -115,7 +118,7 @@ class ReportPage1Renderer {
     // → 로직 이동: headerValues()
     final header = headerValues(result); // 머리말 칸마다 채울 문구
 
-    for (final field in ReportPage1.fields) {
+    for (final field in ReportPage1Layout.fields) {
       _text(
         canvas,
         xPx: field.x,
@@ -127,8 +130,8 @@ class ReportPage1Renderer {
         color: field.color,
         key: field.key,
         debug: debug,
-        // → 로직 이동: ReportPage1.maxWidthOf()
-        maxWidthPx: ReportPage1.maxWidthOf(field),
+        // → 로직 이동: ReportPage1Layout.maxWidthOf()
+        maxWidthPx: ReportPage1Layout.maxWidthOf(field),
       );
     }
 
@@ -137,8 +140,8 @@ class ReportPage1Renderer {
     return page;
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-21 13:10:00 · 박건준
   /// 함수: _drawMetricsTable
   /// 목적: Performance Metrics 여덟 행을 찍는다. 행마다 이렇게 한다.
   ///       1. 신호등 자리를 그 행의 줄무늬 색으로 덮는다. 서식 1행에
@@ -161,7 +164,7 @@ class ReportPage1Renderer {
     ReportMetrics metrics, {
     required bool debug,
   }) {
-    final rows = ReportPage1.metricRows; // 서식에 놓인 행 자리
+    final rows = ReportPage1Layout.metricRows; // 서식에 놓인 행 자리
     for (var index = 0; index < rows.length; index++) {
       final row = rows[index]; // 이번에 그릴 행의 자리
       final metric = metrics.rows[index]; // 그 행에 올릴 지표
@@ -169,10 +172,10 @@ class ReportPage1Renderer {
           ? ReportColors.stripeOdd
           : ReportColors.stripeEven; // 이 행의 줄무늬 색
 
-      const diameter = ReportPage1.dotDiameter; // 신호등 지름 (픽셀)
+      const diameter = ReportPage1Layout.dotDiameter; // 신호등 지름 (픽셀)
       _erase(
         canvas,
-        xPx: ReportPage1.dotCenterX - diameter,
+        xPx: ReportPage1Layout.dotCenterX - diameter,
         yPx: row.y - diameter,
         widthPx: diameter * 2,
         heightPx: diameter * 2,
@@ -182,7 +185,7 @@ class ReportPage1Renderer {
       if (dotColor != null) {
         _dot(
           canvas,
-          centerXPx: ReportPage1.dotCenterX,
+          centerXPx: ReportPage1Layout.dotCenterX,
           centerYPx: row.y,
           diameterPx: diameter,
           color: dotColor,
@@ -194,12 +197,12 @@ class ReportPage1Renderer {
         _text(
           canvas,
           xPx: row.hasLabel
-              ? ReportPage1.colValueX
-              : ReportPage1.colValueNoLabelX,
+              ? ReportPage1Layout.colValueX
+              : ReportPage1Layout.colValueNoLabelX,
           yPx: row.y,
           text: metric.display,
-          sizePx: ReportPage1.valueSize,
-          align: ReportPage1.colValueAlign,
+          sizePx: ReportPage1Layout.valueSize,
+          align: ReportPage1Layout.colValueAlign,
           weight: LayoutWeight.regular,
           color: ReportColors.text,
           key: row.key,
@@ -210,23 +213,26 @@ class ReportPage1Renderer {
         _drawRemark(canvas, row.y, remark, stripe, row.key, debug: debug);
       }
 
-      for (final columnX in [ReportPage1.colYellowX, ReportPage1.colRedX]) {
+      for (final columnX in [
+        ReportPage1Layout.colYellowX,
+        ReportPage1Layout.colRedX,
+      ]) {
         _erase(
           canvas,
-          xPx: columnX - ReportPage1.eraseRedWidth / 2,
-          yPx: row.y - ReportPage1.eraseRedHeight / 2,
-          widthPx: ReportPage1.eraseRedWidth,
-          heightPx: ReportPage1.eraseRedHeight,
+          xPx: columnX - ReportPage1Layout.eraseRedWidth / 2,
+          yPx: row.y - ReportPage1Layout.eraseRedHeight / 2,
+          widthPx: ReportPage1Layout.eraseRedWidth,
+          heightPx: ReportPage1Layout.eraseRedHeight,
           color: stripe,
         );
       }
       _text(
         canvas,
-        xPx: ReportPage1.colYellowX,
+        xPx: ReportPage1Layout.colYellowX,
         yPx: row.y,
         text: metric.yellowDisplay,
-        sizePx: ReportPage1.thresholdSize,
-        align: ReportPage1.colYellowAlign,
+        sizePx: ReportPage1Layout.thresholdSize,
+        align: ReportPage1Layout.colYellowAlign,
         weight: LayoutWeight.regular,
         color: ReportColors.text,
         key: '${row.key}.yellow',
@@ -234,11 +240,11 @@ class ReportPage1Renderer {
       );
       _text(
         canvas,
-        xPx: ReportPage1.colRedX,
+        xPx: ReportPage1Layout.colRedX,
         yPx: row.y,
         text: metric.redDisplay,
-        sizePx: ReportPage1.thresholdSize,
-        align: ReportPage1.colRedAlign,
+        sizePx: ReportPage1Layout.thresholdSize,
+        align: ReportPage1Layout.colRedAlign,
         weight: LayoutWeight.regular,
         color: ReportColors.text,
         key: '${row.key}.red',
@@ -247,7 +253,7 @@ class ReportPage1Renderer {
     }
   }
 
-  /// 작성: 2026-10-21 13:10:00 · nada
+  /// 작성: 2026-10-21 13:10:00 · 박건준
   /// 함수: _drawRemark
   /// 목적: 황색 · 적색 행의 설명 칸에 OTIS 문구를 적는다. 서식에 박힌 설명
   ///       라벨과 값 자리를 줄무늬 색으로 덮은 뒤, 행 가운데를 사이에 두고
@@ -268,66 +274,67 @@ class ReportPage1Renderer {
   }) {
     _erase(
       canvas,
-      xPx: ReportPage1.remarkEraseX,
-      yPx: rowY - ReportPage1.remarkEraseHeight / 2,
-      widthPx: ReportPage1.remarkEraseWidth,
-      heightPx: ReportPage1.remarkEraseHeight,
+      xPx: ReportPage1Layout.remarkEraseX,
+      yPx: rowY - ReportPage1Layout.remarkEraseHeight / 2,
+      widthPx: ReportPage1Layout.remarkEraseWidth,
+      heightPx: ReportPage1Layout.remarkEraseHeight,
       color: stripe,
     );
     final firstY =
-        rowY - ReportPage1.remarkLineGap * (lines.length - 1) / 2; // 첫 줄 자리
+        rowY -
+        ReportPage1Layout.remarkLineGap * (lines.length - 1) / 2; // 첫 줄 자리
     for (var i = 0; i < lines.length; i++) {
       _text(
         canvas,
-        xPx: ReportPage1.remarkX,
-        yPx: firstY + ReportPage1.remarkLineGap * i,
+        xPx: ReportPage1Layout.remarkX,
+        yPx: firstY + ReportPage1Layout.remarkLineGap * i,
         text: lines[i],
-        sizePx: ReportPage1.remarkSize,
-        align: ReportPage1.colValueAlign,
+        sizePx: ReportPage1Layout.remarkSize,
+        align: ReportPage1Layout.colValueAlign,
         weight: LayoutWeight.regular,
         color: ReportColors.text,
         key: '$key.remark$i',
         debug: debug,
         maxWidthPx:
-            ReportPage1.remarkEraseX +
-            ReportPage1.remarkEraseWidth -
-            ReportPage1.remarkX,
+            ReportPage1Layout.remarkEraseX +
+            ReportPage1Layout.remarkEraseWidth -
+            ReportPage1Layout.remarkX,
       );
     }
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: _drawAnalysisTable
   /// 목적: 분석 자료 일곱 행의 신호등을 찍는다. 일곱 개 모두 회색이고
   ///       설명 칸은 비운다. 이것이 완성된 모습이며 나중에 채울 자리가
   ///       아니다 — 회색 점은 "아직 안 그렸다" 가 아니라 "판정하지
   ///       않는다" 를 뜻한다.
-  ///       서식에 박힌 구분 이름 가운데 `ReportPage1.analysisRelabels` 에
+  ///       서식에 박힌 구분 이름 가운데 `ReportPage1Layout.analysisRelabels` 에
   ///       있는 행("Machine으로 부터 진동" · "Belts")은 줄무늬 색으로 덮고
   ///       새 이름("권상기 머신으로 부터 진동" · "로우프")을 찍는다.
-  ///       Performance Metrics 의 진동 네 행이 비는 것과는 사정이 다르다.
-  ///       그쪽은 진동 필터만 정해지면 값이 들어오지만, 이 일곱 행은
-  ///       기다릴 것이 없다.
+  ///       Performance Metrics 행이 값이 없을 때 회색인 것(아직 재지 못함)과는
+  ///       사정이 다르다 — 이 일곱 행은 기다릴 값이 없다.
   /// 인자: canvas — 그리기 도구
   ///       debug — 표식을 함께 찍을지
-  /// 근거: 인용 — `pdf_report_dev/README.md` 가 이 일곱 항목을 회색으로
+  /// 근거: 인용 — 리포트 프로토타입 문서(2026-10-23 저장소에서 지움, 커밋
+  ///       6bd171a 의 `pdf_report_dev/README.md`)가 이 일곱 항목을 회색으로
   ///       두기로 확정했다. 요구사항서에 이 항목들의 판정 기준이 없고,
   ///       앱이 잰 값 중에도 이것들을 가릴 수 있는 것이 없다. 녹색으로
   ///       찍으면 "이상 없음을 확인했다" 로 읽히는데 확인한 적이 없으므로,
   ///       판정하지 않았다는 사실을 회색으로 그대로 드러낸다
   void _drawAnalysisTable(PdfGraphics canvas, {required bool debug}) {
-    final keys = ReportPage1.analysisRowKeys; // 행 이름
-    final ys = ReportPage1.analysisRowYs; // 행 세로 자리
+    final keys = ReportPage1Layout.analysisRowKeys; // 행 이름
+    final ys = ReportPage1Layout.analysisRowYs; // 행 세로 자리
     for (var index = 0; index < ys.length; index++) {
       final stripe = index.isEven
           ? ReportColors.stripeOdd
           : ReportColors.stripeEven; // 이 행의 줄무늬 색
 
-      const diameter = ReportPage1.dotDiameter; // 신호등 지름 (픽셀)
+      const diameter = ReportPage1Layout.dotDiameter; // 신호등 지름 (픽셀)
       _erase(
         canvas,
-        xPx: ReportPage1.dotCenterX - diameter,
+        xPx: ReportPage1Layout.dotCenterX - diameter,
         yPx: ys[index] - diameter,
         widthPx: diameter * 2,
         heightPx: diameter * 2,
@@ -335,30 +342,30 @@ class ReportPage1Renderer {
       );
       _dot(
         canvas,
-        centerXPx: ReportPage1.dotCenterX,
+        centerXPx: ReportPage1Layout.dotCenterX,
         centerYPx: ys[index],
         diameterPx: diameter,
         color: ReportColors.judgeUnknown,
       );
       final relabel =
-          ReportPage1.analysisRelabels[keys[index]]; // 새 이름, 그대로 두면 null
+          ReportPage1Layout.analysisRelabels[keys[index]]; // 새 이름, 그대로 두면 null
       if (relabel != null) {
         _erase(
           canvas,
-          xPx: ReportPage1.eraseAnalysisLabelX,
-          yPx: ys[index] - ReportPage1.eraseAnalysisLabelHeight / 2,
-          widthPx: ReportPage1.eraseAnalysisLabelWidth,
-          heightPx: ReportPage1.eraseAnalysisLabelHeight,
+          xPx: ReportPage1Layout.eraseAnalysisLabelX,
+          yPx: ys[index] - ReportPage1Layout.eraseAnalysisLabelHeight / 2,
+          widthPx: ReportPage1Layout.eraseAnalysisLabelWidth,
+          heightPx: ReportPage1Layout.eraseAnalysisLabelHeight,
           color: stripe,
         );
         _text(
           canvas,
-          xPx: ReportPage1.analysisCategoryX,
+          xPx: ReportPage1Layout.analysisCategoryX,
           yPx: ys[index],
           text: relabel,
-          sizePx: ReportPage1.analysisCategorySize,
-          align: ReportPage1.analysisCategoryAlign,
-          weight: ReportPage1.analysisCategoryWeight,
+          sizePx: ReportPage1Layout.analysisCategorySize,
+          align: ReportPage1Layout.analysisCategoryAlign,
+          weight: ReportPage1Layout.analysisCategoryWeight,
           color: ReportColors.text,
           key: '${keys[index]}.category',
           debug: debug,
@@ -367,7 +374,7 @@ class ReportPage1Renderer {
       if (debug) {
         _debugMark(
           canvas,
-          xPx: ReportPage1.analysisDescriptionX,
+          xPx: ReportPage1Layout.analysisDescriptionX,
           yPx: ys[index],
           label: keys[index],
         );
@@ -375,13 +382,13 @@ class ReportPage1Renderer {
     }
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-21 23:20:00 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-23 11:00:00 · 박건준
   /// 함수: headerValues
   /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
-  ///       자리 표시 문구(`ReportPage1.placeholder`, "미입력")를 찍는다.
+  ///       자리 표시 문구(`ReportPage1Layout.placeholder`, "미입력")를 찍는다.
   ///       - 제번 → 측정 ID, 현장명 → 건물명, 최하층·최상층 → 층 정보
-  ///       - 엔지니어 → 저장 시점 설정의 이름
+  ///       - 엔지니어 → 저장 시점 로그인 작업자 성명(2026-10-18)
   ///       - 제품 → "엘리베이터, 기종". 기종의 쉼표는 이 표기에서만
   ///         공백으로 바꾼다("엘리베이터, 줄-로우프 2:1") — 제품 칸의 쉼표가
   ///         제품과 기종을 가르는 자리라 기종 안 쉼표가 섞이면 읽기
@@ -404,7 +411,8 @@ class ReportPage1Renderer {
   ///       시험이 칸마다 문구를 확인할 수 있게 공개해 둔다.
   /// 인자: result — 값을 가져올 측정 결과
   /// 반환: 서식 칸 이름을 열쇠로 하는 문구 표
-  /// 근거: 인용 — `pdf_report_dev/README.md` 의 헤더 대응표. 그 표는
+  /// 근거: 인용 — 리포트 프로토타입 문서(2026-10-23 저장소에서 지움, 커밋
+  ///       6bd171a 의 `pdf_report_dev/README.md`)의 헤더 대응표. 그 표는
   ///       요구사항서 "현장 정보" 를 우선 배치하도록 정하고 있다.
   ///       제품 · 하중 · 주소 표기는 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
   ///       현장 리포트) 1쪽 머리말
@@ -422,7 +430,7 @@ class ReportPage1Renderer {
       if (result.address.isNotEmpty) result.address,
       if (result.postalCode case final code? when code.isNotEmpty) code,
     ]; // 주소 칸에 이어 쓸 조각
-    const placeholder = ReportPage1.placeholder; // 값이 없을 때 찍는 문구
+    const placeholder = ReportPage1Layout.placeholder; // 값이 없을 때 찍는 문구
     // → 로직 이동: SiteInfo.startStopFloors()
     final floors = SiteInfo.startStopFloors(
       result.direction,
@@ -449,8 +457,8 @@ class ReportPage1Renderer {
     };
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: _verdictColor
   /// 목적: 판정 결과를 신호등 색으로 바꾼다.
   /// 인자: verdict — 판정 결과
@@ -471,8 +479,8 @@ class ReportPage1Renderer {
     }
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
-  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-11 19:15:25 · 박건준
   /// 함수: _text
   /// 목적: 글자 한 덩이를 서식 좌표에 찍는다. 찍는 일 자체는
   ///       `ReportTextWriter` 가 하고, 여기서는 디버그 표식을 얹을지만
@@ -518,7 +526,7 @@ class ReportPage1Renderer {
     );
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
   /// 함수: _dot
   /// 목적: 신호등 원 하나를 채워 그린다.
   /// 인자: canvas — 그리기 도구
@@ -544,7 +552,7 @@ class ReportPage1Renderer {
       ..fillPath();
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
   /// 함수: _erase
   /// 목적: 서식에 인쇄된 채로 남아 있는 값을 네모로 덮는다. 흰색이 아니라
   ///       그 행의 줄무늬 색으로 칠해야 덮은 자국이 드러나지 않는다.
@@ -571,7 +579,7 @@ class ReportPage1Renderer {
       ..fillPath();
   }
 
-  /// 작성: 2026-09-16 09:12:40 · nada
+  /// 작성: 2026-09-16 09:12:40 · 박건준
   /// 함수: _debugMark
   /// 목적: 자리 하나에 자홍색 십자와 이름을 찍는다. 좌표가 틀어졌는지
   ///       눈으로 바로 확인하려고 두는 것이라 제품 흐름에서는 그리지
@@ -597,17 +605,19 @@ class ReportPage1Renderer {
       ..drawString(textWriter.regular, 3.6, label, x + 5, y + 1.5);
   }
 
-  /// 작성: 2026-09-22 20:18:06 · nada
+  /// 작성: 2026-09-22 20:18:06 · 박건준
   /// 변수: _debugColor
   /// 목적: 자리 확인용 표식(`debug: true` 일 때만 그린다)에 쓰는 자홍색.
   ///       서식에 없는 색이라 눈에 바로 띈다.
   static final PdfColor _debugColor = PdfColor.fromInt(0xFFFF00AA);
 }
 
-/// 작성: 2026-09-16 09:12:40 · nada
+/// 작성: 2026-09-16 09:12:40 · 박건준
+/// 수정: 2026-10-23 11:00:00 · 박건준
 /// 함수: renderReportPage1
-/// 목적: 1쪽만 담은 PDF 한 부를 만든다. 아직 뒤 쪽들이 없어서 1쪽을 따로
-///       확인할 때 쓴다.
+/// 목적: 1쪽만 담은 PDF 한 부를 만든다. 앱은 세 쪽을 이어 붙인
+///       `TuneReportBuilder` 를 쓰고, 이 함수는 시험이 1쪽만 따로 확인할 때
+///       쓴다.
 /// 인자: result — 값을 가져올 측정 결과
 ///       debug — 자리마다 표식을 찍을지. 기본은 꺼짐
 /// 반환: PDF 파일 내용

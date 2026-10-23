@@ -1,14 +1,16 @@
-import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
+import 'package:vibration_checker/domain/dsp/units.dart';
 
-/// 작성: 2026-10-10 11:54:43 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
+/// 수정: 2026-10-23 11:00:00 · 박건준
 /// 클래스: LiveSpeedEstimator
 /// 목적: 측정 중에 들어오는 센서 이벤트로 승강기 속도를 그때그때 어림한다.
 ///       측정 화면에 보여 주기만 하고 저장 · 리포트에는 쓰지 않는다.
 ///
-///       저장하는 속도(`MeasurementAssembler._deriveKinematics()`)는 측정이
-///       끝난 뒤 전체 평균과 두 끝을 잇는 직선을 빼 적분 오차를 없앤다.
+///       저장하는 속도(`Kinematics.derive()`)는 측정이 끝난 뒤 움직인
+///       구간을 찾아 그 구간만 적분하고, 구간 평균을 빼 적분 오차를 줄인다.
 ///       끝을 모르는 측정 중에는 그렇게 할 수 없어, 아래처럼 따로 어림한다.
 ///       그래서 두 값은 다를 수 있다.
 ///       1. 수직 가속도 — raw 와 바로 앞 gravity 로 `GridResampler.motionOf()`
@@ -24,13 +26,6 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 ///       이벤트는 일정한 간격으로 오지 않으므로 시간 간격은 이벤트 시각
 ///       차이로 잰다.
 class LiveSpeedEstimator {
-  /// 작성: 2026-10-10 11:54:43 · nada
-  /// 변수: _mgToMetersPerSecondSquared
-  /// 목적: mg 를 m/s² 로 바꾸는 배수.
-  /// 근거: 표준 — 국제단위계(SI) 표준 중력 9.80665 m/s², 그 1/1000.
-  ///       `MeasurementAssembler` 에도 같은 값이 비공개로 있다
-  static const double _mgToMetersPerSecondSquared = 9.80665e-3;
-
   /// 기준선 구간 길이를 꺼낼 수집 설정
   final CaptureConfig config;
 
@@ -65,26 +60,26 @@ class LiveSpeedEstimator {
   /// 정지 판정 조건이 이어진 시간 (마이크로초). 조건이 깨지면 0
   int _stillUs = 0;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 함수: LiveSpeedEstimator
   /// 목적: 기준선 구간 길이를 꺼낼 수집 설정을 받는다.
   /// 인자: config — 수집 설정. 안 주면 기본값
   LiveSpeedEstimator({this.config = const CaptureConfig()});
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 함수: velocityMps
   /// 목적: 어림한 수직 속도 (m/s). 부호는 격자 Z 와 같다. 기준선이 정해지기
   ///       전이면 null.
   double? get velocityMps => _baselineMg == null ? null : _velocity;
 
-  /// 작성: 2026-10-10 11:54:43 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
   /// 함수: speedMps
   /// 목적: 어림한 속도의 크기 (m/s). 화면에 보이는 값이다. 기준선이
   ///       정해지기 전이면 null.
   double? get speedMps => velocityMps?.abs();
 
-  /// 작성: 2026-10-10 11:54:43 · nada
-  /// 수정: 2026-10-21 15:20:00 · nada
+  /// 작성: 2026-10-10 11:54:43 · 박건준
+  /// 수정: 2026-10-22 23:55:00 · 박건준
   /// 함수: onEvent
   /// 목적: 센서 이벤트 한 건을 받아 속도 어림을 한 걸음 진행한다. 쓰지
   ///       못하는 이벤트는 조용히 건너뛴다 — 저장용 격자
@@ -152,7 +147,7 @@ class LiveSpeedEstimator {
     const tauSec = CaptureConfig.liveSmoothingMs / 1000; // 저역 시간 상수 (초)
     final accelMg = motion.z - baseline; // 기준선을 뺀 수직 가속도 (mg)
     _smoothedMg += dtSec / (tauSec + dtSec) * (accelMg - _smoothedMg);
-    _velocity += _smoothedMg * _mgToMetersPerSecondSquared * dtSec;
+    _velocity += _smoothedMg * Units.mgToMetersPerSecondSquared * dtSec;
 
     final still =
         _smoothedMg.abs() < CaptureConfig.liveStillAccelMg &&

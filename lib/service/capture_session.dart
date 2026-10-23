@@ -1,0 +1,414 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
+import 'package:vibration_checker/domain/capture/grid_resampler.dart';
+import 'package:vibration_checker/domain/capture/live_speed_estimator.dart';
+import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/capture/placement.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
+import 'package:vibration_checker/domain/config/noise_config.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
+/// 작성: 2026-10-04 13:29:41 · 박건준
+/// 수정: 2026-10-22 09:30:00 · 박건준
+/// 클래스: CaptureSession
+/// 목적: 측정 한 번의 센서 수집을 켜고 끄는 절차를 맡는다. 측정 화면
+///       (measuring_screen.dart)이 화면 모양과 상관없이 같은 순서로
+///       수집하도록, 순서가 중요한 단계를 이 클래스 하나에 모은다.
+///       - `start()` — 화면 꺼짐 방지, 마이크 권한, 센서 구독, 볼륨키
+///         가로채기, 무응답 감시를 차례로 건다
+///       - `stop()` — 건 것을 거꾸로 푼다. 여러 번 불러도 안전하다
+///       - `discard()` — 저장하지 않는 중단이면 멈춘 뒤 안드로이드 원본
+///         기록 파일과 현장 소음 녹음까지 지운다
+///       수집 처음 1초의 중력으로 거치 방향을 판정해(`placement`) 화면
+///       아래가 아니면 경고음 · 진동을 울린다(2026-10-22).
+///       수집한 이벤트는 `resampler` 에 쌓이고, 저장은
+///       `MeasurementRecorder`(measurement_recorder.dart)가 한다.
+class CaptureSession {
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 함수: CaptureSession
+  /// 목적: 수집 한 번에 쓸 센서 통로와 격자(일정한 시간 간격으로 줄 세운
+  ///       표의 각 행) 환산기를 준비한다.
+  /// 인자: sensorManager — 안드로이드 센서와 주고받는 통로. null 이면
+  ///       새로 만든다. 다른 구현을 끼워 넣을 때만 넘긴다
+  CaptureSession({SensorChannelManager? sensorManager})
+    : _sensorManager = sensorManager ?? SensorChannelManager();
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 변수: noResponseTimeout
+  /// 목적: 수집을 시작한 뒤 이 시간 안에 센서 값이 하나도 안 오면 무응답
+  ///       으로 본다.
+  /// 근거: 미확인 — 3초를 고른 근거가 코드 · 문서에 없다
+  static const Duration noResponseTimeout = Duration(seconds: 3);
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 변수: _flushWait
+  /// 목적: 수집 정지를 요청한 뒤 구독을 끊기 전까지 기다리는 시간.
+  ///       안드로이드는 남은 묶음을 정지 요청의 응답 뒤에 메인 스레드로
+  ///       보내므로, 기다리지 않고 끊으면 측정 끝부분이 사라진다.
+  /// 근거: 미확인 — 300ms 를 고른 근거가 코드 · 문서에 없다
+  static const Duration _flushWait = Duration(milliseconds: 300);
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 변수: _slowStepLimit
+  /// 목적: 정리 단계 하나를 기다리는 한도. 넘기면 포기하고 다음 단계로
+  ///       간다 — 안드로이드 응답이 늦어 화면 나가기가 멈추면 안 된다.
+  /// 근거: 미확인 — 500ms 를 고른 근거가 코드 · 문서에 없다
+  static const Duration _slowStepLimit = Duration(milliseconds: 500);
+
+  /// 작성: 2026-10-05 10:00:11 · 박건준
+  /// 수정: 2026-10-18 10:12:30 · 박건준
+  /// 변수: _stopCaptureLimit
+  /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 정지는 안드로이드가 원본
+  ///       기록 · 현장 소음 녹음 파일을 닫고 경로를 돌려주는 단계라 다른
+  ///       정리보다 길게 기다린다. 이 한도가 `SensorChannelManager.stopCapture()`
+  ///       자신의 한도보다 짧으면 경로를 받기 전에 끊겨 원본 사본과 녹음이
+  ///       빠진다.
+  /// 근거: 인용 — `SensorChannelManager` 의 응답 한도(3.5초, 그 근거를
+  ///       본다)보다 길게 둔다
+  static const Duration _stopCaptureLimit = Duration(seconds: 4);
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 변수: _wakelockOnLimit
+  /// 목적: 화면 꺼짐 방지를 켤 때 기다리는 한도. 넘기면 켜졌는지와
+  ///       상관없이 수집을 시작한다 — 화면 꺼짐 방지 때문에 측정이
+  ///       늦어지면 안 된다.
+  /// 근거: 미확인 — 100ms 를 고른 근거가 코드 · 문서에 없다
+  static const Duration _wakelockOnLimit = Duration(milliseconds: 100);
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 변수: _wakelockOffLimit
+  /// 목적: 화면 꺼짐 방지를 끌 때 기다리는 한도.
+  /// 근거: 미확인 — 200ms 를 고른 근거가 코드 · 문서에 없다
+  static const Duration _wakelockOffLimit = Duration(milliseconds: 200);
+
+  /// 안드로이드 센서와 주고받는 통로
+  final SensorChannelManager _sensorManager;
+
+  /// 받은 센서 이벤트를 쌓아 두었다가 측정이 끝나면 격자로 환산한다.
+  /// `start()` 의 구독이 채우고, `MeasurementRecorder.record()` 가 읽는다
+  final GridResampler resampler = GridResampler(config: const CaptureConfig());
+
+  /// 측정 중 속도를 어림하는 추정기. `start()` 의 구독이 이벤트를 넣는다.
+  /// 화면 표시 전용이고 저장 · 리포트에는 쓰지 않는다
+  final LiveSpeedEstimator _speedEstimator = LiveSpeedEstimator();
+
+  /// 측정 중 어림한 속도의 크기 (m/s). 측정 화면이 보여 준다. 기준선을
+  /// 모으는 첫 1초 동안과 수집 전에는 null. 이벤트 시각으로
+  /// `CaptureConfig.livePublishMs` 마다 한 번만 바꿔 화면을 너무 자주 다시
+  /// 그리지 않게 한다
+  final ValueNotifier<double?> liveSpeedMps = ValueNotifier<double?>(null);
+
+  /// 마지막으로 `liveSpeedMps` 를 바꾼 이벤트 시각 (마이크로초). 아직
+  /// 바꾸지 않았으면 null
+  int? _lastSpeedPublishUs;
+
+  /// 수집 처음 1초의 중력 Z 로 거치 방향을 판정하는 감시기
+  final PlacementMonitor _placementMonitor = PlacementMonitor();
+
+  /// 거치 경고를 울릴 이벤트 시각 (마이크로초). "화면 아래" 가 아니라고
+  /// 판정했을 때 정하고, 울리거나 건너뛰면 null 로 되돌린다
+  int? _placementAlertDueUs;
+
+  /// 거치 경고를 울린 이벤트 시각 (마이크로초). 울리지 않았으면 null
+  int? _placementAlertedUs;
+
+  /// 경고 시각에 이미 운행 중이라 거치 경고를 건너뛰었는지
+  bool _placementAlertSkipped = false;
+
+  /// 작성: 2026-10-22 09:30:00 · 박건준
+  /// 함수: placement
+  /// 목적: 거치 방향 판정 결과. 저장 절차(`MeasurementRecorder.record()`)가
+  ///       결과 파일에 싣는다. 수집 처음 1초가 지나기 전이면 null.
+  PlacementReading? get placement => _placementMonitor.reading;
+
+  /// 작성: 2026-10-22 17:10:00 · 박건준
+  /// 함수: placementAlertOffsetMs
+  /// 목적: 거치 경고를 울린 시각을 첫 중력 이벤트부터 잰 값 (밀리초). 경고가
+  ///       기준선 구간 뒤에 울렸는지 시험이 본다. 울리지 않았으면 null.
+  double? get placementAlertOffsetMs {
+    final alerted = _placementAlertedUs; // 울린 시각, 없으면 null
+    final start = _placementMonitor.startUs; // 판정 창 시작
+    if (alerted == null || start == null) return null;
+    return (alerted - start) / 1000;
+  }
+
+  /// 작성: 2026-10-22 17:10:00 · 박건준
+  /// 함수: placementAlertSkipped
+  /// 목적: 경고 시각에 이미 운행 중이라 거치 경고를 건너뛰었는지. 이때는
+  ///       결과 화면 경고만 남는다.
+  bool get placementAlertSkipped => _placementAlertSkipped;
+
+  /// 센서 이벤트 구독. `start()` 가 센서가 있을 때만 만들고 `stop()` 이
+  /// 끊는다. 구독 중이 아니면 null
+  StreamSubscription<NativeEvent>? _sensorSub;
+
+  /// 볼륨키 눌림 구독. `start()` 가 센서가 있을 때 만들고 `stop()` 이
+  /// 끊는다. 구독 중이 아니면 null
+  StreamSubscription<void>? _volumeKeySub;
+
+  /// 무응답 감시 타이머. `start()` 가 걸고, 기한 전에 `stop()` 이
+  /// 불리면 취소된다. 감시 중이 아니면 null
+  Timer? _noResponseTimer;
+
+  /// 센서 이벤트를 한 번이라도 받았는지. 무응답 감시가 이 값을 본다
+  bool _receivedSample = false;
+
+  /// `stop()` 이 불렸는지. 한 번 true 가 되면 되돌리지 않는다. `start()` 가
+  /// 기다리는 사이에 정지가 끼었는지 이 값으로 알아챈다
+  bool _stopped = false;
+
+  /// 안드로이드에 수집 시작을 요청했는지. `_teardown()` 이 정지 요청을
+  /// 보낼지 정한다 — 켜지 않은 수집을 멈추라고 보내지 않고, 두 번 보내지도
+  /// 않는다
+  bool _captureStarted = false;
+
+  /// 안드로이드에 볼륨키 가로채기를 켜 달라고 했는지. `_teardown()` 이 끄는
+  /// 요청을 보낼지 정한다
+  bool _volumeKeyEnabled = false;
+
+  /// 화면 꺼짐 방지를 켰는지. `_teardown()` 이 끌지 정한다
+  bool _wakelockEnabled = false;
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 함수: lastCaptureError
+  /// 목적: 수집 시작 요청이 실패했을 때 화면에 보여줄 원인 문구. 실패가
+  ///       없었으면 null.
+  String? get lastCaptureError => _sensorManager.lastCaptureError;
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 함수: nativeRecordPath
+  /// 목적: 안드로이드가 `stop()` 때 저장한 원본 기록 파일 경로. 저장하지
+  ///       못했거나 아직 멈추기 전이면 null.
+  String? get nativeRecordPath => _sensorManager.lastRecordPath;
+
+  /// 작성: 2026-10-18 10:12:30 · 박건준
+  /// 함수: noiseAudioPath
+  /// 목적: 안드로이드가 `stop()` 때 닫은 현장 소음 녹음(M4A) 경로. 녹음하지
+  ///       못했거나 아직 멈추기 전이면 null.
+  String? get noiseAudioPath => _sensorManager.lastAudioPath;
+
+  /// 작성: 2026-10-22 12:00:00 · 박건준
+  /// 함수: noiseSampleRateHz
+  /// 목적: 안드로이드가 `stop()` 때 알려 준 소음 마이크 표본 속도(Hz, 48000
+  ///       또는 44100). 마이크를 못 열었거나 아직 멈추기 전이면 null.
+  int? get noiseSampleRateHz => _sensorManager.lastNoiseSampleRateHz;
+
+  /// 작성: 2026-10-22 19:00:00 · 박건준
+  /// 함수: deviceManufacturer
+  /// 목적: 수집을 멈출 때 안드로이드가 알려 준 휴대폰 제조사. 멈추기 전이거나
+  ///       응답이 없으면 null.
+  String? get deviceManufacturer => _sensorManager.lastDeviceManufacturer;
+
+  /// 작성: 2026-10-22 19:00:00 · 박건준
+  /// 함수: deviceModel
+  /// 목적: 수집을 멈출 때 안드로이드가 알려 준 휴대폰 기종 이름. 저장 절차가
+  ///       기종 응답 보정을 고른다. 멈추기 전이거나 응답이 없으면 null.
+  String? get deviceModel => _sensorManager.lastDeviceModel;
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 함수: start
+  /// 목적: 수집을 시작한다. 순서대로 진행한다. 마이크 권한은 여기서
+  ///       요청하지 않는다 — 측정 중에 권한 창이 뜨면 뒤집어 놓은 휴대폰에서
+  ///       누를 수 없으므로 시작 화면이 미리 받는다(`ensureMicPermission()`).
+  ///       권한이 없으면 소음 수집 쪽이 0 으로 대신한다.
+  ///       1. 화면 꺼짐 방지를 켠다. 한도 안에 응답이 없어도 넘어간다
+  ///       2. 센서가 있으면 수집을 시작하고 이벤트를 `resampler` 에
+  ///          쌓는다. 같은 이벤트로 측정 중 속도(`liveSpeedMps`)도
+  ///          어림한다. 측정은 볼륨키로 끝내므로 볼륨키도 가로챈다
+  ///       3. 센서 유무와 상관없이 무응답 감시를 건다. 센서가 없으면
+  ///          값이 오지 않으므로 감시가 그 경우도 잡는다
+  ///       기다리는 단계마다 그 사이에 `stop()` 이 끼었는지 본다. 끼었으면
+  ///       그때까지 켠 것을 `_teardown()` 으로 되돌리고 멈춘다 — 그대로
+  ///       이어 가면 정지 뒤에 수집과 볼륨키 가로채기가 켜진 채 남는다.
+  /// 인자: onVolumeKey — 볼륨키가 눌릴 때마다 부를 함수
+  ///       onNoResponse — `noResponseTimeout` 안에 값이 하나도 안 오면
+  ///       한 번 부를 함수
+  Future<void> start({
+    required void Function() onVolumeKey,
+    required void Function() onNoResponse,
+  }) async {
+    if (_stopped) return;
+    _wakelockEnabled = true;
+    try {
+      await WakelockPlus.enable().timeout(_wakelockOnLimit);
+    } catch (_) {}
+    if (_stopped) return _teardown(); // → 로직 이동: _teardown()
+
+    // → 로직 이동: SensorChannelManager.checkSensorsAvailable()
+    final available = await _sensorManager.checkSensorsAvailable(); // 센서 유무
+    if (_stopped) return _teardown(); // → 로직 이동: _teardown()
+    if (available) {
+      _captureStarted = true;
+      // → 로직 이동: SensorChannelManager.startCapture()
+      await _sensorManager.startCapture(
+        calibrationOffsetDba: 0.0,
+        micDbfsToDbaOffset: kDefaultMicDbfsToDbaOffset,
+      );
+      if (_stopped) return _teardown(); // → 로직 이동: _teardown()
+      _sensorSub = _sensorManager.nativeEventStream.listen((event) {
+        _receivedSample = true;
+        resampler.onEvent(event); // → 로직 이동: GridResampler.onEvent()
+        _publishSpeed(event); // → 로직 이동: _publishSpeed()
+        _watchPlacement(event); // → 로직 이동: _watchPlacement()
+      });
+      _volumeKeyEnabled = true;
+      // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
+      await _sensorManager.setVolumeKeyCaptureEnabled(true);
+      if (_stopped) return _teardown(); // → 로직 이동: _teardown()
+      _volumeKeySub = _sensorManager.volumeKeyPresses.listen(
+        (_) => onVolumeKey(),
+      );
+    }
+
+    _noResponseTimer = Timer(noResponseTimeout, () {
+      if (!_receivedSample) onNoResponse();
+    });
+  }
+
+  /// 작성: 2026-10-15 22:32:44 · 박건준
+  /// 함수: _publishSpeed
+  /// 목적: 이벤트 한 건을 속도 추정기에 넣고, 앞서 내보낸 뒤
+  ///       `CaptureConfig.livePublishMs` 가 지났으면 어림한 속도를
+  ///       `liveSpeedMps` 로 내보낸다. 간격은 이벤트 시각으로 잰다.
+  /// 인자: event — 안드로이드에서 도착한 원본 이벤트
+  void _publishSpeed(NativeEvent event) {
+    _speedEstimator.onEvent(event); // → 로직 이동: LiveSpeedEstimator.onEvent()
+    final last = _lastSpeedPublishUs; // 앞서 내보낸 시각, 처음이면 null
+    if (last != null &&
+        event.tsUs - last < CaptureConfig.livePublishMs * 1000) {
+      return;
+    }
+    _lastSpeedPublishUs = event.tsUs;
+    liveSpeedMps.value = _speedEstimator.speedMps;
+  }
+
+  /// 작성: 2026-10-22 09:30:00 · 박건준
+  /// 수정: 2026-10-22 17:10:00 · 박건준
+  /// 함수: _watchPlacement
+  /// 목적: 이벤트 한 건을 거치 감시기에 넣고, "화면 아래" 가 아니라고 판정했으면
+  ///       첫 중력 이벤트부터 `CaptureConfig.placementAlertDelayMs`(1.7초)가
+  ///       지난 첫 이벤트에서 경고음 · 진동을 한 번 울린다. 측정은 계속한다 —
+  ///       막으면 엎어 둔 휴대폰에서 안내를 볼 수 없고 다 잰 운행을 버리게 된다.
+  ///       - 판정(1초)은 바로 하지만 경고는 기준선 구간(수집 0.5 ~ 1.5초)이
+  ///         끝난 뒤로 미룬다. 진동 모터 · 경고음이 기준선 평균에 들지 않게
+  ///         한다
+  ///       - 그 시각에 측정 중 속도가 `CaptureConfig.motionSpeedThresholdMps`
+  ///         를 넘으면(이미 운행 중) 울리지 않는다. 운행 구간에 경고음 ·
+  ///         진동을 넣지 않기 위해서다. 결과 화면 경고는 그대로 남는다
+  ///       - 속도를 아직 모르면(가속도 이벤트가 없음) 운행 중이 아닌 것으로
+  ///         보고 울린다 — 경고를 빠뜨리는 쪽보다 낫다
+  /// 인자: event — 안드로이드에서 도착한 원본 이벤트
+  void _watchPlacement(NativeEvent event) {
+    // → 로직 이동: PlacementMonitor.onEvent()
+    final judged = _placementMonitor.onEvent(event); // 이번에 판정했으면 결과
+    if (judged != null && judged.placement != Placement.faceDown) {
+      // 판정했으면 창을 시작한 중력 이벤트가 있으므로 시작 시각이 있다
+      assert(_placementMonitor.startUs != null, '판정했는데 창 시작 시각이 없다');
+      _placementAlertDueUs =
+          _placementMonitor.startUs! +
+          CaptureConfig.placementAlertDelayMs * 1000;
+    }
+    final due = _placementAlertDueUs; // 울릴 시각, 없으면 null
+    if (due == null || event.tsUs < due) return;
+    _placementAlertDueUs = null;
+    final speed = _speedEstimator.speedMps; // 측정 중 속도, 모르면 null
+    if (speed != null && speed > CaptureConfig.motionSpeedThresholdMps) {
+      _placementAlertSkipped = true;
+      return;
+    }
+    _placementAlertedUs = event.tsUs;
+    // → 로직 이동: SensorChannelManager.playPlacementAlert()
+    unawaited(_sensorManager.playPlacementAlert());
+  }
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 함수: stop
+  /// 목적: 수집을 멈춘다. 측정을 끝낼 때, 중단할 때, 화면이 사라질 때 모두
+  ///       부르므로 두 번 불러도 안전하다. 먼저 정지 표시를 세워, 아직
+  ///       진행 중인 `start()` 가 더 켜지 않고 스스로 되돌리게 한다.
+  Future<void> stop() async {
+    _stopped = true;
+    await _teardown(); // → 로직 이동: _teardown()
+  }
+
+  /// 작성: 2026-10-07 03:30:18 · 박건준
+  /// 수정: 2026-10-18 10:12:30 · 박건준
+  /// 함수: discard
+  /// 목적: 저장하지 않고 끝내는 측정(뒤로가기 중단, 앱 전환 중단, 센서
+  ///       무응답)의 수집을 멈추고, 안드로이드가 남긴 원본 기록 파일과
+  ///       현장 소음 녹음을 지운다. 저장하지 않으면 측정 폴더가 생기지 않아
+  ///       두 파일이 앱 저장 공간 맨 위에 쌓이고, 쓰는 곳도 없다. 중단 확인
+  ///       창도 "진행 중인 측정 데이터는 저장되지 않습니다"라고 안내한다.
+  ///       지우지 못해도 기록만 남기고 넘어간다 — 화면 나가기를 막지 않는다.
+  ///       `stop()` 처럼 여러 번 불러도 안전하다.
+  Future<void> discard() async {
+    await stop(); // → 로직 이동: stop()
+    for (final path in <String?>[nativeRecordPath, noiseAudioPath]) {
+      if (path == null) continue; // 저장 안 된 파일
+      try {
+        final file = File(path); // 지울 파일
+        if (await file.exists()) await file.delete();
+      } catch (e) {
+        debugPrint('중단한 측정의 파일 삭제 실패: $path, $e');
+      }
+    }
+  }
+
+  /// 작성: 2026-10-05 10:00:11 · 박건준
+  /// 함수: _teardown
+  /// 목적: `start()` 가 지금까지 켠 것만 거꾸로 푼다. 켜지 않은 것은 건드리지
+  ///       않고, 각 표시와 필드를 먼저 비워 두 번 불려도 같은 요청을 두 번
+  ///       보내지 않는다.
+  ///       - 수집 정지 요청을 구독 끊기보다 먼저 보낸다. 정지 요청이
+  ///         안드로이드에 남은 묶음을 내보내게 하는데, 구독을 먼저 끊으면
+  ///         안드로이드가 보낼 통로를 닫아 남은 묶음이 버려진다
+  ///       - 정지 응답 뒤에도 남은 묶음이 도착하므로 `_flushWait` 만큼
+  ///         기다린 뒤 구독을 끊는다
+  ///       - 안드로이드 응답이 늦거나 실패해도 한도가 지나면 다음 단계로
+  ///         간다
+  Future<void> _teardown() async {
+    _noResponseTimer?.cancel();
+    _noResponseTimer = null;
+
+    final volumeKeySub = _volumeKeySub; // 끊기 전에 옮겨 두는 구독, 없으면 null
+    _volumeKeySub = null;
+    if (_volumeKeyEnabled) {
+      _volumeKeyEnabled = false;
+      // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
+      await _limit(_sensorManager.setVolumeKeyCaptureEnabled(false));
+    }
+    if (volumeKeySub != null) await _limit(volumeKeySub.cancel());
+
+    final sensorSub = _sensorSub; // 끊기 전에 옮겨 두는 구독, 없으면 null
+    _sensorSub = null;
+    if (_captureStarted) {
+      _captureStarted = false;
+      // → 로직 이동: SensorChannelManager.stopCapture()
+      await _limit(_sensorManager.stopCapture(), _stopCaptureLimit);
+      await Future<void>.delayed(_flushWait);
+    }
+    if (sensorSub != null) await _limit(sensorSub.cancel());
+
+    if (_wakelockEnabled) {
+      _wakelockEnabled = false;
+      try {
+        await WakelockPlus.disable().timeout(_wakelockOffLimit);
+      } catch (_) {}
+    }
+  }
+
+  /// 작성: 2026-10-04 13:29:41 · 박건준
+  /// 함수: _limit
+  /// 목적: 정리 단계 하나를 한도까지만 기다린다. 늦거나 실패해도 오류를
+  ///       올리지 않는다 — 정리가 막혀 화면을 못 나가는 것이 더 나쁘다.
+  /// 인자: step — 기다릴 정리 단계 (정지 요청, 구독 끊기 등)
+  ///       limit — 기다릴 한도. 안 주면 `_slowStepLimit`
+  Future<void> _limit(Future<void> step, [Duration? limit]) async {
+    try {
+      await step.timeout(limit ?? _slowStepLimit);
+    } catch (_) {}
+  }
+}

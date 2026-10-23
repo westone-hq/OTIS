@@ -13,18 +13,19 @@ import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration_checker/adapter/measurement_repository.dart';
-import 'package:vibration_checker/adapter/sensor_channel.dart';
-import 'package:vibration_checker/adapter/update_checker.dart';
-import 'package:vibration_checker/adapter/update_installer.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
+import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/adapter/update/update_checker.dart';
+import 'package:vibration_checker/adapter/update/update_installer.dart';
+import 'package:vibration_checker/domain/analysis/travel_window.dart';
+import 'package:vibration_checker/domain/auth/login_session.dart';
+import 'package:vibration_checker/domain/auth/worker.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
-import 'package:vibration_checker/domain/report/travel_window.dart';
-import 'package:vibration_checker/domain/session/login_session.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/update/update_decision.dart';
 import 'package:vibration_checker/domain/update/update_info.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
-import 'package:vibration_checker/model/worker.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
@@ -34,13 +35,13 @@ import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/measure/placement_sheet.dart';
 import 'package:vibration_checker/ui/features/measure/start_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
+import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
-import 'package:vibration_checker/ui/features/shared/send_email_sheet.dart';
 import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
 import 'shot_harness.dart';
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: _FakeSensors
 /// 목적: 안드로이드 대신 쓰는 센서 통로. 센서는 늘 있다고 답하고, 마이크
 ///       권한은 `micGranted` 로, 볼륨키는 `pressVolumeKey()` 로 흉내 낸다.
@@ -51,24 +52,24 @@ class _FakeSensors extends SensorChannelManager {
   /// 볼륨키 눌림을 흘려보내는 통로
   final StreamController<void> _volume = StreamController<void>.broadcast();
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: pressVolumeKey
   /// 목적: 볼륨키를 한 번 누른 것처럼 알린다.
   void pressVolumeKey() => _volume.add(null);
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: checkSensorsAvailable
   /// 목적: 센서가 있다고 답한다.
   @override
   Future<bool> checkSensorsAvailable() async => true;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: requestAudioPermission
   /// 목적: `micGranted` 로 답한다.
   @override
   Future<bool> requestAudioPermission() async => micGranted;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: startCapture
   /// 목적: 아무것도 하지 않는다.
   @override
@@ -77,25 +78,25 @@ class _FakeSensors extends SensorChannelManager {
     double micDbfsToDbaOffset = 0.0,
   }) async {}
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: stopCapture
   /// 목적: 원본 기록 없이 멈춘다.
   @override
   Future<void> stopCapture() async => lastRecordPath = null;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: setVolumeKeyCaptureEnabled
   /// 목적: 아무것도 하지 않는다.
   @override
   Future<void> setVolumeKeyCaptureEnabled(bool enabled) async {}
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: volumeKeyPresses
   /// 목적: `pressVolumeKey()` 가 흘려보내는 눌림.
   @override
   Stream<void> get volumeKeyPresses => _volume.stream;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: nativeEventStream
   /// 목적: 값이 오지 않는 빈 흐름. 저장 때 "표본 없음" 실패가 난다.
   @override
@@ -103,7 +104,7 @@ class _FakeSensors extends SensorChannelManager {
       const Stream<NativeEvent>.empty();
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 클래스: _FakeInstaller
 /// 목적: 안드로이드 대신 쓰는 업데이트 통로. 받기는 끝나지 않게 붙잡아 진행
 ///       막대가 보이게 한다.
@@ -111,38 +112,38 @@ class _FakeInstaller implements UpdateInstaller {
   /// 설치가 허용돼 있는지
   bool allowed = true;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: canInstall
   /// 목적: `allowed` 로 답한다.
   @override
   Future<bool> canInstall() async => allowed;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: openInstallSettings
   /// 목적: 설정 화면에서 돌아오지 않은 채로 둔다.
   @override
   Future<bool> openInstallSettings() => Completer<bool>().future;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: progress
   /// 목적: 42% 진행률 한 건을 흘려보낸다.
   @override
   Stream<DownloadProgress> progress() =>
       Stream<DownloadProgress>.value(const DownloadProgress(42, 100));
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: download
   /// 목적: 끝나지 않는 내려받기.
   @override
   Future<String> download(UpdateInfo info) => Completer<String>().future;
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: cancelDownload
   /// 목적: 아무것도 하지 않는다.
   @override
   Future<void> cancelDownload() async {}
 
-  /// 작성: 2026-10-15 16:50:04 · nada
+  /// 작성: 2026-10-15 16:50:04 · 박건준
   /// 함수: install
   /// 목적: 설치됐다고 답한다.
   @override
@@ -150,7 +151,7 @@ class _FakeInstaller implements UpdateInstaller {
       (InstallOutcome.success, null);
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 변수: _info
 /// 목적: 업데이트 창에 띄울 버전 정보.
 final UpdateInfo _info = UpdateInfo(
@@ -162,7 +163,7 @@ final UpdateInfo _info = UpdateInfo(
   notes: '리포트 진동 지표를 원본 리포트와 같은 방식으로 냅니다',
 );
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _offlinePrompt
 /// 목적: 서버에 닿지 않는 업데이트 흐름. 홈 · 설정 화면이 캡처 중에 창을
 ///       띄우지 않게 한다.
@@ -175,14 +176,14 @@ UpdatePrompt _offlinePrompt() => UpdatePrompt(
   installer: _FakeInstaller(),
 );
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _series
 /// 목적: 결과 파일에 실을 짧은 시계열.
 /// 반환: 100표본 사인
 List<double> _series() =>
     List<double>.generate(100, (i) => (i % 10 - 5).toDouble());
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _mock
 /// 목적: 목업 측정 결과 하나를 만든다.
 /// 인자: id — 측정 ID
@@ -258,7 +259,7 @@ MeasurementResult _mock(
   );
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _seed
 /// 목적: 목업 결과들을 저장소에 넣는다. 정상 · 황색 · 적색 · 미측정 · 아주
 ///       긴 현장명 · lb 예전 결과 · 처리 전 예전 결과, 그리고 측정 일시가
@@ -309,7 +310,7 @@ Future<void> _seed(String root) async {
   ).deleteSync();
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _app
 /// 목적: 캡처 경계로 감싼 앱을 만든다.
 /// 인자: home — 첫 화면
@@ -319,7 +320,7 @@ Widget _app(Widget home) => RepaintBoundary(
   child: MaterialApp(theme: shotTheme(), home: home),
 );
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _routerApp
 /// 목적: 화면 이동이 필요한 화면(시작 · 측정 · 결과)을 경로로 띄운다.
 /// 인자: initial — 처음 경로
@@ -349,7 +350,7 @@ Widget _routerApp(String initial, {_FakeSensors? sensors}) {
   );
 }
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: _contextOf
 /// 목적: 화면 안 위치 정보를 얻는다(대화상자 · 시트를 띄울 자리).
 /// 인자: tester — 위젯 시험 도구
@@ -357,7 +358,7 @@ Widget _routerApp(String initial, {_FakeSensors? sensors}) {
 BuildContext _contextOf(WidgetTester tester) =>
     tester.element(find.byType(Scaffold).last);
 
-/// 작성: 2026-10-15 16:50:04 · nada
+/// 작성: 2026-10-15 16:50:04 · 박건준
 /// 함수: main
 /// 목적: 화면 · 상태별 목업 캡처를 두 화면 크기로 남긴다. 일반 시험에서
 ///       빠진다(`dart_test.yaml` 의 `screenshot` 태그). 돌리는 법:

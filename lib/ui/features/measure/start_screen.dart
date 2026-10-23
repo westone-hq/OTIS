@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-import 'package:vibration_checker/adapter/sensor_channel.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_card.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_layout.dart';
-import '../../core/widgets/app_notice.dart';
-import 'mic_permission.dart';
-import 'placement_sheet.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_card.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
+import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
+import 'package:vibration_checker/ui/features/measure/placement_sheet.dart';
 
 /// 작성: 2026-08-17 13:31:30 · 박건준
-/// 수정: 2026-10-04 13:37:23 · nada
+/// 수정: 2026-10-04 13:37:23 · 박건준
 /// 클래스: StartScreen
 /// 목적: 카운트다운 대기 시간을 고르고 측정을 시작하는 화면.
 ///       - 어르신도 쓰기 쉽도록 선택 카드 높이 72dp, 시작 버튼 높이 64dp로
@@ -36,7 +34,7 @@ class StartScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-17 13:31:30 · 박건준
-/// 수정: 2026-10-05 10:03:35 · nada
+/// 수정: 2026-10-05 10:03:35 · 박건준
 /// 클래스: _StartScreenState
 /// 목적: 측정 준비 화면의 상태를 관리한다.
 ///       - 센서 가용 여부(`_sensorsAvailable`)를 비동기로 확인해 저장한다
@@ -109,7 +107,7 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 13:37:23 · 박건준
   /// 함수: _showPlacementSheet
   /// 목적: `PlacementSheet`(휴대폰을 엘리베이터 바닥 어디에 어느 방향으로
   ///       놓을지부터, 측정을 시작하고 끝내는 방법까지 4단계로 안내하는
@@ -122,7 +120,7 @@ class _StartScreenState extends State<StartScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 13:37:23 · nada
+  /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: _startMeasuring
   /// 목적: 마이크 권한을 먼저 받고, 고른 대기 시간을 `MeasurementSession`
   ///       에 실어 측정 화면으로 넘어간다. 측정은 모두 볼륨키로 끝낸다.
@@ -147,7 +145,7 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 13:37:23 · 박건준
   /// 함수: _buildTimeCard
   /// 목적: 대기 시간 선택 카드 하나를 만든다. 선택된 카드는 파란
   ///       배경 · 체크 아이콘으로, 나머지는 기본 배경 · 빈 원으로
@@ -206,7 +204,7 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-22 20:00:00 · nada
+  /// 수정: 2026-10-22 20:00:00 · 박건준
   /// 함수: build
   /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
   ///       - `appBar` — 제목만 있는 간단한 상단 바

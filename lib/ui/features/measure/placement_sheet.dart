@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 
-import '../../core/theme.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_notice.dart';
-
-/// 작성: 2026-10-04 13:37:23 · nada
+/// 작성: 2026-10-04 13:37:23 · 박건준
 /// 클래스: _DiagramSize
 /// 목적: 거치 안내 그림의 치수 (dp). 이 그림에만 쓰는 값이라 앱 공통
 ///       토큰(theme.dart)에 두지 않고 여기에 모은다.
@@ -47,7 +46,7 @@ abstract final class _DiagramSize {
 }
 
 /// 작성: 2026-08-17 18:55:14 · 박건준
-/// 수정: 2026-10-07 01:36:03 · nada
+/// 수정: 2026-10-07 01:36:03 · 박건준
 /// 클래스: PlacementSheet
 /// 목적: 휴대폰을 엘리베이터 카 바닥 중앙에 뒤집어서, 출입구를 바라보고
 ///       섰을 때 휴대폰 위쪽이 왼쪽을 보게 놓으라고 안내하는 바텀 시트.
@@ -58,7 +57,7 @@ class PlacementSheet extends StatelessWidget {
   const PlacementSheet({super.key});
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-04 13:37:23 · nada
+  /// 수정: 2026-10-04 13:37:23 · 박건준
   /// 함수: _buildStepItem
   /// 목적: 안내 단계 하나를 번호 뱃지 + 문구 형태로 만든다.
   /// 인자: stepNumber — 단계 번호 (원형 뱃지에 표시)
@@ -96,7 +95,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-22 20:00:00 · nada
+  /// 수정: 2026-10-22 20:00:00 · 박건준
   /// 함수: build
   /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다.
   ///       - 상단 헤더 — 제목과 닫기 버튼
@@ -196,7 +195,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-07 01:36:03 · nada
+  /// 수정: 2026-10-07 01:36:03 · 박건준
   /// 함수: _buildDiagram
   /// 목적: 엘리베이터 카 안에서 휴대폰을 어느 위치에 어느 방향으로
   ///       놓을지 보여주는 도식을 만든다. 위쪽에 출입구, 가운데에 뒤집어
@@ -279,8 +278,8 @@ class PlacementSheet extends StatelessWidget {
     );
   }
 
-  /// 작성: 2026-10-04 16:54:15 · nada
-  /// 수정: 2026-10-07 01:36:03 · nada
+  /// 작성: 2026-10-04 16:54:15 · 박건준
+  /// 수정: 2026-10-07 01:36:03 · 박건준
   /// 함수: _buildPhoneBack
   /// 목적: 위에서 내려다본, 뒤집어 놓은 휴대폰을 그린다. 뒷면이 보이므로
   ///       남색으로 칠하고, 휴대폰 위쪽 끝(왼쪽)에 카메라 모듈을 둔다.

@@ -1,6 +1,6 @@
 import 'package:vibration_checker/domain/update/update_info.dart';
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 클래스: UpdateDecision
 /// 목적: 지금 설치된 빌드와 배포 서버의 버전 정보를 견주어 업데이트
 ///       안내를 어떻게 띄울지 고른다.
@@ -12,7 +12,7 @@ enum UpdateDecision {
   optional,
   required;
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: decide
   /// 목적: 내 빌드 번호와 버전 정보로 안내 종류를 고른다. `minimum` 보다
   ///       낮으면 `required`, 그렇지 않고 `latest` 보다 낮으면 `optional`.

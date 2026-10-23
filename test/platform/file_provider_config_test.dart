@@ -2,39 +2,39 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:vibration_checker/adapter/measurement_repository.dart';
+import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 
-/// 작성: 2026-10-11 17:10:57 · nada
+/// 작성: 2026-10-11 17:10:57 · 박건준
 /// 변수: _manifestPath
 /// 목적: 앱 안드로이드 manifest 경로 (저장소 루트 기준).
 const String _manifestPath = 'android/app/src/main/AndroidManifest.xml';
 
-/// 작성: 2026-10-11 17:10:57 · nada
+/// 작성: 2026-10-11 17:10:57 · 박건준
 /// 변수: _pathsPath
 /// 목적: 플러그인 FileProvider 경로 설정을 덮어쓰는 앱 리소스 경로.
 const String _pathsPath = 'android/app/src/main/res/xml/shared_file_paths.xml';
 
-/// 작성: 2026-10-11 17:10:57 · nada
+/// 작성: 2026-10-11 17:10:57 · 박건준
 /// 클래스: _TempPathProvider
 /// 목적: 앱 임시 폴더 자리를 시험용 임시 폴더로 바꿔 끼운다.
 class _TempPathProvider extends PathProviderPlatform {
   /// 임시 폴더 경로
   final String root;
 
-  /// 작성: 2026-10-11 17:10:57 · nada
+  /// 작성: 2026-10-11 17:10:57 · 박건준
   /// 함수: _TempPathProvider
   /// 목적: 돌려줄 임시 폴더 경로를 받는다.
   /// 인자: root — 임시 폴더 경로
   _TempPathProvider(this.root);
 
-  /// 작성: 2026-10-11 17:10:57 · nada
+  /// 작성: 2026-10-11 17:10:57 · 박건준
   /// 함수: getTemporaryPath
   /// 목적: 앱 임시 폴더 자리에 시험용 임시 폴더를 돌려준다.
   @override
   Future<String?> getTemporaryPath() async => root;
 }
 
-/// 작성: 2026-10-11 17:10:57 · nada
+/// 작성: 2026-10-11 17:10:57 · 박건준
 /// 함수: _withoutComments
 /// 목적: XML 주석을 걷어 낸다. 주석에 적힌 설명 문구가 요소로 잡히지
 ///       않게 한다.
@@ -43,7 +43,7 @@ class _TempPathProvider extends PathProviderPlatform {
 String _withoutComments(String xml) =>
     xml.replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
 
-/// 작성: 2026-10-11 17:10:57 · nada
+/// 작성: 2026-10-11 17:10:57 · 박건준
 /// 함수: main
 /// 목적: 메일 첨부 FileProvider 설정이 2026-10-11 정리한 모양에서 벗어나지
 ///       않는지 파일 내용으로 확인한다. 누가 앱 manifest 에 같은 authority

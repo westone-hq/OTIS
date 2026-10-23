@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/auth/worker_directory.dart';
 
-/// 작성: 2026-10-18 09:09:47 · nada
+/// 작성: 2026-10-18 09:09:47 · 박건준
 /// 함수: _json
 /// 목적: `tool/import_workers.py` 가 만드는 형태의 명단 JSON 을 만든다.
 /// 인자: workers — 명단 항목 목록
@@ -11,7 +11,7 @@ import 'package:vibration_checker/domain/auth/worker_directory.dart';
 String _json(List<Map<String, Object?>> workers) =>
     jsonEncode({'source': 'test.xlsx', 'workers': workers});
 
-/// 작성: 2026-10-18 09:09:47 · nada
+/// 작성: 2026-10-18 09:09:47 · 박건준
 /// 함수: main
 /// 목적: 명단을 읽고, 사번 대소문자를 가리지 않고 찾으며, 비밀번호 = 사번
 ///       규칙으로 로그인을 판정하는지 시험한다. 깨진 명단은 건너뛰지 않고

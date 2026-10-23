@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 클래스: UpdateInfoError
 /// 목적: 배포 서버의 버전 안내 파일(version.json)을 읽지 못한 사유.
 ///       - `notJson` — JSON 이 아니거나 맨 바깥이 표(객체)가 아니다
@@ -20,7 +20,7 @@ enum UpdateInfoError {
   notPositive,
 }
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 클래스: UpdateInfoParseResult
 /// 목적: version.json 읽기 결과. 성공이면 `info`, 실패면 `error` 와
 ///       `detail` 하나만 채운다. 형식이 틀린 파일을 빈 값으로 바꿔 삼키지
@@ -36,7 +36,7 @@ class UpdateInfoParseResult {
   /// null
   final String? detail;
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: UpdateInfoParseResult.success
   /// 목적: 성공 결과를 만든다.
   /// 인자: info — 읽은 버전 정보
@@ -44,7 +44,7 @@ class UpdateInfoParseResult {
     : error = null,
       detail = null;
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: UpdateInfoParseResult.failure
   /// 목적: 실패 결과를 만든다.
   /// 인자: error — 실패 사유
@@ -52,7 +52,7 @@ class UpdateInfoParseResult {
   const UpdateInfoParseResult.failure(UpdateInfoError this.error, this.detail)
     : info = null;
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: toString
   /// 목적: 실패 사유를 기록(`debugPrint`)에 남길 한 줄로 만든다.
   @override
@@ -61,7 +61,7 @@ class UpdateInfoParseResult {
       : 'UpdateInfoParseResult(${error!.name}: $detail)';
 }
 
-/// 작성: 2026-10-13 14:18:51 · nada
+/// 작성: 2026-10-13 14:18:51 · 박건준
 /// 클래스: UpdateInfo
 /// 목적: 배포 서버(GitHub Releases)에 올린 version.json 한 건. 앱이 켜질
 ///       때 이것을 받아 새 버전이 있는지(`UpdateDecision`) 고른다.
@@ -89,7 +89,7 @@ class UpdateInfo {
   /// 사용자에게 보여 줄 바뀐 점 한두 줄. 비어 있을 수 있다
   final String notes;
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: UpdateInfo
   /// 목적: 검사를 마친 값으로 버전 정보를 만든다. 외부 파일에서 읽을 때는
   ///       `UpdateInfo.parse()` 를 거친다.
@@ -103,14 +103,14 @@ class UpdateInfo {
     required this.notes,
   });
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 변수: _sha256Pattern
   /// 목적: SHA-256 16진수 표기 검사. `sha256sum` 이 내는 소문자 64자만
   ///       받는다 — 대문자를 섞어 받으면 비교할 때 한쪽만 바꾸는 실수가
   ///       생긴다.
   static final RegExp _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: parse
   /// 목적: version.json 본문을 읽어 검사한다. 순서대로 본다.
   ///       1. JSON 이고 맨 바깥이 표인지

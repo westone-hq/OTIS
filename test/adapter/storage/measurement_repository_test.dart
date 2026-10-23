@@ -1,0 +1,406 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+
+/// 작성: 2026-09-26 09:30:00 · 박건준
+/// 클래스: _TempPathProvider
+/// 목적: 저장소가 쓰는 기준 폴더를 시험용 임시 폴더로 바꿔 끼운다. 실제
+///       구현은 안드로이드 기기의 외장 저장소를 묻는데, 시험은 기기 없이
+///       도므로 그 자리에 임시 폴더를 돌려준다.
+class _TempPathProvider extends PathProviderPlatform {
+  /// 기준 폴더로 쓸 임시 폴더 경로
+  final String root;
+
+  /// 작성: 2026-09-26 09:30:00 · 박건준
+  /// 함수: _TempPathProvider
+  /// 목적: 기준 폴더로 쓸 경로를 담는 생성자.
+  /// 인자: root — 임시 폴더 경로
+  _TempPathProvider(this.root);
+
+  /// 작성: 2026-09-26 09:30:00 · 박건준
+  /// 함수: getExternalStoragePath
+  /// 목적: 외장 저장소 자리에 임시 폴더를 돌려준다.
+  /// 반환: 임시 폴더 경로
+  @override
+  Future<String?> getExternalStoragePath() async => root;
+
+  /// 작성: 2026-09-26 09:30:00 · 박건준
+  /// 함수: getApplicationDocumentsPath
+  /// 목적: 앱 문서 폴더 자리에 임시 폴더를 돌려준다.
+  /// 반환: 임시 폴더 경로
+  @override
+  Future<String?> getApplicationDocumentsPath() async => root;
+}
+
+/// 작성: 2026-09-26 09:30:00 · 박건준
+/// 함수: _result
+/// 목적: 저장했다 읽어 볼 측정 결과를 꾸민다. 시계열을 짧게 두어 파일
+///       크기가 시험 시간을 잡아먹지 않게 한다.
+/// 인자: id — 측정 식별자
+///       measuredAt — 측정 시각
+/// 반환: 저장에 넣을 측정 결과
+MeasurementResult _result(String id, DateTime measuredAt) {
+  return MeasurementResult(
+    id: id,
+    jobNo: '2025F 1234R01',
+    siteName: '럭키종합건설/송정동근생',
+    bottomFloor: 1,
+    topFloor: 8,
+    direction: '하부에서 상부로',
+    dateTime: measuredAt,
+    maxSpeed: 1.743390961,
+    distance: 57.093948064,
+    noiseMax: 65.6,
+    xSeries: const <double>[1.0, 2.0, 3.0],
+    ySeries: const <double>[4.0, 5.0, 6.0],
+    zSeries: const <double>[7.0, 8.0, 9.0],
+    noiseSeries: const <double>[45.0, 46.0, 47.0],
+    positionSeries: const <double>[0.0, 1.0, 2.0],
+    speedSeries: const <double>[0.0, 0.5, 1.0],
+    accelSeries: const <double>[0.1, 0.2, 0.3],
+    jerkSeries: const <double>[0.01, 0.02, 0.03],
+  );
+}
+
+/// 작성: 2026-09-26 09:30:00 · 박건준
+/// 함수: main
+/// 목적: 저장소를 시험한다. 측정 한 건이 폴더 하나로 저장되는지, 목록이
+///       요약만 읽는지, 지울 때 폴더째 사라지는지를 본다.
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late Directory temp; // 이번 시험이 쓸 임시 폴더
+  final repo = MeasurementRepository.instance; // 시험할 저장소
+
+  setUp(() async {
+    temp = await Directory.systemTemp.createTemp('otis_repo_test');
+    PathProviderPlatform.instance = _TempPathProvider(temp.path);
+  });
+
+  tearDown(() async {
+    if (await temp.exists()) await temp.delete(recursive: true);
+  });
+
+  group('MeasurementRepository 저장과 조회', () {
+    test('측정 한 건이 폴더 하나로 저장된다', () async {
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59)),
+      ); // 저장된 폴더
+
+      expect(dir.path.endsWith('20260114-110359'), isTrue);
+      expect(
+        await File(
+          '${dir.path}/${MeasurementRepository.resultFileName}',
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          '${dir.path}/${MeasurementRepository.summaryFileName}',
+        ).exists(),
+        isTrue,
+      );
+    });
+
+    test('요약 파일에는 시계열이 없다', () async {
+      // 목록 화면이 읽는 파일이라, 시계열이 들어가면 측정이 쌓일수록
+      // 화면 여는 데 시간이 걸린다
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59)),
+      ); // 저장된 폴더
+      final summary =
+          jsonDecode(
+                await File(
+                  '${dir.path}/${MeasurementRepository.summaryFileName}',
+                ).readAsString(),
+              )
+              as Map<String, dynamic>; // 요약 파일 내용
+
+      for (final key in MeasurementRepository.seriesKeys) {
+        expect(summary.containsKey(key), isFalse, reason: key);
+      }
+      expect(summary['noiseMax'], 65.6, reason: '판정에 쓰는 값은 남아 있어야 한다');
+    });
+
+    test('저장한 것을 시계열까지 그대로 읽는다', () async {
+      final saved = _result(
+        '20260114-110359',
+        DateTime(2026, 1, 14, 11, 3, 59),
+      ); // 저장할 측정 결과
+      await repo.save(saved);
+
+      final loaded = await repo.load(saved.id); // 다시 읽은 측정 결과
+
+      expect(loaded, isNotNull);
+      expect(loaded!.jobNo, saved.jobNo);
+      expect(loaded.zSeries, saved.zSeries);
+      expect(loaded.noiseMax, saved.noiseMax);
+      expect(loaded.dateTime, saved.dateTime);
+    });
+
+    test('없는 것을 읽으면 예외 대신 null 이다', () async {
+      expect(await repo.load('없는측정'), isNull);
+    });
+
+    test('목록은 최근 것부터 나온다', () async {
+      await repo.save(_result('20260114-110359', DateTime(2026, 1, 14)));
+      await repo.save(_result('20260301-090000', DateTime(2026, 3, 1)));
+      await repo.save(_result('20260210-090000', DateTime(2026, 2, 10)));
+
+      final items = await repo.list(); // 저장된 목록
+
+      expect(items.map((e) => e.id).toList(), <String>[
+        '20260301-090000',
+        '20260210-090000',
+        '20260114-110359',
+      ]);
+    });
+
+    test('목록은 요약만 읽으므로 시계열이 비어 있다', () async {
+      await repo.save(_result('20260114-110359', DateTime(2026, 1, 14)));
+
+      final items = await repo.list(); // 저장된 목록
+
+      expect(items.single.zSeries, isEmpty);
+      expect(items.single.noiseMax, 65.6, reason: '판정에 쓰는 값은 있어야 한다');
+    });
+
+    test('요약이 없으면 정본에서 다시 만들어 목록에 올린다', () async {
+      // 저장 도중 앱이 죽어 정본만 남은 경우다. 목록에서 빠뜨리면 있는
+      // 기록을 없는 것처럼 보여 주게 된다
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      final cache = File(
+        '${dir.path}/${MeasurementRepository.summaryFileName}',
+      ); // 목록용 캐시
+      await cache.delete();
+
+      final items = await repo.list(); // 저장된 목록
+
+      expect(items.single.id, '20260114-110359');
+      expect(items.single.noiseMax, 65.6);
+      expect(await cache.exists(), isTrue, reason: '캐시를 고쳐 써 둬야 한다');
+      expect(items.single.zSeries, isEmpty, reason: '목록은 시계열을 싣지 않는다');
+    });
+
+    test('요약이 깨져 있어도 정본에서 다시 만든다', () async {
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      final cache = File(
+        '${dir.path}/${MeasurementRepository.summaryFileName}',
+      ); // 목록용 캐시
+      await cache.writeAsString('이건 json 이 아니다');
+
+      final items = await repo.list(); // 저장된 목록
+
+      expect(items.single.id, '20260114-110359');
+      expect(
+        jsonDecode(await cache.readAsString()),
+        isA<Map<String, dynamic>>(),
+        reason: '깨진 캐시를 성한 것으로 덮어써야 한다',
+      );
+    });
+
+    test('정본까지 없으면 그 폴더만 건너뛴다', () async {
+      // 한 건이 깨졌다고 목록 전체를 못 보게 되면 나머지 측정까지 손을
+      // 못 대게 된다
+      await repo.save(_result('20260114-110359', DateTime(2026, 1, 14)));
+      final broken = Directory('${temp.path}/captures/망가진측정'); // 깨진 폴더
+      await broken.create(recursive: true);
+      await File(
+        '${broken.path}/${MeasurementRepository.summaryFileName}',
+      ).writeAsString('이건 json 이 아니다');
+      await File(
+        '${broken.path}/${MeasurementRepository.resultFileName}',
+      ).writeAsString('정본도 깨졌다');
+
+      final items = await repo.list(); // 저장된 목록
+
+      expect(items.length, 1);
+      expect(items.single.id, '20260114-110359');
+      // 목록 화면이 쓰는 쪽은 깨진 폴더를 "읽을 수 없는 결과" 로 따로 준다
+      final entries = await repo.listEntries(); // 읽은 것 · 못 읽은 것
+      expect(entries.results.single.id, '20260114-110359');
+      expect(entries.unreadable.single.id, '망가진측정');
+    });
+
+    test('측정 일시가 깨진 결과는 읽을 수 없는 결과로 따로 나온다', () async {
+      await repo.save(_result('20260114-110359', DateTime(2026, 1, 14)));
+      await repo.save(_result('20260210-090000', DateTime(2026, 2, 10)));
+      final dir = Directory(
+        '${temp.path}/captures/20260210-090000',
+      ); // 일시를 망가뜨릴 폴더
+      final file = File(
+        '${dir.path}/${MeasurementRepository.resultFileName}',
+      ); // 그 정본
+      final map = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      map['dateTime'] = '날짜 아님';
+      await file.writeAsString(jsonEncode(map));
+      await File(
+        '${dir.path}/${MeasurementRepository.summaryFileName}',
+      ).delete();
+
+      final entries = await repo.listEntries(); // 읽은 것 · 못 읽은 것
+
+      expect(entries.results.map((r) => r.id), ['20260114-110359']);
+      expect(entries.unreadable.single.id, '20260210-090000');
+      expect(entries.unreadable.single.reason, contains('dateTime'));
+    });
+  });
+
+  group('MeasurementRepository 파일 배치', () {
+    test('폴더에 생긴 파일이 모두 저장소가 아는 이름이다', () async {
+      // 배치를 아는 곳이 저장소 하나여야 한다. 쓰는 쪽이 경로를 짜 맞추면
+      // 배치가 바뀔 때 그쪽이 조용히 어긋난다
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      await repo.ensureReportPdf('20260114-110359');
+
+      // 경로 구분자가 운영체제마다 달라 문자열을 자르지 않고, 경로를
+      // 주소 형태로 본 뒤 마지막 조각을 쓴다
+      final names = await dir
+          .list()
+          .map((e) => e.uri.pathSegments.last)
+          .toList(); // 폴더에 실제로 생긴 파일 이름
+
+      expect(names, isNotEmpty);
+      for (final name in names) {
+        expect(
+          MeasurementRepository.jobFileNames,
+          contains(name),
+          reason: '저장소가 모르는 이름이 생겼다: $name',
+        );
+      }
+    });
+
+    test('모아 둔 이름 목록이 낱개 상수와 어긋나지 않는다', () {
+      expect(MeasurementRepository.jobFileNames, <String>[
+        MeasurementRepository.resultFileName,
+        MeasurementRepository.summaryFileName,
+        MeasurementRepository.reportFileName,
+        MeasurementRepository.rawFileName,
+        MeasurementRepository.metaFileName,
+        MeasurementRepository.nativeRawFileName,
+        MeasurementRepository.noiseAudioFileName,
+      ]);
+      expect(
+        MeasurementRepository.jobFileNames.toSet().length,
+        MeasurementRepository.jobFileNames.length,
+        reason: '같은 이름을 두 번 담지 않는다',
+      );
+    });
+  });
+
+  group('MeasurementRepository 삭제', () {
+    test('폴더째 지운다', () async {
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+
+      expect(await repo.delete('20260114-110359'), isTrue);
+      expect(await dir.exists(), isFalse);
+      expect(await repo.list(), isEmpty);
+    });
+
+    test('없는 것을 지우면 예외 대신 false 다', () async {
+      expect(await repo.delete('없는측정'), isFalse);
+    });
+  });
+
+  group('MeasurementRepository 개수 제한', () {
+    // 2026-10-01 10:00:00 부터 1분씩 늦은 측정 ID
+    String idAt(int i) => '20261001-10${i.toString().padLeft(2, '0')}00';
+    Future<void> saveMany(int count) async {
+      for (var i = 0; i < count; i++) {
+        await repo.save(_result(idAt(i), DateTime(2026, 10, 1, 10, i)));
+      }
+    }
+
+    Future<List<String>> names() async {
+      final base = await repo.getBaseDirectory(); // 기준 폴더
+      return [
+        await for (final entry in base.list())
+          if (entry is Directory)
+            entry.uri.pathSegments.lastWhere((s) => s.isNotEmpty),
+      ]..sort();
+    }
+
+    test('넘지 않으면 아무것도 지우지 않는다', () async {
+      await saveMany(MeasurementRepository.maxStoredMeasurements);
+
+      expect(await repo.pruneOldest(keepId: idAt(29)), isEmpty);
+      expect(await names(), hasLength(30));
+    });
+
+    test('넘으면 오래된 것부터 지우고 최근 30건을 남긴다', () async {
+      await saveMany(32);
+      final base = await repo.getBaseDirectory(); // 기준 폴더
+      // 결과 없이 멈춘 측정 폴더 — 오래된 것 하나, 최근 것 하나
+      await Directory('${base.path}/20260901-090000').create();
+      await Directory('${base.path}/20261001-120000').create();
+
+      final deleted = await repo.pruneOldest(keepId: idAt(31));
+
+      expect(deleted, <String>[idAt(1), idAt(0), '20260901-090000']);
+      final left = await names(); // 남은 폴더
+      expect(left, hasLength(31));
+      expect(left, contains('20261001-120000'));
+      expect((await repo.list()).length, 30);
+    });
+
+    test('방금 저장한 측정은 이름이 가장 오래돼 보여도 남긴다', () async {
+      await saveMany(31);
+
+      final deleted = await repo.pruneOldest(keepId: idAt(0));
+
+      expect(deleted, <String>[idAt(1)]);
+      expect(await names(), contains(idAt(0)));
+    });
+  });
+
+  group('MeasurementRepository 리포트', () {
+    test('저장된 것이 없으면 만들지 않고 null 이다', () async {
+      expect(await repo.ensureReportPdf('없는측정'), isNull);
+    });
+
+    test('없으면 그 자리에서 만들어 폴더에 남긴다', () async {
+      // 측정을 마칠 때 만들어 두므로 보통은 이 갈래로 오지 않지만, 그때
+      // 실패했거나 옛 측정이면 여기서 만든다
+      await repo.save(_result('20260114-110359', DateTime(2026, 1, 14)));
+
+      final made = await repo.ensureReportPdf('20260114-110359'); // 만든 리포트
+
+      expect(made, isNotNull);
+      final bytes = await made!.readAsBytes(); // 만든 PDF 내용
+      expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+      expect(
+        made.path.endsWith(MeasurementRepository.reportFileName),
+        isTrue,
+        reason: '측정 폴더 안에 남아야 다음에 다시 만들지 않는다',
+      );
+      expect(await repo.ensureReportPdf('20260114-110359'), isNotNull);
+    });
+
+    test('이미 있으면 다시 만들지 않고 그대로 준다', () async {
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      final made = File(
+        '${dir.path}/${MeasurementRepository.reportFileName}',
+      ); // 미리 놓아 둘 리포트 자리
+      await made.writeAsString('이미 만들어 둔 리포트');
+
+      final got = await repo.ensureReportPdf('20260114-110359'); // 받아 온 리포트
+
+      expect(got, isNotNull);
+      expect(await got!.readAsString(), '이미 만들어 둔 리포트');
+    });
+  });
+}

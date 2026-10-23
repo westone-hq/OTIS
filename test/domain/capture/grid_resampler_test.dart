@@ -1,21 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
 
-/// 작성: 2026-10-05 10:03:35 · nada
+/// 작성: 2026-10-05 10:03:35 · 박건준
 /// 변수: _stepUs
 /// 목적: 시험 이벤트 사이 간격 (마이크로초). 256Hz 한 칸에 가깝다.
 const int _stepUs = 3906;
 
-/// 작성: 2026-10-05 10:03:35 · nada
+/// 작성: 2026-10-05 10:03:35 · 박건준
 /// 변수: _gravityLagUs
 /// 목적: 중력 이벤트를 가속도 이벤트보다 늦게 둔 거리 (마이크로초). 두
 ///       센서가 같은 시각에 오지 않는 실제 모습을 흉내 낸다.
 const int _gravityLagUs = 100;
 
-/// 작성: 2026-10-05 10:03:35 · nada
-/// 수정: 2026-10-21 15:20:00 · nada
+/// 작성: 2026-10-05 10:03:35 · 박건준
+/// 수정: 2026-10-21 15:20:00 · 박건준
 /// 함수: _resampler
 /// 목적: 가속도 · 중력을 일정 간격으로 넣은 환산기를 만든다. 기본은 화면을
 ///       아래로 놓은 거치다 — 안드로이드 가속도계는 가만히 있을 때 위쪽으로
@@ -57,7 +57,7 @@ GridResampler _resampler(
   return resampler;
 }
 
-/// 작성: 2026-10-05 10:03:35 · nada
+/// 작성: 2026-10-05 10:03:35 · 박건준
 /// 함수: main
 /// 목적: 격자 환산이 시작 · 종료 입력 충격을 빼려고 앞뒤 0.5초씩 버리는지,
 ///       너무 짧은 측정은 사유와 함께 실패하는지, 화면을 아래로 놓은 거치에

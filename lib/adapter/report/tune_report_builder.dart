@@ -3,14 +3,16 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
-import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_chart_page.dart';
+import 'package:vibration_checker/adapter/report/report_chart_renderer.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 클래스: TuneReportBuilder
 /// 목적: TUNE 리포트 한 부를 통째로 만든다. 1쪽(요약표)과 2·3쪽(차트)을
 ///       각각 그리던 것을 한 문서에 이어 붙인다.
@@ -30,7 +32,7 @@ class TuneReportBuilder {
   /// 두 렌더러가 함께 쓰는 PDF 문서
   final PdfDocument document;
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 함수: TuneReportBuilder
   /// 목적: 한 문서를 함께 쓰는 렌더러 둘을 그대로 담는 생성자. 직접
   ///       부르지 말고 `load()` 를 쓴다.
@@ -43,8 +45,8 @@ class TuneReportBuilder {
     required this.chartPages,
   });
 
-  /// 작성: 2026-09-26 09:30:00 · nada
-  /// 수정: 2026-10-15 15:53:26 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
+  /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: load
   /// 목적: 글꼴 두 벌과 서식 이미지 두 장을 자산에서 한 번에 읽어, 한
   ///       문서를 함께 쓰는 렌더러 둘을 만든다.
@@ -57,10 +59,10 @@ class TuneReportBuilder {
       ReportLayout.boldFontAsset,
     ); // 굵은 글꼴 원본
     final page1Bytes = await rootBundle.load(
-      ReportPage1.background,
+      ReportPage1Layout.background,
     ); // 1쪽 서식 이미지 원본
     final chartBytes = await rootBundle.load(
-      ReportChartPage.background,
+      ReportChartPageLayout.background,
     ); // 차트 쪽 서식 이미지 원본
 
     final document = PdfDocument(); // 두 렌더러가 함께 쓸 문서
@@ -95,7 +97,7 @@ class TuneReportBuilder {
     );
   }
 
-  /// 작성: 2026-09-26 09:30:00 · nada
+  /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 함수: build
   /// 목적: 리포트 세 쪽을 차례로 그려 PDF 한 부를 만든다. 1쪽을 먼저
   ///       그리고 차트 쪽을 이어 붙인다 — 붙인 차례가 곧 쪽 차례다.
@@ -112,7 +114,7 @@ class TuneReportBuilder {
   }
 }
 
-/// 작성: 2026-09-26 09:30:00 · nada
+/// 작성: 2026-09-26 09:30:00 · 박건준
 /// 함수: writeTuneReport
 /// 목적: TUNE 리포트 한 부를 만들어 파일로 떨군다. 부르는 쪽이 자산
 ///       읽기와 쪽 조립을 몰라도 되게 한 줄로 감싼 것이다. 같은 폴더의

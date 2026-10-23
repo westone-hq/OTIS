@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:vibration_checker/adapter/login_store.dart';
-import 'package:vibration_checker/adapter/prefs_store.dart';
-import 'package:vibration_checker/domain/session/login_session.dart';
-
-import '../update/update_prompt.dart';
-
-import '../../core/theme.dart';
-import '../../core/widgets/app_card.dart';
-import '../../core/widgets/app_dialog.dart';
-import '../../core/widgets/app_layout.dart';
-import '../../core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/adapter/storage/login_store.dart';
+import 'package:vibration_checker/adapter/storage/prefs_store.dart';
+import 'package:vibration_checker/domain/auth/login_session.dart';
+import 'package:vibration_checker/ui/core/theme.dart';
+import 'package:vibration_checker/ui/core/widgets/app_card.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
+import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
-/// 수정: 2026-10-18 09:41:12 · nada
+/// 수정: 2026-10-18 09:41:12 · 박건준
 /// 클래스: SettingsScreen
 /// 목적: 설정 화면. 로그인 작업자 · 로그아웃, 결과 수신 이메일 목록 관리(추가 ·
 ///       삭제)와 앱 버전 확인 · 업데이트 확인을 한 화면에서 처리한다. 어르신도 쓰기 편하도록 버튼 높이를 64dp 이상으로
 ///       두고, 오류는 테두리 색 · 아이콘 · 문구 3중으로 겹쳐 보여준다.
 class SettingsScreen extends StatefulWidget {
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: SettingsScreen
   /// 목적: 설정 화면을 만든다.
   /// 인자: updatePrompt — "업데이트 확인" 이 쓸 업데이트 안내 흐름. 안
@@ -35,7 +33,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-19 10:57:06 · 박건준
-/// 수정: 2026-10-18 09:41:12 · nada
+/// 수정: 2026-10-18 09:41:12 · 박건준
 /// 클래스: _SettingsScreenState
 /// 목적: 설정 화면의 상태를 관리한다. 수신 이메일 목록을 불러오고, 바꿀
 ///       때마다 저장한다. 로그인 작업자는 `LoginSession` 에서 바로 읽는다.
@@ -67,7 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _checkingUpdate = false;
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
-  /// 수정: 2026-10-18 09:41:12 · nada
+  /// 수정: 2026-10-18 09:41:12 · 박건준
   /// 함수: initState
   /// 목적: 이 화면이 나타날 때 한 번, 입력 컨트롤러를 만들고 저장된
   ///       이메일 목록과 앱 버전을 불러와 화면에 채운다.
@@ -79,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadVersion(); // → 로직 이동: _loadVersion()
   }
 
-  /// 작성: 2026-10-04 13:28:35 · nada
+  /// 작성: 2026-10-04 13:28:35 · 박건준
   /// 함수: _loadVersion
   /// 목적: 설치된 앱의 버전을 읽어 화면에 채운다. 버전은 `pubspec.yaml`
   ///       의 `version:` 한 곳에서만 정하고, 빌드할 때 앱에 새겨진 값을
@@ -98,7 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _version = version);
   }
 
-  /// 작성: 2026-10-13 14:18:51 · nada
+  /// 작성: 2026-10-13 14:18:51 · 박건준
   /// 함수: _checkUpdate
   /// 목적: "업데이트 확인" 을 눌렀을 때 서버에 새 버전이 있는지 확인한다.
   ///       결과 문구 · 창은 `UpdatePrompt.checkManually()` 가 고른다.
@@ -110,7 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() => _checkingUpdate = false);
   }
 
-  /// 작성: 2026-10-18 09:41:12 · nada
+  /// 작성: 2026-10-18 09:41:12 · 박건준
   /// 함수: _logout
   /// 목적: "로그아웃" 을 눌렀을 때 확인을 받고 로그아웃한 뒤 로그인 화면으로
   ///       간다. 이미 저장한 측정 결과의 엔지니어 이름은 그대로 남는다.
@@ -131,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 16:44:32 · 박건준
   /// 함수: _loadEmails
   /// 목적: 저장된 수신 이메일 목록을 불러와 화면에 채운다.
   Future<void> _loadEmails() async {
@@ -142,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-18 09:41:12 · nada
+  /// 수정: 2026-10-18 09:41:12 · 박건준
   /// 함수: dispose
   /// 목적: 화면이 사라질 때 입력 컨트롤러를 해제해 메모리 누수를 막는다.
   @override
@@ -152,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-08-19 10:57:06 · 박건준
-  /// 수정: 2026-10-04 16:44:32 · nada
+  /// 수정: 2026-10-04 16:44:32 · 박건준
   /// 함수: _add
   /// 목적: "추가" 버튼을 눌렀을 때 실행된다. 입력한 이메일이
   ///       `name@example.com`처럼 "@" 앞뒤에 글자가 있고 "@" 뒤에
@@ -185,7 +183,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showSuccessSnackBar(context, '추가되었습니다');
   }
 
-  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 작성: 2026-10-04 16:44:32 · 박건준
   /// 함수: _remove
   /// 목적: 이메일 하나를 목록에서 지운다. 되돌릴 수 없어 먼저 확인을
   ///       받는다.
@@ -210,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _emails = next);
   }
 
-  /// 작성: 2026-10-04 16:44:32 · nada
+  /// 작성: 2026-10-04 16:44:32 · 박건준
   /// 함수: _buildEmailRow
   /// 목적: 등록된 이메일 한 줄을 주소 + 삭제 버튼으로 만든다.
   /// 인자: email — 보여줄 주소
@@ -239,8 +237,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// 작성: 2026-10-04 13:26:44 · nada
-  /// 수정: 2026-10-18 09:41:12 · nada
+  /// 작성: 2026-10-04 13:26:44 · 박건준
+  /// 수정: 2026-10-18 09:41:12 · 박건준
   /// 함수: _buildListTile
   /// 목적: 제목과 오른쪽 값 한 쌍을 보여주는 정보 행을 만든다. 값이
   ///       길면(업체명 등) 줄을 바꿔 오른쪽에 맞춘다 — 한 줄에 묶으면
@@ -274,7 +272,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-18 09:41:12 · nada
+  /// 수정: 2026-10-18 09:41:12 · 박건준
   /// 함수: build
   /// 목적: 설정 화면을 그린다. 로그인 작업자 · 로그아웃 → 수신 이메일 목록
   ///       → 추가 입력창 → 앱 버전 · 업데이트 확인 순으로 세로로 배치한다.

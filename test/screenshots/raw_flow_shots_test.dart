@@ -13,24 +13,25 @@ import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration_checker/domain/capture/device_response.dart';
-import 'package:vibration_checker/adapter/login_store.dart';
-import 'package:vibration_checker/adapter/measurement_repository.dart';
-import 'package:vibration_checker/adapter/sensor_channel.dart';
-import 'package:vibration_checker/adapter/update_checker.dart';
-import 'package:vibration_checker/adapter/update_installer.dart';
-import 'package:vibration_checker/domain/capture/capture_config.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
+import 'package:vibration_checker/adapter/storage/login_store.dart';
+import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/adapter/update/update_checker.dart';
+import 'package:vibration_checker/adapter/update/update_installer.dart';
+import 'package:vibration_checker/domain/analysis/device_response.dart';
+import 'package:vibration_checker/domain/analysis/kinematics.dart';
+import 'package:vibration_checker/domain/analysis/measurement_assembler.dart';
+import 'package:vibration_checker/domain/analysis/motion_zones.dart';
+import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
+import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
+import 'package:vibration_checker/domain/auth/login_session.dart';
+import 'package:vibration_checker/domain/auth/worker.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
-import 'package:vibration_checker/domain/capture/noise_offset.dart';
-import 'package:vibration_checker/domain/capture/ride_weighting.dart';
-import 'package:vibration_checker/domain/capture/signal_conditioner.dart';
-import 'package:vibration_checker/domain/report/measurement_assembler.dart';
-import 'package:vibration_checker/domain/report/motion_zones.dart';
-import 'package:vibration_checker/domain/session/login_session.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
+import 'package:vibration_checker/domain/config/noise_config.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
-import 'package:vibration_checker/model/worker.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
 import 'package:vibration_checker/ui/features/home/home_screen.dart';
 import 'package:vibration_checker/ui/features/login/login_screen.dart';
@@ -44,7 +45,7 @@ import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 import '../support/fake_worker_bundle.dart';
 import 'shot_harness.dart';
 
-/// 작성: 2026-10-15 22:01:43 · nada
+/// 작성: 2026-10-15 22:01:43 · 박건준
 /// 클래스: _FakeSensors
 /// 목적: 안드로이드 대신 쓰는 센서 통로. 센서 · 마이크 권한은 늘 있다고
 ///       답하고, `events` 를 흘려보낸다. 측정 화면의 현재 속도가 이 값으로
@@ -53,19 +54,19 @@ class _FakeSensors extends SensorChannelManager {
   /// 수집이 시작되면 흘려보낼 이벤트
   List<NativeEvent> events = const <NativeEvent>[];
 
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: checkSensorsAvailable
   /// 목적: 센서가 있다고 답한다.
   @override
   Future<bool> checkSensorsAvailable() async => true;
 
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: requestAudioPermission
   /// 목적: 마이크 권한을 받았다고 답한다.
   @override
   Future<bool> requestAudioPermission() async => true;
 
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: startCapture
   /// 목적: 아무것도 하지 않는다.
   @override
@@ -74,25 +75,25 @@ class _FakeSensors extends SensorChannelManager {
     double micDbfsToDbaOffset = 0.0,
   }) async {}
 
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: stopCapture
   /// 목적: 원본 기록 없이 멈춘다.
   @override
   Future<void> stopCapture() async => lastRecordPath = null;
 
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: setVolumeKeyCaptureEnabled
   /// 목적: 아무것도 하지 않는다.
   @override
   Future<void> setVolumeKeyCaptureEnabled(bool enabled) async {}
 
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: volumeKeyPresses
   /// 목적: 눌리지 않는 볼륨키.
   @override
   Stream<void> get volumeKeyPresses => const Stream<void>.empty();
 
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: nativeEventStream
   /// 목적: `events` 를 흘려보낸다.
   @override
@@ -100,11 +101,11 @@ class _FakeSensors extends SensorChannelManager {
       Stream<NativeEvent>.fromIterable(events);
 }
 
-/// 작성: 2026-10-15 22:01:43 · nada
+/// 작성: 2026-10-15 22:01:43 · 박건준
 /// 클래스: _NoInstaller
 /// 목적: 쓰이지 않는 업데이트 설치 통로(확인이 늘 실패해 창이 뜨지 않는다).
 class _NoInstaller implements UpdateInstaller {
-  /// 작성: 2026-10-15 22:01:43 · nada
+  /// 작성: 2026-10-15 22:01:43 · 박건준
   /// 함수: noSuchMethod
   /// 목적: 불리면 시험이 잘못된 것이라 바로 실패시킨다.
   @override
@@ -112,7 +113,7 @@ class _NoInstaller implements UpdateInstaller {
       throw StateError('업데이트 설치 통로가 불렸다: ${invocation.memberName}');
 }
 
-/// 작성: 2026-10-15 22:01:43 · nada
+/// 작성: 2026-10-15 22:01:43 · 박건준
 /// 함수: _offlinePrompt
 /// 목적: 서버에 닿지 않는 업데이트 흐름. 홈 · 설정 화면이 창을 띄우지 않게
 ///       한다.
@@ -125,7 +126,7 @@ UpdatePrompt _offlinePrompt() => UpdatePrompt(
   installer: _NoInstaller(),
 );
 
-/// 작성: 2026-10-15 22:01:43 · nada
+/// 작성: 2026-10-15 22:01:43 · 박건준
 /// 함수: _readGrid
 /// 목적: 로우 데이터(raw.txt 꼴 EVIMP1, 256Hz 격자)를 격자 결과로 읽는다.
 ///       앱이 저장 때 `GridResampler` 에서 받는 것과 같은 꼴이다.
@@ -166,7 +167,7 @@ GridResampleResult _readGrid(String text) {
   );
 }
 
-/// 작성: 2026-10-15 22:32:44 · nada
+/// 작성: 2026-10-15 22:32:44 · 박건준
 /// 함수: _eventsFromRaw
 /// 목적: 로우 데이터 앞 `seconds` 초를 안드로이드 이벤트처럼 바꾼다. 측정
 ///       화면의 현재 속도(`CaptureSession.liveSpeedMps`)를 그 자료로 내게
@@ -200,7 +201,7 @@ List<NativeEvent> _eventsFromRaw(GridResampleResult grid, double seconds) {
   ];
 }
 
-/// 작성: 2026-10-15 22:01:43 · nada
+/// 작성: 2026-10-15 22:01:43 · 박건준
 /// 함수: _recordFromRaw
 /// 목적: 측정 화면이 볼륨키로 끝났을 때 저장 절차가 하는 일을 로우 데이터로
 ///       한다. 홈에서 입력한 현장 정보(`MeasurementSession`)를 그대로 쓴다.
@@ -231,9 +232,9 @@ Future<MeasurementResult> _recordFromRaw(
     signalConditioning:
         '${conditioner.methodLabel}+${RideWeighting.methodLabel}'
         '+${DeviceResponse.methodLabel(null)}'
-        '+${MeasurementAssembler.kinematicsMethodLabel}'
-        '+${MeasurementAssembler.jerkMethodLabel}'
-        '+${MeasurementAssembler.accelChartMethodLabel}'
+        '+${Kinematics.kinematicsMethodLabel}'
+        '+${Kinematics.jerkMethodLabel}'
+        '+${Kinematics.accelChartMethodLabel}'
         '+${MotionZones.methodLabel}'
         '+${noiseMethodLabel(48000)}',
   ); // 저장 절차와 같이 처리 방식을 실은 측정 결과
@@ -247,7 +248,7 @@ Future<MeasurementResult> _recordFromRaw(
   return result;
 }
 
-/// 작성: 2026-10-15 22:01:43 · nada
+/// 작성: 2026-10-15 22:01:43 · 박건준
 /// 함수: _summary
 /// 목적: 결과 지표를 사람이 읽을 한 덩어리 JSON 으로 만든다.
 /// 인자: r — 측정 결과
@@ -269,16 +270,17 @@ Map<String, Object?> _summary(MeasurementResult r) => <String, Object?>{
   'seriesLength': r.zSeries.length,
 };
 
-/// 작성: 2026-10-15 22:01:43 · nada
-/// 수정: 2026-10-18 11:20:05 · nada
+/// 작성: 2026-10-15 22:01:43 · 박건준
+/// 수정: 2026-10-23 11:00:00 · 박건준
 /// 함수: main
-/// 목적: 로우 데이터 두 개(`RAW_DIR` 의 오티스꺼.txt · 우리꺼.txt)로 사람이
-///       앱을 쓰는 순서대로 화면을 찍는다. 로그인 → 홈 입력 → 측정 시작 →
-///       측정 화면 → 결과 → 메일 → (두 번째) 결과 비교 → 설정 → 저장 결과
-///       목록. 로그인은 시험용 명단(`FakeWorkerBundle`)으로 한다. 측정 화면을
-///       볼륨키로 끝내는 대신 그 자리에서 로우 데이터로 저장 절차를 돈다.
+/// 목적: 로우 데이터 두 개(`RAW_DIR` 의 `otis_phone.txt` · `dev_phone.txt`,
+///       오티스폰 · 개발폰 EVIMP1 기록)로 사람이 앱을 쓰는 순서대로 화면을
+///       찍는다. 로그인 → 홈 입력 → 측정 시작 → 측정 화면 → 결과 → 메일 →
+///       (두 번째) 결과 비교 → 설정 → 저장 결과 목록. 로그인은 시험용
+///       명단(`FakeWorkerBundle`)으로 한다. 측정 화면을 볼륨키로 끝내는
+///       대신 그 자리에서 로우 데이터로 저장 절차를 돈다.
 ///       리포트 PDF 는 `SHOT_DIR/pdf/` 에, 지표는 `SHOT_DIR/지표.json` 에
-///       쓴다. `RAW_DIR` 이 없으면 건너뛴다. `RAW_RUNS`(예: "우리앱")를
+///       쓴다. `RAW_DIR` 이 없으면 건너뛴다. `RAW_RUNS`(예: "개발폰")를
 ///       주면 그 측정만 돌린다 — 하나만 돌리면 결과 비교 단계는 없다.
 void main() {
   late Directory temp; // 이번 캡처가 쓸 임시 저장소
@@ -386,14 +388,14 @@ void main() {
     final runs =
         <({String label, String file, String id, DateTime at})>[
               (
-                label: '오티스',
-                file: '오티스꺼.txt',
+                label: '오티스폰',
+                file: 'otis_phone.txt',
                 id: '20261015-140000',
                 at: DateTime.utc(2026, 10, 15, 5),
               ),
               (
-                label: '우리앱',
-                file: '우리꺼.txt',
+                label: '개발폰',
+                file: 'dev_phone.txt',
                 id: '20261015-140100',
                 at: DateTime.utc(2026, 10, 15, 5, 1),
               ),

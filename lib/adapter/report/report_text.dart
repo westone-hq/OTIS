@@ -1,7 +1,7 @@
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 
-/// 작성: 2026-09-25 09:30:00 · nada
+/// 작성: 2026-09-25 09:30:00 · 박건준
 /// 함수: reportPdfColor
 /// 목적: `ReportColors` 의 0xRRGGBB 값을 PDF 색으로 바꾼다. 색을 정해 둔
 ///       `report_layout.dart` 는 바깥 패키지를 쓰지 않기로 되어 있어,
@@ -10,7 +10,7 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 /// 반환: 불투명한 PDF 색
 PdfColor reportPdfColor(int rgb) => PdfColor.fromInt(0xFF000000 | rgb);
 
-/// 작성: 2026-09-25 09:30:00 · nada
+/// 작성: 2026-09-25 09:30:00 · 박건준
 /// 클래스: ReportTextWriter
 /// 목적: 서식 좌표에 글자를 찍는다. 1쪽과 차트 쪽이 같은 방식으로 찍어야
 ///       두 쪽의 머리말이 같은 자리에 놓이므로, 찍는 코드를 한 곳에 둔다.
@@ -25,13 +25,13 @@ class ReportTextWriter {
   /// 굵게 쓸 자리용 한글 글꼴
   final PdfFont bold;
 
-  /// 작성: 2026-09-25 09:30:00 · nada
+  /// 작성: 2026-09-25 09:30:00 · 박건준
   /// 함수: ReportTextWriter
   /// 목적: 글꼴 두 벌을 그대로 담는 생성자.
   /// 인자: regular, bold — 한글 글꼴 두 벌
   const ReportTextWriter({required this.regular, required this.bold});
 
-  /// 작성: 2026-09-25 09:30:00 · nada
+  /// 작성: 2026-09-25 09:30:00 · 박건준
   /// 함수: fontOf
   /// 목적: 굵기에 맞는 글꼴을 고른다.
   /// 인자: weight — 글자 굵기
@@ -39,8 +39,8 @@ class ReportTextWriter {
   PdfFont fontOf(LayoutWeight weight) =>
       weight == LayoutWeight.bold ? bold : regular;
 
-  /// 작성: 2026-09-25 09:30:00 · nada
-  /// 수정: 2026-10-12 02:13:59 · nada
+  /// 작성: 2026-09-25 09:30:00 · 박건준
+  /// 수정: 2026-10-12 02:13:59 · 박건준
   /// 함수: drawField
   /// 목적: 서식의 한 칸에 글자를 찍는다. 칸이 가진 자리 · 크기 · 굵기 ·
   ///       색을 그대로 따른다.
@@ -69,8 +69,8 @@ class ReportTextWriter {
     );
   }
 
-  /// 작성: 2026-09-25 09:30:00 · nada
-  /// 수정: 2026-10-11 19:15:25 · nada
+  /// 작성: 2026-09-25 09:30:00 · 박건준
+  /// 수정: 2026-10-11 19:15:25 · 박건준
   /// 함수: drawAt
   /// 목적: 글자 한 덩이를 서식 좌표에 찍는다. 서식에 칸으로 잡혀 있지 않은
   ///       자리, 이를테면 표 안의 값처럼 좌표를 그때그때 셈해 넣는 곳에

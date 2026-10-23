@@ -2,27 +2,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/live_speed_estimator.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
-/// 작성: 2026-10-10 11:54:43 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
 /// 변수: _rateHz
 /// 목적: 합성 이벤트를 넣는 주기 (Hz).
 /// 근거: 측정 — `CaptureConfig.normalIntervalMinUs` 근거의 실측 수신 주기
 ///       421 ~ 471Hz 에 가깝게 잡았다
 const int _rateHz = 400;
 
-/// 작성: 2026-10-10 11:54:43 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
 /// 변수: _gravityMg
 /// 목적: 합성 이벤트의 중력 성분 Z (mg). 화면을 아래로 놓은 거치를 흉내
 ///       낸다 — 가속도계는 위쪽으로 1g 를 읽어 화면이 바닥을 보면 −1000 이다.
 const double _gravityMg = -1000.0;
 
-/// 작성: 2026-10-10 11:54:43 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
 /// 변수: _mgPerMps2
 /// 목적: m/s² 를 mg 로 바꾸는 배수. 합성 운행을 m/s² 로 적고 이벤트에는
 ///       mg 로 넣는다.
 /// 근거: 표준 — 1000 / 9.80665
 const double _mgPerMps2 = 1000 / 9.80665;
 
-/// 작성: 2026-10-10 11:54:43 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
 /// 함수: _feed
 /// 목적: 수직 가속도 시계열을 gravity · raw 이벤트 쌍으로 바꿔 넣고, 넣을
 ///       때마다 어림 속도를 모은다. raw 는 `GridResampler.motionOf()` 의 Z
@@ -61,7 +61,7 @@ List<double?> _feed(LiveSpeedEstimator estimator, List<double> motionMg) {
   return speeds;
 }
 
-/// 작성: 2026-10-10 11:54:43 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
 /// 함수: _trapezoidRide
 /// 목적: 사다리꼴 운행의 수직 가속도를 만든다. 정지 2초 → 가속 1초 →
 ///       정속 4초 → 감속 1초 → 정지 3초. 가속도 1.0 m/s² 를 1초 걸어
@@ -80,7 +80,7 @@ List<double> _trapezoidRide() {
   );
 }
 
-/// 작성: 2026-10-10 11:54:43 · nada
+/// 작성: 2026-10-10 11:54:43 · 박건준
 /// 함수: main
 /// 목적: 측정 중 속도 어림을 시험한다. 기준선 전에는 값이 없는지,
 ///       사다리꼴 운행의 정속 속도를 맞히는지, 정지 중 작은 치우침이

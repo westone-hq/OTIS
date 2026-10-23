@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/analysis/travel_window.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
-import 'package:vibration_checker/domain/report/travel_window.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
-/// 작성: 2026-09-15 21:14:33 · nada
+/// 작성: 2026-09-15 21:14:33 · 박건준
 /// 함수: _result
 /// 목적: 지표 산출만 보려고 만드는 측정 결과. 산출에 쓰이지 않는 값은
 ///       비워 둔다.
@@ -51,13 +51,13 @@ MeasurementResult _result({
   );
 }
 
-/// 작성: 2026-09-25 11:20:00 · nada
+/// 작성: 2026-09-25 11:20:00 · 박건준
 /// 변수: _fixturePath
 /// 목적: 기준 측정 기록의 경로. 원본 TUNE 리포트를 만든 실제 현장
 ///       기록이며, 소음 회귀는 이 파일로 고정한다.
-const _fixturePath = 'test/fixtures/ride_reference.txt';
+const _fixturePath = 'test/fixtures/records/ride_reference.txt';
 
-/// 작성: 2026-09-26 14:10:00 · nada
+/// 작성: 2026-09-26 14:10:00 · 박건준
 /// 변수: _warmupFixturePath
 /// 목적: 수집 주기를 44100Hz · 1초 창으로 고정한 뒤 뽑은 측정 기록의 경로.
 ///       앞쪽에 0 구간이 있어, 0 을 거르는 규칙을 시험하는 데 쓴다.
@@ -65,9 +65,9 @@ const _fixturePath = 'test/fixtures/ride_reference.txt';
 ///       것이다. 0 이 43개로 끝나고 그 뒤 약 1.2초가 0 에서 실제 크기로
 ///       올라오는 경사인데, 고친 뒤에는 그 경사가 0 구간에 흡수된다.
 ///       지금 동작의 근거로 쓰면 안 되고, 고치기 전 모습으로만 본다.
-const _warmupFixturePath = 'test/fixtures/noise_warmup.txt';
+const _warmupFixturePath = 'test/fixtures/records/noise_warmup.txt';
 
-/// 작성: 2026-09-25 11:20:00 · nada
+/// 작성: 2026-09-25 11:20:00 · 박건준
 /// 함수: _fixtureNoise
 /// 목적: 측정 기록에서 소음 열만 뽑는다. EVIMP1 포맷이라 머리말이 두
 ///       줄이고 그 뒤로 X Y Z 소음 네 열이 공백으로 구분돼 있다.
@@ -82,8 +82,8 @@ List<double> _fixtureNoise([String path = _fixturePath]) {
       .toList();
 }
 
-/// 작성: 2026-09-15 21:14:33 · nada
-/// 수정: 2026-10-15 15:53:26 · nada
+/// 작성: 2026-09-15 21:14:33 · 박건준
+/// 수정: 2026-10-15 15:53:26 · 박건준
 /// 함수: main
 /// 목적: 측정 결과에서 리포트 표 여덟 행을 만드는 산출 계층을 시험한다.
 ///       - 지금 낼 수 있는 두 값이 나오는지

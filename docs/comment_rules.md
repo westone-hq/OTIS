@@ -14,7 +14,7 @@
 - Dart 파일 머리에 `///` 금지 — 바로 아래 첫 선언의 문서 주석으로 붙어버린다.
 - 다만 `import` 가 하나도 없어 **첫 선언이 1행부터 시작하는 파일**은, 1행의 `///`
   가 곧 그 선언의 문서 주석이므로 위반이 아니다 (`capture_config.dart`,
-  `native_event.dart`, `noise_offset.dart`, `measurement_session.dart`).
+  `native_event.dart`, `noise_config.dart`, `report_layout.dart`).
 - 라이선스 · 자동생성 표시처럼 도구가 요구하는 줄만 예외로 남긴다.
 
 ---
@@ -50,7 +50,9 @@ Kotlin 은 `/** ... */`, 라벨은 동일.
 | 수정 | `수정: YYYY-MM-DD HH:MM:SS · 이름` | **그 선언의 내용이나 주석이 실제로 바뀐 경우에만** 추가 |
 
 - 최신 것만 남기고 **`수정`은 최대 1줄**. 그 이전 이력은 git 이 갖는다.
-- 작성자와 수정자가 같으면 `수정` 줄을 쓰지 않는다.
+- 작성자와 수정자가 같아도 최신 `수정` 줄을 남긴다. 마지막으로 바뀐 날짜를
+  주석에서 바로 보게 하려는 것이다(2026-10-23 사용자 결정, 예전에는 같은
+  사람이면 쓰지 않았다).
 - **값을 모르면 줄을 통째로 생략한다.** `미상`, `unknown` 같은 채움값을 쓰지 않는다.
 - 파일 전체를 한 사람이 고쳤어도, 그 파일 안 선언마다 각자 `수정` 줄을 갖는다.
 
@@ -155,18 +157,18 @@ static const int normalIntervalMinUs = 1953;
 - **항목에 따로 근거가 있으면 그 항목에만 라벨 블록을 둔다.** 나머지는 한 줄로 남긴다
 
 ```dart
-/// 작성: 2026-09-15 19:43:50 · nada
-/// 클래스: ReportPage1
+/// 작성: 2026-09-15 19:43:50 · 박건준
+/// 클래스: ReportPage1Layout
 /// 목적: 리포트 1쪽의 자리들을 담는다. 좌표는 모두 서식 이미지 픽셀이고
 ///       원점은 좌상단이다.
-class ReportPage1 {
+class ReportPage1Layout {
   /// 신호등 원의 중심 가로 좌표 (픽셀)
   static const int dotCenterX = 243;
 
   /// 구분 이름이 시작하는 가로 좌표 (픽셀)
   static const int colCategoryX = 313;
 
-  /// 작성: 2026-09-15 19:43:50 · nada
+  /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 변수: travelDistanceY
   /// 목적: 운행 거리 행의 세로 좌표 (픽셀).
   /// 근거: 인용 — 원본 리포트에서 잰 값이다. 앞 행과의 간격이 표에서 가장
@@ -241,7 +243,7 @@ routerConfig: appRouter, // → 로직 이동: appRouter
 ```
 
 - 대상 이름만 짧게. 설명 문장 금지.
-- **함수 · 메서드는 `()` 를 붙인다** (`_startMeasure()`, `SensorChannelManager.stopCapture()`, `HomeScreen.build()`). 함수가 아닌 대상 — 객체, 프로퍼티, Kotlin `when` case — 은 괄호 없이 이름만 (`appRouter`, `MeasurementSession.instance.currentSite`, `MainActivity.checkAvailable`).
+- **함수 · 메서드는 `()` 를 붙인다** (`_startMeasure()`, `SensorChannelManager.stopCapture()`, `HomeScreen.build()`). 함수가 아닌 대상 — 객체, 프로퍼티, Kotlin `when` case — 은 괄호 없이 이름만 (`appRouter`, `MeasurementSession.instance.currentSite`, `SensorMethodHandler.checkAvailable`).
 - **호출부마다 하나씩 단다.** 같은 대상을 세 곳에서 부르면 표시도 세 개다. 한 곳만 달면 다이어그램에서 갈래가 사라진다.
 - 표시한 대상은 **실제로 실행될 수 있어야 한다.** 부르는 곳이 없거나 조건상 절대 도달하지 못하는 경로에는 달지 않는다. 그런 코드는 7장에 따라 삭제한다.
 - 대상 이름은 코드의 실제 식별자 그대로 쓴다. 한국어 별칭은 명칭 통일표에서 따로 관리한다.

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
 
-/// 작성: 2026-09-15 20:13:49 · nada
+/// 작성: 2026-09-15 20:13:49 · 박건준
 /// 함수: _result
 /// 목적: 판정만 보려고 만드는 측정 결과. 판정에 쓰이지 않는 값은 비워 둔다.
 /// 인자: xPtp, yPtp, zPtp — 축별 진동 p2p (mg). 안 주면 null
@@ -37,8 +37,8 @@ MeasurementResult _result({
   );
 }
 
-/// 작성: 2026-09-15 20:13:49 · nada
-/// 수정: 2026-10-15 15:53:26 · nada
+/// 작성: 2026-09-15 20:13:49 · 박건준
+/// 수정: 2026-10-15 15:53:26 · 박건준
 /// 함수: main
 /// 목적: 리포트 판정 기준과 그 기준을 쓰는 측정 결과 게터를 시험한다.
 ///       - 경계값에서 "초과"의 뜻이 흔들리지 않는지

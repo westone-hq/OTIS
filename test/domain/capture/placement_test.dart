@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/domain/capture/capture_config.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
 
-/// 작성: 2026-10-22 09:30:00 · nada
+/// 작성: 2026-10-22 09:30:00 · 박건준
 /// 함수: _gravity
 /// 목적: 중력 이벤트 한 건을 만든다.
 /// 인자: ms — 시각 (밀리초)
@@ -18,7 +18,7 @@ NativeEvent _gravity(int ms, double z) => NativeEvent(
   dtUs: 4000,
 );
 
-/// 작성: 2026-10-22 09:30:00 · nada
+/// 작성: 2026-10-22 09:30:00 · 박건준
 /// 함수: main
 /// 목적: 거치 방향 판정(`Placement.of()`)의 세 갈래와 경계, 수집 처음 1초를
 ///       모으는 감시기(`PlacementMonitor`)를 시험한다.

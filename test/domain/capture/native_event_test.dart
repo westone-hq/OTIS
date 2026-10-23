@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 
 /// 작성: 2026-08-06 14:47:52 · 박건준
-/// 수정: 2026-10-04 14:30:00 · nada
+/// 수정: 2026-10-04 14:30:00 · 박건준
 /// 함수: main
 /// 목적: 안드로이드가 채널로 보낸 표를 `NativeEvent` 로 바꿀 때 값이
 ///       보존되고, 형식이 맞지 않는 표는 0 으로 채우지 않고 버리는지

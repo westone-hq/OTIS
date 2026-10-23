@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
+import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 
-import 'package:vibration_checker/adapter/sensor_channel.dart';
-
-import '../../core/widgets/app_dialog.dart';
-
-/// 작성: 2026-10-04 18:15:24 · nada
-/// 수정: 2026-10-13 14:15:29 · nada
+/// 작성: 2026-10-04 18:15:24 · 박건준
+/// 수정: 2026-10-13 14:15:29 · 박건준
 /// 함수: ensureMicPermission
 /// 목적: 측정 화면으로 넘어가기 전에 마이크 권한을 받는다. 측정 중에는
 ///       휴대폰을 뒤집어 놓으므로 그때 권한 창이 뜨면 누를 수 없다. 한 번

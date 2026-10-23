@@ -2,21 +2,23 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vibration_checker/adapter/report/report_chart.dart';
 import 'package:vibration_checker/adapter/report/report_chart_page.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/report/chart_axes.dart';
+import 'package:vibration_checker/domain/report/report_chart_page_layout.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
-import 'pdf_probe.dart';
+import '../../support/pdf_probe.dart';
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 변수: _outputPath
 /// 목적: 만들어 낸 차트 두 쪽을 남겨 둘 자리. 자리는 아래 시험이 값으로
 ///       대조하므로, 이 파일은 눈금과 라벨이 겹치지 않는지처럼 숫자로 재기
 ///       어려운 것을 눈으로 열어 볼 때 쓴다.
 const _outputPath = 'build/report_chart_page_test.pdf';
 
-/// 작성: 2026-09-27 09:30:00 · nada
+/// 작성: 2026-09-27 09:30:00 · 박건준
 /// 변수: _framePrecision
 /// 목적: 축 틀 자리를 대조할 때 봐주는 오차 (PDF 포인트).
 /// 근거: 측정 — 렌더러와 기대값이 같은 계수로 같은 곱셈을 하므로 실제
@@ -24,20 +26,20 @@ const _outputPath = 'build/report_chart_page_test.pdf';
 ///       PDF 대조가 허용하던 0.1pt 보다 백 배 촘촘하다
 const _framePrecision = 0.001;
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 변수: _sampleRate
 /// 목적: 시험에 쓰는 표본 주기 (Hz).
-/// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/ride_reference.txt`)이
+/// 근거: 인용 — 회귀 기준 측정 기록(`test/fixtures/records/ride_reference.txt`)이
 ///       이 주기로 기록돼 있다
 const _sampleRate = 256.0;
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 변수: _sampleCount
 /// 목적: 시험에 쓰는 표본 개수.
 /// 근거: 인용 — 회귀 기준 측정 기록의 행 수와 같다
 const _sampleCount = 11388;
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 함수: _series
 /// 목적: 시험용 시계열 하나를 만든다.
 /// 인자: amplitude — 파형의 진폭. 단위는 쓰는 쪽을 따른다
@@ -50,7 +52,7 @@ List<double> _series(double amplitude, double cycles) {
   );
 }
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
 /// 함수: _result
 /// 목적: 차트 쪽을 그려 보려고 만드는 측정 결과.
 /// 인자: noiseSeries — 소음 시계열 (dBA). 안 주면 빈 목록이며, 마이크
@@ -82,13 +84,15 @@ MeasurementResult _result({List<double> noiseSeries = const <double>[]}) {
   );
 }
 
-/// 작성: 2026-09-23 09:40:00 · nada
+/// 작성: 2026-09-23 09:40:00 · 박건준
+/// 수정: 2026-10-23 01:10:00 · 박건준
 /// 함수: main
 /// 목적: 차트 쪽 렌더링을 시험한다. 쪽 구성이 원본 차례와 같은지, 만들어진
 ///       PDF 의 축 틀이 서식 좌표에서 계산한 자리와 맞는지를 본다.
 ///
 ///       참조 PDF 와 대조하지 않는 까닭
-///         `docs/reference/sample_evimp.pdf` 는 축별 계수를 나누기 전 단일
+///         `sample_evimp.pdf`(2026-10-23 저장소에서 지움, 커밋 6bd171a)
+///         는 축별 계수를 나누기 전 단일
 ///         계수로 그려진 옛 산출물이라 아래쪽으로 갈수록 최대 0.1035pt 씩
 ///         벌어진다. 새로 받을 수도 없다. 남는 잔차(가로 -0.0004 · 폭
 ///         -0.0022 · 높이 +0.0100pt)도 렌더러가 아니라 그 PDF 를 만든
@@ -96,8 +100,7 @@ MeasurementResult _result({List<double> noiseSeries = const <double>[]}) {
 ///         않는다. 참조가 알려 줄 수 있는 것은 이미 다 확인했다.
 ///         지금은 `ReportLayout` 이 옮겨 둔 서식 좌표와 쪽 크기에서 곧바로
 ///         계산해 0.001pt 로 대조한다. 참조보다 백 배 촘촘하고, 좌표가
-///         바뀌면 기대값도 따라 바뀐다. `sample_evimp.pdf` 는 눈으로 볼
-///         때만 쓰는 참고물로 남긴다.
+///         바뀌면 기대값도 따라 바뀐다.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -114,7 +117,7 @@ void main() {
       for (final plan in ReportChartPageRenderer.pages) {
         expect(
           plan.axes.length,
-          ReportChartPage.slots.length,
+          ReportChartPageLayout.slots.length,
           reason: '${plan.pageNumber}쪽',
         );
       }
@@ -160,12 +163,12 @@ void main() {
         ); // 실제로 찍힌 축 틀
         expect(
           drawn.length,
-          ReportChartPage.slots.length,
+          ReportChartPageLayout.slots.length,
           reason: '${p + 2}쪽 축 틀 수',
         );
 
         for (var i = 0; i < drawn.length; i++) {
-          final slot = ReportChartPage.slots[i]; // 서식이 정한 그 자리
+          final slot = ReportChartPageLayout.slots[i]; // 서식이 정한 그 자리
           final where = '${p + 2}쪽 ${i + 1}번째 자리'; // 어긋난 자리를 알릴 문구
 
           expect(
@@ -285,7 +288,7 @@ void main() {
       );
       expect(
         ReportChartPageRenderer.headerValues(_result(), 3)['engineer_name'],
-        ReportPage1.placeholder,
+        ReportPage1Layout.placeholder,
       );
       expect(
         ReportChartPageRenderer.headerValues(_result(), 3)['page_number'],

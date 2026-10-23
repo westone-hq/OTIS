@@ -2,18 +2,18 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart';
-import 'package:vibration_checker/domain/report/report_layout.dart';
-import 'package:vibration_checker/domain/session/measurement_session.dart';
-import 'package:vibration_checker/model/measurement_result.dart';
+import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/report/report_page1_layout.dart';
+import 'package:vibration_checker/domain/session/site_info.dart';
 
-/// 작성: 2026-09-16 09:12:40 · nada
+/// 작성: 2026-09-16 09:12:40 · 박건준
 /// 변수: _outputPath
 /// 목적: 만들어 낸 1쪽을 남겨 둘 자리. 표와 신호등이 서식 위에 제대로
 ///       얹혔는지는 숫자로 재기 어려워 눈으로 열어 봐야 한다. 시험이
 ///       끝나도 지우지 않는 이유가 그것이다.
 const _outputPath = 'build/report_page1_test.pdf';
 
-/// 작성: 2026-09-16 09:12:40 · nada
+/// 작성: 2026-09-16 09:12:40 · 박건준
 /// 함수: _result
 /// 목적: 1쪽을 그려 보려고 만드는 측정 결과. 지금 값을 낼 수 있는 두
 ///       지표만 채우고 나머지는 비운다 — 실제 측정이 지금 그렇다.
@@ -40,7 +40,7 @@ MeasurementResult _result() {
   );
 }
 
-/// 작성: 2026-10-11 19:15:25 · nada
+/// 작성: 2026-10-11 19:15:25 · 박건준
 /// 함수: _siteResult
 /// 목적: 현장 정보 새 항목을 모두 채운 측정 결과를 만든다.
 /// 인자: loadUnit — 하중 단위
@@ -63,8 +63,8 @@ MeasurementResult _siteResult({
   );
 }
 
-/// 작성: 2026-09-16 09:12:40 · nada
-/// 수정: 2026-10-15 15:53:26 · nada
+/// 작성: 2026-09-16 09:12:40 · 박건준
+/// 수정: 2026-10-15 15:53:26 · 박건준
 /// 함수: main
 /// 목적: 1쪽 렌더링을 시험한다. 자리가 맞는지는 `ReportLayout` 과 대조하는
 ///       `report_layout_test.dart` 가 맡으므로, 여기서는 PDF 가 실제로
@@ -204,9 +204,9 @@ void main() {
     test('값이 없는 예전 결과는 빈 칸 대신 자리 표시와 기본 문구를 찍는다', () {
       final header = ReportPage1Renderer.headerValues(_result()); // 예전 결과
 
-      expect(header['engineer_name'], ReportPage1.placeholder);
-      expect(header['load'], ReportPage1.placeholder);
-      expect(header['address'], ReportPage1.placeholder);
+      expect(header['engineer_name'], ReportPage1Layout.placeholder);
+      expect(header['load'], ReportPage1Layout.placeholder);
+      expect(header['address'], ReportPage1Layout.placeholder);
       expect(header['test_type'], '층간 시험');
       expect(header['product'], '엘리베이터');
       expect(header.values, everyElement(isNot(contains('null'))));
@@ -235,11 +235,17 @@ void main() {
 
     test('넘칠 수 있는 칸만 폭을 재고 폭은 오른쪽 여백까지다', () {
       expect(
-        ReportPage1.maxWidthOf(ReportPage1.address),
-        ReportPage1.headerRightLimitX - ReportPage1.address.x,
+        ReportPage1Layout.maxWidthOf(ReportPage1Layout.address),
+        ReportPage1Layout.headerRightLimitX - ReportPage1Layout.address.x,
       );
-      expect(ReportPage1.maxWidthOf(ReportPage1.testType), isNotNull);
-      expect(ReportPage1.maxWidthOf(ReportPage1.measurementId), isNull);
+      expect(
+        ReportPage1Layout.maxWidthOf(ReportPage1Layout.testType),
+        isNotNull,
+      );
+      expect(
+        ReportPage1Layout.maxWidthOf(ReportPage1Layout.measurementId),
+        isNull,
+      );
     });
   });
 }
