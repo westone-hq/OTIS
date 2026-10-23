@@ -12,15 +12,17 @@ String _json(List<Map<String, Object?>> workers) =>
     jsonEncode({'source': 'test.xlsx', 'workers': workers});
 
 /// 작성: 2026-10-18 09:09:47 · 박건준
+/// 수정: 2026-10-23 13:30:00 · 박건준
 /// 함수: main
 /// 목적: 명단을 읽고, 사번 대소문자를 가리지 않고 찾으며, 비밀번호 = 사번
 ///       규칙으로 로그인을 판정하는지 시험한다. 깨진 명단은 건너뛰지 않고
-///       실패로 올리는지도 본다.
+///       실패로 올리는지, 칸 형식이 틀리면 몇 번째 항목의 어느 칸인지 담은
+///       `FormatException` 인지도 본다(2026-10-23).
 void main() {
   final directory = WorkerDirectory.parse(
     _json([
       {'id': 'T00001', 'name': '홍길동', 'company': '(주)시험승강기', 'team': '설치1팀'},
-      {'id': 200001, 'name': '김철수', 'company': null, 'team': ' '},
+      {'id': '200001', 'name': '김철수', 'company': null, 'team': ' '},
     ]),
   ); // 시험용 명단
 
@@ -30,7 +32,7 @@ void main() {
     expect(hong.name, '홍길동');
     expect(hong.company, '(주)시험승강기');
     expect(hong.team, '설치1팀');
-    final kim = directory.find('200001')!; // 숫자 사번 · 업체 없는 작업자
+    final kim = directory.find('200001')!; // 숫자로 된 사번 · 업체 없는 작업자
     expect(kim.employeeId, '200001');
     expect(kim.company, isNull);
     expect(kim.team, isNull);
@@ -103,5 +105,88 @@ void main() {
       throwsFormatException,
     );
     expect(() => WorkerDirectory.parse('[]'), throwsFormatException);
+  });
+
+  group('칸 형식이 틀린 명단 (2026-10-23)', () {
+    // 두 번째 항목의 `key` 칸만 `value` 로 바꾼 명단을 읽은 실패 문구
+    String failureOf(String key, Object? value) {
+      final broken = <String, Object?>{
+        'id': 'T00002',
+        'name': '김철수',
+        'company': '(주)시험승강기',
+        'team': '설치1팀',
+      }..[key] = value; // 칸 하나만 틀린 항목
+      try {
+        WorkerDirectory.parse(
+          _json([
+            {'id': 'T00001', 'name': '홍길동', 'company': null, 'team': null},
+            broken,
+          ]),
+        );
+      } on FormatException catch (e) {
+        return e.message;
+      }
+      fail('$key = $value 인데 FormatException 이 아니다');
+    }
+
+    final bad = <String, List<Object?>>{
+      'id': [
+        200001,
+        null,
+        <String>['T00002'],
+      ],
+      'name': [
+        7,
+        null,
+        <String>['김철수'],
+      ],
+      'company': [
+        3,
+        <String>['업체'],
+      ],
+      'team': [
+        4,
+        <String>['팀'],
+      ],
+    }; // 칸마다 틀린 값 (숫자 · null · 목록)
+    for (final entry in bad.entries) {
+      for (final value in entry.value) {
+        test('${entry.key} = $value 이면 행 번호와 칸 이름을 담아 실패한다', () {
+          final message = failureOf(entry.key, value); // 실패 문구
+          expect(message, contains('2번째 항목'));
+          expect(message, contains(entry.key));
+        });
+      }
+    }
+
+    test('업체 · 팀이 null 인 것은 형식 오류가 아니다(OTIS 직원)', () {
+      final read = WorkerDirectory.parse(
+        _json([
+          {'id': 'T00001', 'name': '홍길동', 'company': null, 'team': null},
+        ]),
+      ); // 읽은 명단
+      expect(read.find('T00001')!.company, isNull);
+    });
+
+    test('항목이 표가 아니면 행 번호를 담아 실패한다', () {
+      expect(
+        () => WorkerDirectory.parse(
+          jsonEncode({
+            'source': 'test.xlsx',
+            'workers': [
+              {'id': 'T00001', 'name': '홍길동'},
+              'T00002',
+            ],
+          }),
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('2번째 항목'),
+          ),
+        ),
+      );
+    });
   });
 }

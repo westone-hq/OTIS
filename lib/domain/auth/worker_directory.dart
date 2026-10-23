@@ -58,11 +58,17 @@ class WorkerDirectory {
   int get length => _byId.length;
 
   /// 작성: 2026-10-18 09:09:47 · 박건준
+  /// 수정: 2026-10-23 13:30:00 · 박건준
   /// 함수: WorkerDirectory.parse
   /// 목적: 명단 JSON(`tool/import_workers.py` 가 만든 형태)을 읽는다. 사번 ·
-  ///       성명이 비었거나 사번이 겹치면 그 줄을 건너뛰지 않고 실패로
-  ///       올린다 — 건너뛰면 그 작업자가 왜 로그인하지 못하는지 현장에서
-  ///       알 수 없다.
+  ///       성명이 비었거나 사번이 겹치거나 칸의 형식이 틀리면 그 줄을
+  ///       건너뛰지 않고 실패로 올린다 — 건너뛰면 그 작업자가 왜 로그인하지
+  ///       못하는지 현장에서 알 수 없다. 실패 문구에는 몇 번째 항목(1 부터)의
+  ///       어느 칸인지 적는다. 로그인 화면이 그 문구를 오류 알림으로 보인다
+  ///       (`LoginScreen._submit()`).
+  ///       - `id` · `name` — 문자열이어야 한다
+  ///       - `company` · `team` — 문자열이거나 null(OTIS 직원은 업체 · 팀이
+  ///         없다)이어야 한다
   /// 인자: source — 명단 JSON 문자열.
   ///       `{"source": 엑셀 이름, "workers": [{"id", "name", "company", "team"}]}`
   /// 반환: 명단. 형식이 틀리면 `FormatException` 을 던진다
@@ -71,42 +77,75 @@ class WorkerDirectory {
     if (decoded is! Map<String, Object?> || decoded['workers'] is! List) {
       throw const FormatException('작업자 명단에 workers 목록이 없다');
     }
+    final entries = decoded['workers'] as List; // 명단 항목
     final workers = <Worker>[]; // 읽어 낸 작업자
     final seen = <String>{}; // 이미 나온 사번
-    for (final Object? entry in decoded['workers'] as List) {
+    for (var index = 0; index < entries.length; index++) {
+      final row = index + 1; // 몇 번째 항목인지 (1 부터)
+      final Object? entry = entries[index]; // 이 항목
       if (entry is! Map<String, Object?>) {
-        throw FormatException('작업자 명단 항목이 표가 아니다: $entry');
+        throw FormatException('작업자 명단 $row번째 항목이 표가 아니다: $entry');
       }
-      final id = normalizeId('${entry['id'] ?? ''}'); // 대문자로 맞춘 사번
-      final name = (entry['name'] as String?)?.trim() ?? ''; // 성명
+      // → 로직 이동: _requiredText()
+      final id = normalizeId(_requiredText(entry, 'id', row)); // 맞춘 사번
+      final name = _requiredText(entry, 'name', row).trim(); // 성명
       if (id.isEmpty || name.isEmpty) {
-        throw FormatException('작업자 명단에 사번 · 성명이 빈 항목이 있다: $entry');
+        throw FormatException('작업자 명단 $row번째 항목에 사번 · 성명이 비었다: $entry');
       }
       if (!seen.add(id)) {
-        throw FormatException('작업자 명단에 사번 $id 가 겹친다');
+        throw FormatException('작업자 명단 $row번째 항목의 사번 $id 가 앞 항목과 겹친다');
       }
       workers.add(
         Worker(
           employeeId: id,
           name: name,
-          // → 로직 이동: _optional()
-          company: _optional(entry['company']),
-          team: _optional(entry['team']), // → 로직 이동: _optional()
+          // → 로직 이동: _optionalText()
+          company: _optionalText(entry, 'company', row),
+          // → 로직 이동: _optionalText()
+          team: _optionalText(entry, 'team', row),
         ),
       );
     }
     return WorkerDirectory(workers);
   }
 
+  /// 작성: 2026-10-23 13:30:00 · 박건준
+  /// 함수: _requiredText
+  /// 목적: 반드시 문자열이어야 하는 칸을 읽는다.
+  /// 인자: entry — 명단 항목
+  ///       key — 칸 이름 (`id` · `name`)
+  ///       row — 몇 번째 항목인지 (1 부터). 실패 문구에 쓴다
+  /// 반환: 칸 값. 문자열이 아니면(숫자 · null · 목록 등) `FormatException`
+  static String _requiredText(Map<String, Object?> entry, String key, int row) {
+    final value = entry[key]; // 칸 값
+    if (value is! String) {
+      throw FormatException('작업자 명단 $row번째 항목의 $key 가 문자열이 아니다: $value');
+    }
+    return value;
+  }
+
   /// 작성: 2026-10-18 09:09:47 · 박건준
-  /// 함수: _optional
+  /// 수정: 2026-10-23 13:30:00 · 박건준
+  /// 함수: _optionalText
   /// 목적: 비워 둘 수 있는 칸을 읽는다. 빈 문자열은 null 로 읽는다 — 빈
   ///       문자열을 업체명 · 관리팀 값으로 남기지 않는다.
-  /// 인자: value — 명단 항목의 칸 값
-  /// 반환: 앞뒤 공백을 지운 문자열. 없거나 비었으면 null
-  static String? _optional(Object? value) {
-    final text = (value as String?)?.trim(); // 앞뒤 공백을 지운 값
-    return text == null || text.isEmpty ? null : text;
+  /// 인자: entry — 명단 항목
+  ///       key — 칸 이름 (`company` · `team`)
+  ///       row — 몇 번째 항목인지 (1 부터). 실패 문구에 쓴다
+  /// 반환: 앞뒤 공백을 지운 문자열. 없거나 비었으면 null. 문자열도 null 도
+  ///       아니면(숫자 · 목록 등) `FormatException`
+  static String? _optionalText(
+    Map<String, Object?> entry,
+    String key,
+    int row,
+  ) {
+    final value = entry[key]; // 칸 값
+    if (value == null) return null;
+    if (value is! String) {
+      throw FormatException('작업자 명단 $row번째 항목의 $key 가 문자열이 아니다: $value');
+    }
+    final text = value.trim(); // 앞뒤 공백을 지운 값
+    return text.isEmpty ? null : text;
   }
 
   /// 작성: 2026-10-20 09:12:40 · 박건준

@@ -9,12 +9,14 @@ import 'package:vibration_checker/ui/features/login/login_screen.dart';
 import '../../../support/fake_worker_bundle.dart';
 
 /// 작성: 2026-10-18 09:41:12 · 박건준
+/// 수정: 2026-10-23 13:30:00 · 박건준
 /// 함수: _pumpLogin
 /// 목적: 시험용 명단을 읽는 로그인 화면과, 로그인하면 옮겨 갈 홈 자리
 ///       화면을 띄운다.
 /// 인자: tester — 위젯 시험 도구
-Future<void> _pumpLogin(WidgetTester tester) async {
-  final store = LoginStore(bundle: FakeWorkerBundle()); // 시험용 명단 저장소
+///       json — 명단 JSON. 안 주면 시험용 명단(`testWorkersJson`)
+Future<void> _pumpLogin(WidgetTester tester, {String? json}) async {
+  final store = LoginStore(bundle: FakeWorkerBundle(json)); // 시험용 명단 저장소
   final router = GoRouter(
     initialLocation: '/login',
     routes: [
@@ -47,9 +49,11 @@ Future<void> _submit(WidgetTester tester, String id, String password) async {
 }
 
 /// 작성: 2026-10-18 09:41:12 · 박건준
+/// 수정: 2026-10-23 13:30:00 · 박건준
 /// 함수: main
 /// 목적: 로그인 화면이 맞는 사번 · 비밀번호면 홈으로 가고, 틀리면 사유에
-///       맞는 칸에 문구를 띄우는지 시험한다.
+///       맞는 칸에 문구를 띄우는지 시험한다. 명단을 읽지 못하면 오류 알림에
+///       그 사유가 보이는지도 본다.
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -64,6 +68,22 @@ void main() {
 
     expect(find.text('홈 화면'), findsOneWidget);
     expect(LoginSession.instance.current?.name, '홍길동');
+  });
+
+  testWidgets('명단 칸 형식이 틀리면 몇 번째 항목의 어느 칸인지 오류 알림에 보인다', (tester) async {
+    await _pumpLogin(
+      tester,
+      json:
+          '{"source": "t.xlsx", "workers": ['
+          '{"id": "T00001", "name": "홍길동", "company": null, "team": null},'
+          '{"id": "T00002", "name": "김철수", "company": 3, "team": null}]}',
+    );
+
+    await _submit(tester, 'T00001', 'T00001');
+
+    expect(find.textContaining('작업자 명단을 읽지 못했습니다'), findsOneWidget);
+    expect(find.textContaining('2번째 항목의 company'), findsOneWidget);
+    expect(LoginSession.instance.current, isNull);
   });
 
   testWidgets('명단에 없는 사번은 사번 칸에 알린다', (tester) async {
