@@ -42,18 +42,18 @@ class SensorChannelManager {
   );
 
   /// 작성: 2026-10-05 10:00:11 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
+  /// 수정: 2026-10-23 11:30:00 · 박건준
   /// 변수: _stopReplyLimit
   /// 목적: 수집 정지 요청의 응답을 기다리는 한도. 넘기면 원본 기록 · 현장
   ///       소음 녹음 경로를 받지 못해 측정 폴더에 원본 사본
   ///       (`native_raw.txt`)과 녹음(`noise.m4a`)이 빠진다.
   /// 근거: 인용 — 안드로이드 `SensorStreamHandler.stop()` 이 센서 스레드를
-  ///       최대 500ms 기다리고, `NoiseCaptureHandler.stop()` 은 녹음을 멈춰
-  ///       읽기를 푼 뒤 마이크 스레드가 끝나길 기다린다(한도 없음, 읽기가
-  ///       풀리면 곧 끝난다). 녹음 파일을 닫는 `NoiseAudioEncoder.finish()`
-  ///       는 압축기를 최대 2초(입력 칸 1초 + 끝 조각 1초) 기다린다. 이들의
-  ///       합보다 넉넉히 잡았다
-  static const Duration _stopReplyLimit = Duration(milliseconds: 3500);
+  ///       최대 500ms, `NoiseCaptureHandler.stop()` 이 마이크 스레드를 최대
+  ///       1초(`CAPTURE_THREAD_JOIN_LIMIT_MS`, 넘기면 녹음만 포기) 기다리고,
+  ///       녹음 파일을 닫는 `NoiseAudioEncoder.finish()` 가 압축기를 최대
+  ///       2초(입력 칸 1초 + 끝 조각 1초) 기다린다. 셋의 합(3.5초)에 1초를
+  ///       더했다
+  static const Duration _stopReplyLimit = Duration(milliseconds: 4500);
 
   /// 작성: 2026-10-01 13:04:31 · 박희정
   /// 수정: 2026-10-04 13:44:32 · 박건준

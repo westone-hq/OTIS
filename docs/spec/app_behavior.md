@@ -118,7 +118,10 @@
   `noise_native_*.m4a` 에 쓰고, `stopCapture` 가 원본 기록 경로와 함께
   돌려준다(`{recordPath, audioPath}`). 저장 절차가 측정 폴더의
   `noise.m4a` 로 옮기고, 중단이면 `CaptureSession.discard()` 가 지운다.
-  녹음이 실패해도 dBA 는 계속 잰다(녹음만 포기, 메일에 "누락:"). 2026-10-15
+  녹음이 실패해도 dBA 는 계속 잰다(녹음만 포기, 메일에 "누락:"). 수집을
+  멈출 때 녹음 스레드가 1초(`CAPTURE_THREAD_JOIN_LIMIT_MS`) 안에 끝나지
+  않으면 녹음만 포기하고 저장을 계속한다(2026-10-23, 같은 "누락:" 길 ·
+  meta.txt `noiseAudioPath: null`). 2026-10-15
   에 진단 PCM 을 뺀 까닭 중 "대화가 녹음될 수 있다" 는 이 녹음에도
   해당한다 — 사용자가 알고 넣기로 했다. 크기는 1분에 약 0.48MB 이고 30건
   보관 정리가 측정 폴더째 지운다. 실기기 확인 전(`docs/pending_checks.md`).
