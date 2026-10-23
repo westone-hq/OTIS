@@ -396,6 +396,29 @@ void main() {
       expect(meta, contains('noiseAudioPath: null'));
     });
 
+    test('저장 절차가 쓴 집계 파일의 모든 줄이 CRLF 로 끝난다', () async {
+      final outcome = await MeasurementRecorder.record(
+        resampler: _filledResampler(),
+        site: _site,
+        nativeRecordPath: '${temp.path}/missing_native.txt', // 복사 실패 줄
+        noiseAudioPath: null, // 녹음 없음 줄
+        measuredAt: measuredAt,
+      ); // 저장 결과
+
+      expect(outcome.isSuccess, isTrue);
+      final meta = await File(
+        outcome.savedPaths.firstWhere(
+          (path) => path.endsWith(MeasurementRepository.metaFileName),
+        ),
+      ).readAsString(); // 집계 파일 내용
+      expect(meta, contains('rawRecordCopyFailed'));
+      expect(meta, contains('noiseAudioPath: null'));
+      expect(meta, endsWith('\r\n'));
+      final rest = meta.replaceAll('\r\n', ''); // CRLF 를 뺀 나머지
+      expect(rest, isNot(contains('\n')), reason: 'LF 만 있는 줄');
+      expect(rest, isNot(contains('\r')), reason: 'CR 만 있는 줄');
+    });
+
     test('원본 복사가 실패해도 저장은 성공하고 집계 파일에 적는다', () async {
       final outcome = await MeasurementRecorder.record(
         resampler: _filledResampler(),
