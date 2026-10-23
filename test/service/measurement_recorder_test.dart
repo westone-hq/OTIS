@@ -699,9 +699,11 @@ void main() {
         }
         return null;
       });
-      final manager = SensorChannelManager(); // 시험할 통로
+      final manager = SensorChannelManager(
+        stopReplyLimit: const Duration(milliseconds: 50),
+      ); // 응답 한도를 짧게 넣은 통로 (앱 값 4.5초)
       // → 로직 이동: SensorChannelManager.stopCapture()
-      await manager.stopCapture().timeout(const Duration(seconds: 10));
+      await manager.stopCapture().timeout(const Duration(seconds: 2));
       expect(manager.lastAudioPath, isNull);
 
       final outcome = await MeasurementRecorder.record(

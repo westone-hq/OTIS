@@ -226,7 +226,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-09-15 13:20:00 · 박희정
-     * 수정: 2026-10-23 11:30:00 · 박건준
+     * 수정: 2026-10-23 12:00:00 · 박건준
      * 함수: start
      * 목적: 소음 측정을 시작한다. 이미 돌고 있으면 먼저 멈추고 다시 시작한다
      *       — 그때 닫힌 앞 녹음은 받아 갈 곳이 없어 지운다.
@@ -235,7 +235,9 @@ class NoiseCaptureHandler(private val context: Context) {
      *       읽은 표본을 그대로 넣는다. 녹음이 실패하면 녹음만 포기한다.
      *       녹음 스레드는 이번에 연 녹음기 · 압축기만 쓰고 자기 번호
      *       (`captureGeneration`)가 바뀌면 멈춘다 — 정지 한도를 넘겨 포기한
-     *       앞 스레드가 다음 측정의 녹음기를 건드리지 않게 한다.
+     *       앞 스레드가 다음 측정의 녹음기를 건드리지 않게 한다. 녹음
+     *       스레드에서 예외가 나도 앱을 죽이지 않고 기록한 뒤 소음을
+     *       미측정(0.0)으로 둔다.
      *
      *       창이 가득 차기 전에는 값을 내지 않고 0.0을 내보낸다. 덜 찬 창의
      *       RMS는 0에서 실제 크기로 천천히 올라오는 경사라서 값이 아니다.
@@ -416,6 +418,12 @@ class NoiseCaptureHandler(private val context: Context) {
                 }
             }.apply {
                 name = "OTIS_NoiseCaptureThread"
+                // 녹음 스레드에서 난 예외가 앱을 죽이지 않게 받아 기록만 한다.
+                // 그 뒤 소음은 미측정(0.0)이다 — 마지막 값이 계속 붙지 않게 한다
+                setUncaughtExceptionHandler { _, e ->
+                    Log.e(TAG, "noise capture thread failed", e)
+                    if (captureGeneration == generation) latestDba = 0.0
+                }
                 start()
             }
         } catch (e: SecurityException) {
@@ -585,6 +593,7 @@ class NoiseCaptureHandler(private val context: Context) {
 
     /**
      * 작성: 2026-10-23 11:30:00 · 박건준
+     * 수정: 2026-10-23 12:00:00 · 박건준
      * 함수: abandonCapture
      * 목적: 한도 안에 끝나지 않은 녹음 스레드를 두고 정지를 마친다. 녹음기 ·
      *       압축기를 지금 반납하지 않는다 — 그 스레드가 아직 읽거나 넣는
@@ -592,6 +601,10 @@ class NoiseCaptureHandler(private val context: Context) {
      *       차례에 멈추게 하고(`isRecording` 은 이미 false), 반납과 쓰다 만
      *       녹음 파일 지우기는 그 스레드가 끝나길 기다리는 정리 스레드에
      *       맡긴다. 다음 측정은 새 녹음기로 시작할 수 있다.
+     *       그 스레드가 끝내 풀리지 않으면 앞 녹음기는 반납되지 않은 채
+     *       남는다. 다음 `start()` 가 새 녹음기를 열지 못하면 앞 측정과
+     *       같이 마이크 없이 잰다(`activeSampleRate` 0 · `latestDba` 0.0 ·
+     *       녹음 없음) — 앱은 그대로이고 결과는 소음 "—", 메일은 "누락:" 이다.
      * 인자: thread — 끝나지 않은 녹음 스레드
      *       record — 그 스레드가 쓰던 녹음기, 없으면 null
      */
@@ -607,7 +620,11 @@ class NoiseCaptureHandler(private val context: Context) {
             } catch (_: InterruptedException) {
                 return@Thread
             }
-            record?.release()
+            try {
+                record?.release()
+            } catch (e: Exception) {
+                Log.e(TAG, "release failed after abandon", e)
+            }
             encoder?.abort() // → 로직 이동: NoiseAudioEncoder.abort()
         }.apply {
             name = "OTIS_NoiseCaptureCleanup"
