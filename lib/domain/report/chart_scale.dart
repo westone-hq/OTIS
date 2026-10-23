@@ -91,7 +91,7 @@ class ChartAxisRange {
 }
 
 /// 작성: 2026-10-10 11:38:05 · 박건준
-/// 수정: 2026-10-23 11:00:00 · 박건준
+/// 수정: 2026-10-23 12:30:00 · 박건준
 /// 클래스: ChartScaleKind
 /// 목적: 데이터에 맞춰 넓힐 때 축을 어떤 모양으로 넓히는지.
 ///       - `symmetric` — 0 을 가운데 둔다. 위아래로 흔들리는 진동 ·
@@ -113,11 +113,13 @@ class ChartAxisRange {
 ///         바깥으로 반올림" 을 바꾼다
 ///       - `paddedSymmetric` — `padded` 를 0 대칭으로 쓴 것. 틀 = ±(데이터
 ///         최대 절댓값 x 1.2), 반올림 없음. 가속도 · 저크(2026-10-22, OTIS
-///         3쪽 실측 1.20 ~ 1.22). 데이터가 모두 0 이면 최소 범위를 쓴다
+///         3쪽 실측 1.20 ~ 1.22). 데이터가 모두 0 이면 최소 범위를 쓴다.
+///         최대 절댓값이 `ChartScale.minimumPeak` 보다 작으면 그 값으로
+///         본다(2026-10-23)
 enum ChartScaleKind { symmetric, zeroAnchored, free, padded, paddedSymmetric }
 
 /// 작성: 2026-10-10 11:38:05 · 박건준
-/// 수정: 2026-10-11 19:20:58 · 박건준
+/// 수정: 2026-10-23 12:30:00 · 박건준
 /// 클래스: ChartScale
 /// 목적: 차트 하나의 세로축 범위를 데이터에 맞춰 정하는 규칙. 순서대로
 ///       정한다.
@@ -144,6 +146,12 @@ class ChartScale {
   /// 값 0 을 미측정으로 보고 범위 계산에서 뺄지. 소음이 그렇다 — 마이크
   /// 창이 차기 전이나 권한이 없을 때 0 으로 들어온다
   final bool ignoreZeros;
+
+  /// `paddedSymmetric` 축에서 데이터 최대 절댓값을 이보다 작게 보지 않는
+  /// 값(그 축의 단위). 틀이 ±(이 값 x 1.2) 보다 좁아지지 않아 눈금 간격이
+  /// 라벨 소수 자리로 적을 수 있는 크기 밑으로 내려가지 않는다. 0 이면 바닥이
+  /// 없다. 다른 모양의 축은 쓰지 않는다
+  final double minimumPeak;
 
   /// 작성: 2026-10-10 11:38:05 · 박건준
   /// 수정: 2026-10-11 19:20:58 · 박건준
@@ -188,25 +196,30 @@ class ChartScale {
   static const double _roundingSlack = 1e-9;
 
   /// 작성: 2026-10-10 11:38:05 · 박건준
+  /// 수정: 2026-10-23 12:30:00 · 박건준
   /// 함수: ChartScale
   /// 목적: 축 하나의 최소 범위와 넓히는 모양을 그대로 담는 생성자.
   /// 인자: minimum — 최소 범위
   ///       kind — 넓히는 모양
   ///       ignoreZeros — 0 을 미측정으로 볼지. 기본 false
+  ///       minimumPeak — `paddedSymmetric` 의 최대 절댓값 바닥. 기본 0(없음)
   const ChartScale({
     required this.minimum,
     required this.kind,
     this.ignoreZeros = false,
+    this.minimumPeak = 0.0,
   });
 
   /// 작성: 2026-10-10 11:38:05 · 박건준
-  /// 수정: 2026-10-22 10:30:00 · 박건준
+  /// 수정: 2026-10-23 12:30:00 · 박건준
   /// 함수: rangeFor
   /// 목적: 그릴 값에 맞는 세로축 범위를 정한다. 순서는 클래스 주석과 같다.
   ///       `padded` 축은 최소 범위와 견주지 않고 데이터로만 정한다
   ///       (`_paddedRange()`). 데이터가 한 값뿐이면(정지 측정) 최소 범위를
   ///       데이터로 보고 정한다. `paddedSymmetric` 은 0 을 가운데 두고 큰 쪽
-  ///       절댓값으로 같은 규칙을 쓴다.
+  ///       절댓값으로 같은 규칙을 쓰되, 그 절댓값이 `minimumPeak` 보다 작으면
+  ///       `minimumPeak` 로 본다 — 거의 움직이지 않은 기록의 틀이 너무 좁아
+  ///       눈금 라벨이 같은 숫자로 겹치지 않게 한다.
   /// 인자: values — 그릴 값 목록. 단위는 그 축의 단위를 따른다
   /// 반환: 모든 값이 들어가는 범위. 값이 없으면 최소 범위
   ChartAxisRange rangeFor(List<double> values) {
@@ -222,8 +235,9 @@ class ChartScale {
       final peak = math.max(low.abs(), high.abs()); // 데이터 최대 절댓값
       // 모두 0 이면(정지 측정 등) 틀 폭이 0 이 되지 않게 최소 범위를 쓴다
       if (peak == 0) return minimum;
+      final floored = math.max(peak, minimumPeak); // 바닥을 적용한 절댓값
       // → 로직 이동: _paddedRange()
-      return _paddedRange(-peak, peak);
+      return _paddedRange(-floored, floored);
     }
     if (kind == ChartScaleKind.padded) {
       // → 로직 이동: _paddedRange()

@@ -189,11 +189,13 @@ class ReportChartAxes {
   );
 
   /// 작성: 2026-09-17 10:05:00 · 박건준
-  /// 수정: 2026-10-22 10:30:00 · 박건준
+  /// 수정: 2026-10-23 12:30:00 · 박건준
   /// 변수: accel
   /// 목적: 수직 가속도 차트의 세로축. 0 을 가운데 두고 틀 = ±(데이터 최대
   ///       절댓값 x 1.2), 반올림 없음(`ChartScaleKind.paddedSymmetric`).
-  ///       최소 범위는 데이터가 모두 0 일 때만 쓴다.
+  ///       최소 범위는 데이터가 모두 0 일 때만 쓴다. 최대 절댓값이
+  ///       `motionlessPeak` 보다 작은 거의 정지한 기록은 틀을 ±0.03 으로
+  ///       둔다(2026-10-23).
   /// 근거: 측정 — 2026-10-22 OTIS 리포트 3쪽 가속도 · 저크 차트 6개의 틀이
   ///       데이터 최대 절댓값의 1.20 ~ 1.22배(저크 3회만 1.34). 예전 "±0.6
   ///       을 넘으면 ±0.75 · ±1 로 넓힘" 을 바꾼다
@@ -203,16 +205,17 @@ class ReportChartAxes {
     scale: ChartScale(
       minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.3),
       kind: ChartScaleKind.paddedSymmetric,
+      minimumPeak: motionlessPeak,
     ),
   );
 
   /// 작성: 2026-09-17 10:05:00 · 박건준
-  /// 수정: 2026-10-22 10:30:00 · 박건준
+  /// 수정: 2026-10-23 12:30:00 · 박건준
   /// 변수: jerk
   /// 목적: 저크(가속도가 얼마나 빠르게 변하는지) 차트의 세로축. 가속도와
-  ///       같은 0 대칭 여백 규칙이다(`accel` 근거 참고). 저크는 1.6Hz 저역
-  ///       가속도를 미분한 값이라(`CaptureConfig.jerkLowpassHz`) 정상 운행이면
-  ///       ±0.6 안이다.
+  ///       같은 0 대칭 여백 규칙 · 정지 기록 바닥(`motionlessPeak`)이다
+  ///       (`accel` 근거 참고). 저크는 1.6Hz 저역 가속도를 미분한 값이라
+  ///       (`CaptureConfig.jerkLowpassHz`) 정상 운행이면 ±0.6 안이다.
   /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관) · 2026-10-21
   ///       오티스폰 리포트 3쪽 저크 차트 범위 ±0.6, 눈금 0.2
   static const ChartAxisSpec jerk = ChartAxisSpec(
@@ -221,8 +224,22 @@ class ReportChartAxes {
     scale: ChartScale(
       minimum: ChartAxisRange(min: -0.6, max: 0.6, tickStep: 0.2),
       kind: ChartScaleKind.paddedSymmetric,
+      minimumPeak: motionlessPeak,
     ),
   );
+
+  /// 작성: 2026-10-23 12:30:00 · 박건준
+  /// 변수: motionlessPeak
+  /// 목적: 가속도 · 저크 축이 데이터 최대 절댓값을 이보다 작게 보지 않는 값
+  ///       (m/s², m/s³). 틀이 ±0.03(= 0.025 x 1.2) 보다 좁아지지 않아 눈금
+  ///       간격이 0.01 밑으로 내려가지 않는다 — 눈금 라벨은 소수 둘째
+  ///       자리까지 적으므로(`ReportChartRenderer.tickLabelDecimals`) 그보다
+  ///       잘게 나누면 이웃 라벨이 같은 숫자로 반올림돼 겹친다.
+  /// 근거: 측정 — 운행 기록(ride_reference · 개발폰 처리 픽스처)은 최대
+  ///       절댓값이 이 값보다 훨씬 커 바닥에 걸리지 않아 틀 · 눈금이
+  ///       그대로다. 걸리는 것은 거의 움직이지 않은 정지 기록뿐이다
+  ///       (2026-10-23 사용자 지시)
+  static const double motionlessPeak = 0.025;
 
   /// 작성: 2026-09-26 14:10:00 · 박건준
   /// 변수: all
