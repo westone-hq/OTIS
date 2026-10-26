@@ -65,11 +65,16 @@ class UnreadableMeasurement {
 ///         보여 주게 된다.
 class MeasurementRepository {
   /// 작성: 2026-10-15 22:22:45 · 박건준
+  /// 수정: 2026-10-26 12:11:41 · 박건준
   /// 변수: maxStoredMeasurements
   /// 목적: 기기에 남겨 두는 측정 결과 수. 새 측정을 저장한 뒤 이보다
   ///       많으면 오래된 것부터 지운다(`pruneOldest()`).
-  /// 근거: 인용 — 2026-10-15 사용자 지시 "30개 쌓이면 지우는걸로"
-  static const int maxStoredMeasurements = 30;
+  /// 근거: 인용 — 2026-10-26 사용자 지시 "100개까지로 늘려줘"(전에는
+  ///       2026-10-15 "30개 쌓이면 지우는걸로"). 측정 한 건은 44초 운행에
+  ///       약 5MB(측정 — ride_reference: result.json 0.65MB · report.pdf
+  ///       1.16MB · raw.txt 0.31MB, native_raw.txt 는 어림 2~3MB)라
+  ///       100건이면 0.5GB 안팎이다
+  static const int maxStoredMeasurements = 100;
 
   /// 작성: 2026-09-26 09:30:00 · 박건준
   /// 변수: resultFileName

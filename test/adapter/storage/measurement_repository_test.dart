@@ -315,8 +315,14 @@ void main() {
   });
 
   group('MeasurementRepository 개수 제한', () {
+    const max = MeasurementRepository.maxStoredMeasurements; // 남기는 수
     // 2026-10-01 10:00:00 부터 1분씩 늦은 측정 ID
-    String idAt(int i) => '20261001-10${i.toString().padLeft(2, '0')}00';
+    String idAt(int i) {
+      final t = DateTime(2026, 10, 1, 10, i); // 측정 시각
+      String two(int v) => v.toString().padLeft(2, '0');
+      return '2026${two(t.month)}${two(t.day)}-${two(t.hour)}${two(t.minute)}00';
+    }
+
     Future<void> saveMany(int count) async {
       for (var i = 0; i < count; i++) {
         await repo.save(_result(idAt(i), DateTime(2026, 10, 1, 10, i)));
@@ -333,30 +339,30 @@ void main() {
     }
 
     test('넘지 않으면 아무것도 지우지 않는다', () async {
-      await saveMany(MeasurementRepository.maxStoredMeasurements);
+      await saveMany(max);
 
-      expect(await repo.pruneOldest(keepId: idAt(29)), isEmpty);
-      expect(await names(), hasLength(30));
+      expect(await repo.pruneOldest(keepId: idAt(max - 1)), isEmpty);
+      expect(await names(), hasLength(max));
     });
 
-    test('넘으면 오래된 것부터 지우고 최근 30건을 남긴다', () async {
-      await saveMany(32);
+    test('넘으면 오래된 것부터 지우고 최근 것을 한도만큼 남긴다', () async {
+      await saveMany(max + 2);
       final base = await repo.getBaseDirectory(); // 기준 폴더
       // 결과 없이 멈춘 측정 폴더 — 오래된 것 하나, 최근 것 하나
       await Directory('${base.path}/20260901-090000').create();
-      await Directory('${base.path}/20261001-120000').create();
+      await Directory('${base.path}/${idAt(max + 2)}').create();
 
-      final deleted = await repo.pruneOldest(keepId: idAt(31));
+      final deleted = await repo.pruneOldest(keepId: idAt(max + 1));
 
       expect(deleted, <String>[idAt(1), idAt(0), '20260901-090000']);
       final left = await names(); // 남은 폴더
-      expect(left, hasLength(31));
-      expect(left, contains('20261001-120000'));
-      expect((await repo.list()).length, 30);
+      expect(left, hasLength(max + 1));
+      expect(left, contains(idAt(max + 2)));
+      expect((await repo.list()).length, max);
     });
 
     test('방금 저장한 측정은 이름이 가장 오래돼 보여도 남긴다', () async {
-      await saveMany(31);
+      await saveMany(max + 1);
 
       final deleted = await repo.pruneOldest(keepId: idAt(0));
 
