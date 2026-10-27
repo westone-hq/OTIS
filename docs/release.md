@@ -59,8 +59,10 @@ flutter build apk --release
 `apksigner` 가 보여 주는 인증서 SHA-256 지문이 아래 값과 같아야 한다.
 다르면(특히 `CN=Android Debug`) 배포하지 않는다.
 
-- 릴리스 키 인증서 SHA-256 (2026-10-13 생성, 별칭 `vcheck`):
-  `309a7739c3b18f46a01dd5b442cafa7f0cc89a2efaf41da14dc213e07d1f3534`
+- 릴리스 키 인증서 SHA-256 (2026-10-27 생성, 별칭 `vcheck`, `CN=OTIS V-Check`):
+  `985405947be9a646338c11815a441df9ec7d47a451e8dd504b1b173d35a704bf`
+- 2026-10-13 키(`309a7739…3534`)는 쓰지 않는다(`docs/decisions.md`
+  2026-10-27). 이 지문으로 서명된 APK 는 배포하지 않는다.
 
 지문 · 인증서 이름은 비밀이 아니다(APK 를 받은 누구나 볼 수 있다). 비밀은
 키 파일과 비밀번호다.
