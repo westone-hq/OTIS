@@ -231,13 +231,13 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-11 19:09:59 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: _rerun
   /// 목적: 이 결과와 같은 현장 정보로 곧바로 다시 측정한다. 순서대로
   ///       진행한다.
   ///       1. 되살린 현장 정보가 지금 필수 항목을 다 갖췄는지
-  ///          `SiteInfo.validate()` 로 본다. 하중 · 우편번호를 받기 전의
-  ///          예전 결과는 걸린다. 그때는 홈에서 채우라고 안내만 하고
+  ///          `SiteInfo.validate()` 로 본다. 하중을 받기 전의 예전 결과 ·
+  ///          lb 결과는 걸린다. 그때는 홈에서 채우라고 안내만 하고
   ///          멈춘다 — 그대로 재면 측정이 끝난 뒤 저장 검사에서 거절돼
   ///          운행 한 번이 버려진다
   ///       2. 운전 방향을 다시 고르게 한다. 상승 측정 다음은 보통 하강이라
@@ -262,7 +262,7 @@ class _ResultScreenState extends State<ResultScreen> {
           context,
           title: '현장 정보 확인',
           message:
-              '이 측정에는 지금 필요한 현장 정보(주소 · 우편번호 · 하중 등) 중 '
+              '이 측정에는 지금 필요한 현장 정보(하중 등) 중 '
               '빠진 항목이 있습니다.\n홈에서 빠진 항목을 입력한 뒤 측정하세요.',
           confirmLabel: '확인',
           barrierDismissible: true,
@@ -359,12 +359,13 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-22 23:50:00 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: _buildHeader
   /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 제번 · 현장명,
-  ///       측정 일시, 운전 방향 · 층 · 기종, 주소(있을 때만)를 보여준다.
+  ///       측정 일시, 운전 방향 · 층 · 기종을 보여준다. 주소는 받지 않아
+  ///       (2026-10-27) 예전 결과에 있어도 보이지 않는다.
   ///       층은 출발층 → 도착층이다(하강이면 최상층 → 최하층, 리포트 1쪽
-  ///       층 정보와 같은 `SiteInfo.startStopFloors()`).
+  ///       층 정보와 같은 `SiteInfo.startStopFloors()`). 지하층은 "B1".
   /// 인자: result — 보여줄 측정 결과
   /// 반환: 머리 카드 위젯
   Widget _buildHeader(MeasurementResult result) {
@@ -385,12 +386,11 @@ class _ResultScreenState extends State<ResultScreen> {
           const SizedBox(height: AppDims.gapHalf),
           Text(when, style: AppText.caption),
           Text(
-            '${result.direction} · $start층 → '
-            '$stop층${model == null ? '' : ' · $model'}',
+            // → 로직 이동: SiteInfo.floorLabel()
+            '${result.direction} · ${SiteInfo.floorLabel(start)}층 → '
+            '${SiteInfo.floorLabel(stop)}층${model == null ? '' : ' · $model'}',
             style: AppText.caption,
           ),
-          if (result.address.isNotEmpty)
-            Text(result.address, style: AppText.caption),
         ],
       ),
     );

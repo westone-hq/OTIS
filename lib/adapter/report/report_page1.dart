@@ -383,10 +383,12 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: headerValues
   /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
   ///       자리 표시 문구(`ReportPage1Layout.placeholder`, "미입력")를 찍는다.
+  ///       주소 칸만 예외로 비운다 — 주소 · 우편번호를 받지 않는다
+  ///       (2026-10-27). 서식의 "주소:" 라벨은 2차 서식 작업에서 지운다.
   ///       - 제번 → 측정 ID, 현장명 → 건물명, 최하층·최상층 → 층 정보
   ///       - 엔지니어 → 저장 시점 로그인 작업자 성명(2026-10-18)
   ///       - 제품 → "엘리베이터, 기종". 기종의 쉼표는 이 표기에서만
@@ -398,8 +400,8 @@ class ReportPage1Renderer {
   ///         단위표기는 결과에 저장된 단위를 따른다 — 새 결과는 늘
   ///         킬로그램, 단위를 고를 수 있던 빌드의 lb 결과는 파운드
   ///       - 측정 종류 → 해석 종류. 없으면 기본값 "층간 시험"
-  ///       - 주소 → "주소, 우편번호". 하나만 있으면 그것만
-  ///       - 층 정보 → "Start Floor : 최하층, Stop Floor : 최상층"
+  ///       - 층 정보 → "Start Floor : 최하층, Stop Floor : 최상층". 지하층은
+  ///         "B1" 꼴(`SiteInfo.floorLabel()`, 2026-10-27)
   ///         (2026-10-15 사용자 지시, 예전 "시작층 · 도착층"). 하강이면
   ///         "Start Floor : 최상층, Stop Floor : 최하층" 이다 — 홈 화면은
   ///         최하층 · 최상층을 받고(최상층 > 최하층 검사), 출발 · 도착은
@@ -426,10 +428,6 @@ class ReportPage1Renderer {
     final unitLabel = unit == null
         ? ''
         : SiteInfo.loadUnitReportLabels[unit] ?? unit; // 리포트 단위 표기
-    final addressParts = <String>[
-      if (result.address.isNotEmpty) result.address,
-      if (result.postalCode case final code? when code.isNotEmpty) code,
-    ]; // 주소 칸에 이어 쓸 조각
     const placeholder = ReportPage1Layout.placeholder; // 값이 없을 때 찍는 문구
     // → 로직 이동: SiteInfo.startStopFloors()
     final floors = SiteInfo.startStopFloors(
@@ -451,9 +449,14 @@ class ReportPage1Renderer {
       'standard': 'Standard',
       'test_type': result.analysisType ?? SiteInfo.defaultAnalysisType,
       'direction': result.direction,
-      'floors': 'Start Floor : ${floors.$1}, Stop Floor : ${floors.$2}',
+      // → 로직 이동: SiteInfo.floorLabel()
+      'floors':
+          'Start Floor : ${SiteInfo.floorLabel(floors.$1)}, '
+          'Stop Floor : ${SiteInfo.floorLabel(floors.$2)}',
       'building_name': result.siteName,
-      'address': addressParts.isEmpty ? placeholder : addressParts.join(', '),
+      // 주소 · 우편번호는 받지 않아(2026-10-27) 칸을 비운다. "미입력" 도
+      // 찍지 않는다 — 넣지 않기로 한 칸이다. 예전 결과의 값도 찍지 않는다
+      'address': '',
     };
   }
 

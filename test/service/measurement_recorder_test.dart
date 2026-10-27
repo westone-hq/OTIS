@@ -70,13 +70,11 @@ const MethodChannel _sensorsMethod = MethodChannel(
 const _site = SiteInfo(
   jobNo: '2025F 1234R01',
   siteName: '럭키종합건설/송정동근생',
-  address: '부산시 해운대구',
   bottomFloor: '1',
   topFloor: '8',
   direction: SiteInfo.directionUp,
   model: SiteInfo.defaultModel,
   load: '1000',
-  postalCode: '48094',
 );
 
 /// 작성: 2026-10-04 13:36:00 · 박건준
@@ -154,13 +152,11 @@ void main() {
       const reversed = SiteInfo(
         jobNo: '2025F 1234R01',
         siteName: '현장',
-        address: '부산시 해운대구',
         bottomFloor: '8',
         topFloor: '1',
         direction: SiteInfo.directionUp,
         model: SiteInfo.defaultModel,
         load: '1000',
-        postalCode: '48094',
       ); // 층수만 거꾸로이고 나머지는 검사를 통과하는 현장 정보
       expect(reversed.validate(), [SiteFieldError.floorNotAscending]);
       final outcome = await MeasurementRecorder.record(

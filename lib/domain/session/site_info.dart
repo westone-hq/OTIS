@@ -1,27 +1,23 @@
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 /// 작성: 2026-10-04 13:31:53 · 박건준
-/// 수정: 2026-10-11 17:26:58 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 클래스: SiteFieldError
 /// 목적: 현장 정보 입력 검사에서 걸린 항목의 종류. 화면이 종류마다 안내
-///       문구와 옮겨 갈 입력칸을 고른다. 층수 오류 셋, 하중 오류 둘,
-///       우편번호 오류 둘은 각각 한 번에 하나만 나온다.
+///       문구와 옮겨 갈 입력칸을 고른다. 층수 오류 셋, 하중 오류 둘은 각각
+///       한 번에 하나만 나온다. 주소 · 우편번호는 2026-10-27 부터 받지 않아
+///       검사하지 않는다.
 ///       - `jobNoMissing` — 제번이 비었다
 ///       - `siteNameMissing` — 현장명이 비었다
-///       - `addressMissing` — 주소가 비었다
-///       - `postalCodeMissing` — 우편번호가 비었다
-///       - `postalCodeInvalid` — 우편번호가 숫자 5자리가 아니다
 ///       - `loadMissing` — 하중이 비었다
 ///       - `loadNotNumber` — 하중이 0 보다 큰 유한한 숫자가 아니다
 ///       - `floorMissing` — 최하층이나 최상층이 비었다
-///       - `floorNotNumber` — 층수가 정수가 아니다
+///       - `floorNotNumber` — 층수가 층 표기(`SiteInfo.parseFloor()`)가
+///         아니다
 ///       - `floorNotAscending` — 최상층이 최하층보다 크지 않다
 enum SiteFieldError {
   jobNoMissing,
   siteNameMissing,
-  addressMissing,
-  postalCodeMissing,
-  postalCodeInvalid,
   loadMissing,
   loadNotNumber,
   floorMissing,
@@ -106,14 +102,13 @@ class SiteInfo {
     '사이클 저크(가속도증가율) 테스트',
   ];
 
-  /// 작성: 2026-10-11 17:26:58 · 박건준
-  /// 변수: postalCodeLength
-  /// 목적: 우편번호 자릿수. 검사(`validate()`)와 홈 화면 입력 길이 제한이
-  ///       함께 쓴다.
-  /// 근거: 표준 — 2015-08-01 시행 국가기초구역 우편번호(숫자 5자리).
-  ///       원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제 현장 리포트)
-  ///       1쪽 머리말 주소 끝 "10575" 도 5자리다
-  static const int postalCodeLength = 5;
+  /// 작성: 2026-10-27 11:00:00 · 박건준
+  /// 변수: basementPrefix
+  /// 목적: 지하층 표기 머리글자. "B1" 은 지하 1층이고 저장 값은 -1 이다.
+  ///       입력 · 결과 화면 · 메일 · 리포트가 모두 이 표기를 쓴다
+  ///       (`parseFloor()` · `floorLabel()`).
+  /// 근거: 인용 — 2026-10-27 사용자 결정 "지하층 표기는 B1 B2 형식으로"
+  static const String basementPrefix = 'B';
 
   /// 작성: 2026-10-11 16:58:59 · 박건준
   /// 변수: defaultAnalysisType
@@ -128,15 +123,11 @@ class SiteInfo {
   /// 현장명
   final String siteName;
 
-  /// 현장 주소. 입력하지 않았으면 빈 문자열
-  final String address;
-
-  /// 최하층. 숫자 문자열 (예: "1"). 홈 입력칸(`FloorFields`)이 숫자만 받아
-  /// 지하층은 넣을 수 없다 — 지하층 표기(-1 / B1)는 OTIS 확인 뒤 정한다
-  /// (`docs/pending_checks.md`). 검사(`validate()`)는 정수면 받는다
+  /// 최하층. 입력한 층 표기 그대로 (예: "1", 지하 1층 "B1"). 숫자로 바꾸는
+  /// 일은 `parseFloor()` 가 한다
   final String bottomFloor;
 
-  /// 최상층. 숫자 문자열 (예: "8")
+  /// 최상층. 입력한 층 표기 그대로 (예: "8")
   final String topFloor;
 
   /// 운전 방향. `directionUp` 또는 `directionDown`
@@ -152,58 +143,51 @@ class SiteInfo {
   /// 해석 종류. `analysisTypeOptions` 가운데 하나
   final String analysisType;
 
-  /// 우편번호. 입력한 문자열 그대로. 입력하지 않았으면 빈 문자열
-  final String postalCode;
-
   /// 추가 참고사항. 메일 본문에 들어간다. 비워 둘 수 있다
   final String notes;
 
   /// 작성: 2026-07-04 15:04:38 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: SiteInfo
-  /// 목적: 입력받은 현장 정보 값을 그대로 담는 생성자.
+  /// 목적: 입력받은 현장 정보 값을 그대로 담는 생성자. 주소 · 우편번호는
+  ///       2026-10-27 사용자 지시로 받지 않는다.
   /// 인자: jobNo — 제번
   ///       siteName — 현장명
-  ///       address — 현장 주소. 안 주면 빈 문자열
   ///       bottomFloor — 최하층
   ///       topFloor — 최상층
   ///       direction — 방향
   ///       model — 엘리베이터 모델명
   ///       load — 하중 입력 문자열 (`loadUnit` 단위). 안 주면 빈 문자열
   ///       analysisType — 해석 종류. 안 주면 `defaultAnalysisType`
-  ///       postalCode — 우편번호 입력 문자열. 안 주면 빈 문자열
   ///       notes — 추가 참고사항. 안 주면 빈 문자열
   const SiteInfo({
     required this.jobNo,
     required this.siteName,
-    this.address = '',
     required this.bottomFloor,
     required this.topFloor,
     required this.direction,
     required this.model,
     this.load = '',
     this.analysisType = defaultAnalysisType,
-    this.postalCode = '',
     this.notes = '',
   });
 
   /// 작성: 2026-10-04 16:44:32 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: SiteInfo.fromMap
   /// 목적: 기기에 저장해 둔 표에서 현장 정보를 되살린다. 홈 화면이 지난번
   ///       입력을 다시 채울 때 쓴다. 빠진 항목은 빈 값으로 두고, 운전
   ///       방향 · 기종 · 해석 종류는 `_known*()` 으로 지금 선택지에
   ///       맞춘다. 참고사항은 표에 없으므로 빈 칸으로 시작한다
-  ///       (`toMap()` 참고). 단위를 고를 수 있던 빌드가 표에 남긴
-  ///       "loadUnit" 항목(예: "lb")은 읽지 않는다 — 단위는 상수
-  ///       `loadUnit` 하나다.
+  ///       (`toMap()` 참고). 예전 빌드가 표에 남긴 "loadUnit"(예: "lb") ·
+  ///       "address" · "postalCode" 항목은 읽지 않는다 — 단위는 상수
+  ///       `loadUnit` 하나이고 주소 · 우편번호는 받지 않는다.
   /// 인자: map — `toMap()` 이 만든 표
   /// 반환: 되살린 현장 정보
   factory SiteInfo.fromMap(Map<String, String?> map) {
     return SiteInfo(
       jobNo: map['jobNo'] ?? '',
       siteName: map['siteName'] ?? '',
-      address: map['address'] ?? '',
       bottomFloor: map['bottomFloor'] ?? '',
       topFloor: map['topFloor'] ?? '',
       // → 로직 이동: _knownDirection()
@@ -216,29 +200,29 @@ class SiteInfo {
         analysisTypeOptions,
         defaultAnalysisType,
       ),
-      postalCode: map['postalCode'] ?? '',
     );
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: SiteInfo.fromResult
   /// 목적: 저장된 측정 결과에서 그 측정의 현장 정보를 되살린다. 결과
   ///       화면의 "테스트 재실행" 이 같은 현장 정보로 다시 재는 데 쓴다.
-  ///       하중 · 우편번호가 없는 예전 결과는 빈 칸으로 되살린다 — 재실행
-  ///       화면이 `validate()` 로 걸러 홈에서 채우게 한다. 하중 단위가
+  ///       하중이 없는 예전 결과는 빈 칸으로 되살린다 — 재실행 화면이
+  ///       `validate()` 로 걸러 홈에서 채우게 한다. 하중 단위가
   ///       `loadUnit` 이 아닌 예전 결과(lb)도 하중을 빈 칸으로 되살린다 —
-  ///       그 숫자를 그대로 쓰면 새 결과에 kg 로 잘못 저장된다. 참고사항은
-  ///       측정마다 새로 적으므로 되살리지 않는다.
+  ///       그 숫자를 그대로 쓰면 새 결과에 kg 로 잘못 저장된다. 층은 층
+  ///       표기(`floorLabel()`, 지하 "B1")로 되살린다. 참고사항은 측정마다
+  ///       새로 적으므로 되살리지 않는다.
   /// 인자: result — 저장된 측정 결과
   /// 반환: 되살린 현장 정보
   factory SiteInfo.fromResult(MeasurementResult result) {
     return SiteInfo(
       jobNo: result.jobNo,
       siteName: result.siteName,
-      address: result.address,
-      bottomFloor: '${result.bottomFloor}',
-      topFloor: '${result.topFloor}',
+      // → 로직 이동: floorLabel()
+      bottomFloor: floorLabel(result.bottomFloor),
+      topFloor: floorLabel(result.topFloor), // → 로직 이동: floorLabel()
       // → 로직 이동: _knownDirection()
       direction: _knownDirection(result.direction),
       model: _knownModel(result.model), // → 로직 이동: _knownModel()
@@ -251,12 +235,11 @@ class SiteInfo {
         analysisTypeOptions,
         defaultAnalysisType,
       ),
-      postalCode: result.postalCode ?? '',
     );
   }
 
   /// 작성: 2026-10-11 19:09:59 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: copyWith
   /// 목적: 일부 값만 바꾼 사본을 만든다. 넘기지 않은 값은 이 현장 정보의
   ///       값을 그대로 쓴다. 결과 화면 재실행이 운전 방향만 바꿔 다시 잴 때
@@ -266,27 +249,23 @@ class SiteInfo {
   SiteInfo copyWith({
     String? jobNo,
     String? siteName,
-    String? address,
     String? bottomFloor,
     String? topFloor,
     String? direction,
     String? model,
     String? load,
     String? analysisType,
-    String? postalCode,
     String? notes,
   }) {
     return SiteInfo(
       jobNo: jobNo ?? this.jobNo,
       siteName: siteName ?? this.siteName,
-      address: address ?? this.address,
       bottomFloor: bottomFloor ?? this.bottomFloor,
       topFloor: topFloor ?? this.topFloor,
       direction: direction ?? this.direction,
       model: model ?? this.model,
       load: load ?? this.load,
       analysisType: analysisType ?? this.analysisType,
-      postalCode: postalCode ?? this.postalCode,
       notes: notes ?? this.notes,
     );
   }
@@ -355,6 +334,38 @@ class SiteInfo {
     String fallback,
   ) => options.contains(saved) ? saved! : fallback;
 
+  /// 작성: 2026-10-27 11:00:00 · 박건준
+  /// 함수: parseFloor
+  /// 목적: 층 표기를 층 번호로 바꾼다. 층을 받아들이는 기준을 한 곳에 둔다
+  ///       — 홈 화면 검사(`validate()`)와 저장할 때 변환
+  ///       (`MeasurementAssembler.assemble()`)이 둘 다 이 함수를 쓴다.
+  ///       - "1" · "12" — 지상층
+  ///       - "B1" · "b2" — 지하층. 음수로 바꾼다(B1 → -1)
+  ///       - "-1" — 지하층 표기를 정하기 전 빌드가 받은 값. 기기에 남은
+  ///         입력이 그대로 통과하게 읽는다
+  ///       0층은 없으므로 받지 않는다.
+  /// 인자: text — 층 입력 문자열. 앞뒤 공백은 지우고 본다
+  /// 반환: 층 번호(지하는 음수). 층 표기가 아니면 null
+  static int? parseFloor(String text) {
+    final match = RegExp(
+      '^($basementPrefix|-)?([0-9]+)\$',
+      caseSensitive: false,
+    ).firstMatch(text.trim()); // 지하 표시 · 숫자, 맞지 않으면 null
+    if (match == null) return null;
+    final number = int.parse(match.group(2)!); // 층 숫자 (부호 없이)
+    if (number == 0) return null;
+    return match.group(1) == null ? number : -number;
+  }
+
+  /// 작성: 2026-10-27 11:00:00 · 박건준
+  /// 함수: floorLabel
+  /// 목적: 층 번호를 화면 · 메일 · 리포트에 적을 층 표기로 바꾼다. 지하는
+  ///       `basementPrefix` 를 붙인다(-1 → "B1").
+  /// 인자: floor — 층 번호 (지하는 음수)
+  /// 반환: 층 표기 (예: "8", "B1")
+  static String floorLabel(int floor) =>
+      floor < 0 ? '$basementPrefix${-floor}' : '$floor';
+
   /// 작성: 2026-10-11 17:26:58 · 박건준
   /// 함수: parseLoad
   /// 목적: 하중 입력 문자열을 숫자로 바꾼다. 하중을 받아들이는 기준을 한
@@ -381,7 +392,7 @@ class SiteInfo {
       load == load.truncateToDouble() ? load.toStringAsFixed(0) : '$load';
 
   /// 작성: 2026-10-04 16:44:32 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: toMap
   /// 목적: 기기에 저장할 표로 바꾼다. `SiteInfo.fromMap` 이 되읽는다.
   ///       참고사항은 넣지 않는다 — 현장마다 달라, 남겨 두면 다음 현장
@@ -391,38 +402,29 @@ class SiteInfo {
   Map<String, String> toMap() => <String, String>{
     'jobNo': jobNo,
     'siteName': siteName,
-    'address': address,
     'bottomFloor': bottomFloor,
     'topFloor': topFloor,
     'direction': direction,
     'model': model,
     'load': load,
     'analysisType': analysisType,
-    'postalCode': postalCode,
   };
 
   /// 작성: 2026-10-04 13:31:53 · 박건준
-  /// 수정: 2026-10-11 17:26:58 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: validate
   /// 목적: 측정을 시작해도 되는 현장 정보인지 검사한다. 홈 화면이 측정
   ///       시작 전에, `MeasurementRecorder` 가 저장 전에, 결과 화면이
   ///       재실행 전에 같은 기준으로 부른다 — 기준이 갈라지면 화면은
   ///       통과시켰는데 저장이 거절하는 일이 생긴다.
-  ///       필수: 제번 · 현장명 · 주소 · 우편번호 · 하중 · 층수. 참고사항만
-  ///       선택이다(2026-10-10 사용자 결정).
+  ///       필수: 제번 · 현장명 · 하중 · 층수. 참고사항만 선택이다
+  ///       (2026-10-10 사용자 결정). 주소 · 우편번호는 2026-10-27 부터 받지
+  ///       않는다.
   /// 반환: 걸린 항목 목록. 문제가 없으면 빈 목록
   List<SiteFieldError> validate() {
     final errors = <SiteFieldError>[]; // 걸린 항목을 모을 목록
     if (jobNo.trim().isEmpty) errors.add(SiteFieldError.jobNoMissing);
     if (siteName.trim().isEmpty) errors.add(SiteFieldError.siteNameMissing);
-    if (address.trim().isEmpty) errors.add(SiteFieldError.addressMissing);
-
-    final postalText = postalCode.trim(); // 앞뒤 공백을 지운 우편번호
-    if (postalText.isEmpty) {
-      errors.add(SiteFieldError.postalCodeMissing);
-    } else if (!RegExp('^[0-9]{$postalCodeLength}\$').hasMatch(postalText)) {
-      errors.add(SiteFieldError.postalCodeInvalid);
-    }
 
     // → 로직 이동: parseLoad()
     final loadValue = parseLoad(load); // 0 보다 큰 유한한 하중, 아니면 null
@@ -438,8 +440,8 @@ class SiteInfo {
       errors.add(SiteFieldError.floorMissing);
       return errors;
     }
-    final bottom = int.tryParse(bottomText); // 최하층 숫자, 정수가 아니면 null
-    final top = int.tryParse(topText); // 최상층 숫자, 정수가 아니면 null
+    final bottom = parseFloor(bottomText); // 최하층 번호, 층 표기가 아니면 null
+    final top = parseFloor(topText); // → 로직 이동: parseFloor()
     if (bottom == null || top == null) {
       errors.add(SiteFieldError.floorNotNumber);
     } else if (bottom >= top) {

@@ -78,8 +78,6 @@ MeasurementAssembleResult assembleRecord(
         const SiteInfo(
           jobNo: 'J',
           siteName: 'S',
-          address: 'A',
-          postalCode: '00000',
           bottomFloor: '1',
           topFloor: '8',
           direction: SiteInfo.directionUp,

@@ -24,13 +24,14 @@ class MeasurementResult {
   /// 현장명
   final String siteName;
 
-  /// 현장 주소. 입력하지 않았거나 주소를 받기 전의 측정이면 빈 문자열
+  /// 현장 주소. 2026-10-27 부터 받지 않아 새 결과는 빈 문자열이다. 그 전
+  /// 결과에 남은 값은 읽기만 하고 화면 · 리포트 · 메일에 쓰지 않는다
   final String address;
 
-  /// 최하층
+  /// 최하층. 지하층은 음수(B1 = -1, `SiteInfo.floorLabel()`)
   final int bottomFloor;
 
-  /// 최상층
+  /// 최상층. 지하층은 음수
   final int topFloor;
 
   /// 운전 방향
@@ -52,8 +53,8 @@ class MeasurementResult {
   /// null 이면 해석 종류를 받기 전의 예전 측정이다
   final String? analysisType;
 
-  /// 우편번호 (숫자 5자리 문자열). null 이면 우편번호를 받기 전의 예전
-  /// 측정이다
+  /// 우편번호 (숫자 5자리 문자열). 2026-10-11 ~ 10-27 사이 결과에만 있고
+  /// 그 밖은 null 이다. `address` 처럼 읽기만 한다
   final String? postalCode;
 
   /// 추가 참고사항. 메일 본문에만 쓰고 리포트에는 찍지 않는다. 비워

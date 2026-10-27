@@ -41,15 +41,17 @@ Future<void> _pumpHome(WidgetTester tester) async {
 }
 
 /// 작성: 2026-10-11 17:28:28 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 함수: _field
 /// 목적: 화면 위에서부터 n 번째 입력칸을 찾는다. 차례는 제번(0) ·
-///       현장명(1) · 우편번호(2) · 주소(3) · 최하층(4) · 최상층(5) ·
-///       하중(6) · 추가 참고사항(7) 이다.
+///       현장명(1) · 최하층(2) · 최상층(3) · 하중(4) · 추가 참고사항(5)
+///       이다. 주소 · 우편번호 칸은 2026-10-27 에 없앴다.
 /// 인자: index — 위에서부터의 차례
 /// 반환: 그 입력칸을 찾는 조건
 Finder _field(int index) => find.byType(TextField).at(index);
 
 /// 작성: 2026-10-11 17:28:28 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 함수: _fillRequired
 /// 목적: 필수 입력칸을 검사를 통과하는 값으로 모두 채운다. 참고사항은
 ///       비워 둔다.
@@ -57,21 +59,20 @@ Finder _field(int index) => find.byType(TextField).at(index);
 Future<void> _fillRequired(WidgetTester tester) async {
   await tester.enterText(_field(0), 'J-1');
   await tester.enterText(_field(1), '현장');
-  await tester.enterText(_field(2), '10575');
-  await tester.enterText(_field(3), '고양시 덕양구');
-  await tester.enterText(_field(4), '1');
-  await tester.enterText(_field(5), '8');
-  await tester.enterText(_field(6), '2000');
+  await tester.enterText(_field(2), '1');
+  await tester.enterText(_field(3), '8');
+  await tester.enterText(_field(4), '2000');
   await tester.pumpAndSettle();
 }
 
 /// 작성: 2026-10-04 14:35:59 · 박건준
-/// 수정: 2026-10-13 13:17:56 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 함수: main
 /// 목적: 홈 화면을 시험한다.
 ///       - 지난번 현장 정보로 입력창 · 선택지를 미리 채우는지, 선택지에
 ///         없는 저장값은 버리는지, 입력하는 즉시 저장하는지
-///       - 새 입력칸(우편번호 · 하중 · 해석 종류 · 참고사항)이 보이는지
+///       - 입력칸(하중 · 해석 종류 · 참고사항)이 보이고 주소 · 우편번호
+///         칸은 없는지, 층에 지하층(B1)을 넣을 수 있는지
 ///       - 하중 단위가 고르는 버튼 없이 고정 글자 kg 로 보이는지, 단위를
 ///         고를 수 있던 빌드가 남긴 저장값(lb)을 오류 없이 읽는지
 ///       - 필수 항목이 빠지면 측정을 시작하지 않고 안내하는지, 참고사항만
@@ -99,8 +100,8 @@ void main() {
     await _pumpHome(tester);
 
     expect(find.text('2024F 1447R01'), findsOneWidget);
-    expect(find.text('서울시 강남구'), findsOneWidget);
-    expect(find.text('06236'), findsOneWidget);
+    expect(find.text('서울시 강남구'), findsNothing, reason: '주소 칸이 없다');
+    expect(find.text('06236'), findsNothing, reason: '우편번호 칸이 없다');
     expect(find.text('4400'), findsOneWidget);
     expect(find.text('줄-로우프, 2:1'), findsOneWidget);
     expect(find.text('브레이크 기능'), findsOneWidget);
@@ -154,7 +155,7 @@ void main() {
 
     await _pumpHome(tester);
     await tester.enterText(_field(0), 'J-77');
-    await tester.enterText(_field(6), '1500');
+    await tester.enterText(_field(4), '1500');
     await tester.pumpAndSettle();
 
     final saved = await PrefsStore.instance.loadLastSite(); // 저장된 현장 정보
@@ -162,13 +163,14 @@ void main() {
     expect(saved['load'], '1500');
   });
 
-  testWidgets('예시 힌트 없이 주소 · 층수 · 하중 힌트만 둔다', (tester) async {
+  testWidgets('예시 힌트 없이 층수 · 하중 힌트만 두고 지하층 안내를 단다', (tester) async {
     SharedPreferences.setMockInitialValues({});
 
     await _pumpHome(tester);
 
     expect(find.textContaining('예:'), findsNothing);
-    expect(find.text('도로명 주소'), findsOneWidget);
+    expect(find.text('도로명 주소'), findsNothing);
+    expect(find.text('지하층은 B1, B2 처럼 입력합니다'), findsOneWidget);
   });
 
   testWidgets('새 입력칸이 정한 차례대로 보인다', (tester) async {
@@ -177,7 +179,6 @@ void main() {
     await _pumpHome(tester);
 
     for (final label in <String>[
-      '우편번호',
       '하중',
       'kg',
       '분석 내용',
@@ -187,46 +188,62 @@ void main() {
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    expect(find.byType(TextField), findsNWidgets(8));
+    expect(find.text('우편번호'), findsNothing);
+    expect(find.text('주소'), findsNothing);
+    expect(find.byType(TextField), findsNWidgets(6));
     final top = <String, double>{
-      for (final label in <String>['주소', '하중', '분석 내용', '추가 참고사항 (선택)'])
+      for (final label in <String>['최하층', '하중', '분석 내용', '추가 참고사항 (선택)'])
         label: tester.getTopLeft(find.text(label)).dy,
     }; // 라벨마다 세로 자리
-    expect(top['주소']!, lessThan(top['하중']!));
+    expect(top['최하층']!, lessThan(top['하중']!));
     expect(top['하중']!, lessThan(top['분석 내용']!));
     expect(top['분석 내용']!, lessThan(top['추가 참고사항 (선택)']!));
   });
 
-  testWidgets('주소 · 우편번호 · 하중이 빠지면 시작하지 않고 안내한다', (tester) async {
+  testWidgets('하중이 빠지면 시작하지 않고 안내한다', (tester) async {
     SharedPreferences.setMockInitialValues({});
 
     await _pumpHome(tester);
     await tester.enterText(_field(0), 'J-1');
     await tester.enterText(_field(1), '현장');
-    await tester.enterText(_field(4), '1');
-    await tester.enterText(_field(5), '8');
+    await tester.enterText(_field(2), '1');
+    await tester.enterText(_field(3), '8');
     await tester.tap(find.text('측정 시작'));
     await tester.pumpAndSettle();
 
     expect(find.text(_startScreenText), findsNothing);
-    expect(find.text('우편번호를 입력하세요\n주소를 입력하세요'), findsOneWidget);
     expect(find.text('하중을 입력하세요'), findsOneWidget);
     expect(MeasurementSession.instance.currentSite, isNull);
   });
 
-  testWidgets('우편번호가 5자리가 아니거나 하중이 0 이면 안내한다', (tester) async {
+  testWidgets('층이 층 표기가 아니거나 하중이 0 이면 안내한다', (tester) async {
     SharedPreferences.setMockInitialValues({});
 
     await _pumpHome(tester);
     await _fillRequired(tester);
-    await tester.enterText(_field(2), '1057');
-    await tester.enterText(_field(6), '0');
+    await tester.enterText(_field(2), 'B');
+    await tester.enterText(_field(4), '0');
     await tester.tap(find.text('측정 시작'));
     await tester.pumpAndSettle();
 
     expect(find.text(_startScreenText), findsNothing);
-    expect(find.text('우편번호는 숫자 5자리로 입력하세요'), findsOneWidget);
+    expect(find.text('층수는 1 이상 숫자로, 지하층은 B1 처럼 입력하세요'), findsOneWidget);
     expect(find.text('하중은 0 보다 큰 숫자로 입력하세요'), findsOneWidget);
+  });
+
+  testWidgets('지하층은 소문자로 넣어도 B 로 바뀌어 측정에 실린다', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+
+    await _pumpHome(tester);
+    await _fillRequired(tester);
+    await tester.enterText(_field(2), 'b2');
+    await tester.pumpAndSettle();
+    expect(find.text('B2'), findsOneWidget);
+    await tester.tap(find.text('측정 시작'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_startScreenText), findsOneWidget);
+    expect(MeasurementSession.instance.currentSite!.bottomFloor, 'B2');
   });
 
   testWidgets('참고사항만 비어 있으면 측정을 시작한다', (tester) async {
@@ -239,7 +256,6 @@ void main() {
 
     expect(find.text(_startScreenText), findsOneWidget);
     final site = MeasurementSession.instance.currentSite!; // 실린 현장 정보
-    expect(site.postalCode, '10575');
     expect(site.load, '2000');
     expect(site.analysisType, '층간 시험');
     expect(site.notes, '');
@@ -250,7 +266,7 @@ void main() {
 
     await _pumpHome(tester);
     await _fillRequired(tester);
-    await tester.enterText(_field(7), '도어 쪽 소음 큼');
+    await tester.enterText(_field(5), '도어 쪽 소음 큼');
     await tester.tap(find.text('측정 시작'));
     await tester.pumpAndSettle();
 

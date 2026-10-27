@@ -392,8 +392,6 @@ void main() {
     MeasurementSession.instance.currentSite = const SiteInfo(
       jobNo: '2025F 1234R01',
       siteName: '시험 현장',
-      address: '경기도 고양시 덕양구 오금동',
-      postalCode: '10575',
       bottomFloor: '1',
       topFloor: '8',
       direction: SiteInfo.directionUp,
