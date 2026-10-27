@@ -316,7 +316,7 @@ void main() {
     await _openSheet(tester);
 
     expect(_checked(tester, 'PDF 리포트'), isTrue);
-    expect(_checked(tester, '로우 데이터 (raw.txt)'), isTrue);
+    expect(_checked(tester, '로우 데이터 (txt)'), isTrue);
     expect(_checked(tester, '현장 소음 (m4a)'), isTrue);
     expect(find.textContaining('native'), findsNothing);
   });
@@ -554,7 +554,7 @@ void main() {
     });
     await tester.runAsync(() => _saveJob(withRaw: true));
 
-    for (final uncheck in <String?>[null, 'PDF 리포트', '로우 데이터 (raw.txt)']) {
+    for (final uncheck in <String?>[null, 'PDF 리포트', '로우 데이터 (txt)']) {
       sender.sent = null;
       await _openSheet(tester);
       if (uncheck != null) {
@@ -579,7 +579,7 @@ void main() {
 
     await _openSheet(tester);
     await tester.tap(find.text('PDF 리포트'));
-    await tester.tap(find.text('로우 데이터 (raw.txt)'));
+    await tester.tap(find.text('로우 데이터 (txt)'));
     // 세 번째 항목은 작은 화면에서 아래 버튼 뒤에 있어 먼저 스크롤한다
     await tester.ensureVisible(find.text('현장 소음 (m4a)'));
     await tester.pumpAndSettle();
@@ -604,5 +604,44 @@ void main() {
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
     final button = tester.getRect(find.widgetWithText(ElevatedButton, '보내기'));
     expect(button.bottom, lessThanOrEqualTo(screen.height - inset));
+  });
+
+  testWidgets('받는 사람이 15개여도 끝까지 스크롤되고 보내기 버튼은 그대로 보인다', (tester) async {
+    // 2026-10-27 사용자 요청 "메일은 여러개 등록시 스크롤 잘 되는지 확인"
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final emails = <String>[
+      for (var i = 1; i <= 15; i++) 'user$i@otis.com',
+    ]; // 등록한 수신 이메일
+    SharedPreferences.setMockInitialValues({'emails': emails});
+    await tester.runAsync(() => _saveJob(withRaw: true));
+
+    await _openSheet(tester);
+    final sheetScroll = find.descendant(
+      of: find.byType(SendEmailSheet),
+      matching: find.byType(Scrollable),
+    ); // 받는 사람 · 보낼 항목을 함께 넘기는 목록
+    expect(find.text('user15@otis.com').hitTestable(), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('user15@otis.com'),
+      120,
+      scrollable: sheetScroll.first,
+    );
+    final before = _checked(tester, 'user15@otis.com'); // 누르기 전 선택
+    await tester.tap(find.text('user15@otis.com'));
+    await tester.pumpAndSettle();
+    expect(_checked(tester, 'user15@otis.com'), !before, reason: '맨 끝도 눌린다');
+    await tester.scrollUntilVisible(
+      find.text('현장 소음 (m4a)'),
+      120,
+      scrollable: sheetScroll.first,
+    );
+    expect(find.text('현장 소음 (m4a)').hitTestable(), findsOneWidget);
+    expect(
+      find.widgetWithText(ElevatedButton, '보내기').hitTestable(),
+      findsOneWidget,
+      reason: '목록이 길어도 아래 고정 버튼이 밀려나지 않는다',
+    );
   });
 }

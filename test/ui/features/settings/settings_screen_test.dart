@@ -85,4 +85,32 @@ void main() {
     expect(LoginSession.instance.current, isNull);
     expect(await PrefsStore.instance.loadLoginEmployeeId(), isNull);
   });
+
+  testWidgets('수신 이메일이 15개여도 끝까지 스크롤된다', (tester) async {
+    // 2026-10-27 사용자 요청 "메일은 여러개 등록시 스크롤 잘 되는지 확인"
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    LoginSession.instance.current = const Worker(
+      employeeId: 'T00001',
+      name: '홍길동',
+    );
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>[for (var i = 1; i <= 15; i++) 'user$i@otis.com'],
+    });
+
+    await _pumpSettings(tester);
+    await tester.scrollUntilVisible(
+      find.text('user15@otis.com'),
+      120,
+      scrollable: find.byType(Scrollable).first, // 화면 본문 스크롤
+    );
+    expect(find.text('user15@otis.com').hitTestable(), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('업데이트 확인'),
+      120,
+      scrollable: find.byType(Scrollable).first, // 화면 본문 스크롤
+    );
+    expect(find.text('업데이트 확인').hitTestable(), findsOneWidget);
+  });
 }

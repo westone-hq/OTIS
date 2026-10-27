@@ -229,7 +229,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   }
 
   /// 작성: 2026-10-04 13:37:23 · 박건준
-  /// 수정: 2026-10-18 10:12:30 · 박건준
+  /// 수정: 2026-10-27 15:00:00 · 박건준
   /// 함수: build
   /// 목적: 이메일 발송 시트를 그린다. 위에서부터 순서대로 놓는다.
   ///       1. 제목과 닫기 버튼
@@ -240,7 +240,10 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
   ///          원본(2026-10-08 결정)과 소음 진단 산출물(2026-10-15 결정)은
   ///          보낼 항목이 아니라 목록에 없다
   ///       4. 고를 것이 빠졌을 때의 안내와 "보내기" 버튼
-  ///       2 · 3 은 함께 스크롤되고 4 는 아래에 고정한다. 시트 아래쪽
+  ///       2 · 3 은 함께 스크롤되고 4 는 아래에 고정한다 — 받는 사람이 많아도
+  ///       보내기 버튼이 밀려나지 않는다(2026-10-27 15개로 확인).
+  ///       로우 데이터 항목 이름은 파일 이름이 ``up_RAW_…txt`` 로 바뀌어
+  ///       "(txt)" 로 적는다. 시트 아래쪽
   ///       시스템 영역은 `showAppSheet()` 가 비켜 준다.
   /// 인자: context — 이 시트가 화면 어디에 놓이는지 알려주는 값
   /// 반환: 화면 높이의 일정 비율을 차지하는 시트 내용
@@ -333,7 +336,7 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
                           setState(() => _sendPdf = val ?? false),
                     ),
                     _buildCheckboxItem(
-                      title: '로우 데이터 (raw.txt)',
+                      title: '로우 데이터 (txt)',
                       value: _sendRaw,
                       onChanged: (val) =>
                           setState(() => _sendRaw = val ?? false),
