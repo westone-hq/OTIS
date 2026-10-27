@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/mail/mail_composer.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 /// 작성: 2026-10-23 00:30:00 · 박건준
@@ -27,57 +28,68 @@ MeasurementResult _result() {
 }
 
 /// 작성: 2026-10-23 00:30:00 · 박건준
+/// 수정: 2026-10-27 13:00:00 · 박건준
 /// 함수: main
-/// 목적: 메일 제목 · 본문 · 첨부 이름(`MailComposer`)이 이전 메일 시트와
-///       글자 하나까지 같은지 본다. 파일을 모으는 경로는
+/// 목적: 메일 제목 · 본문 · 첨부 이름(`MailComposer`)을 글자 하나까지 본다.
+///       이름 · 제목은 2026-10-27 방향 표시(up · dn) 규칙이다. 파일을 모으는 경로는
 ///       `send_email_sheet_test` 가 본다.
 void main() {
-  test('첨부 이름에 제번 · 측정 ID 를 넣고 파일 이름에 못 쓰는 글자는 _ 로 바꾼다', () {
+  test('첨부 이름은 방향 · 종류 · 제번 · 측정 ID 이고 못 쓰는 글자는 _ 로 바꾼다', () {
     final item = _result().copyWith(jobNo: '2024F 1447/R01'); // 공백 · 빗금 제번
     expect(
-      MailComposer.attachmentName(item, MailItem.report),
-      'TUNE_2024F_1447_R01_20260114-110359.pdf',
+      MailComposer.attachmentName(item, MeasurementFile.report),
+      'up_REPORT_2024F_1447_R01_20260114-110359.pdf',
     );
     expect(
-      MailComposer.attachmentName(_result(), MailItem.raw),
-      'RAW_J-1_20260114-110359.txt',
+      MailComposer.attachmentName(_result(), MeasurementFile.raw),
+      'up_RAW_J-1_20260114-110359.txt',
+    );
+    final down = _result().copyWith(direction: '하강'); // 하강 측정
+    expect(
+      MailComposer.attachmentName(down, MeasurementFile.noise),
+      'dn_NOISE_J-1_20260114-110359.m4a',
     );
     expect(
-      MailComposer.attachmentName(_result(), MailItem.noise),
-      'NOISE_J-1_20260114-110359.m4a',
+      MailComposer.attachmentName(
+        _result().copyWith(direction: '상부 → 하부'),
+        MeasurementFile.report,
+      ),
+      startsWith('dn_'),
+      reason: '예전 하강 표기',
     );
   });
 
-  test('제목은 제번과 한국 시각(분까지)이다', () {
+  test('제목은 TUNE Summary Report-방향-제번 이고 날짜가 없다', () {
+    expect(MailComposer.subject(_result()), 'TUNE Summary Report-up-J-1');
     expect(
-      MailComposer.subject(_result()),
-      'TUNE Summary Report - J-1 - 2026-01-14 11:03',
+      MailComposer.subject(_result().copyWith(direction: '하강')),
+      'TUNE Summary Report-dn-J-1',
     );
   });
 
   test('첨부 · 누락 줄 문구', () {
     expect(
-      MailComposer.attachmentLine('RAW_J-1_x.txt', MailItem.raw),
+      MailComposer.attachmentLine('RAW_J-1_x.txt', MeasurementFile.raw),
       '- RAW_J-1_x.txt: 256Hz 원시값(EVIMP1, 축별 평균 제거 · 필터 없음)',
     );
     expect(
-      MailComposer.attachmentLine('T.pdf', MailItem.report),
+      MailComposer.attachmentLine('T.pdf', MeasurementFile.report),
       '- T.pdf: 앱 측정 결과(가공값)',
     );
     expect(
-      MailComposer.attachmentLine('N.m4a', MailItem.noise),
+      MailComposer.attachmentLine('N.m4a', MeasurementFile.noise),
       '- N.m4a: 측정 중 현장 소음 녹음(AAC)',
     );
     expect(
-      MailComposer.missingLine(MailItem.report, 'report.pdf'),
-      '누락: report.pdf — 리포트를 만들지 못했습니다',
+      MailComposer.missingLine(MeasurementFile.report, 'up_REPORT_J-1_x.pdf'),
+      '누락: up_REPORT_J-1_x.pdf — 리포트를 만들지 못했습니다',
     );
     expect(
-      MailComposer.missingLine(MailItem.raw, 'raw.txt'),
+      MailComposer.missingLine(MeasurementFile.raw, 'raw.txt'),
       '누락: raw.txt — 이 측정에는 로우 데이터 파일이 없습니다',
     );
     expect(
-      MailComposer.missingLine(MailItem.noise, 'noise.m4a'),
+      MailComposer.missingLine(MeasurementFile.noise, 'noise.m4a'),
       '누락: noise.m4a — 이 측정에는 현장 소음 녹음이 없습니다',
     );
   });

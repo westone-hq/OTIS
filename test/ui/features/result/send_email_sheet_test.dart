@@ -7,6 +7,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/auth/worker.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
@@ -107,7 +108,7 @@ MeasurementResult _result({String? notes, Worker? worker, String? placement}) {
 }
 
 /// 작성: 2026-10-10 13:54:43 · 박건준
-/// 수정: 2026-10-18 10:12:30 · 박건준
+/// 수정: 2026-10-27 13:00:00 · 박건준
 /// 함수: _saveJob
 /// 목적: 측정 한 건을 저장소에 저장하고, 측정 폴더에 리포트 · 원본 파일을
 ///       놓는다. 리포트를 미리 놓아 시험이 실제 PDF 를 그리지 않게 한다.
@@ -119,9 +120,11 @@ MeasurementResult _result({String? notes, Worker? worker, String? placement}) {
 ///       notes — 결과에 실을 추가 참고사항. 없으면 null
 ///       worker — 결과에 실을 저장 시점 작업자. 없으면 null
 ///       placement — 거치 방향 이름. 없으면 null
+///       legacyNames — true 면 2026-10-27 전 이름(`report.pdf` 등)으로 놓는다
 Future<void> _saveJob({
   required bool withRaw,
   bool withAudio = false,
+  bool legacyNames = false,
   String? notes,
   Worker? worker,
   String? placement,
@@ -137,20 +140,24 @@ Future<void> _saveJob({
       deviceCompensation: deviceCompensation,
     ),
   );
+  final saved = (await repo.load(_jobId))!; // 이름을 정할 저장된 결과
+  // 측정 폴더 안 이름. 2026-10-27 전 측정이면 예전 고정 이름이다
+  String stored(MeasurementFile file) =>
+      legacyNames ? file.legacyName : MeasurementNaming.fileNameOf(saved, file);
   await File(
-    '${dir.path}/${MeasurementRepository.reportFileName}',
+    '${dir.path}/${stored(MeasurementFile.report)}',
   ).writeAsString('%PDF-1.4');
   await File(
     '${dir.path}/${MeasurementRepository.nativeRawFileName}',
   ).writeAsString('native');
   if (withRaw) {
     await File(
-      '${dir.path}/${MeasurementRepository.rawFileName}',
+      '${dir.path}/${stored(MeasurementFile.raw)}',
     ).writeAsString('EVIMP1\n256\n');
   }
   if (withAudio) {
     await File(
-      '${dir.path}/${MeasurementRepository.noiseAudioFileName}',
+      '${dir.path}/${stored(MeasurementFile.noise)}',
     ).writeAsBytes(const <int>[0, 0, 0, 24]);
   }
 }
@@ -327,8 +334,8 @@ void main() {
     expect(find.text('마이크 원본 (audio.pcm)'), findsNothing);
     final email = await _sendAndCapture(tester, sender);
     expect(_names(email), <String>[
-      'TUNE_J-1_$_jobId.pdf',
-      'RAW_J-1_$_jobId.txt',
+      'up_REPORT_J-1_$_jobId.pdf',
+      'up_RAW_J-1_$_jobId.txt',
     ]);
     expect(email.body, isNot(contains('noise_diagnostics')));
   });
@@ -343,15 +350,18 @@ void main() {
     final email = await _sendAndCapture(tester, sender);
 
     expect(_names(email), <String>[
-      'TUNE_J-1_$_jobId.pdf',
-      'RAW_J-1_$_jobId.txt',
-      'NOISE_J-1_$_jobId.m4a',
+      'up_REPORT_J-1_$_jobId.pdf',
+      'up_RAW_J-1_$_jobId.txt',
+      'up_NOISE_J-1_$_jobId.m4a',
     ]);
     expect(
       email.body,
-      contains('- RAW_J-1_$_jobId.txt: 256Hz 원시값(EVIMP1, 축별 평균 제거 · 필터 없음)'),
+      contains('- up_RAW_J-1_$_jobId.txt: 256Hz 원시값(EVIMP1, 축별 평균 제거 · 필터 없음)'),
     );
-    expect(email.body, contains('- NOISE_J-1_$_jobId.m4a: 측정 중 현장 소음 녹음(AAC)'));
+    expect(
+      email.body,
+      contains('- up_NOISE_J-1_$_jobId.m4a: 측정 중 현장 소음 녹음(AAC)'),
+    );
     expect(email.body, contains('※ 첨부 3개'));
     expect(email.body, isNot(contains('누락')));
   });
@@ -366,10 +376,7 @@ void main() {
     final email = await _sendAndCapture(tester, sender);
 
     expect(_names(email), isNot(contains(startsWith('NOISE_'))));
-    expect(
-      email.body,
-      contains('누락: ${MeasurementRepository.noiseAudioFileName}'),
-    );
+    expect(email.body, contains('누락: up_NOISE_J-1_$_jobId.m4a'));
   });
 
   testWidgets('현장 소음을 해제하면 녹음이 있어도 붙이지 않고 누락도 적지 않는다', (tester) async {
@@ -387,8 +394,8 @@ void main() {
     final email = await _sendAndCapture(tester, sender);
 
     expect(_names(email), <String>[
-      'TUNE_J-1_$_jobId.pdf',
-      'RAW_J-1_$_jobId.txt',
+      'up_REPORT_J-1_$_jobId.pdf',
+      'up_RAW_J-1_$_jobId.txt',
     ]);
     expect(email.body, isNot(contains('누락')));
   });
@@ -408,7 +415,7 @@ void main() {
       email.body,
       startsWith(
         'OTIS 승강기 진동 측정 리포트입니다.\n\n[참고사항]\n'
-        '도어 쪽 소음 큼\n다음 점검 때 재측정\n\n- TUNE_',
+        '도어 쪽 소음 큼\n다음 점검 때 재측정\n\n- up_REPORT_',
       ),
     );
   });
@@ -423,7 +430,7 @@ void main() {
     final email = await _sendAndCapture(tester, sender);
 
     expect(email.body, isNot(contains('[참고사항]')));
-    expect(email.body, startsWith('OTIS 승강기 진동 측정 리포트입니다.\n- TUNE_'));
+    expect(email.body, startsWith('OTIS 승강기 진동 측정 리포트입니다.\n- up_REPORT_'));
   });
 
   testWidgets('결과에 실린 작업자를 첫 줄 아래에 사번 · 업체 · 팀과 함께 적는다', (tester) async {
@@ -449,9 +456,29 @@ void main() {
       email.body,
       startsWith(
         'OTIS 승강기 진동 측정 리포트입니다.\n'
-        '작업자: 홍길동 (T00001) · (주)시험승강기 · 설치1팀\n- TUNE_',
+        '작업자: 홍길동 (T00001) · (주)시험승강기 · 설치1팀\n- up_REPORT_',
       ),
     );
+  });
+
+  testWidgets('2026-10-27 전 이름으로 저장된 측정도 새 이름으로 붙인다', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'emails': <String>['a@otis.com'],
+    });
+    await tester.runAsync(
+      () => _saveJob(withRaw: true, withAudio: true, legacyNames: true),
+    );
+
+    await _openSheet(tester);
+    final email = await _sendAndCapture(tester, sender);
+
+    expect(_names(email), <String>[
+      'up_REPORT_J-1_$_jobId.pdf',
+      'up_RAW_J-1_$_jobId.txt',
+      'up_NOISE_J-1_$_jobId.m4a',
+    ]);
+    expect(email.body, isNot(contains('누락')));
+    expect(email.subject, 'TUNE Summary Report-up-J-1');
   });
 
   testWidgets('거치 · 미보정 기종 경고 줄은 본문에 넣지 않는다', (tester) async {
@@ -504,7 +531,7 @@ void main() {
     await tester.pumpAndSettle();
     final email = await _sendAndCapture(tester, sender);
 
-    expect(_names(email), <String>['RAW_J-1_$_jobId.txt']);
+    expect(_names(email), <String>['up_RAW_J-1_$_jobId.txt']);
     expect(email.body, contains('※ 첨부 1개'));
   });
 
@@ -517,8 +544,8 @@ void main() {
     await _openSheet(tester);
     final email = await _sendAndCapture(tester, sender);
 
-    expect(_names(email), <String>['TUNE_J-1_$_jobId.pdf']);
-    expect(email.body, contains('누락: ${MeasurementRepository.rawFileName}'));
+    expect(_names(email), <String>['up_REPORT_J-1_$_jobId.pdf']);
+    expect(email.body, contains('누락: up_RAW_J-1_$_jobId.txt'));
   });
 
   testWidgets('안드로이드 원본은 어떤 조합에서도 붙지 않는다', (tester) async {

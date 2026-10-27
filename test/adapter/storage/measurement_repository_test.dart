@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 /// 작성: 2026-09-26 09:30:00 · 박건준
@@ -270,13 +271,20 @@ void main() {
           .map((e) => e.uri.pathSegments.last)
           .toList(); // 폴더에 실제로 생긴 파일 이름
 
+      final saved = (await repo.load('20260114-110359'))!; // 저장한 결과
+      final known = <String>[
+        ...MeasurementRepository.jobFileNames,
+        for (final file in MeasurementFile.values)
+          MeasurementNaming.fileNameOf(saved, file),
+      ]; // 고정 이름 + 방향 · 제번 · 측정 ID 이름
       expect(names, isNotEmpty);
+      expect(
+        names,
+        contains('up_REPORT_2025F_1234R01_20260114-110359.pdf'),
+        reason: '리포트는 새 이름으로 만든다(2026-10-27)',
+      );
       for (final name in names) {
-        expect(
-          MeasurementRepository.jobFileNames,
-          contains(name),
-          reason: '저장소가 모르는 이름이 생겼다: $name',
-        );
+        expect(known, contains(name), reason: '저장소가 모르는 이름이 생겼다: $name');
       }
     });
 
@@ -284,11 +292,8 @@ void main() {
       expect(MeasurementRepository.jobFileNames, <String>[
         MeasurementRepository.resultFileName,
         MeasurementRepository.summaryFileName,
-        MeasurementRepository.reportFileName,
-        MeasurementRepository.rawFileName,
         MeasurementRepository.metaFileName,
         MeasurementRepository.nativeRawFileName,
-        MeasurementRepository.noiseAudioFileName,
       ]);
       expect(
         MeasurementRepository.jobFileNames.toSet().length,
@@ -387,9 +392,9 @@ void main() {
       final bytes = await made!.readAsBytes(); // 만든 PDF 내용
       expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
       expect(
-        made.path.endsWith(MeasurementRepository.reportFileName),
+        made.path.endsWith('up_REPORT_2025F_1234R01_20260114-110359.pdf'),
         isTrue,
-        reason: '측정 폴더 안에 남아야 다음에 다시 만들지 않는다',
+        reason: '측정 폴더 안에 새 이름으로 남아야 다음에 다시 만들지 않는다',
       );
       expect(await repo.ensureReportPdf('20260114-110359'), isNotNull);
     });
@@ -399,7 +404,7 @@ void main() {
         _result('20260114-110359', DateTime(2026, 1, 14)),
       ); // 저장된 폴더
       final made = File(
-        '${dir.path}/${MeasurementRepository.reportFileName}',
+        '${dir.path}/up_REPORT_2025F_1234R01_20260114-110359.pdf',
       ); // 미리 놓아 둘 리포트 자리
       await made.writeAsString('이미 만들어 둔 리포트');
 
@@ -407,6 +412,26 @@ void main() {
 
       expect(got, isNotNull);
       expect(await got!.readAsString(), '이미 만들어 둔 리포트');
+    });
+
+    test('2026-10-27 전 측정은 예전 이름(report.pdf · raw.txt)을 찾는다', () async {
+      final dir = await repo.save(
+        _result('20260114-110359', DateTime(2026, 1, 14)),
+      ); // 저장된 폴더
+      await File('${dir.path}/report.pdf').writeAsString('예전 리포트');
+      await File('${dir.path}/raw.txt').writeAsString('예전 로우 데이터');
+      final saved = (await repo.load('20260114-110359'))!; // 저장한 결과
+
+      final report = await repo.ensureReportPdf('20260114-110359'); // 리포트
+      expect(await report!.readAsString(), '예전 리포트', reason: '다시 만들지 않는다');
+      final raw = await repo.findFile(saved, MeasurementFile.raw); // 로우 데이터
+      expect(await raw!.readAsString(), '예전 로우 데이터');
+      expect(await repo.findFile(saved, MeasurementFile.noise), isNull);
+      expect(
+        await dir.list().map((e) => e.uri.pathSegments.last).toList(),
+        isNot(contains(startsWith('up_REPORT_'))),
+        reason: '예전 리포트가 있으면 새로 만들지 않는다',
+      );
     });
   });
 }

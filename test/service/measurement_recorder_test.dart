@@ -15,9 +15,23 @@ import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/mail/mail_composer.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/service/mail_service.dart';
 import 'package:vibration_checker/service/measurement_recorder.dart';
+
+/// 작성: 2026-10-27 13:00:00 · 박건준
+/// 함수: _fileName
+/// 목적: `_site` 로 2026-01-14 11:03:59 에 잰 측정의 산출물 이름
+///       (`MeasurementNaming.fileName()`, "up_RAW_2025F_1234R01_…").
+/// 인자: file — 산출물 종류
+/// 반환: 측정 폴더 안 파일 이름
+String _fileName(MeasurementFile file) => MeasurementNaming.fileName(
+  file,
+  direction: _site.direction,
+  jobNo: _site.jobNo,
+  id: '20260114-110359',
+);
 
 /// 작성: 2026-10-04 13:36:00 · 박건준
 /// 수정: 2026-10-23 11:30:00 · 박건준
@@ -65,8 +79,8 @@ const MethodChannel _sensorsMethod = MethodChannel(
 /// 작성: 2026-10-04 13:36:00 · 박건준
 /// 수정: 2026-10-11 17:28:28 · 박건준
 /// 변수: _site
-/// 목적: 검사를 통과하는 현장 정보. 2026-10-11 부터 필수인 주소 ·
-///       우편번호 · 하중까지 채운다.
+/// 목적: 검사를 통과하는 현장 정보. 하중까지 채운다(주소 · 우편번호는
+///       2026-10-27 부터 받지 않는다).
 const _site = SiteInfo(
   jobNo: '2025F 1234R01',
   siteName: '럭키종합건설/송정동근생',
@@ -200,8 +214,8 @@ void main() {
           .map((p) => p.split('/').last)
           .toList(); // 저장한 파일 이름
       expect(names, <String>[
-        MeasurementRepository.reportFileName,
-        MeasurementRepository.rawFileName,
+        'up_REPORT_2025F_1234R01_20260114-110359.pdf',
+        'up_RAW_2025F_1234R01_20260114-110359.txt',
         MeasurementRepository.metaFileName,
       ]);
       for (final path in outcome.savedPaths) {
@@ -320,7 +334,7 @@ void main() {
       // raw.txt 는 OTIS EVIMP1 관례대로 축별 전체 평균을 뺀 값이다
       final raw = await File(
         outcome.savedPaths.firstWhere(
-          (path) => path.endsWith(MeasurementRepository.rawFileName),
+          (path) => path.endsWith(_fileName(MeasurementFile.raw)),
         ),
       ).readAsLines(); // 값 파일 줄
       final rows = <List<double>>[
@@ -363,7 +377,7 @@ void main() {
 
       expect(
         outcome.savedPaths.last,
-        endsWith(MeasurementRepository.noiseAudioFileName),
+        endsWith(_fileName(MeasurementFile.noise)),
       );
       expect(await File(outcome.savedPaths.last).readAsBytes(), <int>[
         0,
@@ -458,7 +472,7 @@ void main() {
       final dir = await MeasurementRepository.instance.jobDirectory(
         '20260114-110359',
       ); // 이번 측정 폴더
-      return File('${dir.path}/${MeasurementRepository.rawFileName}').exists();
+      return File('${dir.path}/${_fileName(MeasurementFile.raw)}').exists();
     }
 
     /// 작성: 2026-10-07 02:10:57 · 박건준
@@ -704,7 +718,7 @@ void main() {
       // → 로직 이동: MailService.buildJobEmail()
       final email = await MailService.buildJobEmail(
         jobId: outcome.id!,
-        items: {MailItem.raw, MailItem.noise},
+        items: {MeasurementFile.raw, MeasurementFile.noise},
         recipients: const ['a@b.com'],
       ); // 녹음까지 고른 메일
       return (meta: meta, body: email.body);
@@ -739,8 +753,8 @@ void main() {
         read.body,
         contains(
           MailComposer.missingLine(
-            MailItem.noise,
-            MeasurementRepository.noiseAudioFileName,
+            MeasurementFile.noise,
+            _fileName(MeasurementFile.noise),
           ),
         ),
       );
@@ -779,8 +793,11 @@ void main() {
       );
       final read = await metaAndMail(outcome); // 집계 · 메일 본문
       expect(read.meta, contains('noiseAudioPath: null'));
-      expect(read.body, contains('누락: noise.m4a'));
-      expect(read.body, isNot(contains('누락: raw.txt')));
+      expect(read.body, contains('누락: ${_fileName(MeasurementFile.noise)}'));
+      expect(
+        read.body,
+        isNot(contains('누락: ${_fileName(MeasurementFile.raw)}')),
+      );
     });
   });
 }

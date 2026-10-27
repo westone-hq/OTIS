@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/measurement/result_warnings.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
@@ -359,9 +360,10 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-27 11:00:00 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 함수: _buildHeader
-  /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 제번 · 현장명,
+  /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 방향 · 제번
+  ///       (`MeasurementNaming.title()`, "up_제번") · 현장명,
   ///       측정 일시, 운전 방향 · 층 · 기종을 보여준다. 주소는 받지 않아
   ///       (2026-10-27) 예전 결과에 있어도 보이지 않는다.
   ///       층은 출발층 → 도착층이다(하강이면 최상층 → 최하층, 리포트 1쪽
@@ -382,7 +384,11 @@ class _ResultScreenState extends State<ResultScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${result.jobNo} · ${result.siteName}', style: AppText.bodyBold),
+          Text(
+            // → 로직 이동: MeasurementNaming.title()
+            '${MeasurementNaming.title(result)} · ${result.siteName}',
+            style: AppText.bodyBold,
+          ),
           const SizedBox(height: AppDims.gapHalf),
           Text(when, style: AppText.caption),
           Text(
@@ -397,7 +403,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-22 23:50:00 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 함수: _buildCompareBanner
   /// 목적: 지금 무엇과 비교하는지 알리고 비교를 끌 수 있는 줄을 만든다.
   /// 인자: compare — 비교 대상 결과
@@ -411,7 +417,8 @@ class _ResultScreenState extends State<ResultScreen> {
         children: [
           Expanded(
             child: Text(
-              '비교: ${compare.jobNo} · $when',
+              // → 로직 이동: MeasurementNaming.title()
+              '비교: ${MeasurementNaming.title(compare)} · $when',
               style: AppText.body,
               overflow: TextOverflow.ellipsis,
             ),

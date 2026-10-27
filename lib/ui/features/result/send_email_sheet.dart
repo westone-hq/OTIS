@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/adapter/storage/prefs_store.dart';
-import 'package:vibration_checker/domain/mail/mail_composer.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/service/mail_service.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
@@ -162,10 +162,10 @@ class _SendEmailSheetState extends State<SendEmailSheet> {
       // → 로직 이동: MailService.buildJobEmail()
       final email = await MailService.buildJobEmail(
         jobId: widget.jobId,
-        items: <MailItem>{
-          if (_sendPdf) MailItem.report,
-          if (_sendRaw) MailItem.raw,
-          if (_sendNoise) MailItem.noise,
+        items: <MeasurementFile>{
+          if (_sendPdf) MeasurementFile.report,
+          if (_sendRaw) MeasurementFile.raw,
+          if (_sendNoise) MeasurementFile.noise,
         },
         recipients: _recipients(), // → 로직 이동: _recipients()
       ); // 조립한 메일

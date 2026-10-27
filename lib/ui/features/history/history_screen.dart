@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
@@ -299,9 +300,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 함수: _buildListItem
-  /// 목적: 측정 결과 한 줄을 만든다. 왼쪽부터 상태, 제번 · 현장명과
+  /// 목적: 측정 결과 한 줄을 만든다. 왼쪽부터 상태, 방향 · 제번("up_제번",
+  ///       `MeasurementNaming.title()`) · 현장명과
   ///       측정 일시 · 요약, 삭제 버튼, 넘어가기 표시를 둔다. 줄 어디를
   ///       눌러도 결과 화면이 열린다.
   /// 인자: item — 보여줄 측정 결과
@@ -327,7 +329,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${item.jobNo} · ${item.siteName}',
+                    // → 로직 이동: MeasurementNaming.title()
+                    '${MeasurementNaming.title(item)} · ${item.siteName}',
                     style: AppText.bodyBold,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -350,7 +353,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
               // → 로직 이동: _confirmDelete()
               onPressed: () => _confirmDelete(
                 item.id,
-                '${item.jobNo} (${_formatDate(item.dateTime)})',
+                // → 로직 이동: MeasurementNaming.title()
+                '${MeasurementNaming.title(item)} '
+                '(${_formatDate(item.dateTime)})',
               ),
             ),
             const Icon(

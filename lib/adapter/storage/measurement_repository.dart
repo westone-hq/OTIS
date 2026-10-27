@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 /// 작성: 2026-10-15 16:50:04 · 박건준
@@ -86,16 +87,6 @@ class MeasurementRepository {
   /// 목적: 목록 화면이 읽는, 시계열을 뺀 파일 이름.
   static const String summaryFileName = 'summary.json';
 
-  /// 작성: 2026-09-26 09:30:00 · 박건준
-  /// 변수: reportFileName
-  /// 목적: 만들어 둔 리포트 파일 이름.
-  static const String reportFileName = 'report.pdf';
-
-  /// 작성: 2026-09-27 11:00:00 · 박건준
-  /// 변수: rawFileName
-  /// 목적: 격자에 맞춘 측정값 파일 이름 (EVIMP1, X Y Z 소음 네 열).
-  static const String rawFileName = 'raw.txt';
-
   /// 작성: 2026-09-27 11:00:00 · 박건준
   /// 변수: metaFileName
   /// 목적: 격자 환산 집계 파일 이름. 사람이 읽어 보는 진단용이다.
@@ -107,26 +98,19 @@ class MeasurementRepository {
   ///       이름.
   static const String nativeRawFileName = 'native_raw.txt';
 
-  /// 작성: 2026-10-18 10:12:30 · 박건준
-  /// 변수: noiseAudioFileName
-  /// 목적: 측정 중 마이크로 녹음한 현장 소음(AAC, M4A 틀) 파일 이름.
-  ///       안드로이드(`NoiseAudioEncoder`)가 남긴 것을 저장 절차가 이 폴더로
-  ///       옮겨 온다. 메일에 "현장 소음" 으로 붙는다.
-  static const String noiseAudioFileName = 'noise.m4a';
-
   /// 작성: 2026-09-27 11:00:00 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 변수: jobFileNames
-  /// 목적: 측정 폴더에 놓이는 파일 이름을 모두 모아 둔 것. 낱개 상수와
-  ///       같은 값이며, 폴더에 무엇이 들어가는지 한눈에 보거나 전부
-  ///       훑어야 할 때 쓴다.
+  /// 목적: 측정 폴더에 놓이는 이름이 고정된 파일을 모아 둔 것. 낱개 상수와
+  ///       같은 값이다. 리포트 · 로우 데이터 · 현장 소음은 이름에 방향 ·
+  ///       제번 · 측정 ID 가 들어가 여기 없다(`MeasurementNaming.fileName()`,
+  ///       2026-10-27). 그 전 측정 폴더에는 예전 고정 이름
+  ///       (`MeasurementFile.legacyName`)으로 남아 있다.
   static const List<String> jobFileNames = <String>[
     resultFileName,
     summaryFileName,
-    reportFileName,
-    rawFileName,
     metaFileName,
     nativeRawFileName,
-    noiseAudioFileName,
   ];
 
   /// 작성: 2026-09-26 09:30:00 · 박건준
@@ -431,65 +415,67 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-09-26 09:30:00 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 함수: ensureReportPdf
   /// 목적: 측정 한 건의 리포트 PDF 를 가져온다. 이미 만들어 둔 것이 있으면
-  ///       그대로 주고, 없으면 그 자리에서 만들어 남긴 뒤 준다. 측정을
-  ///       마칠 때 한 번 만들어 두므로 보통은 있는 쪽이다.
+  ///       (`findFile()`, 예전 이름 `report.pdf` 포함) 그대로 주고, 없으면 그
+  ///       자리에서 새 이름(`MeasurementNaming.fileNameOf()`)으로 만들어 남긴
+  ///       뒤 준다. 측정을 마칠 때 한 번 만들어 두므로 보통은 있는 쪽이다.
+  ///       이름에 방향 · 제번이 들어가 결과를 먼저 읽는다.
   /// 인자: id — 측정 결과 식별자
   /// 반환: 만들어졌거나 이미 있던 PDF 파일. 그런 측정이 저장돼 있지
   ///       않으면 null — 만들 밑천이 없다는 뜻이다. 만들다 실패하면 null
   ///       로 감추지 않고 그 예외를 그대로 올린다
   Future<File?> ensureReportPdf(String id) async {
-    // → 로직 이동: jobDirectory()
-    final dir = await jobDirectory(id); // 이 측정의 폴더
-    final file = File('${dir.path}/$reportFileName'); // 리포트 파일
-    if (await file.exists()) return file;
-
     // → 로직 이동: load()
     final result = await load(id); // 저장돼 있던 측정 결과, 없으면 null
     if (result == null) return null;
+    // → 로직 이동: findFile()
+    final existing = await findFile(result, MeasurementFile.report); // 있던 것
+    if (existing != null) return existing;
 
+    // → 로직 이동: jobDirectory()
+    final dir = await jobDirectory(id); // 이 측정의 폴더
+    // → 로직 이동: MeasurementNaming.fileNameOf()
+    final name = MeasurementNaming.fileNameOf(result, MeasurementFile.report);
     // → 로직 이동: writeTuneReport()
-    return writeTuneReport(result: result, path: file.path);
+    return writeTuneReport(result: result, path: '${dir.path}/$name');
   }
 
-  /// 작성: 2026-10-08 21:39:21 · 박건준
-  /// 함수: rawFile
-  /// 목적: 측정 한 건의 `raw.txt` 를 찾는다. 리포트와 달리 나중에 다시
-  ///       만들 수 없는 기록이라, 없으면 없다고만 알린다. `jobDirectory()`
-  ///       를 거치지 않는다 — 그 함수는 폴더가 없으면 만들어서, 찾기만
-  ///       하는 데 빈 측정 폴더가 기기에 남는다.
-  /// 인자: id — 측정 결과 식별자
-  /// 반환: 그 측정의 `raw.txt`. 예전 측정이거나 저장 도중 실패해 파일이
-  ///       없으면 null
-  Future<File?> rawFile(String id) async {
+  /// 작성: 2026-10-27 13:00:00 · 박건준
+  /// 함수: findFile
+  /// 목적: 측정 한 건의 리포트 · 로우 데이터 · 현장 소음 파일을 찾는다. 새
+  ///       이름(`MeasurementNaming.fileNameOf()`)을 먼저 보고, 없으면 2026-10-27
+  ///       전 이름(`MeasurementFile.legacyName`)을 본다 — 그 전 측정을 그대로
+  ///       메일로 보낼 수 있게 한다. `jobDirectory()` 를 거치지 않는다 — 그
+  ///       함수는 폴더가 없으면 만들어서, 찾기만 하는 데 빈 측정 폴더가 기기에
+  ///       남는다. 로우 데이터 · 녹음은 나중에 다시 만들 수 없는 기록이라
+  ///       없으면 없다고만 알린다.
+  /// 인자: result — 측정 결과 (이름에 쓸 방향 · 제번 · 측정 ID)
+  ///       file — 찾을 산출물 종류
+  /// 반환: 찾은 파일. 예전 측정 · 저장 도중 실패 · 녹음 없음 등으로 없으면
+  ///       null
+  Future<File?> findFile(MeasurementResult result, MeasurementFile file) async {
     // → 로직 이동: getBaseDirectory()
     final base = await getBaseDirectory(); // 산출물 기준 폴더
-    final file = File('${base.path}/$id/$rawFileName'); // 그 측정의 raw.txt
-    return await file.exists() ? file : null;
-  }
-
-  /// 작성: 2026-10-18 10:12:30 · 박건준
-  /// 함수: noiseAudioFile
-  /// 목적: 측정 한 건의 현장 소음 녹음(`noise.m4a`)을 찾는다. `rawFile()`
-  ///       과 같이 폴더를 만들지 않고 찾기만 한다.
-  /// 인자: id — 측정 결과 식별자
-  /// 반환: 그 측정의 `noise.m4a`. 녹음 기능 전 측정이거나, 마이크 권한이
-  ///       없었거나, 녹음이 실패해 파일이 없으면 null
-  Future<File?> noiseAudioFile(String id) async {
-    // → 로직 이동: getBaseDirectory()
-    final base = await getBaseDirectory(); // 산출물 기준 폴더
-    final file = File('${base.path}/$id/$noiseAudioFileName'); // 그 측정의 녹음
-    return await file.exists() ? file : null;
+    for (final name in <String>[
+      // → 로직 이동: MeasurementNaming.fileNameOf()
+      MeasurementNaming.fileNameOf(result, file),
+      file.legacyName,
+    ]) {
+      final found = File('${base.path}/${result.id}/$name'); // 찾아볼 파일
+      if (await found.exists()) return found;
+    }
+    return null;
   }
 
   /// 작성: 2026-10-05 10:03:35 · 박건준
-  /// 수정: 2026-10-23 00:20:00 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 함수: mailAttachmentCopy
   /// 목적: 측정 폴더의 파일을 메일용 이름으로 앱 임시 폴더(`mail/`)에
-  ///       복사한다. 측정 폴더 안 이름은 리포트 생성 · 목록 읽기가 기대하는
-  ///       이름이라 바꾸지 않는다. 같은 이름이 있으면 덮어쓴다.
+  ///       복사한다. 2026-10-27 부터 측정 폴더 안 이름과 첨부 이름이 같지만,
+  ///       메일 앱에 넘기는 통로가 이 폴더만 열어 사본이 필요하다. 같은 이름이
+  ///       있으면 덮어쓴다.
   ///       메일 앱에 넘기는 FileProvider 는 이 폴더 하나만 연다
   ///       (`android/app/src/main/res/xml/shared_file_paths.xml` 의
   ///       `cache-path mail/`). 폴더 이름 `mail` 을 바꾸면 그 파일도 같이

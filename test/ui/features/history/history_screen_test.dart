@@ -138,8 +138,8 @@ void main() {
     await tester.pumpWidget(_app());
     await _settle(tester);
 
-    final newer = tester.getTopLeft(find.text('J-NEW · 현장')); // 최근 줄 위치
-    final older = tester.getTopLeft(find.text('J-OLD · 현장')); // 옛 줄 위치
+    final newer = tester.getTopLeft(find.text('up_J-NEW · 현장')); // 최근 줄 위치
+    final older = tester.getTopLeft(find.text('up_J-OLD · 현장')); // 옛 줄 위치
     expect(newer.dy, lessThan(older.dy));
     expect(find.text('초과'), findsNWidgets(2), reason: 'Z 32mg 은 30mg 초과');
     expect(find.textContaining('Z 32.0mg 초과'), findsNWidgets(2));
@@ -164,8 +164,8 @@ void main() {
     await tester.pumpWidget(_app());
     await _settle(tester);
 
-    expect(find.text('J-NEW · 현장'), findsOneWidget, reason: '나머지는 정상');
-    expect(find.text('J-OLD · 현장'), findsNothing);
+    expect(find.text('up_J-NEW · 현장'), findsOneWidget, reason: '나머지는 정상');
+    expect(find.text('up_J-OLD · 현장'), findsNothing);
     expect(find.text('읽을 수 없는 결과'), findsOneWidget);
     expect(find.textContaining('20260113-090000'), findsOneWidget);
   });
@@ -173,7 +173,7 @@ void main() {
   testWidgets('한 줄을 누르면 그 측정의 결과 화면이 열린다', (tester) async {
     await tester.pumpWidget(_app());
     await _settle(tester);
-    await tester.tap(find.text('J-NEW · 현장'));
+    await tester.tap(find.text('up_J-NEW · 현장'));
     await _settle(tester);
 
     expect(find.text('측정 결과'), findsOneWidget);
@@ -188,8 +188,8 @@ void main() {
     await tester.tap(find.text('삭제'));
     await _settle(tester);
 
-    expect(find.text('J-NEW · 현장'), findsNothing);
-    expect(find.text('J-OLD · 현장'), findsOneWidget);
+    expect(find.text('up_J-NEW · 현장'), findsNothing);
+    expect(find.text('up_J-OLD · 현장'), findsOneWidget);
   });
 
   testWidgets('결과 화면에서 재실행해 새 결과가 생기면 돌아온 목록에 보인다', (tester) async {
@@ -197,7 +197,7 @@ void main() {
     // 바꿔 끼움) → 새 결과 저장 → 뒤로 오면 새 결과가 목록에 없었다
     await tester.pumpWidget(_app());
     await _settle(tester);
-    await tester.tap(find.text('J-OLD · 현장'));
+    await tester.tap(find.text('up_J-OLD · 현장'));
     await _settle(tester);
     _router.pushReplacement('/measuring');
     await _settle(tester);
@@ -209,7 +209,7 @@ void main() {
     _router.pop();
     await _settle(tester);
 
-    expect(find.text('J-RERUN · 현장'), findsOneWidget);
-    expect(find.text('J-OLD · 현장'), findsOneWidget);
+    expect(find.text('up_J-RERUN · 현장'), findsOneWidget);
+    expect(find.text('up_J-OLD · 현장'), findsOneWidget);
   });
 }

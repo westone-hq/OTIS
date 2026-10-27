@@ -30,6 +30,7 @@ import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/native_event.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/config/noise_config.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/ui/features/history/history_screen.dart';
@@ -241,7 +242,8 @@ Future<MeasurementResult> _recordFromRaw(
   final repo = MeasurementRepository.instance; // 저장소
   final dir = await repo.save(result); // 측정 폴더
   File(
-    '${dir.path}/${MeasurementRepository.rawFileName}',
+    // → 로직 이동: MeasurementNaming.fileNameOf()
+    '${dir.path}/${MeasurementNaming.fileNameOf(result, MeasurementFile.raw)}',
   ).writeAsStringSync(rawText);
   final pdf = await repo.ensureReportPdf(id); // 앱이 만든 리포트
   await pdf!.copy(pdfOut);
