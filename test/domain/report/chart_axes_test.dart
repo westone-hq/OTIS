@@ -5,6 +5,8 @@ import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/chart_axes.dart';
 import 'package:vibration_checker/domain/report/chart_scale.dart';
 
+import '../../support/reference_records.dart';
+
 /// 작성: 2026-09-17 10:05:00 · 박건준
 /// 변수: _sampleRate
 /// 목적: 시험에 쓰는 표본 주기 (Hz).
@@ -87,13 +89,14 @@ MeasurementResult _result() {
 }
 
 /// 작성: 2026-09-17 10:05:00 · 박건준
-/// 수정: 2026-10-22 23:40:00 · 박건준
+/// 수정: 2026-10-27 10:00:00 · 박건준
 /// 함수: main
 /// 목적: 차트 축 사양을 시험한다(렌더러 시험에서 옮겼다).
 ///       1. 축마다 세로축 범위 — 최소 범위를 지키는지, 넘치면 넓어지는지,
 ///          축마다 넓히는 모양이 맞는지
 ///       2. 눈금 만들기 — 마지막 눈금이 축 위끝에 정확히 떨어지는지
 ///       3. 축마다 그릴 시계열 고르기
+///       4. 빨간 점 두 지점 고르기 — 리포트와 결과 화면이 같이 쓴다
 void main() {
   group('ChartAxisSpec.rangeFor — 축마다 세로축 범위', () {
     test('데이터가 비면 최소 범위를 쓴다', () {
@@ -323,6 +326,53 @@ void main() {
       expect(
         () => ReportChartAxes.seriesOf(unknown, _result()),
         throwsArgumentError,
+      );
+    });
+  });
+
+  group('ReportChartAxes.ptpMarkers — 빨간 점 두 지점', () {
+    test('P2P 가 없으면 파형이 있어도 점을 고르지 않는다', () {
+      final result = _result(); // P2P 를 계산하지 않은 결과
+
+      expect(
+        ReportChartAxes.ptpMarkers(ReportChartAxes.x, result.xSeries, result),
+        isNull,
+      );
+      expect(
+        ReportChartAxes.ptpMarkers(
+          ReportChartAxes.speed,
+          result.speedSeries,
+          result.copyWith(xPtp: 11.0),
+        ),
+        isNull,
+        reason: '진동 축이 아니다',
+      );
+    });
+
+    test('운행 구간이 없는 예전 결과는 전체 최댓값 · 최솟값 자리다', () {
+      final result = _result().copyWith(xPtp: 11.0); // 구간 없는 예전 결과
+      final at = ReportChartAxes.ptpMarkers(
+        ReportChartAxes.x,
+        result.xSeries,
+        result,
+      ); // 고른 두 지점
+
+      expect(at?.high, 100, reason: '봉우리 8.0 을 꽂은 자리');
+      expect(at, ReportChartAxes.peakToPeakPair(result.xSeries, result));
+    });
+
+    test('실측 기록에서 X 는 반주기 쌍, 수직은 정속 구간 쌍이다', () {
+      final result = assembleRecord(rideReferencePath).result!; // 실측 결과
+      expect(result.motionZones, isNotNull);
+
+      expect(
+        ReportChartAxes.ptpMarkers(ReportChartAxes.x, result.xSeries, result),
+        ReportChartAxes.peakToPeakPair(result.xSeries, result),
+      );
+      expect(
+        ReportChartAxes.ptpMarkers(ReportChartAxes.z, result.zSeries, result),
+        ReportChartAxes.verticalPairs(result.zSeries, result)?.steady,
+        reason: '수직 최대(zPtp)는 정속 구간 안 최대다',
       );
     });
   });

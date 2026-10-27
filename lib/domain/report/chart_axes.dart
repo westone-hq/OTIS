@@ -45,11 +45,12 @@ class ChartAxisSpec {
   });
 
   /// 작성: 2026-09-17 10:05:00 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
+  /// 수정: 2026-10-27 10:00:00 · 박건준
   /// 함수: rangeFor
   /// 목적: 그릴 값이 모두 들어가는 세로축 범위를 고른다. 규칙은
-  ///       `ChartScale` 이 갖는다 — 결과 화면 그래프(아직 없다)를 더하면
-  ///       같은 규칙을 써야 PDF 와 화면이 같은 눈금을 보인다.
+  ///       `ChartScale` 이 갖는다 — 리포트 차트와 결과 화면 그래프
+  ///       (`result_charts.dart`)가 함께 써서 PDF 와 화면이 같은 눈금을
+  ///       보인다.
   /// 인자: values — 그릴 값 목록
   /// 반환: 고른 범위. 값이 없으면 최소 범위
   ChartAxisRange rangeFor(List<double> values) =>
@@ -274,11 +275,11 @@ class ReportChartAxes {
   }
 
   /// 작성: 2026-09-17 10:05:00 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
+  /// 수정: 2026-10-27 10:00:00 · 박건준
   /// 함수: seriesOf
   /// 목적: 축 사양에 맞는 시계열을 측정 결과에서 꺼낸다. 어떤 축이 어떤
-  ///       시계열을 그리는지 정하는 곳을 한 군데로 둔다. 리포트 차트가 쓰고,
-  ///       결과 화면 그래프(아직 없다)도 이것을 쓴다.
+  ///       시계열을 그리는지 정하는 곳을 한 군데로 둔다. 리포트 차트와 결과
+  ///       화면 그래프가 함께 쓴다.
   ///       속도는 부호 그대로 꺼낸다 — 하강이면 음수다. 위치는 하부층
   ///       정지레벨 기준이라 하강이면 운행 거리에서 0 으로 내려온다. OTIS
   ///       리포트 3쪽과 같다(2026-10-21, 2026-10-10 "속도는 크기로 그린다"
@@ -376,6 +377,37 @@ class ReportChartAxes {
     ); // 최대 반주기 P2P, 못 만들면 null
     if (best == null) return null;
     return orderedPair(values, best); // → 로직 이동: orderedPair()
+  }
+
+  /// 작성: 2026-10-27 10:00:00 · 박건준
+  /// 함수: ptpMarkers
+  /// 목적: 진동 세 축 차트에 빨간 점을 찍을 최대 P2P 두 지점을 고른다.
+  ///       리포트 2쪽(`ReportChartRenderer`)과 결과 화면 그래프가 같은 점을
+  ///       찍도록 고르는 규칙을 이 한 곳에 둔다.
+  ///       - 수직은 정속 구간 최대(`zPtp`) 쌍(`verticalPairs()`)이고, 정속
+  ///         구간이 없는 결과는 `peakToPeakPair()` 다
+  ///       - X · Y 는 `peakToPeakPair()` 다
+  ///       적을 P2P(`ptpOf()`)가 없으면 점도 고르지 않는다 — 값 없이 찍은
+  ///       점은 무엇을 가리키는지 알 수 없다.
+  /// 인자: spec — 축 사양
+  ///       values — 그린 시계열 (줄이기 전)
+  ///       result — 지표 · 구간을 가진 측정 결과
+  /// 반환: (높은 쪽, 낮은 쪽) 첨자. 진동 축이 아니거나 P2P · 자리가 없으면
+  ///       null
+  static ({int high, int low})? ptpMarkers(
+    ChartAxisSpec spec,
+    List<double> values,
+    MeasurementResult result,
+  ) {
+    if (ptpOf(spec, result) == null) return null; // → 로직 이동: ptpOf()
+    final vertical = spec.key == 'z'
+        // → 로직 이동: verticalPairs()
+        ? verticalPairs(values, result)
+        : null; // 수직 정속 · 가감속 쌍, 구간 없는 결과 · 다른 축이면 null
+    return vertical == null
+        // → 로직 이동: peakToPeakPair()
+        ? peakToPeakPair(values, result)
+        : vertical.steady;
   }
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
