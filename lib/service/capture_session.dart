@@ -12,7 +12,7 @@ import 'package:vibration_checker/domain/config/noise_config.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// 작성: 2026-10-04 13:29:41 · 박건준
-/// 수정: 2026-10-22 09:30:00 · 박건준
+/// 수정: 2026-10-27 12:00:00 · 박건준
 /// 클래스: CaptureSession
 /// 목적: 측정 한 번의 센서 수집을 켜고 끄는 절차를 맡는다. 측정 화면
 ///       (measuring_screen.dart)이 화면 모양과 상관없이 같은 순서로
@@ -22,8 +22,10 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 ///       - `stop()` — 건 것을 거꾸로 푼다. 여러 번 불러도 안전하다
 ///       - `discard()` — 저장하지 않는 중단이면 멈춘 뒤 안드로이드 원본
 ///         기록 파일과 현장 소음 녹음까지 지운다
-///       수집 처음 1초의 중력으로 거치 방향을 판정해(`placement`) 화면
-///       아래가 아니면 경고음 · 진동을 울린다(2026-10-22).
+///       - `playStartBeep()` · `playEndBeep()` — 측정 시작 0.5초 전 · 종료
+///         0.5초 뒤 알림음(2026-10-27)
+///       수집 처음 1초의 중력으로 거치 방향을 판정해(`placement`) 결과에
+///       기록한다. 측정 중 경고음 · 진동은 2026-10-27 에 없앴다.
 ///       수집한 이벤트는 `resampler` 에 쌓이고, 저장은
 ///       `MeasurementRecorder`(measurement_recorder.dart)가 한다.
 class CaptureSession {
@@ -108,38 +110,11 @@ class CaptureSession {
   /// 수집 처음 1초의 중력 Z 로 거치 방향을 판정하는 감시기
   final PlacementMonitor _placementMonitor = PlacementMonitor();
 
-  /// 거치 경고를 울릴 이벤트 시각 (마이크로초). "화면 아래" 가 아니라고
-  /// 판정했을 때 정하고, 울리거나 건너뛰면 null 로 되돌린다
-  int? _placementAlertDueUs;
-
-  /// 거치 경고를 울린 이벤트 시각 (마이크로초). 울리지 않았으면 null
-  int? _placementAlertedUs;
-
-  /// 경고 시각에 이미 운행 중이라 거치 경고를 건너뛰었는지
-  bool _placementAlertSkipped = false;
-
   /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 함수: placement
   /// 목적: 거치 방향 판정 결과. 저장 절차(`MeasurementRecorder.record()`)가
   ///       결과 파일에 싣는다. 수집 처음 1초가 지나기 전이면 null.
   PlacementReading? get placement => _placementMonitor.reading;
-
-  /// 작성: 2026-10-22 17:10:00 · 박건준
-  /// 함수: placementAlertOffsetMs
-  /// 목적: 거치 경고를 울린 시각을 첫 중력 이벤트부터 잰 값 (밀리초). 경고가
-  ///       기준선 구간 뒤에 울렸는지 시험이 본다. 울리지 않았으면 null.
-  double? get placementAlertOffsetMs {
-    final alerted = _placementAlertedUs; // 울린 시각, 없으면 null
-    final start = _placementMonitor.startUs; // 판정 창 시작
-    if (alerted == null || start == null) return null;
-    return (alerted - start) / 1000;
-  }
-
-  /// 작성: 2026-10-22 17:10:00 · 박건준
-  /// 함수: placementAlertSkipped
-  /// 목적: 경고 시각에 이미 운행 중이라 거치 경고를 건너뛰었는지. 이때는
-  ///       결과 화면 경고만 남는다.
-  bool get placementAlertSkipped => _placementAlertSkipped;
 
   /// 센서 이벤트 구독. `start()` 가 센서가 있을 때만 만들고 `stop()` 이
   /// 끊는다. 구독 중이 아니면 null
@@ -252,7 +227,8 @@ class CaptureSession {
         _receivedSample = true;
         resampler.onEvent(event); // → 로직 이동: GridResampler.onEvent()
         _publishSpeed(event); // → 로직 이동: _publishSpeed()
-        _watchPlacement(event); // → 로직 이동: _watchPlacement()
+        // → 로직 이동: PlacementMonitor.onEvent()
+        _placementMonitor.onEvent(event);
       });
       _volumeKeyEnabled = true;
       // → 로직 이동: SensorChannelManager.setVolumeKeyCaptureEnabled()
@@ -266,6 +242,32 @@ class CaptureSession {
     _noResponseTimer = Timer(noResponseTimeout, () {
       if (!_receivedSample) onNoResponse();
     });
+  }
+
+  /// 작성: 2026-10-27 12:00:00 · 박건준
+  /// 함수: playStartBeep
+  /// 목적: 측정 시작 알림음을 울린다. 측정 화면이 수집을 켜기
+  ///       `CaptureConfig.startBeepLeadMs`(0.5초) 전에 부른다 — 마이크가 아직
+  ///       닫혀 있어 소음 값 · 녹음에 들지 않는다.
+  /// 반환: 없음. 알림음을 못 울려도 오류를 올리지 않는다
+  Future<void> playStartBeep() =>
+      _sensorManager.playBeep(); // → 로직 이동: SensorChannelManager.playBeep()
+
+  /// 작성: 2026-10-27 12:00:00 · 박건준
+  /// 함수: playEndBeep
+  /// 목적: 측정 종료 알림음을 울린다. 종료(볼륨키 · 완료 버튼)부터
+  ///       `CaptureConfig.endBeepDelayMs`(0.5초)가 지난 뒤 울린다. 수집 정지가
+  ///       그보다 오래 걸렸으면 기다리지 않고 바로 울린다. 수집을 멈춘
+  ///       (`stop()`) 뒤에 불러야 마이크가 닫혀 녹음에 들지 않는다.
+  /// 인자: elapsed — 종료를 누른 뒤 지금까지 지난 시간
+  /// 반환: 알림음 요청이 끝나면 끝나는 작업. 못 울려도 오류를 올리지 않는다
+  Future<void> playEndBeep({required Duration elapsed}) async {
+    assert(_stopped, '수집을 멈추기 전에 종료음을 울리면 녹음에 들어간다');
+    final wait =
+        const Duration(milliseconds: CaptureConfig.endBeepDelayMs) -
+        elapsed; // 더 기다릴 시간, 음수면 이미 지났다
+    if (wait > Duration.zero) await Future<void>.delayed(wait);
+    await _sensorManager.playBeep(); // → 로직 이동: SensorChannelManager.playBeep()
   }
 
   /// 작성: 2026-10-15 22:32:44 · 박건준
@@ -283,45 +285,6 @@ class CaptureSession {
     }
     _lastSpeedPublishUs = event.tsUs;
     liveSpeedMps.value = _speedEstimator.speedMps;
-  }
-
-  /// 작성: 2026-10-22 09:30:00 · 박건준
-  /// 수정: 2026-10-22 17:10:00 · 박건준
-  /// 함수: _watchPlacement
-  /// 목적: 이벤트 한 건을 거치 감시기에 넣고, "화면 아래" 가 아니라고 판정했으면
-  ///       첫 중력 이벤트부터 `CaptureConfig.placementAlertDelayMs`(1.7초)가
-  ///       지난 첫 이벤트에서 경고음 · 진동을 한 번 울린다. 측정은 계속한다 —
-  ///       막으면 엎어 둔 휴대폰에서 안내를 볼 수 없고 다 잰 운행을 버리게 된다.
-  ///       - 판정(1초)은 바로 하지만 경고는 기준선 구간(수집 0.5 ~ 1.5초)이
-  ///         끝난 뒤로 미룬다. 진동 모터 · 경고음이 기준선 평균에 들지 않게
-  ///         한다
-  ///       - 그 시각에 측정 중 속도가 `CaptureConfig.motionSpeedThresholdMps`
-  ///         를 넘으면(이미 운행 중) 울리지 않는다. 운행 구간에 경고음 ·
-  ///         진동을 넣지 않기 위해서다. 결과 화면 경고는 그대로 남는다
-  ///       - 속도를 아직 모르면(가속도 이벤트가 없음) 운행 중이 아닌 것으로
-  ///         보고 울린다 — 경고를 빠뜨리는 쪽보다 낫다
-  /// 인자: event — 안드로이드에서 도착한 원본 이벤트
-  void _watchPlacement(NativeEvent event) {
-    // → 로직 이동: PlacementMonitor.onEvent()
-    final judged = _placementMonitor.onEvent(event); // 이번에 판정했으면 결과
-    if (judged != null && judged.placement != Placement.faceDown) {
-      // 판정했으면 창을 시작한 중력 이벤트가 있으므로 시작 시각이 있다
-      assert(_placementMonitor.startUs != null, '판정했는데 창 시작 시각이 없다');
-      _placementAlertDueUs =
-          _placementMonitor.startUs! +
-          CaptureConfig.placementAlertDelayMs * 1000;
-    }
-    final due = _placementAlertDueUs; // 울릴 시각, 없으면 null
-    if (due == null || event.tsUs < due) return;
-    _placementAlertDueUs = null;
-    final speed = _speedEstimator.speedMps; // 측정 중 속도, 모르면 null
-    if (speed != null && speed > CaptureConfig.motionSpeedThresholdMps) {
-      _placementAlertSkipped = true;
-      return;
-    }
-    _placementAlertedUs = event.tsUs;
-    // → 로직 이동: SensorChannelManager.playPlacementAlert()
-    unawaited(_sensorManager.playPlacementAlert());
   }
 
   /// 작성: 2026-10-04 13:29:41 · 박건준

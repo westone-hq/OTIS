@@ -1,10 +1,8 @@
 import 'dart:convert';
 
-import 'package:vibration_checker/domain/analysis/device_response.dart';
 import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/domain/analysis/travel_window.dart';
-import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 
@@ -224,9 +222,9 @@ class MeasurementResult {
   final String? deviceModel;
 
   /// 수직 진동에 건 기종 응답 보정 필터 표시(예: "lp25.0bw2zp"). 보정 표에
-  /// 없는 기종이면 `DeviceResponse.noneLabel`("none") — 결과 화면 · 메일이
-  /// "미보정 기종" 으로 알린다. null 이면 보정을 정하기 전(2026-10-22 전)
-  /// 결과다
+  /// 없는 기종이면 `DeviceResponse.noneLabel`("none")이다. 진단 기록이고
+  /// 화면 · 메일에 알리지 않는다(2026-10-27). null 이면 보정을 정하기 전
+  /// (2026-10-22 전) 결과다
   final String? deviceCompensation;
 
   /// 운행 끝(속도 크기가 `CaptureConfig.zoneRunSpeedMps` 를 넘은 마지막
@@ -702,22 +700,6 @@ class MeasurementResult {
   ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get noiseExceeded =>
       ReportThresholds.exceeds(noiseMax, ReportThresholds.noiseMaxRedDba);
-
-  /// 작성: 2026-10-22 09:30:00 · 박건준
-  /// 함수: placementKind
-  /// 목적: 저장된 거치 방향 이름을 `Placement` 로 바꾼다.
-  /// 반환: 거치 방향. 판정하지 않은 예전 결과면 null
-  Placement? get placementKind =>
-      // → 로직 이동: Placement.fromName()
-      Placement.fromName(placement);
-
-  /// 작성: 2026-10-22 19:00:00 · 박건준
-  /// 함수: uncompensatedDevice
-  /// 목적: 보정 표에 없는 기종(또는 기종을 모르는 측정)이라 기종 응답 보정을
-  ///       걸지 않았는지. 결과 화면 · 메일이 "미보정 기종" 을 알린다. 보정을
-  ///       정하기 전(2026-10-22 전) 결과는 false 다.
-  bool get uncompensatedDevice =>
-      deviceCompensation == DeviceResponse.noneLabel;
 
   /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: stoppedTooSoon

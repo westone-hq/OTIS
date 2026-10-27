@@ -618,7 +618,6 @@ void main() {
       expect(saved.deviceManufacturer, 'samsung');
       expect(saved.deviceModel, 'SM-S901N');
       expect(saved.deviceCompensation, 'lp25.0bw2zp');
-      expect(saved.uncompensatedDevice, isFalse);
       final meta = await metaText(); // 집계 파일 내용
       expect(meta, contains('deviceManufacturer: samsung'));
       expect(meta, contains('deviceModel: SM-S901N'));

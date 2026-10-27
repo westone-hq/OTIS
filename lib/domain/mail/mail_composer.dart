@@ -1,5 +1,4 @@
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
-import 'package:vibration_checker/domain/measurement/result_warnings.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
 /// 작성: 2026-10-23 00:20:00 · 박건준
@@ -119,12 +118,13 @@ abstract final class MailComposer {
   }
 
   /// 작성: 2026-10-23 00:20:00 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: body
-  /// 목적: 메일 본문을 만든다. 차례는 다음과 같다.
+  /// 목적: 메일 본문을 만든다. 차례는 다음과 같다. 거치 · 미보정 기종 줄은
+  ///       2026-10-27 사용자 지시("메일 본문에는 경고 띄우는 거 다 없애")로
+  ///       뺐다.
   ///       1. 첫 줄 "OTIS 승강기 진동 측정 리포트입니다."
-  ///       2. 작업자 줄(`workerLine()`), 거치 줄(`placementMailLine()`),
-  ///          미보정 기종 줄(`uncompensatedDeviceMailLine()`) — 없는 줄은
-  ///          뺀다
+  ///       2. 작업자 줄(`workerLine()`) — 성명이 없으면 뺀다
   ///       3. 추가 참고사항이 있으면 "[참고사항]" 머리줄과 함께 적은
   ///          그대로. 참고사항은 리포트에 칸이 없어 메일 본문으로만 전한다
   ///       4. 첨부 목록, 첨부 개수
@@ -144,9 +144,6 @@ abstract final class MailComposer {
     final bodyLines = <String>[
       'OTIS 승강기 진동 측정 리포트입니다.',
       ?workerLine(result), // → 로직 이동: workerLine()
-      ?placementMailLine(result), // → 로직 이동: placementMailLine()
-      // → 로직 이동: uncompensatedDeviceMailLine()
-      ?uncompensatedDeviceMailLine(result),
       if (notes != null) ...['', '[참고사항]', notes, ''],
       ...attachmentLines,
       '',

@@ -421,16 +421,14 @@ void main() {
         final fields = find.byType(TextField); // 입력칸들
         await tester.enterText(fields.at(0), '2025F 1234R01');
         await tester.enterText(fields.at(1), '시험 현장');
-        await tester.enterText(fields.at(2), '10575');
-        await tester.enterText(fields.at(3), '경기도 고양시 덕양구 오금동');
-        await tester.enterText(fields.at(4), '1');
-        await tester.enterText(fields.at(5), '8');
-        await tester.enterText(fields.at(6), '2000');
+        await tester.enterText(fields.at(2), 'B1');
+        await tester.enterText(fields.at(3), '8');
+        await tester.enterText(fields.at(4), '2000');
         await settle(tester, rounds: 5);
         await capture(tester, shotName('02_홈_입력완료', size));
 
-        await tester.enterText(fields.at(2), '123');
-        await tester.enterText(fields.at(6), '');
+        await tester.enterText(fields.at(2), 'B');
+        await tester.enterText(fields.at(4), '');
         await tester.ensureVisible(find.text('측정 시작'));
         await tester.tap(find.text('측정 시작'));
         await settle(tester, rounds: 5);

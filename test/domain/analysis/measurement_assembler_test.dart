@@ -309,7 +309,6 @@ void main() {
         RideWeighting.vertical([for (final r in rows) r.zMg], 100),
       );
       expect(result.deviceCompensation, DeviceResponse.noneLabel);
-      expect(result.uncompensatedDevice, isTrue);
     });
 
     test('샘플레이트를 격자 간격에서 구한다', () {

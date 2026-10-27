@@ -103,7 +103,7 @@ void main() {
     );
   });
 
-  test('본문 차례: 첫 줄 → 작업자 → 거치 → 미보정 → 참고사항 → 첨부 → 누락', () {
+  test('본문 차례: 첫 줄 → 작업자 → 참고사항 → 첨부 → 누락, 경고 줄은 없다', () {
     final result = _result().copyWith(
       engineerName: '김철수',
       employeeId: '200001',
@@ -112,7 +112,7 @@ void main() {
       deviceModel: 'SM-A536N',
       deviceCompensation: 'none',
       notes: '도어 소음 있음',
-    ); // 모든 줄이 걸린 결과
+    ); // 모든 줄이 걸리고 거치 · 미보정도 실은 결과
     expect(
       MailComposer.body(
         result: result,
@@ -122,8 +122,6 @@ void main() {
       ),
       'OTIS 승강기 진동 측정 리포트입니다.\n'
       '작업자: 김철수 (200001)\n'
-      '거치: 화면 아래\n'
-      '미보정 기종: samsung SM-A536N\n'
       '\n'
       '[참고사항]\n'
       '도어 소음 있음\n'
@@ -136,7 +134,7 @@ void main() {
     );
   });
 
-  test('예전 결과 본문은 작업자 · 거치 · 미보정 · 참고사항 · 누락 줄이 없다', () {
+  test('예전 결과 본문은 작업자 · 참고사항 · 누락 줄이 없다', () {
     expect(
       MailComposer.body(
         result: _result(),

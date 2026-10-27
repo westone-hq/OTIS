@@ -7,6 +7,7 @@ import 'package:vibration_checker/ui/core/widgets/app_card.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/features/measure/measure_guide.dart';
 import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/measure/placement_sheet.dart';
 
@@ -63,8 +64,9 @@ class _StartScreenState extends State<StartScreen> {
   /// 사용자가 고른 카운트다운 대기 시간 (초)
   int _selectedSeconds = 5;
 
-  /// 선택 가능한 대기 시간 목록 (초)
-  final List<int> _timeOptions = const [0, 5, 10, 15];
+  /// 선택 가능한 대기 시간 목록 (초). 0초는 2026-10-27 사용자 지시로 3초로
+  /// 바꿨다 — 시작 알림음(수집 0.5초 전)과 휴대폰을 엎어 놓을 틈이 있다
+  final List<int> _timeOptions = const [3, 5, 10, 15];
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
   /// 함수: initState
@@ -123,7 +125,7 @@ class _StartScreenState extends State<StartScreen> {
   /// 작성: 2026-10-04 13:37:23 · 박건준
   /// 함수: _startMeasuring
   /// 목적: 마이크 권한을 먼저 받고, 고른 대기 시간을 `MeasurementSession`
-  ///       에 실어 측정 화면으로 넘어간다. 측정은 모두 볼륨키로 끝낸다.
+  ///       에 실어 측정 화면으로 넘어간다. 측정은 모두 볼륨키로 끝낸다
   ///       권한을 거절하고 진동만 재기도 마다하면 이 화면에 머문다.
   ///       진행하는 동안에는 버튼을 막아 두 번 시작되지 않게 한다.
   Future<void> _startMeasuring() async {
@@ -204,13 +206,13 @@ class _StartScreenState extends State<StartScreen> {
   }
 
   /// 작성: 2026-08-17 13:31:30 · 박건준
-  /// 수정: 2026-10-22 20:00:00 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: build
   /// 목적: 측정 준비 화면의 레이아웃을 구성한다.
   ///       - `appBar` — 제목만 있는 간단한 상단 바
   ///       - `body` — 스크롤 가능한 안내 영역. 거치 안내 카드 → 대기
-  ///         시간 선택 카드 4개 → 선택한 시간 요약 문구(측정은 볼륨키로
-  ///         끝낸다는 안내 포함) 순으로 보여준다
+  ///         시간 선택 카드 4개 → 시작 · 종료 안내 세 줄(`measureGuideLines`,
+  ///         2026-10-27 캡션에서 굵은 본문으로 키움) 순으로 보여준다
   ///       - `bottomNavigationBar` — 센서를 못 쓰면 오류 안내를 보여주고,
   ///         그 아래 "측정 시작" 버튼 하나를 둔다. 볼륨키로 시작하는 기능은
   ///         없다 — 예전 문구 "볼륨키로 측정 시작" 이 볼륨키로 시작한다는
@@ -291,12 +293,13 @@ class _StartScreenState extends State<StartScreen> {
           ),
           const SizedBox(height: AppDims.gap2),
 
-          // 선택 요약 텍스트
+          // 시작 · 종료 안내. 예전 캡션(16sp)보다 키워 굵은 본문으로 쓴다 —
+          // 소제목(22sp)은 360dp 폭에서 여섯 줄이 되어 시작 버튼 위로 넘친다
           Text(
-            '버튼을 누르면 $_selectedSeconds초 후 측정이 시작됩니다\n'
-            '운행이 멈춘 뒤 1초 기다렸다가 볼륨키로 끝냅니다',
+            // → 로직 이동: measureGuideLines
+            measureGuideLines.join('\n'),
             textAlign: TextAlign.center,
-            style: AppText.caption,
+            style: AppText.bodyBold,
           ),
           const SizedBox(height: AppDims.gap6),
         ],

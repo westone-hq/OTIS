@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
+import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/session/measurement_session.dart';
 import 'package:vibration_checker/service/capture_session.dart';
 import 'package:vibration_checker/service/measurement_recorder.dart';
@@ -10,6 +11,7 @@ import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/features/measure/measure_guide.dart';
 import 'package:vibration_checker/ui/features/measure/record_failure_message.dart';
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
@@ -39,10 +41,11 @@ class MeasuringScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-18 18:17:48 · 박건준
-/// 수정: 2026-10-04 16:54:15 · 박건준
+/// 수정: 2026-10-27 12:00:00 · 박건준
 /// 클래스: _MeasuringScreenState
 /// 목적: 라이브 측정 화면의 상태를 관리한다. 경과 시간 · 카운트다운
-///       타이머와, 앱이 백그라운드로 전환됐을 때의 중단 처리를 맡는다.
+///       타이머, 시작 · 종료 알림음 시점, 앱이 백그라운드로 전환됐을 때의
+///       중단 처리를 맡는다.
 class _MeasuringScreenState extends State<MeasuringScreen>
     with WidgetsBindingObserver {
   /// 이번 측정의 센서 수집. 화면이 처음 쓸 때 만든다
@@ -69,8 +72,17 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   bool _isCountingDown = false;
 
   /// 카운트다운 숫자를 1초마다 줄이는 타이머. `_startCountdown()`이
-  /// 만들고, 0에 도달하면 스스로 멈춘다. 진행 중이 아니면 null
+  /// 만들고, 1에 도달하면 스스로 멈춘다. 진행 중이 아니면 null
   Timer? _countdownTimer;
+
+  /// 시작 알림음을 울릴 타이머. `_scheduleStart()`가 만들고 `_cleanup()`이
+  /// 멈춘다. 울렸거나 정해지기 전이면 null
+  Timer? _beepTimer;
+
+  /// 센서 수집을 켤 타이머. `_scheduleStart()`가 만들고 `_cleanup()`이
+  /// 멈춘다 — 켜기 전에 중단하면 수집을 켜지 않는다. 켰거나 정해지기 전이면
+  /// null
+  Timer? _startTimer;
 
   /// 앱이 백그라운드로 전환되어(전화 수신 등) 측정이 중단됐는지 여부.
   /// `didChangeAppLifecycleState()`가 true로 표시하고, 앱이 다시
@@ -90,12 +102,13 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   bool _isFinishing = false;
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: initState
   /// 목적: 이 화면이 새로 만들어질 때 한 번만 실행된다.
   ///       - 전화가 오는 등 앱이 화면 밖으로 밀려나는 순간을 이 화면이
   ///         알아챌 수 있도록 미리 준비해둔다
-  ///       - 시작 전 대기 시간이 있으면 카운트다운부터 시작하고, 없으면
-  ///         곧바로 센서 수집을 시작한다
+  ///       - 시작 전 대기 시간이 있으면 카운트다운을 보여 준다. 수집 시작과
+  ///         그 0.5초 전 알림음은 `_scheduleStart()`가 정한다
   @override
   void initState() {
     super.initState();
@@ -107,32 +120,50 @@ class _MeasuringScreenState extends State<MeasuringScreen>
       _countdownSec = delay;
       _isCountingDown = true;
       _startCountdown(); // → 로직 이동: _startCountdown()
-    } else {
-      _initCaptureAndTimers(); // → 로직 이동: _initCaptureAndTimers()
     }
+    _scheduleStart(Duration(seconds: delay)); // → 로직 이동: _scheduleStart()
+  }
+
+  /// 작성: 2026-10-27 12:00:00 · 박건준
+  /// 함수: _scheduleStart
+  /// 목적: 수집 시작과 시작 알림음 시점을 정한다. 알림음은 수집보다
+  ///       `CaptureConfig.startBeepLeadMs`(0.5초) 먼저 울린다 — 마이크 ·
+  ///       가속도계를 켜기 전에 끝나 소음 값 · 녹음 · 기준선에 들지 않는다.
+  ///       남은 시간이 그보다 짧으면(건너뛰기, 대기 0초) 알림음을 바로 울리고
+  ///       0.5초 뒤 켠다.
+  /// 인자: untilStart — 지금부터 수집을 켤 때까지 남은 시간
+  void _scheduleStart(Duration untilStart) {
+    const lead = Duration(
+      milliseconds: CaptureConfig.startBeepLeadMs,
+    ); // 알림음을 앞세우는 길이
+    final startIn = untilStart > lead ? untilStart : lead; // 수집까지
+    // → 로직 이동: CaptureSession.playStartBeep()
+    _beepTimer = Timer(
+      startIn - lead,
+      () => unawaited(_capture.playStartBeep()),
+    );
+    _startTimer = Timer(startIn, () {
+      if (!mounted) return;
+      _countdownTimer?.cancel();
+      setState(() => _isCountingDown = false);
+      _initCaptureAndTimers(); // → 로직 이동: _initCaptureAndTimers()
+    });
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: _startCountdown
   /// 목적: 1초마다 카운트다운 숫자를 하나씩 줄이는 타이머를 시작한다.
-  ///       0에 도달하면 타이머를 멈추고 실제 측정 준비로 넘어간다. 화면이
-  ///       이미 사라졌으면(`mounted`가 false) 그대로 타이머만 멈춘다.
+  ///       1에 도달하면 멈춘다. 수집으로 넘어가는 것은 `_scheduleStart()`의
+  ///       타이머가 한다 — 두 타이머가 같은 순간을 다투지 않게 화면 숫자만
+  ///       맡긴다. 화면이 이미 사라졌으면(`mounted`가 false) 타이머만 멈춘다.
   void _startCountdown() {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
+      if (!mounted || _countdownSec <= 1) {
         timer.cancel();
         return;
       }
-      setState(() {
-        if (_countdownSec > 1) {
-          _countdownSec--;
-        } else {
-          _countdownSec = 0;
-          _isCountingDown = false;
-          timer.cancel();
-          _initCaptureAndTimers(); // → 로직 이동: _initCaptureAndTimers()
-        }
-      });
+      setState(() => _countdownSec--);
     });
   }
 
@@ -177,9 +208,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-07 03:30:18 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: _cleanup
-  /// 목적: 화면 타이머 두 개(경과 시간, 카운트다운)를 멈추고 센서 수집을
+  /// 목적: 화면 타이머(경과 시간, 카운트다운, 시작 알림음, 수집 시작)를
+  ///       멈추고 센서 수집을
   ///       정리한다. 측정을 중단하거나 끝낼 때, 화면이 사라질 때 등 여러
   ///       곳에서 공통으로 부른다. 수집 정리의 순서와 시간 한도는
   ///       `CaptureSession.stop()` 이 지킨다.
@@ -191,8 +223,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   Future<void> _cleanup({bool discardRecord = false}) async {
     _timeTimer?.cancel();
     _countdownTimer?.cancel();
+    _beepTimer?.cancel();
+    _startTimer?.cancel();
     _timeTimer = null;
     _countdownTimer = null;
+    _beepTimer = null;
+    _startTimer = null;
     if (discardRecord) {
       await _capture.discard(); // → 로직 이동: CaptureSession.discard()
     } else {
@@ -294,14 +330,16 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-22 09:30:00 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: _finishMeasurement
   /// 목적: "테스트 완료" 버튼이나 볼륨키로 측정을 마무리한다. 순서대로
   ///       진행한다.
   ///       1. 이미 마무리 중이거나 끝났으면 다시 실행하지 않는다
   ///          (중복 탭 방지)
   ///       2. 마무리 중 상태로 표시하고 `_cleanup()`으로 타이머와 센서
-  ///          수집을 멈춘다
+  ///          수집을 멈춘다. 멈춘 뒤 종료 알림음을 누른 때부터 0.5초에
+  ///          울린다(`CaptureSession.playEndBeep()`) — 저장을 기다리지
+  ///          않는다
   ///       3. `MeasurementRecorder.record()` 로 저장한다. 수집 처음 1초로
   ///          판정한 거치 방향(`CaptureSession.placement`)을 함께 넘긴다
   ///       4. 실패면 사유를 담은 실패 안내를 띄우고, 성공이면 이 화면을
@@ -317,7 +355,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
     }
     _isFinished = true;
 
+    final pressed = Stopwatch()..start(); // 종료를 누른 뒤 지난 시간
     await _cleanup(); // → 로직 이동: _cleanup()
+    // → 로직 이동: CaptureSession.playEndBeep()
+    unawaited(_capture.playEndBeep(elapsed: pressed.elapsed));
 
     // → 로직 이동: MeasurementRecorder.record()
     final outcome = await MeasurementRecorder.record(
@@ -379,10 +420,10 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-22 20:00:00 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: build
-  /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자 카운트다운
-  ///       화면을, 아니면 경과 시간 · 현재 속도와 "테스트 완료" 버튼이 있는
+  /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자와 시작 · 종료
+  ///       안내(`measureGuideLines`)가 있는 카운트다운 화면을, 아니면 경과 시간 · 현재 속도와 "테스트 완료" 버튼이 있는
   ///       실제 측정 진행 화면을 보여준다. 현재 속도는 측정 중 어림값
   ///       (`CaptureSession.liveSpeedMps`)이고 소수 첫째 자리까지 적는다.
   ///       기준선을 모으는 첫 1초 동안은 값 대신 "—" 를 적는다. 저장하는
@@ -399,9 +440,16 @@ class _MeasuringScreenState extends State<MeasuringScreen>
               children: [
                 Text('$_countdownSec', style: AppText.countdown),
                 const SizedBox(height: AppDims.gap3),
-                Text(
-                  '잠시 후 측정이 시작됩니다...',
-                  style: AppText.subhead.copyWith(color: AppColors.onDark),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDims.screenPad,
+                  ),
+                  child: Text(
+                    // → 로직 이동: measureGuideLines
+                    measureGuideLines.join('\n'),
+                    textAlign: TextAlign.center,
+                    style: AppText.subhead.copyWith(color: AppColors.onDark),
+                  ),
                 ),
                 const SizedBox(height: AppDims.gap6),
                 ElevatedButton(
@@ -415,13 +463,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                   ),
                   onPressed: () {
                     _countdownTimer?.cancel();
-                    if (mounted) {
-                      setState(() {
-                        _isCountingDown = false;
-                      });
-                      // → 로직 이동: _initCaptureAndTimers()
-                      _initCaptureAndTimers();
-                    }
+                    _beepTimer?.cancel();
+                    _startTimer?.cancel();
+                    setState(() => _countdownSec = 0);
+                    // → 로직 이동: _scheduleStart()
+                    _scheduleStart(Duration.zero);
                   },
                   child: const Text('건너뛰기 / 즉시 시작'),
                 ),
@@ -547,9 +593,11 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                   icon: Icons.front_hand_outlined,
                   // 정지 직후에 끝내면 끝부분 값이 부정확해진다(2026-10-22,
                   // `MeasurementResult.stoppedTooSoon`)
-                  message:
-                      '측정 중입니다.\n휴대폰을 움직이지 마세요.\n'
-                      '운행이 멈춘 뒤 1초 기다렸다가 볼륨키로 끝냅니다.',
+                  message: <String>[
+                    '측정 중입니다. 휴대폰을 움직이지 마세요.',
+                    measureEndGuide, // → 로직 이동: measureEndGuide
+                    measureWaitGuide, // → 로직 이동: measureWaitGuide
+                  ].join('\n'),
                   tone: NoticeTone.alert,
                 ),
               ),

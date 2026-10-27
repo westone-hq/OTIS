@@ -454,7 +454,8 @@ void main() {
     );
   });
 
-  testWidgets('거치 방향을 판정한 결과는 작업자 아래에 거치 줄을 적는다', (tester) async {
+  testWidgets('거치 · 미보정 기종 경고 줄은 본문에 넣지 않는다', (tester) async {
+    // 2026-10-27 사용자 지시 "메일 본문에는 경고 띄우는 거 다 없애"
     SharedPreferences.setMockInitialValues({
       'emails': <String>['a@otis.com'],
     });
@@ -463,23 +464,6 @@ void main() {
         withRaw: true,
         worker: const Worker(employeeId: '200001', name: '김철수'),
         placement: 'faceUp',
-      ),
-    );
-
-    await _openSheet(tester);
-    final email = await _sendAndCapture(tester, sender);
-
-    expect(email.body, contains('\n작업자: 김철수 (200001)\n거치: 화면 위\n'));
-  });
-
-  testWidgets('보정 표에 없는 기종이면 거치 아래에 미보정 기종 줄을 적는다', (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'emails': <String>['a@otis.com'],
-    });
-    await tester.runAsync(
-      () => _saveJob(
-        withRaw: true,
-        placement: 'faceDown',
         deviceModel: 'SM-A536N',
         deviceCompensation: 'none',
       ),
@@ -488,35 +472,10 @@ void main() {
     await _openSheet(tester);
     final email = await _sendAndCapture(tester, sender);
 
-    expect(email.body, contains('\n거치: 화면 아래\n미보정 기종: samsung SM-A536N\n'));
-  });
-
-  testWidgets('보정한 기종 · 예전 결과는 미보정 줄을 넣지 않는다', (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'emails': <String>['a@otis.com'],
-    });
-    await tester.runAsync(
-      () => _saveJob(
-        withRaw: true,
-        deviceModel: 'SM-S901N',
-        deviceCompensation: 'lp25.0bw2zp',
-      ),
-    );
-    await _openSheet(tester);
-    final email = await _sendAndCapture(tester, sender);
+    expect(email.body, contains('\n작업자: 김철수 (200001)\n'));
+    expect(email.body, isNot(contains('거치:')));
     expect(email.body, isNot(contains('미보정')));
   });
-
-  testWidgets('판정하지 않은 예전 결과는 거치 줄을 뺀다', (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'emails': <String>['a@otis.com'],
-    });
-    await tester.runAsync(() => _saveJob(withRaw: true));
-    await _openSheet(tester);
-    final legacy = await _sendAndCapture(tester, sender);
-    expect(legacy.body, isNot(contains('거치:')));
-  });
-
   testWidgets('업체 · 팀이 빈 작업자는 성명과 사번만 적는다', (tester) async {
     SharedPreferences.setMockInitialValues({
       'emails': <String>['a@otis.com'],

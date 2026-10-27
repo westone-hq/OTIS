@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
+import 'package:vibration_checker/ui/features/measure/measure_guide.dart';
 
 /// 작성: 2026-10-04 13:37:23 · 박건준
 /// 클래스: _DiagramSize
@@ -95,9 +96,10 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-22 20:00:00 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 함수: build
-  /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다.
+  /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다. 3 · 4단계는 시작 ·
+  ///       종료 알림음 안내(`measure_guide.dart`)를 그대로 쓴다.
   ///       - 상단 헤더 — 제목과 닫기 버튼
   ///       - 스크롤 가능한 본문 — 거치 방향 도식, 4단계 안내, 소음 주의
   ///         경고 배너
@@ -161,11 +163,15 @@ class PlacementSheet extends StatelessWidget {
                       '휴대폰을 뒤집어 그림과 같은 방향으로 놓으세요. '
                       '출입구를 바라보고 섰을 때 휴대폰 위쪽이 왼쪽입니다',
                     ),
-                    _buildStepItem(3, '측정이 시작되면 엘리베이터를 움직이세요'),
+                    _buildStepItem(
+                      3,
+                      // → 로직 이동: measureStartGuide
+                      '$measureStartGuide. 시작되면 엘리베이터를 움직이세요',
+                    ),
                     _buildStepItem(
                       4,
-                      '엘리베이터가 멈춘 뒤 1초 기다렸다가 볼륨키를 눌러 측정을 '
-                      '끝내세요',
+                      // → 로직 이동: measureEndGuide
+                      '$measureEndGuide $measureWaitGuide',
                     ),
                     const SizedBox(height: AppDims.gap),
 

@@ -209,28 +209,23 @@ class CaptureConfig {
   /// 근거: 인용 — 2026-10-22 사용자 지시 "≥ +940 이면 화면 위"
   static const double placementFaceUpMinMg = 940.0;
 
-  /// 작성: 2026-10-22 17:10:00 · 박건준
-  /// 수정: 2026-10-23 10:00:00 · 박건준
-  /// 변수: placementAlertMarginMs
-  /// 목적: 거치 경고를 신호 처리 기준선 구간이 끝난 뒤로 미룰 때 더하는 여유
-  ///       (밀리초, `placementAlertDelayMs`).
-  /// 근거: 미정 — 격자는 두 센서(가속도 · 중력)가 겹친 첫 시각에서 시작하는데,
-  ///       경고 시각은 첫 중력 이벤트부터 잰다. 두 센서 첫 이벤트 차이(수 ms
-  ///       ~ 수십 ms)를 덮을 만큼만 둔다. 길게 두면 운행 시작과 겹칠 일이 늘어난다
-  static const int placementAlertMarginMs = 200;
+  /// 작성: 2026-10-27 12:00:00 · 박건준
+  /// 변수: startBeepLeadMs
+  /// 목적: 측정 시작 알림음을 수집 시작보다 먼저 울리는 길이 (밀리초).
+  ///       카운트다운이 끝나기 이만큼 전에 울리고, 끝나면 수집을 켠다. 알림음
+  ///       (200ms)이 마이크 · 가속도계를 켜기 전에 끝나 소음 값 · 녹음 · 기준선에
+  ///       들지 않는다.
+  /// 근거: 인용 — 2026-10-27 사용자 지시 "측정 시작과 종료 시 삐 소리 (측정
+  ///       0.5초 전, 측정 0.5초 후)"
+  static const int startBeepLeadMs = 500;
 
-  /// 작성: 2026-10-22 17:10:00 · 박건준
-  /// 수정: 2026-10-23 10:00:00 · 박건준
-  /// 변수: placementAlertDelayMs
-  /// 목적: 첫 중력 이벤트부터 거치 경고(경고음 · 진동)를 울리기까지의 길이
-  ///       (밀리초). 판정 창(`placementWindowMs`, 1초)과 신호 처리 기준선 구간
-  ///       (격자 앞 `defaultEdgeTrimMs` 0.5초를 버린 뒤 `defaultBaselineWindowMs`
-  ///       1초 = 수집 0.5 ~ 1.5초), 측정 중 속도 기준선(첫 1초)이 모두 끝난 뒤에
-  ///       울려 진동 모터 · 경고음이 기준선 평균에 들지 않게 한다.
-  /// 근거: 인용 — 0.5 + 1.0 + 여유 0.2 = 1.7초. 2026-10-22 리뷰 지시 "기준선
-  ///       구간이 모두 끝난 뒤에만 경고"
-  static const int placementAlertDelayMs =
-      defaultEdgeTrimMs + defaultBaselineWindowMs + placementAlertMarginMs;
+  /// 작성: 2026-10-27 12:00:00 · 박건준
+  /// 변수: endBeepDelayMs
+  /// 목적: 측정 종료(볼륨키 · 완료 버튼)부터 종료 알림음까지의 길이
+  ///       (밀리초). 수집 정지가 이보다 늦게 끝나면 정지가 끝난 바로 뒤에
+  ///       울린다 — 마이크가 닫힌 뒤라 녹음에 들지 않는다.
+  /// 근거: 인용 — `startBeepLeadMs` 와 같은 지시
+  static const int endBeepDelayMs = 500;
 
   /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 변수: minimumStopMarginMs
