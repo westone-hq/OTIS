@@ -39,6 +39,7 @@ import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
 import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
+import '../support/reference_records.dart';
 import 'shot_harness.dart';
 
 /// 작성: 2026-10-15 16:50:04 · 박건준
@@ -533,6 +534,25 @@ void main() {
         );
         await settle(tester, rounds: 100);
         await capture(tester, shotName('17_메일시트', size));
+      });
+
+      testWidgets('결과 그래프', (tester) async {
+        setShotSize(tester, size);
+        const id = '20261021-100000'; // 실측 기록으로 낸 결과의 측정 ID
+        await tester.runAsync(
+          () => MeasurementRepository.instance.save(
+            assembleRecord(rideReferencePath).result!.copyWith(id: id),
+          ),
+        );
+        await tester.pumpWidget(_app(const ResultScreen(id: id)));
+        await settle(tester);
+        await tester.ensureVisible(find.text('측정 그래프'));
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -80));
+        await settle(tester, rounds: 5);
+        await capture(tester, shotName('10a_결과_그래프_위', size));
+        await tester.ensureVisible(find.text('소음 [dBA]'));
+        await settle(tester, rounds: 5);
+        await capture(tester, shotName('10b_결과_그래프_아래', size));
       });
 
       testWidgets('로그인', (tester) async {

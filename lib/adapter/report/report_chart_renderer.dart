@@ -305,8 +305,8 @@ class ReportChartRenderer {
       timeStartSec: time.start,
     ); // 이 차트의 축 틀과 값 옮기기
     final valueTicks = range.ticks(); // 세로축 눈금 값
-    // → 로직 이동: _timeTicks()
-    final timeTicks = _timeTicks(time); // 가로축 눈금 시각 (초)
+    // → 로직 이동: timeTicks()
+    final timeTicks = ReportChartRenderer.timeTicks(time); // 가로축 눈금 시각 (초)
 
     _drawGrid(canvas, frame, valueTicks, timeTicks);
     _drawFrame(canvas, frame);
@@ -375,11 +375,11 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-10-11 19:20:58 · 박건준
-  /// 수정: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-27 10:00:00 · 박건준
   /// 함수: _drawPeakToPeak
   /// 목적: 진동 세 축 차트에 최대 P2P 를 만든 두 지점을 표시하고 값을 적는다.
-  ///       - 두 지점(`ReportChartAxes.peakToPeakPair()`)에 굵은 빨간 점
-  ///         (`_drawMarker()`).
+  ///       - 두 지점(`ReportChartAxes.ptpMarkers()`, 결과 화면 그래프와 같은
+  ///         규칙)에 굵은 빨간 점(`_drawMarker()`).
   ///         운행 구간이 있는 결과는 지표와 같은 정의 — 최대 반주기 P2P 를
   ///         만든 이웃 봉우리 · 골 — 이고, 그 전 예전 결과는 시계열 전체의
   ///         최댓값 · 최솟값이다(그때 지표 정의)
@@ -416,10 +416,12 @@ class ReportChartRenderer {
         // → 로직 이동: ReportChartAxes.verticalPairs()
         ? ReportChartAxes.verticalPairs(values, result)
         : null; // 수직 정속 · 가감속 쌍, 구간 없는 결과 · 다른 축이면 null
-    final at = vertical == null
-        // → 로직 이동: ReportChartAxes.peakToPeakPair()
-        ? ReportChartAxes.peakToPeakPair(values, result)
-        : vertical.steady; // ptp 두 지점, 못 찾으면 null
+    // → 로직 이동: ReportChartAxes.ptpMarkers()
+    final at = ReportChartAxes.ptpMarkers(
+      spec,
+      values,
+      result,
+    ); // ptp 두 지점, P2P 가 없거나 못 찾으면 null
 
     _Box? taken; // 이미 적은 글자 상자. 다음 글자가 피한다
     if (ptp != null && at != null) {
@@ -960,15 +962,17 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-17 10:05:00 · 박건준
-  /// 수정: 2026-10-22 10:30:00 · 박건준
-  /// 함수: _timeTicks
+  /// 수정: 2026-10-27 10:00:00 · 박건준
+  /// 함수: timeTicks
   /// 목적: 가로축 눈금 시각을 0 부터 `timeWindow()` 의 간격으로 만든다.
   ///       왼쪽 여백(음수 시각)에는 눈금을 찍지 않는다 — 0 초가 첫 눈금이다
-  ///       (OTIS 2 · 3쪽과 같다).
+  ///       (OTIS 2 · 3쪽과 같다). 결과 화면 그래프도 같은 눈금을 쓴다.
   /// 인자: time — `timeWindow()` 가 정한 왼쪽 끝 · 폭 · 간격
   /// 반환: 0 부터 오른쪽 끝을 넘지 않는 마지막 눈금까지의 시각 목록 (초)
   /// 식: n = floor((start + span) / step),  tick_i = i x step,  i = 0 .. n
-  List<double> _timeTicks(({double start, double span, double step}) time) {
+  static List<double> timeTicks(
+    ({double start, double span, double step}) time,
+  ) {
     final count = // 0 초부터 오른쪽 끝까지 눈금 칸 수
     ((time.start + time.span) / time.step + 1e-9)
         .floor();

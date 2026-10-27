@@ -17,6 +17,7 @@ import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/result/compare_sheet.dart';
+import 'package:vibration_checker/ui/features/result/result_charts.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
@@ -112,12 +113,13 @@ final List<_Metric> _metrics = <_Metric>[
 ];
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-11 19:28:11 · 박건준
+/// 수정: 2026-10-27 10:00:00 · 박건준
 /// 클래스: ResultScreen
 /// 목적: 저장된 측정 결과 하나를 보여주는 화면. 측정을 마쳤을 때와 저장
 ///       결과 목록에서 하나를 골랐을 때 같은 화면을 쓴다.
 ///       - 진동 세 축 · 소음 최대 · 운행 거리 · 최대 속도를 보여주고,
 ///         기준을 넘은 값은 붉게 표시한다
+///       - 진동 세 축 · 소음 파형을 리포트 2쪽과 같은 축으로 그린다
 ///       - 다른 저장 결과를 골라 지표마다 나란히 비교한다
 ///       - 메일 발송, 같은 현장 정보로 테스트 재실행
 class ResultScreen extends StatefulWidget {
@@ -521,12 +523,13 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
+  /// 수정: 2026-10-27 10:00:00 · 박건준
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스
   ///       - `body` — 머리 카드 → 경고 박스(`resultWarnings()`, 있을 때만)
-  ///         → (비교 중이면 비교 대상 줄) → 지표 여섯 줄
+  ///         → (비교 중이면 비교 대상 줄) → 지표 여섯 줄 → 측정 그래프
+  ///         (`ResultCharts`, 이번 측정만 그린다)
   ///       - `bottomNavigationBar` — 결과 비교 · 메일 발송, 그 아래
   ///         테스트 재실행(진행 중에는 막는다). 반 폭 버튼 두 개라 문구를
   ///         다섯 글자로 맞춘다 — "메일 보내기" 는 360dp 폭에서 두 줄로
@@ -575,6 +578,11 @@ class _ResultScreenState extends State<ResultScreen> {
                   _buildMetricRow(metric, result),
                   const SizedBox(height: AppDims.gap),
                 ],
+                const SizedBox(height: AppDims.gap2),
+                Text('측정 그래프', style: AppText.subhead),
+                const SizedBox(height: AppDims.gap),
+                // → 로직 이동: ResultCharts.build()
+                ResultCharts(result: result),
               ],
             ),
       bottomNavigationBar: result == null
