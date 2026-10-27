@@ -18,7 +18,6 @@ import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/result/compare_sheet.dart';
-import 'package:vibration_checker/ui/features/result/result_charts.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
@@ -65,13 +64,27 @@ class _Metric {
 }
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
+/// 수정: 2026-10-27 14:00:00 · 박건준
 /// 변수: _metrics
 /// 목적: 결과 화면에 보여줄 지표와 그 차례. 적색 기준은 리포트와 같은
 ///       `ReportThresholds` 값을 쓴다 — 화면과 리포트의 판정이 갈라지지
-///       않게 하려는 것이다.
+///       않게 하려는 것이다. 진동은 축마다 평균(A95) · 최대(P2P) 두 줄이고
+///       X · Y 는 수평, Z 는 수직 기준이다(리포트 1쪽 수평 · 수직 행과 같은
+///       값).
+/// 근거: 인용 — 2026-10-27 사용자 지시 "수직진동, 수평진동 표현 삭제 후 X,
+///       Y, Z 의 평균 최대로 각각 변경. 기준치는 동일"(X · Y = 수평, Z = 수직,
+///       사용자 확인)
 final List<_Metric> _metrics = <_Metric>[
   _Metric(
-    label: 'X축 진동 Peak to Peak',
+    label: 'X축 진동 평균',
+    unit: 'mg',
+    read: (r) => r.xA95,
+    exceeded: (r) => r.xA95Exceeded,
+    redLimit: ReportThresholds.horizA95RedMg,
+    decimals: 1,
+  ),
+  _Metric(
+    label: 'X축 진동 최대',
     unit: 'mg',
     read: (r) => r.xPtp,
     exceeded: (r) => r.xExceeded,
@@ -79,7 +92,15 @@ final List<_Metric> _metrics = <_Metric>[
     decimals: 1,
   ),
   _Metric(
-    label: 'Y축 진동 Peak to Peak',
+    label: 'Y축 진동 평균',
+    unit: 'mg',
+    read: (r) => r.yA95,
+    exceeded: (r) => r.yA95Exceeded,
+    redLimit: ReportThresholds.horizA95RedMg,
+    decimals: 1,
+  ),
+  _Metric(
+    label: 'Y축 진동 최대',
     unit: 'mg',
     read: (r) => r.yPtp,
     exceeded: (r) => r.yExceeded,
@@ -87,7 +108,15 @@ final List<_Metric> _metrics = <_Metric>[
     decimals: 1,
   ),
   _Metric(
-    label: 'Z축 진동 Peak to Peak',
+    label: 'Z축 진동 평균',
+    unit: 'mg',
+    read: (r) => r.zA95,
+    exceeded: (r) => r.zA95Exceeded,
+    redLimit: ReportThresholds.zA95RedMg,
+    decimals: 1,
+  ),
+  _Metric(
+    label: 'Z축 진동 최대',
     unit: 'mg',
     read: (r) => r.zPtp,
     exceeded: (r) => r.zExceeded,
@@ -114,13 +143,13 @@ final List<_Metric> _metrics = <_Metric>[
 ];
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-27 10:00:00 · 박건준
+/// 수정: 2026-10-27 14:00:00 · 박건준
 /// 클래스: ResultScreen
 /// 목적: 저장된 측정 결과 하나를 보여주는 화면. 측정을 마쳤을 때와 저장
 ///       결과 목록에서 하나를 골랐을 때 같은 화면을 쓴다.
-///       - 진동 세 축 · 소음 최대 · 운행 거리 · 최대 속도를 보여주고,
-///         기준을 넘은 값은 붉게 표시한다
-///       - 진동 세 축 · 소음 파형을 리포트 2쪽과 같은 축으로 그린다
+///       - 진동 세 축 평균 · 최대, 소음 최대 · 운행 거리 · 최대 속도를
+///         보여주고, 기준을 넘은 값은 붉게 표시한다
+///       - 진동 세 축 · 소음 파형은 "그래프 보기" 로 따로 연다
 ///       - 다른 저장 결과를 골라 지표마다 나란히 비교한다
 ///       - 메일 발송, 같은 현장 정보로 테스트 재실행
 class ResultScreen extends StatefulWidget {
@@ -530,13 +559,13 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-27 10:00:00 · 박건준
+  /// 수정: 2026-10-27 14:00:00 · 박건준
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스
   ///       - `body` — 머리 카드 → 경고 박스(`resultWarnings()`, 있을 때만)
-  ///         → (비교 중이면 비교 대상 줄) → 지표 여섯 줄 → 측정 그래프
-  ///         (`ResultCharts`, 이번 측정만 그린다)
+  ///         → (비교 중이면 비교 대상 줄) → 지표 아홉 줄 → "그래프 보기"
+  ///         버튼(그래프는 따로 연다, `ResultChartsScreen`, 2026-10-27)
   ///       - `bottomNavigationBar` — 결과 비교 · 메일 발송, 그 아래
   ///         테스트 재실행(진행 중에는 막는다). 반 폭 버튼 두 개라 문구를
   ///         다섯 글자로 맞춘다 — "메일 보내기" 는 360dp 폭에서 두 줄로
@@ -585,11 +614,13 @@ class _ResultScreenState extends State<ResultScreen> {
                   _buildMetricRow(metric, result),
                   const SizedBox(height: AppDims.gap),
                 ],
-                const SizedBox(height: AppDims.gap2),
-                Text('측정 그래프', style: AppText.subhead),
                 const SizedBox(height: AppDims.gap),
-                // → 로직 이동: ResultCharts.build()
-                ResultCharts(result: result),
+                OutlinedButton.icon(
+                  // → 로직 이동: ResultChartsScreen.build()
+                  onPressed: () => context.push('/result/${widget.id}/charts'),
+                  icon: const Icon(Icons.show_chart),
+                  label: const Text('그래프 보기'),
+                ),
               ],
             ),
       bottomNavigationBar: result == null

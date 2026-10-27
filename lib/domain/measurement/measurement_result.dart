@@ -686,6 +686,33 @@ class MeasurementResult {
   bool? get zExceeded =>
       ReportThresholds.exceeds(zPtp, ReportThresholds.zPtpRedMg);
 
+  /// 작성: 2026-10-27 14:00:00 · 박건준
+  /// 함수: xA95Exceeded
+  /// 목적: X축 진동 평균(A95)이 적색 기준을 넘었는지 확인한다. 수평이라
+  ///       리포트 수평진동 평균 행과 같은 기준(`ReportThresholds.horizA95RedMg`)
+  ///       이다.
+  /// 반환: 기준 초과 시 true. `xA95` 가 null 이면 null
+  /// 근거: 인용 — 2026-10-27 사용자 지시 "X, Y 는 수평, Z 는 수직과 기준치
+  ///       동일"
+  bool? get xA95Exceeded =>
+      ReportThresholds.exceeds(xA95, ReportThresholds.horizA95RedMg);
+
+  /// 작성: 2026-10-27 14:00:00 · 박건준
+  /// 함수: yA95Exceeded
+  /// 목적: Y축 진동 평균(A95)이 적색 기준을 넘었는지 확인한다. 기준은
+  ///       `xA95Exceeded` 와 같다.
+  /// 반환: 기준 초과 시 true. `yA95` 가 null 이면 null
+  bool? get yA95Exceeded =>
+      ReportThresholds.exceeds(yA95, ReportThresholds.horizA95RedMg);
+
+  /// 작성: 2026-10-27 14:00:00 · 박건준
+  /// 함수: zA95Exceeded
+  /// 목적: Z축(수직) 진동 평균(A95)이 적색 기준(`ReportThresholds.zA95RedMg`,
+  ///       리포트 수직진동 평균 행)을 넘었는지 확인한다.
+  /// 반환: 기준 초과 시 true. `zA95` 가 null 이면 null
+  bool? get zA95Exceeded =>
+      ReportThresholds.exceeds(zA95, ReportThresholds.zA95RedMg);
+
   /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: noiseExceeded

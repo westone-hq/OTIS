@@ -74,17 +74,17 @@ const List<_ChartEntry> _entries = <_ChartEntry>[
   _ChartEntry(
     spec: ReportChartAxes.x,
     title: 'X축 진동 [mg]',
-    markerNote: '빨간 점: Peak to Peak 두 지점',
+    markerNote: '빨간 점: 최대(Peak to Peak) 두 지점',
   ),
   _ChartEntry(
     spec: ReportChartAxes.y,
     title: 'Y축 진동 [mg]',
-    markerNote: '빨간 점: Peak to Peak 두 지점',
+    markerNote: '빨간 점: 최대(Peak to Peak) 두 지점',
   ),
   _ChartEntry(
     spec: ReportChartAxes.z,
     title: 'Z축 진동 [mg]',
-    markerNote: '빨간 점: 정속 구간 Peak to Peak 두 지점',
+    markerNote: '빨간 점: 정속 구간 최대 두 지점',
   ),
   _ChartEntry(
     spec: ReportChartAxes.noise,

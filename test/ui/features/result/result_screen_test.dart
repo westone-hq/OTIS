@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/features/result/result_charts_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
@@ -97,7 +99,7 @@ Future<void> _settle(WidgetTester tester) async {
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
 /// 함수: main
-/// 목적: 결과 화면이 지표 여섯 줄을 보여주고 기준을 넘은 값만 표시하는지,
+/// 목적: 결과 화면이 지표 아홉 줄을 보여주고 기준을 넘은 값만 표시하는지,
 ///       다른 저장 결과와 비교하는지, 재실행 전에 운전 방향을 묻는지
 ///       시험한다.
 void main() {
@@ -112,10 +114,16 @@ void main() {
     if (await temp.exists()) await temp.delete(recursive: true);
   });
 
-  testWidgets('지표 여섯 줄을 보여주고 기준을 넘은 값에 경고를 붙인다', (tester) async {
+  testWidgets('X · Y · Z 평균 · 최대와 소음 · 거리 · 속도 아홉 줄을 보이고 넘은 값에 경고를 붙인다', (
+    tester,
+  ) async {
     await tester.runAsync(
       () => MeasurementRepository.instance.save(
-        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 31.0),
+        _result(
+          '20260114-110359',
+          DateTime(2026, 1, 14, 11, 3, 59),
+          31.0,
+        ).copyWith(xA95: 14.0, yA95: 5.0, zA95: 22.0),
       ),
     );
 
@@ -125,22 +133,34 @@ void main() {
     await _settle(tester);
 
     for (final label in <String>[
-      'X축 진동 Peak to Peak [mg]',
-      'Y축 진동 Peak to Peak [mg]',
-      'Z축 진동 Peak to Peak [mg]',
+      'X축 진동 평균 [mg]',
+      'X축 진동 최대 [mg]',
+      'Y축 진동 평균 [mg]',
+      'Y축 진동 최대 [mg]',
+      'Z축 진동 평균 [mg]',
+      'Z축 진동 최대 [mg]',
       '소음 최대 [dBA]',
       '운행 거리 [m]',
       '최대 속도 [m/s]',
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    expect(find.textContaining('Peak to Peak'), findsNothing);
+    expect(find.textContaining('수직'), findsNothing);
+    expect(find.textContaining('수평'), findsNothing);
     expect(find.text('26.0'), findsOneWidget);
     expect(find.text('1.74'), findsOneWidget, reason: '리포트와 같은 둘째 자리');
     expect(
       find.byIcon(Icons.error_outline),
-      findsNWidgets(2),
-      reason: 'X(25.5 초과) · Z(30 초과)만 경고다',
+      findsNWidgets(4),
+      reason: 'X 평균(13.5 초과) · X 최대(25.5) · Z 평균(21) · Z 최대(30)',
     );
+    expect(
+      find.text('13.5mg 초과 시 적색'),
+      findsNWidgets(2),
+      reason: 'X · Y 평균은 수평 기준',
+    );
+    expect(find.text('21mg 초과 시 적색'), findsOneWidget, reason: 'Z 평균 수직');
     expect(
       find.text('25.5mg 초과 시 적색'),
       findsNWidgets(2),
@@ -148,6 +168,38 @@ void main() {
     );
     expect(find.text('30mg 초과 시 적색'), findsOneWidget);
     expect(find.text('테스트 재실행'), findsOneWidget);
+    expect(find.text('그래프 보기'), findsOneWidget);
+    expect(find.text('측정 그래프'), findsNothing, reason: '그래프는 따로 연다');
+  });
+
+  testWidgets('그래프 보기를 누르면 그래프 화면이 열린다', (tester) async {
+    await tester.runAsync(
+      () => MeasurementRepository.instance.save(
+        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 8.0),
+      ),
+    );
+    final router = GoRouter(
+      initialLocation: '/result/20260114-110359',
+      routes: [
+        GoRoute(
+          path: '/result/:id',
+          builder: (_, s) => ResultScreen(id: s.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/result/:id/charts',
+          builder: (_, s) => ResultChartsScreen(id: s.pathParameters['id']!),
+        ),
+      ],
+    ); // 결과 · 그래프 두 경로
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await _settle(tester);
+    await tester.ensureVisible(find.text('그래프 보기'));
+    await tester.tap(find.text('그래프 보기'));
+    await _settle(tester);
+
+    expect(find.text('측정 그래프'), findsOneWidget);
+    expect(find.text('up_J-1 · 현장'), findsOneWidget);
+    expect(find.text('X축 진동 [mg]'), findsOneWidget);
   });
 
   testWidgets('머리 카드 층은 출발 → 도착이라 하강이면 최상층부터다', (tester) async {

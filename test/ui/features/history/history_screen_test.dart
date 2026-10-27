@@ -142,7 +142,7 @@ void main() {
     final older = tester.getTopLeft(find.text('up_J-OLD · 현장')); // 옛 줄 위치
     expect(newer.dy, lessThan(older.dy));
     expect(find.text('초과'), findsNWidgets(2), reason: 'Z 32mg 은 30mg 초과');
-    expect(find.textContaining('Z 32.0mg 초과'), findsNWidgets(2));
+    expect(find.textContaining('Z 최대 32.0mg 초과'), findsNWidgets(2));
   });
 
   testWidgets('측정 일시가 깨진 결과는 그 한 건만 "읽을 수 없는 결과" 로 보인다', (tester) async {
@@ -177,7 +177,7 @@ void main() {
     await _settle(tester);
 
     expect(find.text('측정 결과'), findsOneWidget);
-    expect(find.text('X축 진동 Peak to Peak [mg]'), findsOneWidget);
+    expect(find.text('X축 진동 최대 [mg]'), findsOneWidget);
   });
 
   testWidgets('확인을 받고 한 건을 지운다', (tester) async {

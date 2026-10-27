@@ -177,26 +177,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _formatDate(DateTime dt) =>
       KoreaTime.minuteLabel(dt); // → 로직 이동: KoreaTime.minuteLabel()
 
+  /// 작성: 2026-10-27 14:00:00 · 박건준
+  /// 함수: _judged
+  /// 목적: 결과 화면이 적색으로 판정하는 일곱 지표(X · Y · Z 평균 · 최대, 소음
+  ///       최대)의 판정을 모은다. 목록 상태와 결과 화면 붉은 표시가 같은
+  ///       지표를 보게 한 곳에 둔다(2026-10-27 결과 화면에 평균을 더함).
+  /// 인자: item — 판정할 측정 결과
+  /// 반환: 지표별 판정. 아직 재지 않은 항목은 null
+  List<bool?> _judged(MeasurementResult item) => <bool?>[
+    item.xA95Exceeded,
+    item.xExceeded,
+    item.yA95Exceeded,
+    item.yExceeded,
+    item.zA95Exceeded,
+    item.zExceeded,
+    item.noiseExceeded,
+  ];
+
   /// 작성: 2026-10-04 18:38:14 · 박건준
+  /// 수정: 2026-10-27 14:00:00 · 박건준
   /// 함수: _statusOf
-  /// 목적: 측정 결과의 상태를 정한다. 판정은 세 축 진동과 소음 최대를 본다.
+  /// 목적: 측정 결과의 상태를 정한다. 판정은 세 축 진동 평균 · 최대와 소음
+  ///       최대를 본다(`_judged()`).
   /// 인자: item — 판정할 측정 결과
   /// 반환: 하나라도 넘었으면 `exceeded`, 판정할 지표가 하나도 없으면
   ///       `unmeasured`, 그 밖에는 `normal`
   _Status _statusOf(MeasurementResult item) {
-    final judged = <bool?>[
-      item.xExceeded,
-      item.yExceeded,
-      item.zExceeded,
-      item.noiseExceeded,
-    ]; // 세 축과 소음의 판정 결과. 아직 재지 않은 항목은 null
+    final judged = _judged(item); // 지표별 판정 → 로직 이동: _judged()
     if (judged.contains(true)) return _Status.exceeded;
     if (judged.every((v) => v == null)) return _Status.unmeasured;
     return _Status.normal;
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-04 18:38:14 · 박건준
+  /// 수정: 2026-10-27 14:00:00 · 박건준
   /// 함수: _getSummaryText
   /// 목적: 목록 한 줄에 보여줄 요약 문구를 만든다. 초과한 항목이 있으면
   ///       그 항목만 나열하고, 초과가 없으면 "전 지표 정상"을 쓴다.
@@ -206,19 +220,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
   /// 인자: item — 요약할 측정 결과
   /// 반환: 요약 문구
   String _getSummaryText(MeasurementResult item) {
-    final judged = <bool?>[
-      item.xExceeded,
-      item.yExceeded,
-      item.zExceeded,
-      item.noiseExceeded,
-    ]; // 세 축과 소음의 판정 결과. 아직 재지 않은 항목은 null
+    final judged = _judged(item); // 지표별 판정 → 로직 이동: _judged()
     final unmeasured = judged.where((v) => v == null).length; // 미측정 항목 수
     if (unmeasured == judged.length) return '미측정 (진동 · 소음 지표 없음)';
 
     final reasons = <String>[
-      if (item.xExceeded == true) 'X ${item.xPtp!.toStringAsFixed(1)}mg',
-      if (item.yExceeded == true) 'Y ${item.yPtp!.toStringAsFixed(1)}mg',
-      if (item.zExceeded == true) 'Z ${item.zPtp!.toStringAsFixed(1)}mg',
+      if (item.xA95Exceeded == true) 'X 평균 ${item.xA95!.toStringAsFixed(1)}mg',
+      if (item.xExceeded == true) 'X 최대 ${item.xPtp!.toStringAsFixed(1)}mg',
+      if (item.yA95Exceeded == true) 'Y 평균 ${item.yA95!.toStringAsFixed(1)}mg',
+      if (item.yExceeded == true) 'Y 최대 ${item.yPtp!.toStringAsFixed(1)}mg',
+      if (item.zA95Exceeded == true) 'Z 평균 ${item.zA95!.toStringAsFixed(1)}mg',
+      if (item.zExceeded == true) 'Z 최대 ${item.zPtp!.toStringAsFixed(1)}mg',
       if (item.noiseExceeded == true)
         '소음 ${item.noiseMax!.toStringAsFixed(1)}dBA',
     ]; // 초과한 항목 문구
