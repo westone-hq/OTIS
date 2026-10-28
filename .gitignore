@@ -63,6 +63,7 @@ android/.kotlin/
 # 릴리스 서명 키 설정 · 키 파일. 저장소 밖에 보관한다 (2026-10-13)
 android/key.properties
 *.jks
+*password*.txt
 
 # 작업 메모. 로컬에만 둔다 (2026-10-22 병합 절차)
 /작업메모_*.md

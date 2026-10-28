@@ -14,14 +14,12 @@
 | 문서 | 담는 것 |
 |---|---|
 | `docs/comment_rules.md` | 주석 규칙. **코드 작업 전 매번 다시 읽는다** |
-| `docs/spec/app_behavior.md` | 화면 흐름 · 화면별 규칙(로그인 · 홈 · 측정 · 결과 · 목록 · 업데이트) · 거치 · 녹음 · 메일 |
 | `docs/spec/signal_processing.md` | 진동 처리 순서, 설정 상수, result.json · meta.txt 형식, SciPy 정본과 픽스처 |
 | `docs/spec/report.md` | 리포트 1쪽 머리말 · 지표 표, 2 · 3쪽 차트 축 · 표시점, 서식 이미지 |
-| `docs/decisions.md` | 날짜 붙은 결정 이력과 근거 수치(왜 지금 값인가) |
-| `docs/pending_checks.md` | 미확인 · 미결 · 실기기 확인 목록, 알려진 미해결 |
-| `docs/experiments/` | 소음 오프셋 · OTIS 계산 방식 비교 · ride_reference 기준값 실험 기록 |
 | `docs/release.md` | 릴리스 서명 키 보관 · `android/key.properties` · 서명 확인 |
 | `docs/report_layout.json` | 리포트 좌표 정본. `report_layout_test` 가 Dart 상수와 대조한다 |
+| `docs/reference/` · `docs/test_up/` · `docs/test_dn/` · `every_set_compare.png` | OTIS 원본 리포트 · 원시 기록과 우리 앱 결과 비교 자료. 원본 리포트(엔지니어명 · 현장명 포함)까지 공개 저장소에 올린다(2026-10-28 사용자 결정) |
+| `docs/uml/` | 유스케이스 · 액티비티 · 시퀀스 다이어그램(HTML) |
 
 ## 명령
 
@@ -119,9 +117,10 @@ import 는 모두 `package:vibration_checker/...` 로 쓴다(`always_use_package
 - 커밋할 때 `git add .` · `git add -A` 를 쓰지 않고 파일 경로를 하나씩
   지정하며, 커밋 전에 `git diff --cached --stat` 으로 들어가는 파일을
   확인한다(2026-10-11, 저장소 밖에 둘 파일이 섞이지 않게).
-- 결정을 바꾸면 `docs/decisions.md` 에 날짜와 근거를 남기고, 지금 동작은
-  해당 spec 을 고친다. 확인받지 못한 것은 `docs/pending_checks.md` 에 적고
-  권장안으로 진행한다.
+- 결정을 바꾸면 커밋 메시지에 날짜와 근거를 남기고, 지금 동작은 해당 spec 을
+  고친다. 확인받지 못한 것은 해당 코드 주석의 `미확인:` 과 커밋 메시지에
+  적고 권장안으로 진행한다. 결정 이력 · 미확인 목록 문서(`decisions.md` ·
+  `pending_checks.md`)는 2026-10-28 지웠다.
 
 ## 병합 절차
 
@@ -144,9 +143,8 @@ import 는 모두 `package:vibration_checker/...` 로 쓴다(`always_use_package
 3. **예전 데이터 호환** — 이 브랜치 전에 저장된 result.json(시험 픽스처나
    main 에서 만든 결과)을 이 브랜치에서 열어 결과 화면 · 저장 목록 · PDF 가
    오류 없이 나오는지 확인한다.
-4. **커밋 정리** — `git status` 가 깨끗한지 본다. `docs/pending_checks.md` 는
-   커밋하고 `작업메모_*.md` 는 커밋하지 않는다(`.gitignore`). 커밋은 파일
-   경로를 하나씩 지정한다.
+4. **커밋 정리** — `git status` 가 깨끗한지 본다. `작업메모_*.md` 는 커밋하지
+   않는다(`.gitignore`). 커밋은 파일 경로를 하나씩 지정한다.
 5. **병합** — main 을 최신으로 한 뒤 `git merge --no-ff <브랜치>`. 병합 커밋
    메시지에 브랜치 요약(묶음별 한 줄)과 남은 실기기 확인 항목 번호를 적는다.
    충돌이 나면 스스로 풀지 말고 멈추고 보고한다. 병합 뒤 main 에서 1번을 한
@@ -157,4 +155,4 @@ import 는 모두 `package:vibration_checker/...` 로 쓴다(`always_use_package
 병합하지 않고 멈추는 경우: 1 · 3번 실패, 의도하지 않은 지표 변화, 2번에서
 고객에게 보이는 깨짐, 병합 충돌, 사용자가 결정하라고 남겨 둔 항목이 아직
 열려 있을 때, 실기기 확인이 필요하다고 표시한 Kotlin 변경. 그 밖에 실기기에서만
-확인할 수 있는 항목(`docs/pending_checks.md`)은 병합을 막지 않는다.
+확인할 수 있는 항목은 병합을 막지 않는다.

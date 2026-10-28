@@ -7,10 +7,10 @@ import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 
 /// 작성: 2026-10-21 10:05:00 · 박건준
-/// 수정: 2026-10-23 01:10:00 · 박건준
+/// 수정: 2026-10-28 10:30:00 · 박건준
 /// 변수: rideReferencePath
 /// 목적: 원본 TUNE 리포트를 만든 레퍼런스폰 기록 경로. 실측 기록으로 남은
-///       회귀 기준이다(`docs/experiments/ride_reference_기준값.md`).
+///       회귀 기준이다.
 const String rideReferencePath = 'test/fixtures/records/ride_reference.txt';
 
 /// 작성: 2026-10-21 10:05:00 · 박건준

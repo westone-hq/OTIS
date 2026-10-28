@@ -289,7 +289,7 @@ class GridResampler {
   }
 
   /// 작성: 2026-10-10 11:54:43 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
+  /// 수정: 2026-10-28 10:30:00 · 박건준
   /// 함수: motionOf
   /// 목적: 같은 시각의 raw 와 gravity 로 중력을 뺀 세 축 가속도(motion)를
   ///       만든다.
@@ -303,7 +303,7 @@ class GridResampler {
   ///         −(raw_z − gravity_z) 와 같고, 화면을 위로 놓거나 기울여 놓아도
   ///         물리 부호가 그대로 나온다(2026-10-21). 예전 식은 화면을 위로
   ///         놓으면 부호가 뒤집혀 하강이 상승처럼 기록됐다(2026-10-21 개발폰
-  ///         하강 기록 — `docs/spec/app_behavior.md` "거치" 항목)
+  ///         하강 기록)
   ///       격자(`resample()`)와 측정 중 속도 추정(`LiveSpeedEstimator`)이
   ///       같은 부호를 쓰도록 한 곳에 둔다.
   /// 인자: rawX, rawY, rawZ — 중력이 섞인 가속도 원본 (mg)
@@ -492,7 +492,7 @@ class GridResampler {
   }
 
   /// 작성: 2026-09-28 15:00:36 · 박희정
-  /// 수정: 2026-10-04 13:44:32 · 박건준
+  /// 수정: 2026-10-28 10:30:00 · 박건준
   /// 함수: _backfillLeadingNoiseDba
   /// 목적: 격자 앞부분에서 소음이 0 인 행을 첫 유효 소음값으로 채운다.
   ///       안드로이드는 소음 RMS(제곱 평균의 제곱근, 소리 크기를 구하는
@@ -503,8 +503,8 @@ class GridResampler {
   /// 인자: samples — 다 만든 격자 행 목록
   /// 반환: 앞부분 0 을 채운 새 목록. 유효 소음값이 없거나 첫 행부터 값이
   ///       있으면 받은 목록 그대로
-  /// 근거: 인용 — `docs/experiments/noise_otis_offset_notes.md` 의 "초반 noise 0
-  ///       채우기" 절
+  /// 근거: 미확인 — 앞부분 0 을 확인한 실험 기록은 2026-10-28 저장소에서
+  ///       지웠다
   static List<GridSample> _backfillLeadingNoiseDba(List<GridSample> samples) {
     final firstValid = samples.indexWhere(
       (s) => s.noiseDba > 0.0,

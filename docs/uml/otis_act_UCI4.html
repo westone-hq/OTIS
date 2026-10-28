@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-I4 소음 측정 — 액티비티 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px;max-width:1180px;margin:0 auto}
+  a.nd{text-decoration:none;cursor:pointer}
+  a.nd .shape{fill:var(--card);stroke:var(--ink2);stroke-width:1.4;transition:fill .15s,stroke .15s}
+  a.nd .rake{fill:none;stroke:var(--ink2);stroke-width:1.4}
+  a.nd .lb{font-size:13px;fill:var(--ink);text-anchor:middle;pointer-events:none}
+  a.nd .num{font-size:10.5px;fill:var(--ink3);text-anchor:end;pointer-events:none;
+            font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.nd:hover .shape,a.nd:focus .shape{fill:var(--signal-soft);stroke:var(--signal);stroke-width:2}
+  a.nd:hover .lb,a.nd:focus .lb{fill:var(--signal);font-weight:700}
+  a.nd .cnd{font-size:12px;fill:var(--ink);font-weight:700;pointer-events:none}
+  a.nd:hover .cnd,a.nd:focus .cnd{fill:var(--signal)}
+  a.nd .cndbg{fill:var(--card);stroke:none;pointer-events:none}
+  a.nd .term{fill:var(--ink);stroke:none}
+  a.nd .termring{fill:var(--card);stroke:var(--ink);stroke-width:1.6}
+  .flow{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  .flow.back{stroke:var(--extend)}
+  .g{font-size:11.5px;font-weight:600;fill:var(--ink2)}
+  .g.t{fill:var(--signal)}
+  .g.f{fill:var(--ink2)}
+  .g.back{fill:var(--extend)}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-I4 소음 측정</span><span class="tabs"><span class="on">액티비티</span><a href="otis_seq_UCI4.html">시퀀스</a></span><span class="right"><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 1056 1787" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-I4 소음 측정 — 액티비티 다이어그램">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker></defs>
+<g id="rep"></g><g id="edges"></g><g id="glabels"></g><g id="nodes"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const C=560,BW=212,BH=50,DW=26,DH=19;
+const D={"N": [[1, "initial", "", 560, 44, "측정 수집을 시작할 때 진동 센서보다 먼저 이 흐름이 돈다.", [{"n": "startCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 201, "b": 258}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [2, "action", "돌고 있던 소음 측정을\n멈추고 남은 녹음을 지운다", 560, 106.0, "받아 갈 곳이 없는 녹음이라 지운다.", [{"n": "stopAndDiscardAudio()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 539, "b": 549}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [3, "decision", "", 560, 176.0, "권한은 측정 화면에 들어오기 전에 받아 둔다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [4, "action", "소음을 0(미측정)으로 둔다", 220, 176.0, "진동만 잰다. 이 앱은 0 dBA를 “재지 않음” 표시로 쓴다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [5, "final", "", 220, 245.0, "소음 없이 진동만 측정한다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [6, "action", "마이크를 48kHz로 연다", 560, 254.0, "모노 · 16비트.", [{"n": "openRecord()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 440, "b": 472}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [7, "decision", "", 560, 324.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [8, "action", "44.1kHz로 다시 연다", 900, 324.0, "", [{"n": "openRecord()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 440, "b": 472}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [9, "merge", "", 560, 392.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [10, "decision", "", 560, 450.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [11, "action", "소음을 0(미측정)으로 둔다", 220, 450.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [12, "final", "", 220, 519.0, "소음 없이 진동만 측정한다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [13, "action", "표본 속도에 맞는\nA 가중 계수를 고른다", 560, 528.0, "", [{"n": "weightingFor()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 474, "b": 513}], null], [14, "action", "녹음을 시작하고 현장 소음\n녹음(M4A)을 연다", 560, 604.0, "AAC 64 kbps. 녹음을 열지 못하면 녹음만 포기하고 dBA 측정은 계속한다.", [{"n": "openAudioEncoder()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 515, "b": 537}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [15, "action", "계산 스레드를 띄운다", 560, 680.0, "측정 화면과 따로 돈다. 스레드에서 예외가 나도 앱을 죽이지 않고 소음을 0으로 둔다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [16, "merge", "", 560, 774.0, "반복 진입점.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [17, "action", "마이크에서 한 홉만큼 읽는다", 560, 838.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [18, "decision", "", 560, 908.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [19, "action", "5ms 쉰다", 220, 908.0, "바쁘게 돌지 않도록 잠깐 쉬고 다시 읽는다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [20, "action", "가중 전 표본을\n녹음 파일에 넣는다", 560, 986.0, "", [{"n": "feed()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseAudioEncoder.kt", "a": 130, "b": 152}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [21, "decision", "", 560, 1056.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [22, "action", "녹음만 포기한다", 900, 1056.0, "dBA 측정은 계속한다. 메일 본문에 “누락:” 줄이 남는다.", [{"n": "abort()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseAudioEncoder.kt", "a": 180, "b": 193}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [23, "merge", "", 560, 1124.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [24, "action", "A 가중을 걸고 제곱해\n창에 넣는다", 560, 1188.0, "고리 모양 저장소로 빠지는 값만 빼고 들어온 값만 더한다.", [{"n": "aWeight()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 485, "b": 513}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [25, "decision", "", 560, 1258.0, "덜 찬 창의 값은 0에서 올라오는 경사라 값이 아니다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [26, "action", "소음을 0(미측정)으로 둔다", 220, 1258.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [27, "action", "Fast(0.125초)로 평활한 뒤\ndBA로 바꿔 0~130으로 자른다", 560, 1336.0, "dBA = dBFS + 105.2(기본 오프셋) + 현장 보정. 소수 셋째 자리까지 남긴다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [28, "decision", "", 560, 1406.0, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], null], [29, "action", "녹음을 멈추고 스레드가\n끝나길 기다린다 (1초 한도)", 560, 1514.0, "읽는 중인 녹음기를 다른 스레드에서 반납하면 앱이 죽을 수 있어 순서를 지킨다.", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}], null], [30, "decision", "", 560, 1584.0, "", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}], null], [31, "action", "녹음을 포기하고 반납은\n뒤 정리 스레드에 맡긴다", 900, 1584.0, "녹음 경로 없이 돌아간다. 다음 측정은 새 녹음기로 시작할 수 있다.", [{"n": "abandonCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 594, "b": 634}], null], [32, "final", "", 900, 1653.0, "녹음 없이 저장된다.", [{"n": "abandonCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 594, "b": 634}], null], [33, "action", "녹음기를 반납하고\n녹음 파일을 닫는다", 560, 1662.0, "닫은 녹음 경로를 돌려준다. 소음 값은 0으로 돌아간다.", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}, {"n": "finish()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseAudioEncoder.kt", "a": 154, "b": 178}], null], [34, "final", "", 560, 1725.0, "소음 측정이 끝난다.", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}], null]], "E": [[1, 2, "M560,55 L560,81.0", null, null, [[569, 69, "start"], [551, 69, "end"]], false], [2, 3, "M560,131.0 L560,157.0", null, null, [[569, 145.0, "start"], [551, 145.0, "end"]], false], [3, 4, "M534,176.0 L326.0,176.0", "참", "t", [[430.0, 168.0, "middle"], [430.0, 193.0, "middle"]], false], [4, 5, "M220,201.0 L220,233.0", null, null, [], false], [3, 6, "M560,195.0 L560,229.0", "거짓", "f", [[569, 209.0, "start"], [551, 209.0, "end"]], false], [6, 7, "M560,279.0 L560,305.0", null, null, [[569, 293.0, "start"], [551, 293.0, "end"]], false], [7, 8, "M586,324.0 L794.0,324.0", "참", "t", [[690.0, 316.0, "middle"], [690.0, 341.0, "middle"]], false], [7, 9, "M560,343.0 L560,379.0", "거짓", "f", [[569, 357.0, "start"], [551, 357.0, "end"], [569, 372.0, "start"], [551, 372.0, "end"], [569, 365.0, "start"]], false], [8, 9, "M900,349.0 L900,392.0 L578,392.0", null, null, [], false], [9, 10, "M560,405.0 L560,431.0", null, null, [[569, 419.0, "start"], [551, 419.0, "end"]], false], [10, 11, "M534,450.0 L326.0,450.0", "참", "t", [[430.0, 442.0, "middle"], [430.0, 467.0, "middle"]], false], [11, 12, "M220,475.0 L220,507.0", null, null, [], false], [10, 13, "M560,469.0 L560,503.0", "거짓", "f", [[569, 483.0, "start"], [551, 483.0, "end"]], false], [13, 14, "M560,553.0 L560,579.0", null, null, [[569, 567.0, "start"], [551, 567.0, "end"]], false], [14, 15, "M560,629.0 L560,655.0", null, null, [[569, 643.0, "start"], [551, 643.0, "end"]], false], [15, 16, "M560,705.0 L560,761.0", null, null, [[569, 719.0, "start"], [551, 719.0, "end"], [569, 754.0, "start"], [551, 754.0, "end"], [569, 737.0, "start"]], false], [16, 17, "M560,787.0 L560,813.0", null, null, [[569, 801.0, "start"], [551, 801.0, "end"]], false], [17, 18, "M560,863.0 L560,889.0", null, null, [[569, 877.0, "start"], [551, 877.0, "end"]], false], [18, 19, "M534,908.0 L326.0,908.0", "참", "t", [[430.0, 900.0, "middle"], [430.0, 925.0, "middle"]], false], [18, 20, "M560,927.0 L560,961.0", "거짓", "f", [[569, 941.0, "start"], [551, 941.0, "end"]], false], [20, 21, "M560,1011.0 L560,1037.0", null, null, [[569, 1025.0, "start"], [551, 1025.0, "end"]], false], [21, 22, "M586,1056.0 L794.0,1056.0", "참", "t", [[690.0, 1048.0, "middle"], [690.0, 1073.0, "middle"]], false], [21, 23, "M560,1075.0 L560,1111.0", "거짓", "f", [[569, 1089.0, "start"], [551, 1089.0, "end"], [569, 1104.0, "start"], [551, 1104.0, "end"], [569, 1097.0, "start"]], false], [22, 23, "M900,1081.0 L900,1124.0 L578,1124.0", null, null, [], false], [23, 24, "M560,1137.0 L560,1163.0", null, null, [[569, 1151.0, "start"], [551, 1151.0, "end"]], false], [24, 25, "M560,1213.0 L560,1239.0", null, null, [[569, 1227.0, "start"], [551, 1227.0, "end"]], false], [25, 26, "M534,1258.0 L326.0,1258.0", "참", "t", [[430.0, 1250.0, "middle"], [430.0, 1275.0, "middle"]], false], [25, 27, "M560,1277.0 L560,1311.0", "거짓", "f", [[569, 1291.0, "start"], [551, 1291.0, "end"]], false], [27, 28, "M560,1361.0 L560,1387.0", null, null, [[569, 1375.0, "start"], [551, 1375.0, "end"]], false], [28, 29, "M560,1425.0 L560,1489.0", "거짓", "f", [[569, 1439.0, "start"], [551, 1439.0, "end"], [569, 1482.0, "start"], [551, 1482.0, "end"], [569, 1461.0, "start"]], false], [29, 30, "M560,1539.0 L560,1565.0", null, null, [[569, 1553.0, "start"], [551, 1553.0, "end"]], false], [30, 31, "M586,1584.0 L794.0,1584.0", "참", "t", [[690.0, 1576.0, "middle"], [690.0, 1601.0, "middle"]], false], [31, 32, "M900,1609.0 L900,1641.0", null, null, [], false], [30, 33, "M560,1603.0 L560,1637.0", "거짓", "f", [[569, 1617.0, "start"], [551, 1617.0, "end"]], false], [33, 34, "M560,1687.0 L560,1713.0", null, null, [[569, 1701.0, "start"], [551, 1701.0, "end"]], false], [19, 16, "M114.0,908.0 L86.0,908.0 L86.0,774.0 L542,774.0", "다시 읽는다", "back", [[100.0, 901.0, "middle"], [100.0, 925.0, "middle"], [95.8, 901.0, "middle"], [95.8, 925.0, "middle"], [104.2, 901.0, "middle"], [104.2, 925.0, "middle"], [94.0, 845.0, "start"], [78.0, 845.0, "end"], [94.0, 824.9, "start"], [78.0, 824.9, "end"], [94.0, 865.1, "start"], [78.0, 865.1, "end"], [94.0, 804.8, "start"], [78.0, 804.8, "end"], [94.0, 885.2, "start"], [78.0, 885.2, "end"]], true], [26, 16, "M114.0,1258.0 L62.0,1258.0 L62.0,774.0 L542,774.0", "다음 홉", "back", [[88.0, 1251.0, "middle"], [88.0, 1275.0, "middle"], [80.2, 1251.0, "middle"], [80.2, 1275.0, "middle"], [95.80000000000001, 1251.0, "middle"], [95.80000000000001, 1275.0, "middle"], [70.0, 1020.0, "start"], [54.0, 1020.0, "end"], [70.0, 947.4, "start"], [54.0, 947.4, "end"], [70.0, 1092.6, "start"], [54.0, 1092.6, "end"], [70.0, 874.8, "start"], [54.0, 874.8, "end"], [70.0, 1165.2, "start"], [54.0, 1165.2, "end"]], true], [28, 16, "M534,1406.0 L38.0,1406.0 L38.0,774.0 L542,774.0", "참 · 다음 홉", "back", [[286.0, 1399.0, "middle"], [286.0, 1423.0, "middle"], [211.6, 1399.0, "middle"], [211.6, 1423.0, "middle"], [360.40000000000003, 1399.0, "middle"], [360.40000000000003, 1423.0, "middle"], [46.0, 1094.0, "start"], [30.0, 1094.0, "end"], [46.0, 999.2, "start"], [30.0, 999.2, "end"], [46.0, 1188.8, "start"], [30.0, 1188.8, "end"], [46.0, 904.4, "start"], [30.0, 904.4, "end"], [46.0, 1283.6, "start"], [30.0, 1283.6, "end"]], true]], "COND": {"3": "마이크 권한이 없나", "7": "열지 못했나", "10": "그래도 못 열었나", "18": "읽은 표본이 없나", "21": "녹음에 넣지 못했나", "25": "창이 아직 덜 찼나", "28": "아직 측정 중인가", "30": "한도 안에 끝나지 않았나"}, "REP": [{"x": 22.0, "y": 731.0, "w": 1000.0, "h": 708.0, "label": "반복 · 정지 요청이 올 때까지 한 홉마다"}]};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const KIND={initial:"시작",merge:"병합",action:"액션",decision:"분기",call:"호출 액션",final:"종료"};
+const gr=document.getElementById('rep'),eg=document.getElementById('edges'),
+      gl=document.getElementById('glabels'),ng=document.getElementById('nodes');
+const svg=document.getElementById('dg'), VB=svg.viewBox.baseVal;
+
+// 반복 구간
+D.REP.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.x+12,y:r.y+19}); t.textContent=r.label; gr.appendChild(t);
+});
+// 흐름선
+const SEGS=[];
+D.E.forEach(([a,b,d,lab,kd])=>{
+  const p=el("path",{class:"flow dim"+(kd==="back"?" back":""),d:d,"marker-end":"url(#a)"});
+  p.dataset.e=a+"|"+b; eg.appendChild(p);
+  const pts=d.replace(/[ML]/g,"").trim().split(/\s+/).map(s=>s.split(",").map(Number));
+  for(let i=0;i+1<pts.length;i++) SEGS.push({e:a+"|"+b,s:[pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]]});
+});
+// 노드
+D.N.forEach(([id,k,name,x,y,desc,fns,doc])=>{
+  const a=el("a",doc?{class:"nd dim",href:doc}:{class:"nd dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=id;
+  const ti=el("title");
+  ti.textContent=(id+". "+(name?name.replace(/\n/g," "):KIND[k]))+(D.COND[id]?"  ["+D.COND[id]+"]":"")+"\n"+desc+
+    (doc?"\n(누르면 그 흐름의 액티비티 다이어그램으로 이동)":"")+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  let l,t2;
+  if(k==="initial"){ a.appendChild(el("circle",{class:"term shape",cx:x,cy:y,r:11})); l=x-11; t2=y-11; }
+  else if(k==="final"){ a.appendChild(el("circle",{class:"termring shape",cx:x,cy:y,r:12}));
+                        a.appendChild(el("circle",{class:"term",cx:x,cy:y,r:6.5})); l=x-12; t2=y-12; }
+  else if(k==="decision"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-DH} L${x+DW},${y} L${x},${y+DH} L${x-DW},${y} Z`})); l=x-DW; t2=y-DH; }
+  else if(k==="merge"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-13} L${x+18},${y} L${x},${y+13} L${x-18},${y} Z`})); l=x-18; t2=y-13; }
+  else{
+    a.appendChild(el("rect",{class:"shape",x:x-BW/2,y:y-BH/2,width:BW,height:BH,rx:k==="call"?3:14}));
+    if(k==="call"){ const bx=x+BW/2-16, by=y+BH/2-15;
+      a.appendChild(el("path",{class:"rake",d:`M${bx-7},${by} h14 M${bx-7},${by} v9 M${bx},${by} v9 M${bx+7},${by} v9`})); }
+    l=x-BW/2; t2=y-BH/2;
+  }
+  if(name){
+    const lines=name.split("\n");
+    lines.forEach((ln,i)=>{
+      const tt=el("text",{class:"lb",x:k==="call"?x-6:x,y:y+(lines.length===1?4.5:(i===0?-4:15))});
+      tt.textContent=ln; a.appendChild(tt);
+    });
+  }
+  const nm=el("text",{class:"num",x:l-4,y:t2+2}); nm.textContent=id; a.appendChild(nm);
+  ng.appendChild(a);
+});
+
+// 글자 자리: 노드 · 선 · 다른 글자 · 반복 구간 테두리와 겹치지 않는 첫 후보
+function nodeBox(n){
+  const [,k,,x,y]=n;
+  if(k==="decision") return {x:x-DW,y:y-DH,w:DW*2,h:DH*2};
+  if(k==="merge")    return {x:x-18,y:y-13,w:36,h:26};
+  if(k==="initial"||k==="final") return {x:x-13,y:y-13,w:26,h:26};
+  return {x:x-BW/2,y:y-BH/2,w:BW,h:BH};
+}
+const BOXES=D.N.map(n=>Object.assign({id:String(n[0])},nodeBox(n)));
+const TXT=[...gr.querySelectorAll('text'),...ng.querySelectorAll('text.num')].map(t=>{const b=t.getBBox();return {x:b.x,y:b.y,w:b.width,h:b.height};});
+const REPSEG=[];
+D.REP.forEach(r=>{REPSEG.push([r.x,r.y,r.x+r.w,r.y],[r.x,r.y+r.h,r.x+r.w,r.y+r.h],[r.x,r.y,r.x,r.y+r.h],[r.x+r.w,r.y,r.x+r.w,r.y+r.h]);});
+function free(r,selfId,selfEdge){
+  if(r.x<2||r.y<2||r.x+r.w>VB.width-2||r.y+r.h>VB.height-2) return false;
+  if(BOXES.some(b=>b.id!==selfId&&boxHit(r,b))) return false;
+  if(TXT.some(b=>boxHit(r,b))) return false;
+  if(SEGS.some(s=>s.e!==selfEdge&&segHit(r,s.s))) return false;
+  if(REPSEG.some(s=>segHit(r,s))) return false;
+  return true;
+}
+const MISS=[];
+// 흐름선 라벨
+D.E.forEach(([a,b,d,lab,kd,cands,opt])=>{
+  if(!lab) return;
+  const t=el("text",{class:"g dim "+(kd||""),x:0,y:0});
+  t.textContent=lab; t.dataset.e=a+"|"+b; gl.appendChild(t);
+  let ok=null;
+  for(const [x,y,an] of cands){
+    t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(), r={x:bb.x-2,y:bb.y-1,w:bb.width+4,h:bb.height+2};
+    if(free(r,null,a+"|"+b)){ok=r;break;}
+  }
+  if(!ok&&opt){ t.remove(); return; }
+  if(!ok){ const [x,y,an]=cands[0]; t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(); ok={x:bb.x,y:bb.y,w:bb.width,h:bb.height}; MISS.push("선라벨 "+a+"→"+b); }
+  TXT.push(ok);
+});
+// 분기 조건 문구
+D.N.forEach(([id,k,,x,y])=>{
+  if(k!=="decision"||!D.COND[id]) return;
+  const a=ng.querySelector('[data-key="'+id+'"]');
+  const cands=[
+    [x+DW+10, y-DH-4,  "start"],
+    [x-DW-10, y-DH-4,  "end"],
+    [x+DW+12, y+4,     "start"],
+    [x-DW-12, y+4,     "end"],
+    [x,       y-DH-14, "middle"],
+    [x+DW+10, y+DH+14, "start"],
+    [x-DW-10, y+DH+14, "end"],
+    [x+DW+10, y-DH-22, "start"],
+    [x-DW-10, y-DH-22, "end"]
+  ];
+  const ct=el("text",{class:"cnd",x:0,y:0,"text-anchor":"middle"});
+  ct.textContent="["+D.COND[id]+"]";
+  a.appendChild(ct);
+  let placed=null;
+  for(const [cx,cy,an] of cands){
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox();
+    const r={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    if(free(r,String(id),null)){ placed=r; break; }
+  }
+  if(!placed){
+    const [cx,cy,an]=cands[0];
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox(); placed={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    MISS.push("조건 "+id);
+  }
+  const bg=el("rect",{class:"cndbg",x:placed.x,y:placed.y,width:placed.w,height:placed.h,rx:2});
+  a.insertBefore(bg,ct);
+  TXT.push(placed);
+});
+window.__LABEL_MISS=MISS;
+if(MISS.length) console.warn("글자 자리 없음: "+MISS.join(", "));
+
+const nodes=[...ng.querySelectorAll('[data-key]')];
+const edges=[...svg.querySelectorAll('[data-e]')];
+function iso(id){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!id){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const keep=new Set([String(id)]);
+  edges.forEach(e=>{const p=e.dataset.e.split('|');
+    if(p[0]===String(id)||p[1]===String(id)){e.classList.add('lit');keep.add(p[0]);keep.add(p[1]);}});
+  nodes.forEach(n=>{if(keep.has(n.dataset.key))n.classList.add('lit');});
+}
+nodes.forEach(n=>{
+  const k=+n.dataset.key;
+  n.addEventListener('mouseenter',()=>iso(k));
+  n.addEventListener('mouseleave',()=>iso(null));
+  n.addEventListener('focus',()=>iso(k));
+  n.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

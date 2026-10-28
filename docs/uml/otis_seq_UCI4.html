@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-I4 소음 측정 — 시퀀스 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px}
+  .head rect{fill:var(--card);stroke:var(--ink2);stroke-width:1.4}
+  .head text{font-size:13.5px;font-weight:700;fill:var(--ink);text-anchor:middle}
+  .head .fig{stroke:var(--ink);stroke-width:1.6;fill:none;stroke-linecap:round}
+  .head .hd{fill:var(--card)}
+  .life{stroke:var(--rule);stroke-width:1.2;stroke-dasharray:5 5}
+  .bar{fill:var(--card);stroke:var(--ink2);stroke-width:1.2}
+  a.ms{text-decoration:none;cursor:pointer}
+  a.ms .ln{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  a.ms .ln.reply{stroke-dasharray:6 4}
+  a.ms .hit{stroke:transparent;stroke-width:14;fill:none}
+  a.ms .tx{font-size:13px;fill:var(--ink)}
+  a.ms .tx .cond{fill:var(--extend);font-weight:700}
+  a.ms .no{font-size:10px;fill:var(--ink3);font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.ms:hover .ln,a.ms:focus .ln{stroke:var(--signal);stroke-width:2}
+  a.ms:hover .tx,a.ms:focus .tx{fill:var(--signal);font-weight:700}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-I4 소음 측정</span><span class="tabs"><a href="otis_act_UCI4.html">액티비티</a><span class="on">시퀀스</span></span><span class="right"><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 1172 1238" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-I4 소음 측정 — 시퀀스 다이어그램">
+<defs>
+<marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0.5,0.8 L9,5 L0.5,9.2" fill="none" stroke="context-stroke" stroke-width="1.4"/></marker>
+</defs>
+<g id="rep"></g><g id="lifelines"></g><g id="bars"></g><g id="msgs"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const D={"L": [{"k": "SensorMethodHandler", "n": ":SensorMethodHandler", "x": 136.6, "actor": false}, {"k": "NoiseCaptureHandler", "n": ":NoiseCaptureHandler", "x": 364.0, "actor": false}, {"k": "AudioRecord", "n": ":AudioRecord", "x": 629.8, "actor": false}, {"k": "NoiseAudioEncoder", "n": ":NoiseAudioEncoder", "x": 814.8, "actor": false}, {"k": "SensorStreamHandler", "n": ":SensorStreamHandler", "x": 1034.9, "actor": false}], "M": [[1, "SensorMethodHandler", "NoiseCaptureHandler", "sync", 140, "소음 측정을 시작한다", null, "진동 센서보다 먼저 켠다.", [{"n": "startCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 201, "b": 258}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [250.3, 131, "middle", 0]], [2, "NoiseCaptureHandler", "NoiseCaptureHandler", "self", 178, "남은 측정 · 녹음을 지운다", null, "", [{"n": "stopAndDiscardAudio()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 539, "b": 549}], [432.0, 196, "start", 1]], [3, "NoiseCaptureHandler", "NoiseCaptureHandler", "self", 238, "마이크 권한을 확인한다", null, "없으면 소음 0(미측정)으로 끝낸다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [432.0, 256, "start", 1]], [4, "NoiseCaptureHandler", "AudioRecord", "sync", 298, "48kHz로 연다", null, "", [{"n": "openRecord()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 440, "b": 472}], [496.9, 289, "middle", 0]], [5, "NoiseCaptureHandler", "AudioRecord", "sync", 336, "44.1kHz로 연다", "못 엶", "", [{"n": "openRecord()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 440, "b": 472}], [496.9, 327, "middle", 0]], [6, "AudioRecord", "NoiseCaptureHandler", "reply", 374, "녹음기", null, "둘 다 못 열면 소음 0으로 끝낸다.", [{"n": "openRecord()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 440, "b": 472}], [496.9, 365, "middle", 0]], [7, "NoiseCaptureHandler", "AudioRecord", "sync", 412, "녹음을 시작한다", null, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [496.9, 403, "middle", 0]], [8, "NoiseCaptureHandler", "NoiseAudioEncoder", "sync", 450, "녹음 파일(M4A)을 연다", null, "AAC 64 kbps.", [{"n": "openAudioEncoder()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 515, "b": 537}], [496.9, 441, "middle", 0]], [9, "NoiseCaptureHandler", "NoiseCaptureHandler", "self", 488, "계산 스레드를 띄운다", null, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [432.0, 506, "start", 1]], [10, "NoiseCaptureHandler", "AudioRecord", "sync", 594, "한 홉만큼 읽는다", null, "읽은 표본이 없으면 5ms 쉬고 다시 읽는다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [496.9, 585, "middle", 0]], [11, "AudioRecord", "NoiseCaptureHandler", "reply", 632, "표본 묶음", null, "", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [496.9, 623, "middle", 0]], [12, "NoiseCaptureHandler", "NoiseAudioEncoder", "sync", 670, "가중 전 표본을 넣는다", null, "실패하면 녹음만 포기한다.", [{"n": "feed()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseAudioEncoder.kt", "a": 130, "b": 152}], [496.9, 661, "middle", 0]], [13, "NoiseCaptureHandler", "NoiseCaptureHandler", "self", 708, "A 가중 · 제곱해 창에 넣는다", null, "창이 덜 찼으면 소음 0(미측정).", [{"n": "aWeight()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 485, "b": 513}, {"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [432.0, 726, "start", 1]], [14, "NoiseCaptureHandler", "NoiseCaptureHandler", "self", 768, "Fast 평활 뒤 dBA로 바꾼다", null, "dBFS + 105.2 + 현장 보정, 0~130으로 자른다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}], [432.0, 786, "start", 1]], [15, "SensorStreamHandler", "NoiseCaptureHandler", "sync", 844, "최근 소음 값을 읽는다", null, "센서 값 한 건마다 그때의 dBA를 붙인다.", [{"n": "onSensorChanged()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorStreamHandler.kt", "a": 266, "b": 328}], [496.9, 835, "middle", 0]], [16, "NoiseCaptureHandler", "SensorStreamHandler", "reply", 882, "최근 dBA", null, "창이 덜 찼으면 0.0.", [{"n": "onSensorChanged()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorStreamHandler.kt", "a": 266, "b": 328}], [496.9, 873, "middle", 0]], [17, "SensorMethodHandler", "NoiseCaptureHandler", "sync", 920, "소음 측정을 멈춘다", null, "진동 센서를 먼저 멈춘 뒤에 부른다.", [{"n": "stopCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 259, "b": 296}, {"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}], [250.3, 911, "middle", 0]], [18, "NoiseCaptureHandler", "AudioRecord", "sync", 958, "녹음을 멈춘다", null, "스레드의 읽기를 풀어 준다.", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}], [496.9, 949, "middle", 0]], [19, "NoiseCaptureHandler", "NoiseCaptureHandler", "self", 996, "스레드를 기다린다 (1초 한도)", null, "못 끝나면 녹음을 포기하고 반납은 뒤 정리 스레드에 맡긴다.", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}, {"n": "abandonCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 594, "b": 634}], [432.0, 1014, "start", 1]], [20, "NoiseCaptureHandler", "AudioRecord", "sync", 1056, "녹음기를 반납한다", null, "", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}], [496.9, 1047, "middle", 0]], [21, "NoiseCaptureHandler", "NoiseAudioEncoder", "sync", 1094, "녹음 파일을 닫는다", null, "", [{"n": "finish()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseAudioEncoder.kt", "a": 154, "b": 178}], [496.9, 1085, "middle", 0]], [22, "NoiseAudioEncoder", "NoiseCaptureHandler", "reply", 1132, "녹음 경로", null, "", [{"n": "finish()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseAudioEncoder.kt", "a": 154, "b": 178}], [496.9, 1123, "middle", 0]], [23, "NoiseCaptureHandler", "SensorMethodHandler", "reply", 1170, "녹음 경로 · 표본 속도", null, "녹음하지 못했으면 경로는 비어 있다.", [{"n": "stop()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 551, "b": 592}, {"n": "stopCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 259, "b": 296}], [250.3, 1161, "middle", 0]]], "R": [{"x": 329.98890000000006, "y": 544, "w": 518.7795000000001, "h": 264, "label": "반복 · 정지 요청이 올 때까지 한 홉마다", "lx": 373.98890000000006}], "BOT": 1218};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const LX={}; D.L.forEach(l=>LX[l.k]=l.x);
+// 활성 막대: 메시지에서 자동 계산
+function computeBars(){
+  const GAP=200, PAD=10, touch={};
+  const add=(k,v)=>{(touch[k]=touch[k]||[]).push(v);};
+  D.M.forEach(m=>{const [,from,to,kind,y]=m;
+    if(kind==="self"){add(from,y);add(from,y+30);} else {add(from,y);add(to,y);}});
+  const bars=[];
+  for(const k in touch){
+    const lf=D.L.find(l=>l.k===k);
+    if(!lf||lf.actor) continue;
+    const ys=[...new Set(touch[k])].sort((a,b)=>a-b);
+    let s=ys[0],p=ys[0];
+    for(let i=1;i<ys.length;i++){
+      if(ys[i]-p>GAP){bars.push([k,s-PAD,p+PAD]);s=ys[i];}
+      p=ys[i];
+    }
+    bars.push([k,s-PAD,p+PAD]);
+  }
+  return bars;
+}
+const KIND={sync:"동기",reply:"반환",self:"자기호출",async:"비동기"};
+const gl=document.getElementById('lifelines'),gb=document.getElementById('bars'),
+      gr=document.getElementById('rep'),gm=document.getElementById('msgs');
+D.L.forEach(l=>{
+  const g=el("g",{class:"head dim"}); g.dataset.key=l.k;
+  if(l.actor){
+    g.appendChild(el("circle",{class:"fig hd",cx:l.x,cy:26,r:11}));
+    g.appendChild(el("path",{class:"fig",d:`M${l.x},37 L${l.x},63 M${l.x-16},48 L${l.x+16},48 M${l.x},63 L${l.x-12},84 M${l.x},63 L${l.x+12},84`}));
+    const t=el("text",{x:l.x,y:102}); t.textContent=l.n; g.appendChild(t);
+  }else{
+    const t=el("text",{x:l.x,y:65}); t.textContent=l.n; g.appendChild(t);
+    gl.appendChild(g);
+    const w=Math.max(110,t.getBBox().width+28);
+    g.insertBefore(el("rect",{x:l.x-w/2,y:38,width:w,height:44,rx:2}),t);
+  }
+  gl.appendChild(g);
+  gl.appendChild(el("line",{class:"life dim",x1:l.x,y1:l.actor?110:82,x2:l.x,y2:D.BOT}));
+});
+computeBars().forEach(([k,a,b])=>gb.appendChild(el("rect",{class:"bar dim",x:LX[k]-6,y:a,width:12,height:b-a})));
+D.R.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.lx,y:r.y+17}); t.textContent=r.label; gr.appendChild(t);
+});
+D.M.forEach(m=>{
+  const [no,from,to,kind,y,label,cond,desc,fns,[tx,ty,anch,side]]=m;
+  const a=el("a",{class:"ms dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=no; a.dataset.from=from; a.dataset.to=to;
+  const nm=k=>{const l=D.L.find(z=>z.k===k);return l.actor?l.n:":"+l.k;};
+  const ti=el("title");
+  ti.textContent=no+". "+label+(cond?"  [조건: "+cond+"]":"")+"\n"+nm(from)+" → "+nm(to)+" · "+KIND[kind]+"\n"+desc+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  const x1=LX[from],x2=LX[to];
+  let d;
+  if(kind==="self"){
+    if(side>0){ const s=x1+6; d=`M${s},${y} L${s+52},${y} L${s+52},${y+30} L${s+7},${y+30}`; }
+    else { const s=x1-6; d=`M${s},${y} L${s-52},${y} L${s-52},${y+30} L${s-7},${y+30}`; }
+  } else {
+    const dir=x2>x1?1:-1;
+    d=`M${x1+6*dir},${y} L${x2-6*dir},${y}`;
+  }
+  a.appendChild(el("path",{class:"hit",d:d}));
+  a.appendChild(el("path",{class:"ln"+(kind==="reply"||kind==="async"?" reply":""),d:d,
+    "marker-end":(kind==="reply"||kind==="async")?"url(#ao)":"url(#af)"}));
+  const t=el("text",{class:"tx",x:tx,y:ty,"text-anchor":anch});
+  if(cond){const c=el("tspan",{class:"cond"});c.textContent="["+cond+"] ";t.appendChild(c);}
+  t.appendChild(document.createTextNode(label)); a.appendChild(t);
+  const n=el("text",{class:"no",x:(kind==="self"?(side>0?x1+10:x1-22):Math.min(x1,x2)+10),
+                     y:y+(kind==="self"?-6:14),"text-anchor":"start"});
+  n.textContent=no; a.appendChild(n);
+  gm.appendChild(a);
+});
+const svg=document.getElementById('dg');
+const msgs=[...gm.querySelectorAll('a.ms')];
+function iso(no){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!no){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const m=D.M.find(z=>z[0]===no);
+  msgs.forEach(a=>{if(+a.dataset.key===no)a.classList.add('lit');});
+  svg.querySelectorAll('.head').forEach(h=>{if(h.dataset.key===m[1]||h.dataset.key===m[2])h.classList.add('lit');});
+}
+msgs.forEach(a=>{
+  const k=+a.dataset.key;
+  a.addEventListener('mouseenter',()=>iso(k));
+  a.addEventListener('mouseleave',()=>iso(null));
+  a.addEventListener('focus',()=>iso(k));
+  a.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

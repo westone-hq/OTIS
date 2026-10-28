@@ -63,13 +63,14 @@ class _ChartEntry {
 }
 
 /// 작성: 2026-10-27 10:00:00 · 박건준
+/// 수정: 2026-10-28 10:30:00 · 박건준
 /// 변수: _entries
 /// 목적: 결과 화면에 그릴 그래프와 그 차례. 적색 판정이 있는 지표(X · Y · Z
 ///       진동 P2P, 소음 최대)의 파형만 그린다 — 화면에서 값이 왜 그렇게
 ///       나왔는지 보는 용도다. 위치 · 속도 · 가속도 · 저크는 리포트 3쪽에
 ///       있다.
 /// 근거: 미정 — 결과 화면 그래프의 차트 종류는 사양이 없어 권장안으로
-///       정했다(`docs/pending_checks.md`)
+///       정했다
 const List<_ChartEntry> _entries = <_ChartEntry>[
   _ChartEntry(
     spec: ReportChartAxes.x,

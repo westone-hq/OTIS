@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-08 측정 결과 전달 — 액티비티 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px;max-width:1180px;margin:0 auto}
+  a.nd{text-decoration:none;cursor:pointer}
+  a.nd .shape{fill:var(--card);stroke:var(--ink2);stroke-width:1.4;transition:fill .15s,stroke .15s}
+  a.nd .rake{fill:none;stroke:var(--ink2);stroke-width:1.4}
+  a.nd .lb{font-size:13px;fill:var(--ink);text-anchor:middle;pointer-events:none}
+  a.nd .num{font-size:10.5px;fill:var(--ink3);text-anchor:end;pointer-events:none;
+            font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.nd:hover .shape,a.nd:focus .shape{fill:var(--signal-soft);stroke:var(--signal);stroke-width:2}
+  a.nd:hover .lb,a.nd:focus .lb{fill:var(--signal);font-weight:700}
+  a.nd .cnd{font-size:12px;fill:var(--ink);font-weight:700;pointer-events:none}
+  a.nd:hover .cnd,a.nd:focus .cnd{fill:var(--signal)}
+  a.nd .cndbg{fill:var(--card);stroke:none;pointer-events:none}
+  a.nd .term{fill:var(--ink);stroke:none}
+  a.nd .termring{fill:var(--card);stroke:var(--ink);stroke-width:1.6}
+  .flow{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  .flow.back{stroke:var(--extend)}
+  .g{font-size:11.5px;font-weight:600;fill:var(--ink2)}
+  .g.t{fill:var(--signal)}
+  .g.f{fill:var(--ink2)}
+  .g.back{fill:var(--extend)}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-08 측정 결과 전달</span><span class="tabs"><span class="on">액티비티</span><a href="otis_seq_UC08.html">시퀀스</a></span><span class="right"><a href="otis_act_UCI7.html">리포트 PDF 생성</a><a href="otis_act_UC09.html">수신 이메일 관리</a><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 1056 1307" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-08 측정 결과 전달 — 액티비티 다이어그램">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker></defs>
+<g id="rep"></g><g id="edges"></g><g id="glabels"></g><g id="nodes"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const C=560,BW=212,BH=50,DW=26,DH=19;
+const D={"N": [[1, "initial", "", 560, 44, "결과 화면에서 ‘메일 발송’을 누른다.", [{"n": "showSendEmailSheet()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 11, "b": 27}, {"n": "build()", "p": "lib/ui/features/result/result_screen.dart", "a": 523, "b": 619}], null], [2, "action", "수신 이메일과 지난번\n보낸 주소를 불러온다", 560, 106.0, "지난번 보낸 주소 중 아직 목록에 있는 것을 미리 고른다. 등록된 주소가 하나뿐이면 그것을 고른다.", [{"n": "_loadRecipients()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 98, "b": 118}, {"n": "loadEmails()", "p": "lib/adapter/storage/prefs_store.dart", "a": 45, "b": 58}, {"n": "loadLastRecipients()", "p": "lib/adapter/storage/prefs_store.dart", "a": 73, "b": 80}], null], [3, "action", "보낼 자료와 받는 사람을\n고른다", 560, 182.0, "PDF 리포트 · 로우 데이터(raw.txt) · 현장 소음(m4a). 셋 다 기본 체크. 하나도 안 고르면 보내기를 막는다.", [{"n": "build()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 231, "b": 396}], null], [4, "action", "‘보내기’를 누른다", 560, 258.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [5, "decision", "", 560, 328.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [6, "action", "‘설정으로 이동’\n안내를 띄운다", 220, 328.0, "“관리”를 눌러도 설정으로 간다.", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}, {"n": "build()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 231, "b": 396}], null], [7, "call", "수신 이메일 관리", 220, 400.0, "설정 화면에서 이메일을 등록한다(«extend» ③).", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}, {"n": "_add()", "p": "lib/ui/features/settings/settings_screen.dart", "a": 152, "b": 184}], "otis_act_UC09.html"], [8, "final", "", 220, 469.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [9, "action", "측정 결과를 읽는다", 560, 406.0, "", [{"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}, {"n": "load()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 354, "b": 371}], null], [10, "decision", "", 560, 476.0, "", [{"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [11, "action", "‘자료를 준비하지\n못했습니다’를 알린다", 900, 476.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [12, "final", "", 900, 545.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [13, "decision", "", 560, 548.0, "", [{"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [14, "call", "리포트 PDF 생성", 220, 548.0, "그 자리에서 만든다.", [{"n": "ensureReportPdf()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 433, "b": 455}, {"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], "otis_act_UCI7.html"], [15, "merge", "", 560, 616.0, "", [{"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [16, "action", "고른 자료를 제번 · 측정 ID\n이름의 사본으로 만든다", 560, 680.0, "TUNE_제번_측정ID.pdf · RAW_… .txt · NOISE_… .m4a. 메일 앱에 넘기는 임시 폴더에 둔다.", [{"n": "mailAttachmentCopy()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 487, "b": 506}, {"n": "attachmentName()", "p": "lib/domain/mail/mail_composer.dart", "a": 38, "b": 54}, {"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [17, "decision", "", 560, 750.0, "로우 데이터 · 녹음은 다시 만들 수 없다.", [{"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [18, "action", "본문 끝에 ‘누락:’\n줄을 단다", 900, 750.0, "", [{"n": "missingLine()", "p": "lib/domain/mail/mail_composer.dart", "a": 71, "b": 85}, {"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [19, "merge", "", 560, 818.0, "", [{"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [20, "action", "제목 · 본문 · 첨부를\n채운다", 560, 882.0, "제목 “TUNE Summary Report - 제번 - 일시”(한국 시간). 본문에 작업자 · 거치 · 미보정 기종 · 참고사항.", [{"n": "subject()", "p": "lib/domain/mail/mail_composer.dart", "a": 87, "b": 96}, {"n": "body()", "p": "lib/domain/mail/mail_composer.dart", "a": 121, "b": 157}, {"n": "buildJobEmail()", "p": "lib/service/mail_service.dart", "a": 13, "b": 138}], null], [21, "action", "메일 앱 선택 창을 연다", 560, 958.0, "앱이 직접 보내지 않는다.", [{"n": "send()", "p": "lib/service/mail_service.dart", "a": 140, "b": 152}], null], [22, "decision", "", 560, 1028.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [23, "action", "‘자료를 준비하지\n못했습니다’를 알린다", 900, 1028.0, "실제로는 메일 앱을 못 연 경우도 같은 문구가 뜬다.", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [24, "final", "", 900, 1097.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [25, "action", "고른 주소를 기억한다", 560, 1106.0, "다음에 미리 골라 둔다.", [{"n": "send()", "p": "lib/service/mail_service.dart", "a": 140, "b": 152}, {"n": "saveLastRecipients()", "p": "lib/adapter/storage/prefs_store.dart", "a": 82, "b": 89}], null], [26, "action", "시트를 닫고 메일 앱 선택\n창을 열었다고 알린다", 560, 1182.0, "", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null], [27, "final", "", 560, 1245.0, "실제 발송은 작업자가 메일 앱에서 누른다.", [{"n": "_send()", "p": "lib/ui/features/result/send_email_sheet.dart", "a": 128, "b": 188}], null]], "E": [[1, 2, "M560,55 L560,81.0", null, null, [[569, 69, "start"], [551, 69, "end"]], false], [2, 3, "M560,131.0 L560,157.0", null, null, [[569, 145.0, "start"], [551, 145.0, "end"]], false], [3, 4, "M560,207.0 L560,233.0", null, null, [[569, 221.0, "start"], [551, 221.0, "end"]], false], [4, 5, "M560,283.0 L560,309.0", null, null, [[569, 297.0, "start"], [551, 297.0, "end"]], false], [5, 6, "M534,328.0 L326.0,328.0", "참", "t", [[430.0, 320.0, "middle"], [430.0, 345.0, "middle"]], false], [6, 7, "M220,353.0 L220,375.0", null, null, [], false], [7, 8, "M220,425.0 L220,457.0", null, null, [], false], [5, 9, "M560,347.0 L560,381.0", "거짓", "f", [[569, 361.0, "start"], [551, 361.0, "end"]], false], [9, 10, "M560,431.0 L560,457.0", null, null, [[569, 445.0, "start"], [551, 445.0, "end"]], false], [10, 11, "M586,476.0 L794.0,476.0", "참", "t", [[690.0, 468.0, "middle"], [690.0, 493.0, "middle"]], false], [11, 12, "M900,501.0 L900,533.0", null, null, [], false], [10, 13, "M560,495.0 L560,529.0", "거짓", "f", [[569, 509.0, "start"], [551, 509.0, "end"]], false], [13, 14, "M534,548.0 L326.0,548.0", "참", "t", [[430.0, 540.0, "middle"], [430.0, 565.0, "middle"]], false], [13, 15, "M560,567.0 L560,603.0", "거짓", "f", [[569, 581.0, "start"], [551, 581.0, "end"], [569, 596.0, "start"], [551, 596.0, "end"], [569, 589.0, "start"]], false], [14, 15, "M220,573.0 L220,616.0 L542,616.0", null, null, [], false], [15, 16, "M560,629.0 L560,655.0", null, null, [[569, 643.0, "start"], [551, 643.0, "end"]], false], [16, 17, "M560,705.0 L560,731.0", null, null, [[569, 719.0, "start"], [551, 719.0, "end"]], false], [17, 18, "M586,750.0 L794.0,750.0", "참", "t", [[690.0, 742.0, "middle"], [690.0, 767.0, "middle"]], false], [17, 19, "M560,769.0 L560,805.0", "거짓", "f", [[569, 783.0, "start"], [551, 783.0, "end"], [569, 798.0, "start"], [551, 798.0, "end"], [569, 791.0, "start"]], false], [18, 19, "M900,775.0 L900,818.0 L578,818.0", null, null, [], false], [19, 20, "M560,831.0 L560,857.0", null, null, [[569, 845.0, "start"], [551, 845.0, "end"]], false], [20, 21, "M560,907.0 L560,933.0", null, null, [[569, 921.0, "start"], [551, 921.0, "end"]], false], [21, 22, "M560,983.0 L560,1009.0", null, null, [[569, 997.0, "start"], [551, 997.0, "end"]], false], [22, 23, "M586,1028.0 L794.0,1028.0", "참", "t", [[690.0, 1020.0, "middle"], [690.0, 1045.0, "middle"]], false], [23, 24, "M900,1053.0 L900,1085.0", null, null, [], false], [22, 25, "M560,1047.0 L560,1081.0", "거짓", "f", [[569, 1061.0, "start"], [551, 1061.0, "end"]], false], [25, 26, "M560,1131.0 L560,1157.0", null, null, [[569, 1145.0, "start"], [551, 1145.0, "end"]], false], [26, 27, "M560,1207.0 L560,1233.0", null, null, [[569, 1221.0, "start"], [551, 1221.0, "end"]], false]], "COND": {"5": "등록된 이메일이 없나", "10": "결과가 없나", "13": "PDF를 보내는데\n아직 없나", "17": "없는 자료가 있나", "22": "메일 앱을 열지 못했나"}, "REP": []};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const KIND={initial:"시작",merge:"병합",action:"액션",decision:"분기",call:"호출 액션",final:"종료"};
+const gr=document.getElementById('rep'),eg=document.getElementById('edges'),
+      gl=document.getElementById('glabels'),ng=document.getElementById('nodes');
+const svg=document.getElementById('dg'), VB=svg.viewBox.baseVal;
+
+// 반복 구간
+D.REP.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.x+12,y:r.y+19}); t.textContent=r.label; gr.appendChild(t);
+});
+// 흐름선
+const SEGS=[];
+D.E.forEach(([a,b,d,lab,kd])=>{
+  const p=el("path",{class:"flow dim"+(kd==="back"?" back":""),d:d,"marker-end":"url(#a)"});
+  p.dataset.e=a+"|"+b; eg.appendChild(p);
+  const pts=d.replace(/[ML]/g,"").trim().split(/\s+/).map(s=>s.split(",").map(Number));
+  for(let i=0;i+1<pts.length;i++) SEGS.push({e:a+"|"+b,s:[pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]]});
+});
+// 노드
+D.N.forEach(([id,k,name,x,y,desc,fns,doc])=>{
+  const a=el("a",doc?{class:"nd dim",href:doc}:{class:"nd dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=id;
+  const ti=el("title");
+  ti.textContent=(id+". "+(name?name.replace(/\n/g," "):KIND[k]))+(D.COND[id]?"  ["+D.COND[id]+"]":"")+"\n"+desc+
+    (doc?"\n(누르면 그 흐름의 액티비티 다이어그램으로 이동)":"")+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  let l,t2;
+  if(k==="initial"){ a.appendChild(el("circle",{class:"term shape",cx:x,cy:y,r:11})); l=x-11; t2=y-11; }
+  else if(k==="final"){ a.appendChild(el("circle",{class:"termring shape",cx:x,cy:y,r:12}));
+                        a.appendChild(el("circle",{class:"term",cx:x,cy:y,r:6.5})); l=x-12; t2=y-12; }
+  else if(k==="decision"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-DH} L${x+DW},${y} L${x},${y+DH} L${x-DW},${y} Z`})); l=x-DW; t2=y-DH; }
+  else if(k==="merge"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-13} L${x+18},${y} L${x},${y+13} L${x-18},${y} Z`})); l=x-18; t2=y-13; }
+  else{
+    a.appendChild(el("rect",{class:"shape",x:x-BW/2,y:y-BH/2,width:BW,height:BH,rx:k==="call"?3:14}));
+    if(k==="call"){ const bx=x+BW/2-16, by=y+BH/2-15;
+      a.appendChild(el("path",{class:"rake",d:`M${bx-7},${by} h14 M${bx-7},${by} v9 M${bx},${by} v9 M${bx+7},${by} v9`})); }
+    l=x-BW/2; t2=y-BH/2;
+  }
+  if(name){
+    const lines=name.split("\n");
+    lines.forEach((ln,i)=>{
+      const tt=el("text",{class:"lb",x:k==="call"?x-6:x,y:y+(lines.length===1?4.5:(i===0?-4:15))});
+      tt.textContent=ln; a.appendChild(tt);
+    });
+  }
+  const nm=el("text",{class:"num",x:l-4,y:t2+2}); nm.textContent=id; a.appendChild(nm);
+  ng.appendChild(a);
+});
+
+// 글자 자리: 노드 · 선 · 다른 글자 · 반복 구간 테두리와 겹치지 않는 첫 후보
+function nodeBox(n){
+  const [,k,,x,y]=n;
+  if(k==="decision") return {x:x-DW,y:y-DH,w:DW*2,h:DH*2};
+  if(k==="merge")    return {x:x-18,y:y-13,w:36,h:26};
+  if(k==="initial"||k==="final") return {x:x-13,y:y-13,w:26,h:26};
+  return {x:x-BW/2,y:y-BH/2,w:BW,h:BH};
+}
+const BOXES=D.N.map(n=>Object.assign({id:String(n[0])},nodeBox(n)));
+const TXT=[...gr.querySelectorAll('text'),...ng.querySelectorAll('text.num')].map(t=>{const b=t.getBBox();return {x:b.x,y:b.y,w:b.width,h:b.height};});
+const REPSEG=[];
+D.REP.forEach(r=>{REPSEG.push([r.x,r.y,r.x+r.w,r.y],[r.x,r.y+r.h,r.x+r.w,r.y+r.h],[r.x,r.y,r.x,r.y+r.h],[r.x+r.w,r.y,r.x+r.w,r.y+r.h]);});
+function free(r,selfId,selfEdge){
+  if(r.x<2||r.y<2||r.x+r.w>VB.width-2||r.y+r.h>VB.height-2) return false;
+  if(BOXES.some(b=>b.id!==selfId&&boxHit(r,b))) return false;
+  if(TXT.some(b=>boxHit(r,b))) return false;
+  if(SEGS.some(s=>s.e!==selfEdge&&segHit(r,s.s))) return false;
+  if(REPSEG.some(s=>segHit(r,s))) return false;
+  return true;
+}
+const MISS=[];
+// 흐름선 라벨
+D.E.forEach(([a,b,d,lab,kd,cands,opt])=>{
+  if(!lab) return;
+  const t=el("text",{class:"g dim "+(kd||""),x:0,y:0});
+  t.textContent=lab; t.dataset.e=a+"|"+b; gl.appendChild(t);
+  let ok=null;
+  for(const [x,y,an] of cands){
+    t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(), r={x:bb.x-2,y:bb.y-1,w:bb.width+4,h:bb.height+2};
+    if(free(r,null,a+"|"+b)){ok=r;break;}
+  }
+  if(!ok&&opt){ t.remove(); return; }
+  if(!ok){ const [x,y,an]=cands[0]; t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(); ok={x:bb.x,y:bb.y,w:bb.width,h:bb.height}; MISS.push("선라벨 "+a+"→"+b); }
+  TXT.push(ok);
+});
+// 분기 조건 문구
+D.N.forEach(([id,k,,x,y])=>{
+  if(k!=="decision"||!D.COND[id]) return;
+  const a=ng.querySelector('[data-key="'+id+'"]');
+  const cands=[
+    [x+DW+10, y-DH-4,  "start"],
+    [x-DW-10, y-DH-4,  "end"],
+    [x+DW+12, y+4,     "start"],
+    [x-DW-12, y+4,     "end"],
+    [x,       y-DH-14, "middle"],
+    [x+DW+10, y+DH+14, "start"],
+    [x-DW-10, y+DH+14, "end"],
+    [x+DW+10, y-DH-22, "start"],
+    [x-DW-10, y-DH-22, "end"]
+  ];
+  const ct=el("text",{class:"cnd",x:0,y:0,"text-anchor":"middle"});
+  ct.textContent="["+D.COND[id]+"]";
+  a.appendChild(ct);
+  let placed=null;
+  for(const [cx,cy,an] of cands){
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox();
+    const r={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    if(free(r,String(id),null)){ placed=r; break; }
+  }
+  if(!placed){
+    const [cx,cy,an]=cands[0];
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox(); placed={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    MISS.push("조건 "+id);
+  }
+  const bg=el("rect",{class:"cndbg",x:placed.x,y:placed.y,width:placed.w,height:placed.h,rx:2});
+  a.insertBefore(bg,ct);
+  TXT.push(placed);
+});
+window.__LABEL_MISS=MISS;
+if(MISS.length) console.warn("글자 자리 없음: "+MISS.join(", "));
+
+const nodes=[...ng.querySelectorAll('[data-key]')];
+const edges=[...svg.querySelectorAll('[data-e]')];
+function iso(id){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!id){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const keep=new Set([String(id)]);
+  edges.forEach(e=>{const p=e.dataset.e.split('|');
+    if(p[0]===String(id)||p[1]===String(id)){e.classList.add('lit');keep.add(p[0]);keep.add(p[1]);}});
+  nodes.forEach(n=>{if(keep.has(n.dataset.key))n.classList.add('lit');});
+}
+nodes.forEach(n=>{
+  const k=+n.dataset.key;
+  n.addEventListener('mouseenter',()=>iso(k));
+  n.addEventListener('mouseleave',()=>iso(null));
+  n.addEventListener('focus',()=>iso(k));
+  n.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

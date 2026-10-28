@@ -172,7 +172,7 @@ class Kinematics {
       'bw${CaptureConfig.accelChartLowpassOrder}zp)';
 
   /// 작성: 2026-09-15 14:32:07 · 박건준
-  /// 수정: 2026-10-22 23:55:00 · 박건준
+  /// 수정: 2026-10-28 10:30:00 · 박건준
   /// 함수: derive
   /// 목적: 수직 진동 시계열에서 가속도 · 속도 · 누적 이동량 · 저크와
   ///       최대 속도 · 운행 거리를 만든다. 순서대로 한다.
@@ -231,7 +231,6 @@ class Kinematics {
   ///       작고, 원본 리포트 기록(ride_reference)은 57.3 m(원본) 대비 예전
   ///       57.09 · 지금 56.84 m 다. 오티스 앱도 정지 구간까지 적분하는
   ///       것으로 보이나 확인하지 못했다. 층고 도면을 아는 운행으로 확인한다
-  ///       (docs/pending_checks.md)
   ///       저크 저역의 근거는 `CaptureConfig.jerkLowpassHz` 를 본다
   static Kinematics derive(List<double> zSeries, double sampleRate) {
     final n = zSeries.length; // 격자 행 수

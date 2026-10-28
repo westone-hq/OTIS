@@ -294,6 +294,7 @@ class CaptureConfig {
   static const int rideVerticalHighpassOrder = 2;
 
   /// 작성: 2026-10-22 19:00:00 · 박건준
+  /// 수정: 2026-10-28 10:30:00 · 박건준
   /// 변수: deviceResponseByModelPrefix
   /// 목적: 기종 응답 보정 표. 기종 이름(`Build.MODEL`)이 열쇠의 글자로
   ///       시작하면 그 필터를 가중한 수직(Z) 진동에 양방향으로 건다
@@ -323,7 +324,6 @@ class CaptureConfig {
   ///       를 골랐다. 하강3(화면 위 거치 추정)을 뺀 4쌍도 같은 순위였다.
   ///       수평은 보정 없이 ±8%, 신호등 5/5 라 걸지 않는다(2026-10-22 리뷰)
   ///       미확인: 근거가 서일대 승강기 한 대다. 다른 건물에서 다시 확인한다
-  ///       (docs/pending_checks.md)
   static const Map<String, DeviceResponseFilter> deviceResponseByModelPrefix =
       <String, DeviceResponseFilter>{
         'SM-S901': DeviceResponseFilter(order: 2, lowpassHz: 25.0),

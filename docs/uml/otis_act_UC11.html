@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-11 앱 업데이트 — 액티비티 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px;max-width:1180px;margin:0 auto}
+  a.nd{text-decoration:none;cursor:pointer}
+  a.nd .shape{fill:var(--card);stroke:var(--ink2);stroke-width:1.4;transition:fill .15s,stroke .15s}
+  a.nd .rake{fill:none;stroke:var(--ink2);stroke-width:1.4}
+  a.nd .lb{font-size:13px;fill:var(--ink);text-anchor:middle;pointer-events:none}
+  a.nd .num{font-size:10.5px;fill:var(--ink3);text-anchor:end;pointer-events:none;
+            font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.nd:hover .shape,a.nd:focus .shape{fill:var(--signal-soft);stroke:var(--signal);stroke-width:2}
+  a.nd:hover .lb,a.nd:focus .lb{fill:var(--signal);font-weight:700}
+  a.nd .cnd{font-size:12px;fill:var(--ink);font-weight:700;pointer-events:none}
+  a.nd:hover .cnd,a.nd:focus .cnd{fill:var(--signal)}
+  a.nd .cndbg{fill:var(--card);stroke:none;pointer-events:none}
+  a.nd .term{fill:var(--ink);stroke:none}
+  a.nd .termring{fill:var(--card);stroke:var(--ink);stroke-width:1.6}
+  .flow{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  .flow.back{stroke:var(--extend)}
+  .g{font-size:11.5px;font-weight:600;fill:var(--ink2)}
+  .g.t{fill:var(--signal)}
+  .g.f{fill:var(--ink2)}
+  .g.back{fill:var(--extend)}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-11 앱 업데이트</span><span class="tabs"><span class="on">액티비티</span><a href="otis_seq_UC11.html">시퀀스</a></span><span class="right"><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 1056 1565" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-11 앱 업데이트 — 액티비티 다이어그램">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker></defs>
+<g id="rep"></g><g id="edges"></g><g id="glabels"></g><g id="nodes"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const C=560,BW=212,BH=50,DW=26,DH=19;
+const D={"N": [[1, "initial", "", 560, 44, "앱을 켜 홈이 처음 열릴 때 자동으로, 또는 설정의 ‘업데이트 확인’으로 시작한다.", [{"n": "checkAtLaunch()", "p": "lib/ui/features/update/update_prompt.dart", "a": 41, "b": 53}, {"n": "initState()", "p": "lib/ui/features/home/home_screen.dart", "a": 148, "b": 167}, {"n": "_checkUpdate()", "p": "lib/ui/features/settings/settings_screen.dart", "a": 99, "b": 109}], null], [2, "decision", "", 560, 100, "설정에서 누른 확인은 이 검사를 거치지 않는다.", [{"n": "checkAtLaunch()", "p": "lib/ui/features/update/update_prompt.dart", "a": 41, "b": 53}], null], [3, "final", "", 220, 100, "", [{"n": "checkAtLaunch()", "p": "lib/ui/features/update/update_prompt.dart", "a": 41, "b": 53}], null], [4, "action", "배포 저장소에서 version.json을\n받는다 (3초 한도)", 560, 178.0, "GitHub Releases.", [{"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}], null], [5, "decision", "", 560, 248.0, "", [{"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}], null], [6, "action", "시작 확인이면 조용히 넘어가고\n설정 확인이면 사유를 알린다", 220, 248.0, "기계실처럼 인터넷이 없어도 측정은 막지 않는다. 설정 확인은 인터넷 · 서버 · 형식 갈래마다 다른 문구.", [{"n": "checkManually()", "p": "lib/ui/features/update/update_prompt.dart", "a": 55, "b": 80}, {"n": "checkAtLaunch()", "p": "lib/ui/features/update/update_prompt.dart", "a": 41, "b": 53}], null], [7, "final", "", 220, 317.0, "", [{"n": "checkManually()", "p": "lib/ui/features/update/update_prompt.dart", "a": 55, "b": 80}], null], [8, "action", "설치된 빌드와 견줘\n필수 · 선택 · 없음을 고른다", 560, 326.0, "최소 빌드보다 낮으면 필수다.", [{"n": "decide()", "p": "lib/domain/update/update_decision.dart", "a": 15, "b": 27}, {"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}], null], [9, "decision", "", 560, 396.0, "시작 확인에서 같은 버전을 ‘나중에’ 한 지 하루가 안 됐으면 없음으로 본다.", [{"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}, {"n": "checkManually()", "p": "lib/ui/features/update/update_prompt.dart", "a": 55, "b": 80}], null], [10, "action", "설정 확인이면\n‘최신 버전입니다’를 알린다", 900, 396.0, "", [{"n": "checkManually()", "p": "lib/ui/features/update/update_prompt.dart", "a": 55, "b": 80}], null], [11, "final", "", 900, 465.0, "", [{"n": "checkManually()", "p": "lib/ui/features/update/update_prompt.dart", "a": 55, "b": 80}], null], [12, "merge", "", 560, 462.0, "", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}], null], [13, "action", "‘새 버전이 있습니다’\n창을 띄운다", 560, 526.0, "필수면 뒤로가기 · 바깥 누르기로 닫히지 않고 버튼은 “업데이트” 하나다.", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}, {"n": "_offerMessage()", "p": "lib/ui/features/update/update_prompt.dart", "a": 121, "b": 134}], null], [14, "decision", "", 560, 596.0, "", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}], null], [15, "action", "같은 버전을 하루 동안\n묻지 않게 남긴다", 900, 596.0, "", [{"n": "snooze()", "p": "lib/adapter/update/update_checker.dart", "a": 164, "b": 172}, {"n": "saveUpdateSnooze()", "p": "lib/adapter/storage/prefs_store.dart", "a": 144, "b": 154}], null], [16, "final", "", 900, 665.0, "그대로 앱을 쓴다.", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}], null], [17, "decision", "", 560, 668.0, "", [{"n": "_ensureInstallAllowed()", "p": "lib/ui/features/update/update_prompt.dart", "a": 202, "b": 232}, {"n": "canInstall()", "p": "lib/adapter/update/update_installer.dart", "a": 90, "b": 96}], null], [18, "action", "안내 뒤 ‘앱 설치 허용’\n설정 화면을 연다", 220, 668.0, "돌아오면 다시 확인한다.", [{"n": "_ensureInstallAllowed()", "p": "lib/ui/features/update/update_prompt.dart", "a": 202, "b": 232}, {"n": "openInstallSettings()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 153, "b": 176}], null], [19, "merge", "", 560, 736.0, "", [{"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], null], [20, "decision", "", 560, 794.0, "", [{"n": "_ensureInstallAllowed()", "p": "lib/ui/features/update/update_prompt.dart", "a": 202, "b": 232}], null], [21, "action", "진행 표시와 함께\nAPK를 내려받는다", 560, 872.0, "선택 업데이트면 취소 버튼이 있다.", [{"n": "_download()", "p": "lib/ui/features/update/update_prompt.dart", "a": 310, "b": 324}, {"n": "download()", "p": "lib/adapter/update/update_installer.dart", "a": 118, "b": 138}, {"n": "startDownload()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 275, "b": 358}], null], [22, "decision", "", 560, 942.0, "SHA-256이 다르면 파일을 지우고 설치하지 않는다.", [{"n": "startDownload()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 275, "b": 358}, {"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], null], [23, "action", "패키지 설치 세션으로\n설치를 넘긴다", 560, 1020.0, "", [{"n": "install()", "p": "lib/adapter/update/update_installer.dart", "a": 148, "b": 171}, {"n": "startInstall()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 387, "b": 428}], null], [24, "decision", "", 560, 1090.0, "취소 · 서명이 달라 덮어쓸 수 없음 · 실패.", [{"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], null], [25, "action", "새 버전으로 설치된다", 560, 1168.0, "", [{"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], null], [26, "final", "", 560, 1231.0, "", [{"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], null], [27, "merge", "", 560, 1304.0, "", [{"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], null], [28, "action", "사유를 알린다", 560, 1368.0, "취소는 알리지 않는다. 서명이 다르면 기존 앱을 지우고 새로 설치해야 하며 측정 결과도 지워진다고 알린다.", [{"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], null], [29, "decision", "", 560, 1438.0, "필수면 이 빌드는 쓸 수 없으므로 창을 다시 띄운다.", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}], null], [30, "final", "", 560, 1503.0, "선택 업데이트면 그대로 앱을 쓴다.", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}], null]], "E": [[1, 2, "M560,55 L560,81", null, null, [[569, 69, "start"], [551, 69, "end"]], false], [2, 3, "M534,100 L232,100", "참", "t", [[383.0, 92, "middle"], [383.0, 117, "middle"]], false], [2, 4, "M560,119 L560,153.0", "거짓", "f", [[569, 133, "start"], [551, 133, "end"]], false], [4, 5, "M560,203.0 L560,229.0", null, null, [[569, 217.0, "start"], [551, 217.0, "end"]], false], [5, 6, "M534,248.0 L326.0,248.0", "참", "t", [[430.0, 240.0, "middle"], [430.0, 265.0, "middle"]], false], [6, 7, "M220,273.0 L220,305.0", null, null, [], false], [5, 8, "M560,267.0 L560,301.0", "거짓", "f", [[569, 281.0, "start"], [551, 281.0, "end"]], false], [8, 9, "M560,351.0 L560,377.0", null, null, [[569, 365.0, "start"], [551, 365.0, "end"]], false], [9, 10, "M586,396.0 L794.0,396.0", "참", "t", [[690.0, 388.0, "middle"], [690.0, 413.0, "middle"]], false], [10, 11, "M900,421.0 L900,453.0", null, null, [], false], [9, 12, "M560,415.0 L560,449.0", "거짓", "f", [[569, 429.0, "start"], [551, 429.0, "end"]], false], [12, 13, "M560,475.0 L560,501.0", null, null, [[569, 489.0, "start"], [551, 489.0, "end"]], false], [13, 14, "M560,551.0 L560,577.0", null, null, [[569, 565.0, "start"], [551, 565.0, "end"]], false], [14, 15, "M586,596.0 L794.0,596.0", "참", "t", [[690.0, 588.0, "middle"], [690.0, 613.0, "middle"]], false], [15, 16, "M900,621.0 L900,653.0", null, null, [], false], [14, 17, "M560,615.0 L560,649.0", "거짓", "f", [[569, 629.0, "start"], [551, 629.0, "end"]], false], [17, 18, "M534,668.0 L326.0,668.0", "참", "t", [[430.0, 660.0, "middle"], [430.0, 685.0, "middle"]], false], [17, 19, "M560,687.0 L560,723.0", "거짓", "f", [[569, 701.0, "start"], [551, 701.0, "end"], [569, 716.0, "start"], [551, 716.0, "end"], [569, 709.0, "start"]], false], [18, 19, "M220,693.0 L220,736.0 L542,736.0", null, null, [], false], [19, 20, "M560,749.0 L560,775.0", null, null, [[569, 763.0, "start"], [551, 763.0, "end"]], false], [20, 21, "M560,813.0 L560,847.0", "거짓", "f", [[569, 827.0, "start"], [551, 827.0, "end"]], false], [21, 22, "M560,897.0 L560,923.0", null, null, [[569, 911.0, "start"], [551, 911.0, "end"]], false], [22, 23, "M560,961.0 L560,995.0", "거짓", "f", [[569, 975.0, "start"], [551, 975.0, "end"]], false], [23, 24, "M560,1045.0 L560,1071.0", null, null, [[569, 1059.0, "start"], [551, 1059.0, "end"]], false], [24, 25, "M560,1109.0 L560,1143.0", "거짓", "f", [[569, 1123.0, "start"], [551, 1123.0, "end"]], false], [25, 26, "M560,1193.0 L560,1219.0", null, null, [[569, 1207.0, "start"], [551, 1207.0, "end"]], false], [20, 27, "M586,794.0 L900,794.0 L900,1304.0 L578,1304.0", "참", "t", [[743.0, 786.0, "middle"], [743.0, 811.0, "middle"]], false], [22, 27, "M586,942.0 L900,942.0 L900,1304.0 L578,1304.0", "참", "t", [[743.0, 934.0, "middle"], [743.0, 959.0, "middle"]], false], [24, 27, "M586,1090.0 L900,1090.0 L900,1304.0 L578,1304.0", "참", "t", [[743.0, 1082.0, "middle"], [743.0, 1107.0, "middle"]], false], [27, 28, "M560,1317.0 L560,1343.0", null, null, [[569, 1331.0, "start"], [551, 1331.0, "end"]], false], [28, 29, "M560,1393.0 L560,1419.0", null, null, [[569, 1407.0, "start"], [551, 1407.0, "end"]], false], [29, 30, "M560,1457.0 L560,1491.0", "거짓", "f", [[569, 1471.0, "start"], [551, 1471.0, "end"]], false], [29, 12, "M534,1438.0 L86.0,1438.0 L86.0,462.0 L542,462.0", "참 · 창을 다시 띄운다", "back", [[310.0, 1431.0, "middle"], [310.0, 1455.0, "middle"], [242.79999999999998, 1431.0, "middle"], [242.79999999999998, 1455.0, "middle"], [377.2, 1431.0, "middle"], [377.2, 1455.0, "middle"], [314.0, 455.0, "middle"], [222.79999999999998, 455.0, "middle"], [405.2, 455.0, "middle"], [94.0, 954.0, "start"], [78.0, 954.0, "end"], [94.0, 807.5999999999999, "start"], [78.0, 807.5999999999999, "end"], [94.0, 1100.4, "start"], [78.0, 1100.4, "end"], [94.0, 661.2, "start"], [78.0, 661.2, "end"], [94.0, 1246.8000000000002, "start"], [78.0, 1246.8000000000002, "end"]], false]], "COND": {"2": "이번 실행에서 시작 확인을\n이미 했나", "5": "받지 못했거나\n형식이 틀렸나", "9": "새 버전이 없나", "14": "‘나중에’를 골랐나", "17": "설치 허용이 꺼져 있나", "20": "허용되지 않았나", "22": "받지 못했거나 SHA-256이\n맞지 않나", "24": "설치되지 않았나", "29": "필수 업데이트인가"}, "REP": []};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const KIND={initial:"시작",merge:"병합",action:"액션",decision:"분기",call:"호출 액션",final:"종료"};
+const gr=document.getElementById('rep'),eg=document.getElementById('edges'),
+      gl=document.getElementById('glabels'),ng=document.getElementById('nodes');
+const svg=document.getElementById('dg'), VB=svg.viewBox.baseVal;
+
+// 반복 구간
+D.REP.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.x+12,y:r.y+19}); t.textContent=r.label; gr.appendChild(t);
+});
+// 흐름선
+const SEGS=[];
+D.E.forEach(([a,b,d,lab,kd])=>{
+  const p=el("path",{class:"flow dim"+(kd==="back"?" back":""),d:d,"marker-end":"url(#a)"});
+  p.dataset.e=a+"|"+b; eg.appendChild(p);
+  const pts=d.replace(/[ML]/g,"").trim().split(/\s+/).map(s=>s.split(",").map(Number));
+  for(let i=0;i+1<pts.length;i++) SEGS.push({e:a+"|"+b,s:[pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]]});
+});
+// 노드
+D.N.forEach(([id,k,name,x,y,desc,fns,doc])=>{
+  const a=el("a",doc?{class:"nd dim",href:doc}:{class:"nd dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=id;
+  const ti=el("title");
+  ti.textContent=(id+". "+(name?name.replace(/\n/g," "):KIND[k]))+(D.COND[id]?"  ["+D.COND[id]+"]":"")+"\n"+desc+
+    (doc?"\n(누르면 그 흐름의 액티비티 다이어그램으로 이동)":"")+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  let l,t2;
+  if(k==="initial"){ a.appendChild(el("circle",{class:"term shape",cx:x,cy:y,r:11})); l=x-11; t2=y-11; }
+  else if(k==="final"){ a.appendChild(el("circle",{class:"termring shape",cx:x,cy:y,r:12}));
+                        a.appendChild(el("circle",{class:"term",cx:x,cy:y,r:6.5})); l=x-12; t2=y-12; }
+  else if(k==="decision"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-DH} L${x+DW},${y} L${x},${y+DH} L${x-DW},${y} Z`})); l=x-DW; t2=y-DH; }
+  else if(k==="merge"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-13} L${x+18},${y} L${x},${y+13} L${x-18},${y} Z`})); l=x-18; t2=y-13; }
+  else{
+    a.appendChild(el("rect",{class:"shape",x:x-BW/2,y:y-BH/2,width:BW,height:BH,rx:k==="call"?3:14}));
+    if(k==="call"){ const bx=x+BW/2-16, by=y+BH/2-15;
+      a.appendChild(el("path",{class:"rake",d:`M${bx-7},${by} h14 M${bx-7},${by} v9 M${bx},${by} v9 M${bx+7},${by} v9`})); }
+    l=x-BW/2; t2=y-BH/2;
+  }
+  if(name){
+    const lines=name.split("\n");
+    lines.forEach((ln,i)=>{
+      const tt=el("text",{class:"lb",x:k==="call"?x-6:x,y:y+(lines.length===1?4.5:(i===0?-4:15))});
+      tt.textContent=ln; a.appendChild(tt);
+    });
+  }
+  const nm=el("text",{class:"num",x:l-4,y:t2+2}); nm.textContent=id; a.appendChild(nm);
+  ng.appendChild(a);
+});
+
+// 글자 자리: 노드 · 선 · 다른 글자 · 반복 구간 테두리와 겹치지 않는 첫 후보
+function nodeBox(n){
+  const [,k,,x,y]=n;
+  if(k==="decision") return {x:x-DW,y:y-DH,w:DW*2,h:DH*2};
+  if(k==="merge")    return {x:x-18,y:y-13,w:36,h:26};
+  if(k==="initial"||k==="final") return {x:x-13,y:y-13,w:26,h:26};
+  return {x:x-BW/2,y:y-BH/2,w:BW,h:BH};
+}
+const BOXES=D.N.map(n=>Object.assign({id:String(n[0])},nodeBox(n)));
+const TXT=[...gr.querySelectorAll('text'),...ng.querySelectorAll('text.num')].map(t=>{const b=t.getBBox();return {x:b.x,y:b.y,w:b.width,h:b.height};});
+const REPSEG=[];
+D.REP.forEach(r=>{REPSEG.push([r.x,r.y,r.x+r.w,r.y],[r.x,r.y+r.h,r.x+r.w,r.y+r.h],[r.x,r.y,r.x,r.y+r.h],[r.x+r.w,r.y,r.x+r.w,r.y+r.h]);});
+function free(r,selfId,selfEdge){
+  if(r.x<2||r.y<2||r.x+r.w>VB.width-2||r.y+r.h>VB.height-2) return false;
+  if(BOXES.some(b=>b.id!==selfId&&boxHit(r,b))) return false;
+  if(TXT.some(b=>boxHit(r,b))) return false;
+  if(SEGS.some(s=>s.e!==selfEdge&&segHit(r,s.s))) return false;
+  if(REPSEG.some(s=>segHit(r,s))) return false;
+  return true;
+}
+const MISS=[];
+// 흐름선 라벨
+D.E.forEach(([a,b,d,lab,kd,cands,opt])=>{
+  if(!lab) return;
+  const t=el("text",{class:"g dim "+(kd||""),x:0,y:0});
+  t.textContent=lab; t.dataset.e=a+"|"+b; gl.appendChild(t);
+  let ok=null;
+  for(const [x,y,an] of cands){
+    t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(), r={x:bb.x-2,y:bb.y-1,w:bb.width+4,h:bb.height+2};
+    if(free(r,null,a+"|"+b)){ok=r;break;}
+  }
+  if(!ok&&opt){ t.remove(); return; }
+  if(!ok){ const [x,y,an]=cands[0]; t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(); ok={x:bb.x,y:bb.y,w:bb.width,h:bb.height}; MISS.push("선라벨 "+a+"→"+b); }
+  TXT.push(ok);
+});
+// 분기 조건 문구
+D.N.forEach(([id,k,,x,y])=>{
+  if(k!=="decision"||!D.COND[id]) return;
+  const a=ng.querySelector('[data-key="'+id+'"]');
+  const cands=[
+    [x+DW+10, y-DH-4,  "start"],
+    [x-DW-10, y-DH-4,  "end"],
+    [x+DW+12, y+4,     "start"],
+    [x-DW-12, y+4,     "end"],
+    [x,       y-DH-14, "middle"],
+    [x+DW+10, y+DH+14, "start"],
+    [x-DW-10, y+DH+14, "end"],
+    [x+DW+10, y-DH-22, "start"],
+    [x-DW-10, y-DH-22, "end"]
+  ];
+  const ct=el("text",{class:"cnd",x:0,y:0,"text-anchor":"middle"});
+  ct.textContent="["+D.COND[id]+"]";
+  a.appendChild(ct);
+  let placed=null;
+  for(const [cx,cy,an] of cands){
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox();
+    const r={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    if(free(r,String(id),null)){ placed=r; break; }
+  }
+  if(!placed){
+    const [cx,cy,an]=cands[0];
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox(); placed={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    MISS.push("조건 "+id);
+  }
+  const bg=el("rect",{class:"cndbg",x:placed.x,y:placed.y,width:placed.w,height:placed.h,rx:2});
+  a.insertBefore(bg,ct);
+  TXT.push(placed);
+});
+window.__LABEL_MISS=MISS;
+if(MISS.length) console.warn("글자 자리 없음: "+MISS.join(", "));
+
+const nodes=[...ng.querySelectorAll('[data-key]')];
+const edges=[...svg.querySelectorAll('[data-e]')];
+function iso(id){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!id){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const keep=new Set([String(id)]);
+  edges.forEach(e=>{const p=e.dataset.e.split('|');
+    if(p[0]===String(id)||p[1]===String(id)){e.classList.add('lit');keep.add(p[0]);keep.add(p[1]);}});
+  nodes.forEach(n=>{if(keep.has(n.dataset.key))n.classList.add('lit');});
+}
+nodes.forEach(n=>{
+  const k=+n.dataset.key;
+  n.addEventListener('mouseenter',()=>iso(k));
+  n.addEventListener('mouseleave',()=>iso(null));
+  n.addEventListener('focus',()=>iso(k));
+  n.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

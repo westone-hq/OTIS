@@ -25,5 +25,4 @@ flutter build apk --debug
 ```
 
 코드 구조 · 층 규칙 · 원칙 · UI 규칙은 [CLAUDE.md](CLAUDE.md), 동작 사양은
-[docs/spec/](docs/spec/), 결정 이력은 [docs/decisions.md](docs/decisions.md),
-주석 규칙은 [docs/comment_rules.md](docs/comment_rules.md) 를 본다.
+[docs/spec/](docs/spec/), 주석 규칙은 [docs/comment_rules.md](docs/comment_rules.md) 를 본다.
