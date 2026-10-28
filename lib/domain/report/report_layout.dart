@@ -1,5 +1,5 @@
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-22 22:20:00 · 박건준
+/// 수정: 2026-10-28 14:45:51 · Codex
 /// 클래스: ReportLayout
 /// 목적: TUNE 리포트 서식 위에 값을 얹을 자리를 모아 둔다. 리포트의
 ///       좌표 숫자는 전부 이 파일과 쪽별 좌표 파일
@@ -46,6 +46,40 @@ class ReportLayout {
 
   /// 굵게 쓸 자리용 한글 글꼴 자산 경로
   static const String boldFontAsset = '${assetDirectory}NanumGothic-Bold.ttf';
+
+  /// 작성: 2026-10-28 14:45:51 · Codex
+  /// 변수: headerLogoAsset
+  /// 목적: 모든 쪽의 머리말에 쓸 새 로고 원본. 꼬리말 로고는 서식 이미지에
+  ///       남겨 두어 같은 자산 변경으로 함께 바뀌지 않게 한다.
+  /// 근거: 인용 — 2026-10-28 사용자 제공 `OTIS 최종로고.png`. 상단 로고만
+  ///       바꾸고 제번 · 구분선 · 하단 로고는 유지한다
+  static const String headerLogoAsset = '${assetDirectory}otis_v_check.png';
+
+  /// 작성: 2026-10-28 14:45:51 · Codex
+  /// 변수: headerLogoMask
+  /// 목적: 서식에 인쇄된 상단 로고를 덮을 자리 (픽셀). 새 로고의 흰 여백도
+  ///       이 안에서만 그려 오른쪽 금색 구분선과 제번을 지킨다.
+  /// 근거: 측정 — `tem_1.jpg` · `tem_2.jpg` 의 상단 로고는 x 58 ~ 175,
+  ///       y 60 ~ 102 이고 구분선은 x 195 부근이다. 테두리 여유를 포함한다
+  static const LayoutPlotBox headerLogoMask = LayoutPlotBox(
+    x: 50,
+    y: 53,
+    width: 143,
+    height: 56,
+  );
+
+  /// 작성: 2026-10-28 14:45:51 · Codex
+  /// 변수: headerLogoBox
+  /// 목적: 원본의 흰 여백을 포함한 로고를 놓을 자리 (픽셀). 원본을 자르거나
+  ///       늘리지 않고 맞추며, 바깥 여백은 `headerLogoMask` 로 가린다.
+  /// 근거: 측정 — 제공 PNG 는 2172 x 724 이고 실제 문양은 가운데에 있다.
+  ///       제번 시작 x 222 를 옮기지 않고 문양을 기존 로고 영역에 담는다
+  static const LayoutPlotBox headerLogoBox = LayoutPlotBox(
+    x: 42,
+    y: 52,
+    width: 160,
+    height: 54,
+  );
 
   /// 작성: 2026-09-25 09:30:00 · 박건준
   /// 수정: 2026-10-23 01:10:00 · 박건준

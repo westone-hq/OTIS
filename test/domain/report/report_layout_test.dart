@@ -14,7 +14,7 @@ import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 const _layoutJsonPath = 'docs/report_layout.json';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-15 15:53:26 · 박건준
+/// 수정: 2026-10-28 14:45:51 · Codex
 /// 변수: _layoutJsonMd5
 /// 목적: 옮길 때 본 정본 기록의 md5. 정본이 바뀌면 이 값이 달라져,
 ///       사본을 함께 고쳐야 한다는 사실이 시험 실패로 드러난다.
@@ -25,7 +25,8 @@ const _layoutJsonPath = 'docs/report_layout.json';
 ///       2026-10-21 수직 행 황색 · 적색 문구 자리(`remark`)를 더하며 다시
 ///       갱신했다. 2026-10-22 그 글자 크기 · 줄 간격(28 · 36)을 바꾸며 다시
 ///       갱신했다.
-const _layoutJsonMd5 = 'c6e6d6981e94f6003bda5196dae43945';
+///       2026-10-28 상단 로고 자리와 덮을 영역을 더하며 다시 갱신했다.
+const _layoutJsonMd5 = '06149629159c0efc44f0e1869ea3e4bd';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
 /// 함수: _layout
@@ -65,6 +66,7 @@ void _expectField(LayoutField actual, Map<String, dynamic> expected) {
 }
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-28 14:45:51 · Codex
 /// 함수: main
 /// 목적: `report_layout.dart` 의 좌표가 정본 `docs/report_layout.json` 과
 ///       같은지 대조한다. 사람이 손으로 옮기는 과정에서 숫자 하나가
@@ -100,6 +102,24 @@ void main() {
         ReportLayout.ptPerPxY,
         closeTo(page['pt_per_px_y'] as double, 1e-9),
       );
+    });
+
+    test('상단 로고 자산과 덮을 영역이 정본과 같다', () {
+      final logo = _layout()['header_logo'] as Map<String, dynamic>; // 로고 사양
+      expect(
+        ReportLayout.headerLogoAsset,
+        '${ReportLayout.assetDirectory}${logo['asset']}',
+      );
+      for (final entry in <String, LayoutPlotBox>{
+        'mask': ReportLayout.headerLogoMask,
+        'image_box': ReportLayout.headerLogoBox,
+      }.entries) {
+        final expected = logo[entry.key] as Map<String, dynamic>; // 정본 자리
+        expect(entry.value.x, expected['x']);
+        expect(entry.value.y, expected['y']);
+        expect(entry.value.width, expected['w']);
+        expect(entry.value.height, expected['h']);
+      }
     });
 
     test('두 축의 환산 계수가 서로 다르다', () {

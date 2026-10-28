@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_chart_renderer.dart';
+import 'package:vibration_checker/adapter/report/report_header.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/chart_axes.dart';
@@ -32,7 +33,7 @@ class ReportChartPagePlan {
 }
 
 /// 작성: 2026-09-23 09:40:00 · 박건준
-/// 수정: 2026-10-23 10:00:00 · 박건준
+/// 수정: 2026-10-28 14:45:51 · Codex
 /// 클래스: ReportChartPageRenderer
 /// 목적: TUNE 리포트의 차트 쪽을 PDF 로 그린다. 2쪽과 3쪽이 같은 서식을
 ///       쓰고 놓이는 축만 달라, 한 렌더러가 두 쪽을 모두 그린다.
@@ -41,8 +42,8 @@ class ReportChartPagePlan {
 ///       `report_chart_renderer.dart` 가 정해 둔 것을 받아 놓기만 한다 — 여기서
 ///       좌표를 계산하거나 축 범위를 정하지 않는다.
 ///
-///       1쪽(`report_page1.dart`)과 달리 서식에 덮어야 할 옛 값이 없다.
-///       차트 자리가 서식에서 비어 있어 그대로 얹으면 된다.
+///       차트 자리는 서식에서 비어 있다. 상단 로고만 새 원본으로 덮고,
+///       꼬리말 로고와 비어 있는 차트 자리는 서식을 그대로 쓴다.
 class ReportChartPageRenderer {
   /// 작성: 2026-09-23 09:40:00 · 박건준
   /// 수정: 2026-10-21 16:30:00 · 박건준
@@ -88,6 +89,9 @@ class ReportChartPageRenderer {
   /// A4 전면에 깔 차트 쪽 서식 이미지
   final PdfImage background;
 
+  /// 두 차트 쪽이 함께 쓸 상단 로고. 꼬리말은 서식 이미지를 그대로 쓴다
+  final PdfImage headerLogo;
+
   /// 서식 좌표에 글자를 찍는 도구
   final ReportTextWriter textWriter;
 
@@ -95,25 +99,28 @@ class ReportChartPageRenderer {
   final ReportChartRenderer chartRenderer;
 
   /// 작성: 2026-09-23 09:40:00 · 박건준
+  /// 수정: 2026-10-28 14:45:51 · Codex
   /// 함수: ReportChartPageRenderer
   /// 목적: 문서와 미리 읽어 둔 자산을 그대로 담는 생성자. 직접 부르지 말고
   ///       `load()` 를 쓴다.
   /// 인자: document — 그림을 얹을 PDF 문서
   ///       background — 차트 쪽 서식 이미지
+  ///       headerLogo — 머리말에 그릴 로고 원본
   ///       textWriter — 서식 좌표에 글자를 찍는 도구. 글꼴 두 벌을 갖고
   ///       있어 이 클래스가 따로 들고 있지 않는다
   ///       chartRenderer — 차트 한 개씩을 그릴 렌더러
   const ReportChartPageRenderer({
     required this.document,
     required this.background,
+    required this.headerLogo,
     required this.textWriter,
     required this.chartRenderer,
   });
 
   /// 작성: 2026-09-23 09:40:00 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · 박건준
+  /// 수정: 2026-10-28 14:45:51 · Codex
   /// 함수: load
-  /// 목적: 글꼴 두 벌과 차트 쪽 서식 이미지를 자산에서 읽어 렌더러를
+  /// 목적: 글꼴 두 벌과 차트 쪽 서식 이미지 · 상단 로고를 읽어 렌더러를
   ///       만든다. 자산 읽기는 느리고 두 쪽에 한 번이면 되므로 그리기와
   ///       떼어 둔다.
   /// 인자: document — 그림을 얹을 PDF 문서
@@ -128,11 +135,18 @@ class ReportChartPageRenderer {
     final backgroundBytes = await rootBundle.load(
       ReportChartPageLayout.background,
     ); // 차트 쪽 서식 이미지 원본
+    final logoBytes = await rootBundle.load(
+      ReportLayout.headerLogoAsset,
+    ); // 두 차트 쪽에 함께 쓸 상단 로고 원본
 
     final regular = PdfTtfFont(document, regularBytes); // 본문 글꼴
     final bold = PdfTtfFont(document, boldBytes); // 굵은 글꼴
     return ReportChartPageRenderer(
       document: document,
+      headerLogo: PdfImage.file(
+        document,
+        bytes: logoBytes.buffer.asUint8List(),
+      ),
       background: PdfImage.file(
         document,
         bytes: backgroundBytes.buffer.asUint8List(),
@@ -143,10 +157,10 @@ class ReportChartPageRenderer {
   }
 
   /// 작성: 2026-09-23 09:40:00 · 박건준
-  /// 수정: 2026-10-12 02:15:16 · 박건준
+  /// 수정: 2026-10-28 14:45:51 · Codex
   /// 함수: draw
   /// 목적: 차트 쪽 한 장을 문서에 더한다. 순서대로 그린다.
-  ///       1. 서식 이미지를 A4 전면에 깐다
+  ///       1. 서식 이미지를 A4 전면에 깔고 상단 로고만 새 원본으로 덮는다
   ///       2. 머리말 네 칸과 쪽 제목을 찍는다
   ///       3. 차트 자리 넷에 축을 차례로 그린다
   ///
@@ -183,6 +197,9 @@ class ReportChartPageRenderer {
       ReportLayout.pageWidthPt,
       ReportLayout.pageHeightPt,
     );
+
+    // → 로직 이동: drawReportHeaderLogo()
+    drawReportHeaderLogo(canvas, headerLogo);
 
     // → 로직 이동: headerValues()
     final header = headerValues(result, plan.pageNumber); // 머리말에 채울 문구

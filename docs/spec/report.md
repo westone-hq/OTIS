@@ -3,6 +3,15 @@
 리포트 좌표 정본은 `docs/report_layout.json`, 코드는 `lib/domain/report/`
 (좌표 · 임계값 · 축)와 `lib/adapter/report/`(PDF 그리기)다.
 
+- 상단 로고(2026-10-28): `assets/report/otis_v_check.png` 는 사용자 제공
+  `OTIS 최종로고.png` 원본이다. `report_header.dart` 가 1 · 2 · 3쪽의 기존
+  상단 로고 영역만 흰색으로 덮고 원본 비율을 유지해 그린다. 구분선과 제번
+  좌표는 유지하며 제번은 매 측정의 `jobNo` 를 계속 쓴다. 하단 로고와 서식
+  JPEG 두 장은 변경하지 않는다. `TuneReportBuilder` 는 로고를 한 번 읽어
+  세 쪽에서 공유하고, 쪽별 단독 렌더링도 같은 로고를 쓴다. 변경된 앱에서
+  새로 생성하는 PDF 에 적용하며 이미 저장된 PDF 는 자동으로 다시 만들지
+  않는다(`MeasurementRepository.ensureReportPdf()`).
+
 - 리포트 1쪽 머리말: 하중 "2000 킬로그램", 측정 = 해석 종류, 주소 칸은
   비운다(2026-10-27 주소 · 우편번호를 받지 않음, 서식의 "주소:" 라벨은 2차 서식
   작업에서 지운다), 제품 "엘리베이터, 기종"(기종 쉼표는 리포트에서만 공백),

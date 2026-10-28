@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
+import 'package:vibration_checker/adapter/report/report_header.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
@@ -13,7 +14,7 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
 /// 작성: 2026-09-16 09:12:40 · 박건준
-/// 수정: 2026-10-23 11:00:00 · 박건준
+/// 수정: 2026-10-28 14:45:51 · Codex
 /// 클래스: ReportPage1Renderer
 /// 목적: TUNE 리포트 1쪽을 PDF 로 그린다. 서식 이미지를 A4 전면에 깔고 그
 ///       위에 값을 얹는다. 자리는 `ReportLayout` 이, 값과 판정은
@@ -35,26 +36,33 @@ class ReportPage1Renderer {
   /// A4 전면에 깔 서식 이미지
   final PdfImage background;
 
+  /// 상단만 교체할 새 로고. 꼬리말 로고는 서식 이미지에 남아 있다
+  final PdfImage headerLogo;
+
   /// 서식 좌표에 글자를 찍는 도구
   final ReportTextWriter textWriter;
 
   /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-28 14:45:51 · Codex
   /// 함수: ReportPage1Renderer
   /// 목적: 문서와 미리 읽어 둔 자산을 그대로 담는 생성자. 직접 부르지 말고
   ///       `load()` 를 쓴다.
   /// 인자: document — 그림을 얹을 PDF 문서
   ///       background — 서식 이미지
+  ///       headerLogo — 머리말에 그릴 로고 원본
   ///       textWriter — 서식 좌표에 글자를 찍는 도구. 글꼴 두 벌을 갖고
   ///       있어 이 클래스가 따로 들고 있지 않는다
   const ReportPage1Renderer({
     required this.document,
     required this.background,
+    required this.headerLogo,
     required this.textWriter,
   });
 
   /// 작성: 2026-09-16 09:12:40 · 박건준
+  /// 수정: 2026-10-28 14:45:51 · Codex
   /// 함수: load
-  /// 목적: 글꼴 두 벌과 서식 이미지를 자산에서 읽어 렌더러를 만든다.
+  /// 목적: 글꼴 두 벌과 서식 이미지 · 상단 로고를 자산에서 읽어 만든다.
   ///       자산 읽기는 느리고 한 번이면 되므로 그리기와 떼어 둔다.
   /// 인자: document — 그림을 얹을 PDF 문서
   /// 반환: 바로 그릴 수 있는 렌더러
@@ -68,11 +76,18 @@ class ReportPage1Renderer {
     final backgroundBytes = await rootBundle.load(
       ReportPage1Layout.background,
     ); // 서식 이미지 원본
+    final logoBytes = await rootBundle.load(
+      ReportLayout.headerLogoAsset,
+    ); // 상단 로고 원본
 
     final regular = PdfTtfFont(document, regularBytes); // 본문 글꼴
     final bold = PdfTtfFont(document, boldBytes); // 굵은 글꼴
     return ReportPage1Renderer(
       document: document,
+      headerLogo: PdfImage.file(
+        document,
+        bytes: logoBytes.buffer.asUint8List(),
+      ),
       background: PdfImage.file(
         document,
         bytes: backgroundBytes.buffer.asUint8List(),
@@ -82,10 +97,10 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
+  /// 수정: 2026-10-28 14:45:51 · Codex
   /// 함수: draw
   /// 목적: 1쪽을 문서에 더한다. 순서대로 그린다.
-  ///       1. 서식 이미지를 A4 전면에 깐다
+  ///       1. 서식 이미지를 A4 전면에 깔고 상단 로고만 새 원본으로 덮는다
   ///       2. 머리말 11칸을 찍는다
   ///       3. Performance Metrics 8행을 찍는다. 행마다 서식에 남은 자국을
   ///          덮고, 신호등 · 값 · 황색 · 적색 기준을 올린다
@@ -112,6 +127,9 @@ class ReportPage1Renderer {
       ReportLayout.pageWidthPt,
       ReportLayout.pageHeightPt,
     );
+
+    // → 로직 이동: drawReportHeaderLogo()
+    drawReportHeaderLogo(canvas, headerLogo);
 
     // → 로직 이동: ReportMetrics.from()
     final metrics = ReportMetrics.from(result); // 표에 올릴 지표 여덟 개
