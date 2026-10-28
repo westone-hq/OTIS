@@ -584,16 +584,17 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                 // (18sp 에서 약 360dp)이 411dp 폭 폰에서 한 줄에 들게 한다
                 padding: const EdgeInsets.symmetric(horizontal: AppDims.gap),
                 child: AppNotice(
-                  // 문장마다 한 줄이다. 손바닥 아이콘은 뺐다 — 그 폭만큼 줄이
-                  // 모자라 문장 중간에서 꺾였다(2026-10-28 사용자 지시).
+                  // 안내마다 한 줄이다("측정 중입니다." 와 "휴대폰을 움직이지
+                  // 마세요." 는 한 줄로 둔다). 손바닥 아이콘은 뺐다 — 그
+                  // 폭만큼 줄이 모자라 문장 중간에서 꺾였다(2026-10-28 사용자
+                  // 지시).
                   // 더 좁은 폰에서 꺾이면 낱말 중간이 아니라 띄어쓰기에서
                   // 꺾는다(`keepWordsTogether()`).
                   // 정지 직후에 끝내면 끝부분 값이 부정확해진다(2026-10-22,
                   // `MeasurementResult.stoppedTooSoon`)
                   message:
                       <String>[
-                            '측정 중입니다.',
-                            '휴대폰을 움직이지 마세요.',
+                            '측정 중입니다. 휴대폰을 움직이지 마세요.',
                             measureEndGuide, // → 로직 이동: measureEndGuide
                             measureIdleGuide, // → 로직 이동: measureIdleGuide
                           ]
