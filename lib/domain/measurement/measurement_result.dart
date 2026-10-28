@@ -1,10 +1,8 @@
 import 'dart:convert';
 
-import 'package:vibration_checker/domain/analysis/device_response.dart';
 import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/domain/analysis/travel_window.dart';
-import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/capture_config.dart';
 import 'package:vibration_checker/domain/report/report_thresholds.dart';
 
@@ -24,13 +22,14 @@ class MeasurementResult {
   /// 현장명
   final String siteName;
 
-  /// 현장 주소. 입력하지 않았거나 주소를 받기 전의 측정이면 빈 문자열
+  /// 현장 주소. 2026-10-27 부터 받지 않아 새 결과는 빈 문자열이다. 그 전
+  /// 결과에 남은 값은 읽기만 하고 화면 · 리포트 · 메일에 쓰지 않는다
   final String address;
 
-  /// 최하층
+  /// 최하층. 지하층은 음수(B1 = -1, `SiteInfo.floorLabel()`)
   final int bottomFloor;
 
-  /// 최상층
+  /// 최상층. 지하층은 음수
   final int topFloor;
 
   /// 운전 방향
@@ -52,8 +51,8 @@ class MeasurementResult {
   /// null 이면 해석 종류를 받기 전의 예전 측정이다
   final String? analysisType;
 
-  /// 우편번호 (숫자 5자리 문자열). null 이면 우편번호를 받기 전의 예전
-  /// 측정이다
+  /// 우편번호 (숫자 5자리 문자열). 2026-10-11 ~ 10-27 사이 결과에만 있고
+  /// 그 밖은 null 이다. `address` 처럼 읽기만 한다
   final String? postalCode;
 
   /// 추가 참고사항. 메일 본문에만 쓰고 리포트에는 찍지 않는다. 비워
@@ -223,9 +222,9 @@ class MeasurementResult {
   final String? deviceModel;
 
   /// 수직 진동에 건 기종 응답 보정 필터 표시(예: "lp25.0bw2zp"). 보정 표에
-  /// 없는 기종이면 `DeviceResponse.noneLabel`("none") — 결과 화면 · 메일이
-  /// "미보정 기종" 으로 알린다. null 이면 보정을 정하기 전(2026-10-22 전)
-  /// 결과다
+  /// 없는 기종이면 `DeviceResponse.noneLabel`("none")이다. 진단 기록이고
+  /// 화면 · 메일에 알리지 않는다(2026-10-27). null 이면 보정을 정하기 전
+  /// (2026-10-22 전) 결과다
   final String? deviceCompensation;
 
   /// 운행 끝(속도 크기가 `CaptureConfig.zoneRunSpeedMps` 를 넘은 마지막
@@ -687,6 +686,33 @@ class MeasurementResult {
   bool? get zExceeded =>
       ReportThresholds.exceeds(zPtp, ReportThresholds.zPtpRedMg);
 
+  /// 작성: 2026-10-27 14:00:00 · 박건준
+  /// 함수: xA95Exceeded
+  /// 목적: X축 진동 평균(A95)이 적색 기준을 넘었는지 확인한다. 수평이라
+  ///       리포트 수평진동 평균 행과 같은 기준(`ReportThresholds.horizA95RedMg`)
+  ///       이다.
+  /// 반환: 기준 초과 시 true. `xA95` 가 null 이면 null
+  /// 근거: 인용 — 2026-10-27 사용자 지시 "X, Y 는 수평, Z 는 수직과 기준치
+  ///       동일"
+  bool? get xA95Exceeded =>
+      ReportThresholds.exceeds(xA95, ReportThresholds.horizA95RedMg);
+
+  /// 작성: 2026-10-27 14:00:00 · 박건준
+  /// 함수: yA95Exceeded
+  /// 목적: Y축 진동 평균(A95)이 적색 기준을 넘었는지 확인한다. 기준은
+  ///       `xA95Exceeded` 와 같다.
+  /// 반환: 기준 초과 시 true. `yA95` 가 null 이면 null
+  bool? get yA95Exceeded =>
+      ReportThresholds.exceeds(yA95, ReportThresholds.horizA95RedMg);
+
+  /// 작성: 2026-10-27 14:00:00 · 박건준
+  /// 함수: zA95Exceeded
+  /// 목적: Z축(수직) 진동 평균(A95)이 적색 기준(`ReportThresholds.zA95RedMg`,
+  ///       리포트 수직진동 평균 행)을 넘었는지 확인한다.
+  /// 반환: 기준 초과 시 true. `zA95` 가 null 이면 null
+  bool? get zA95Exceeded =>
+      ReportThresholds.exceeds(zA95, ReportThresholds.zA95RedMg);
+
   /// 작성: 2026-07-03 15:21:58 · 박건준
   /// 수정: 2026-10-15 15:53:26 · 박건준
   /// 함수: noiseExceeded
@@ -701,22 +727,6 @@ class MeasurementResult {
   ///       황색 단계도 보지만 이 게터는 적색 초과만 알린다
   bool? get noiseExceeded =>
       ReportThresholds.exceeds(noiseMax, ReportThresholds.noiseMaxRedDba);
-
-  /// 작성: 2026-10-22 09:30:00 · 박건준
-  /// 함수: placementKind
-  /// 목적: 저장된 거치 방향 이름을 `Placement` 로 바꾼다.
-  /// 반환: 거치 방향. 판정하지 않은 예전 결과면 null
-  Placement? get placementKind =>
-      // → 로직 이동: Placement.fromName()
-      Placement.fromName(placement);
-
-  /// 작성: 2026-10-22 19:00:00 · 박건준
-  /// 함수: uncompensatedDevice
-  /// 목적: 보정 표에 없는 기종(또는 기종을 모르는 측정)이라 기종 응답 보정을
-  ///       걸지 않았는지. 결과 화면 · 메일이 "미보정 기종" 을 알린다. 보정을
-  ///       정하기 전(2026-10-22 전) 결과는 false 다.
-  bool get uncompensatedDevice =>
-      deviceCompensation == DeviceResponse.noneLabel;
 
   /// 작성: 2026-10-22 19:00:00 · 박건준
   /// 함수: stoppedTooSoon

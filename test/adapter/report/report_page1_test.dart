@@ -127,11 +127,12 @@ void main() {
       }
     });
 
-    test('주소 칸은 주소 끝에 우편번호를 붙인다', () {
-      expect(
-        ReportPage1Renderer.headerValues(_siteResult())['address'],
-        '덕양구 오금동, 고양시, 경기도, 10575',
-      );
+    test('주소 칸은 예전 결과에 주소 · 우편번호가 있어도 비운다', () {
+      // 2026-10-27 사용자 지시 — 주소 · 우편번호를 받지 않고 리포트에도
+      // 넣지 않는다. 서식의 "주소:" 라벨은 2차 서식 작업에서 지운다
+      expect(ReportPage1Renderer.headerValues(_siteResult())['address'], '');
+      final onlyAddress = _result().copyWith(address: '서울시'); // 예전 결과
+      expect(ReportPage1Renderer.headerValues(onlyAddress)['address'], '');
     });
 
     test('제품 칸은 엘리베이터와 기종이고 기종의 쉼표는 공백으로 바꾼다', () {
@@ -152,6 +153,19 @@ void main() {
         ReportPage1Renderer.headerValues(_siteResult())['floors'],
         'Start Floor : ${_siteResult().bottomFloor}, '
         'Stop Floor : ${_siteResult().topFloor}',
+      );
+    });
+
+    test('지하층은 B 표기로 적는다', () {
+      final basement = _siteResult().copyWith(bottomFloor: -2, topFloor: 5);
+      expect(
+        ReportPage1Renderer.headerValues(basement)['floors'],
+        'Start Floor : B2, Stop Floor : 5',
+      );
+      final down = basement.copyWith(direction: SiteInfo.directionDown);
+      expect(
+        ReportPage1Renderer.headerValues(down)['floors'],
+        'Start Floor : 5, Stop Floor : B2',
       );
     });
 
@@ -206,16 +220,11 @@ void main() {
 
       expect(header['engineer_name'], ReportPage1Layout.placeholder);
       expect(header['load'], ReportPage1Layout.placeholder);
-      expect(header['address'], ReportPage1Layout.placeholder);
       expect(header['test_type'], '층간 시험');
       expect(header['product'], '엘리베이터');
       expect(header.values, everyElement(isNot(contains('null'))));
+      expect(header['address'], '', reason: '주소 칸만 넣지 않기로 한 칸이다');
       expect(header.values, everyElement(isNot('0')));
-    });
-
-    test('주소만 있고 우편번호가 없으면 주소만 쓴다', () {
-      final onlyAddress = _result().copyWith(address: '서울시'); // 예전 결과
-      expect(ReportPage1Renderer.headerValues(onlyAddress)['address'], '서울시');
     });
 
     test('긴 주소 · 해석 종류도 PDF 를 만들어 낸다', () async {

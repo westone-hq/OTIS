@@ -34,6 +34,7 @@ import 'package:vibration_checker/ui/features/measure/measuring_screen.dart';
 import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/measure/placement_sheet.dart';
 import 'package:vibration_checker/ui/features/measure/start_screen.dart';
+import 'package:vibration_checker/ui/features/result/result_charts_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
@@ -392,8 +393,6 @@ void main() {
     MeasurementSession.instance.currentSite = const SiteInfo(
       jobNo: '2025F 1234R01',
       siteName: '시험 현장',
-      address: '경기도 고양시 덕양구 오금동',
-      postalCode: '10575',
       bottomFloor: '1',
       topFloor: '8',
       direction: SiteInfo.directionUp,
@@ -423,16 +422,14 @@ void main() {
         final fields = find.byType(TextField); // 입력칸들
         await tester.enterText(fields.at(0), '2025F 1234R01');
         await tester.enterText(fields.at(1), '시험 현장');
-        await tester.enterText(fields.at(2), '10575');
-        await tester.enterText(fields.at(3), '경기도 고양시 덕양구 오금동');
-        await tester.enterText(fields.at(4), '1');
-        await tester.enterText(fields.at(5), '8');
-        await tester.enterText(fields.at(6), '2000');
+        await tester.enterText(fields.at(2), 'B1');
+        await tester.enterText(fields.at(3), '8');
+        await tester.enterText(fields.at(4), '2000');
         await settle(tester, rounds: 5);
         await capture(tester, shotName('02_홈_입력완료', size));
 
-        await tester.enterText(fields.at(2), '123');
-        await tester.enterText(fields.at(6), '');
+        await tester.enterText(fields.at(2), 'B');
+        await tester.enterText(fields.at(4), '');
         await tester.ensureVisible(find.text('측정 시작'));
         await tester.tap(find.text('측정 시작'));
         await settle(tester, rounds: 5);
@@ -546,9 +543,12 @@ void main() {
         );
         await tester.pumpWidget(_app(const ResultScreen(id: id)));
         await settle(tester);
-        await tester.ensureVisible(find.text('측정 그래프'));
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, -80));
+        await tester.ensureVisible(find.text('그래프 보기'));
         await settle(tester, rounds: 5);
+        await capture(tester, shotName('10_결과_실측_지표', size));
+
+        await tester.pumpWidget(_app(const ResultChartsScreen(id: id)));
+        await settle(tester);
         await capture(tester, shotName('10a_결과_그래프_위', size));
         await tester.ensureVisible(find.text('소음 [dBA]'));
         await settle(tester, rounds: 5);

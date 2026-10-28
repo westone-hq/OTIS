@@ -304,20 +304,20 @@ class SensorChannelManager {
   }
 
   /// 작성: 2026-10-22 09:30:00 · 박건준
-  /// 수정: 2026-10-22 23:30:00 · 박건준
-  /// 함수: playPlacementAlert
-  /// 목적: 거치가 "화면 아래" 가 아닐 때 측정 중에 경고음 한 번과 진동을
-  ///       울려 달라고 안드로이드에 요청한다. 휴대폰이 엎어져 있어 화면
-  ///       안내를 볼 수 없어서다. 측정은 멈추지 않는다.
+  /// 수정: 2026-10-27 12:00:00 · 박건준
+  /// 함수: playBeep
+  /// 목적: 측정 시작 · 종료 알림음을 한 번 울려 달라고 안드로이드에
+  ///       요청한다. 휴대폰이 엎어져 있어 화면을 볼 수 없어서다. 진동은
+  ///       내지 않는다(2026-10-27 거치 경고와 함께 없앴다).
   /// 반환: 없음. 요청이 실패하면 원인을 기록만 하고 오류를 올리지 않는다 —
-  ///       경고를 못 울려도 측정과 결과 화면 경고는 그대로다
-  Future<void> playPlacementAlert() async {
+  ///       알림음을 못 울려도 측정은 그대로다
+  Future<void> playBeep() async {
     try {
-      // → 로직 이동: SensorMethodHandler.playPlacementAlert
-      await _methodChannel.invokeMethod('playPlacementAlert');
+      // → 로직 이동: SensorMethodHandler.playBeep
+      await _methodChannel.invokeMethod('playBeep');
     } catch (error, stack) {
       developer.log(
-        'playPlacementAlert 실패',
+        'playBeep 실패',
         name: 'SensorChannel',
         error: error,
         stackTrace: stack,

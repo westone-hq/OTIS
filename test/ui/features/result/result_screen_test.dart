@@ -2,10 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
-import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
+import 'package:vibration_checker/ui/features/result/result_charts_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
@@ -97,7 +98,7 @@ Future<void> _settle(WidgetTester tester) async {
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
 /// 함수: main
-/// 목적: 결과 화면이 지표 여섯 줄을 보여주고 기준을 넘은 값만 표시하는지,
+/// 목적: 결과 화면이 지표 아홉 줄을 보여주고 기준을 넘은 값만 표시하는지,
 ///       다른 저장 결과와 비교하는지, 재실행 전에 운전 방향을 묻는지
 ///       시험한다.
 void main() {
@@ -112,10 +113,16 @@ void main() {
     if (await temp.exists()) await temp.delete(recursive: true);
   });
 
-  testWidgets('지표 여섯 줄을 보여주고 기준을 넘은 값에 경고를 붙인다', (tester) async {
+  testWidgets('X · Y · Z 평균 · 최대와 소음 · 거리 · 속도 아홉 줄을 보이고 넘은 값에 경고를 붙인다', (
+    tester,
+  ) async {
     await tester.runAsync(
       () => MeasurementRepository.instance.save(
-        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 31.0),
+        _result(
+          '20260114-110359',
+          DateTime(2026, 1, 14, 11, 3, 59),
+          31.0,
+        ).copyWith(xA95: 14.0, yA95: 5.0, zA95: 22.0),
       ),
     );
 
@@ -125,22 +132,34 @@ void main() {
     await _settle(tester);
 
     for (final label in <String>[
-      'X축 진동 Peak to Peak [mg]',
-      'Y축 진동 Peak to Peak [mg]',
-      'Z축 진동 Peak to Peak [mg]',
+      'X축 진동 평균 [mg]',
+      'X축 진동 최대 [mg]',
+      'Y축 진동 평균 [mg]',
+      'Y축 진동 최대 [mg]',
+      'Z축 진동 평균 [mg]',
+      'Z축 진동 최대 [mg]',
       '소음 최대 [dBA]',
       '운행 거리 [m]',
       '최대 속도 [m/s]',
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    expect(find.textContaining('Peak to Peak'), findsNothing);
+    expect(find.textContaining('수직'), findsNothing);
+    expect(find.textContaining('수평'), findsNothing);
     expect(find.text('26.0'), findsOneWidget);
     expect(find.text('1.74'), findsOneWidget, reason: '리포트와 같은 둘째 자리');
     expect(
       find.byIcon(Icons.error_outline),
-      findsNWidgets(2),
-      reason: 'X(25.5 초과) · Z(30 초과)만 경고다',
+      findsNWidgets(4),
+      reason: 'X 평균(13.5 초과) · X 최대(25.5) · Z 평균(21) · Z 최대(30)',
     );
+    expect(
+      find.text('13.5mg 초과 시 적색'),
+      findsNWidgets(2),
+      reason: 'X · Y 평균은 수평 기준',
+    );
+    expect(find.text('21mg 초과 시 적색'), findsOneWidget, reason: 'Z 평균 수직');
     expect(
       find.text('25.5mg 초과 시 적색'),
       findsNWidgets(2),
@@ -148,6 +167,38 @@ void main() {
     );
     expect(find.text('30mg 초과 시 적색'), findsOneWidget);
     expect(find.text('테스트 재실행'), findsOneWidget);
+    expect(find.text('그래프 보기'), findsOneWidget);
+    expect(find.text('측정 그래프'), findsNothing, reason: '그래프는 따로 연다');
+  });
+
+  testWidgets('그래프 보기를 누르면 그래프 화면이 열린다', (tester) async {
+    await tester.runAsync(
+      () => MeasurementRepository.instance.save(
+        _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 8.0),
+      ),
+    );
+    final router = GoRouter(
+      initialLocation: '/result/20260114-110359',
+      routes: [
+        GoRoute(
+          path: '/result/:id',
+          builder: (_, s) => ResultScreen(id: s.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/result/:id/charts',
+          builder: (_, s) => ResultChartsScreen(id: s.pathParameters['id']!),
+        ),
+      ],
+    ); // 결과 · 그래프 두 경로
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await _settle(tester);
+    await tester.ensureVisible(find.text('그래프 보기'));
+    await tester.tap(find.text('그래프 보기'));
+    await _settle(tester);
+
+    expect(find.text('측정 그래프'), findsOneWidget);
+    expect(find.text('up_J-1 · 현장'), findsOneWidget);
+    expect(find.text('X축 진동 [mg]'), findsOneWidget);
   });
 
   testWidgets('머리 카드 층은 출발 → 도착이라 하강이면 최상층부터다', (tester) async {
@@ -178,40 +229,29 @@ void main() {
     expect(find.text('상승 · 1층 → 8층 · Gen2'), findsOneWidget);
   });
 
-  testWidgets('화면 위 · 기울어진 거치 결과에만 재측정 권고 경고를 띄운다', (tester) async {
-    const tail = ' 거치로 측정됨 — 소음 · 수평 값이 달라질 수 있습니다. 재측정을 권합니다';
-    final cases = <String?, String?>{
-      'faceUp': '화면 위$tail',
-      'tilted': '기울어진$tail',
-      'faceDown': null,
-      null: null,
-    }; // 저장한 거치 → 보일 경고
-    var minute = 0; // 측정 ID 를 가르는 분
-    for (final entry in cases.entries) {
-      minute++;
+  testWidgets('거치 · 미보정 기종 경고는 띄우지 않는다 (2026-10-27)', (tester) async {
+    for (final (minute, placement) in <(int, String?)>[
+      (1, 'faceUp'),
+      (2, 'tilted'),
+      (3, null),
+    ]) {
       final id = '20260114-11${minute.toString().padLeft(2, '0')}00';
       await tester.runAsync(
         () => MeasurementRepository.instance.save(
-          _result(
-            id,
-            DateTime(2026, 1, 14, 11, minute),
-            8.0,
-          ).copyWith(placement: entry.key, placementGravityZMg: 0.0),
+          _result(id, DateTime(2026, 1, 14, 11, minute), 8.0).copyWith(
+            placement: placement,
+            placementGravityZMg: 0.0,
+            deviceModel: 'SM-A536N',
+            deviceCompensation: 'none',
+          ),
         ),
       );
       await tester.pumpWidget(const SizedBox());
       await tester.pumpWidget(MaterialApp(home: ResultScreen(id: id)));
       await _settle(tester);
-      final warning = entry.value; // 기대 경고, 없으면 null
-      if (warning == null) {
-        expect(
-          find.textContaining('거치로 측정됨'),
-          findsNothing,
-          reason: '${entry.key}',
-        );
-      } else {
-        expect(find.text(warning), findsOneWidget, reason: '${entry.key}');
-      }
+      expect(find.textContaining('거치로 측정됨'), findsNothing, reason: placement);
+      expect(find.textContaining('미보정 기종'), findsNothing, reason: placement);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
       expect(find.text('테스트 재실행'), findsOneWidget);
     }
   });
@@ -240,7 +280,7 @@ void main() {
     expect(find.text('비교 해제'), findsOneWidget);
   });
 
-  testWidgets('테스트 재실행은 운전 방향부터 묻고 반대 방향을 권한다', (tester) async {
+  testWidgets('테스트 재실행은 운전 방향부터 묻고 상승 · 하강을 같은 모양으로 나란히 둔다', (tester) async {
     await tester.runAsync(
       () => MeasurementRepository.instance.save(
         _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 20.0),
@@ -255,10 +295,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('운전 방향 확인'), findsOneWidget);
-    final down = tester.widget<AppDialogButton>(
-      find.widgetWithText(AppDialogButton, '하강'),
-    ); // 지난 측정(상승)의 반대 방향 버튼
-    expect(down.primary, isTrue);
+    final up = find.widgetWithText(OutlinedButton, '상승'); // 상승 버튼
+    final down = find.widgetWithText(OutlinedButton, '하강'); // 하강 버튼
+    expect(up, findsOneWidget);
+    expect(down, findsOneWidget, reason: '둘 다 같은 테두리 버튼이다');
+    final upRect = tester.getRect(up); // 상승 버튼 자리
+    final downRect = tester.getRect(down); // 하강 버튼 자리
+    expect(upRect.center.dy, closeTo(downRect.center.dy, 0.5), reason: '한 줄');
+    expect(upRect.right, lessThan(downRect.left), reason: '상승이 왼쪽');
+    expect(upRect.width, closeTo(downRect.width, 0.5), reason: '같은 폭');
+    expect(upRect.height, greaterThanOrEqualTo(56));
+
+    await tester.tap(down);
+    await tester.pumpAndSettle();
+    expect(find.text('운전 방향 확인'), findsNothing, reason: '고르면 닫힌다');
   });
 
   testWidgets('필수 항목이 빠진 예전 결과는 재실행하지 않고 홈 입력을 안내한다', (tester) async {

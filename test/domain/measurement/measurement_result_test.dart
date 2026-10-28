@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 import 'package:vibration_checker/domain/analysis/travel_window.dart';
-import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
 /// 작성: 2026-10-07 02:22:28 · 박건준
@@ -196,7 +195,6 @@ void main() {
       ),
     ); // 왕복한 결과
     expect(back.placement, 'faceUp');
-    expect(back.placementKind, Placement.faceUp);
     expect(back.placementGravityZMg, 998.5);
     final speed = MeasurementResult.fromJson(
       jsonEncode(_result().copyWith(steadySpeedMps: 1.507).toMap()),
@@ -209,7 +207,6 @@ void main() {
       ..remove('steadySpeedMps'); // 2026-10-22 이전 형태
     final old = MeasurementResult.fromJson(jsonEncode(legacy)); // 예전 결과
     expect(old.placement, isNull);
-    expect(old.placementKind, isNull);
     expect(old.placementGravityZMg, isNull);
     expect(old.steadySpeedMps, isNull);
   });
@@ -236,7 +233,6 @@ void main() {
     expect(back.stopMarginSec, 0.46);
     expect(back.zJptpClippedAtEnd, isTrue);
     expect(back.baselineSource, 'contaminated');
-    expect(back.uncompensatedDevice, isTrue);
     expect(back.stoppedTooSoon, isTrue);
     expect(back.baselineContaminated, isTrue);
 
@@ -244,7 +240,6 @@ void main() {
       jsonEncode(_result().toMap()),
     ); // 2026-10-22 전 형태(필드 없음)
     expect(old.deviceCompensation, isNull);
-    expect(old.uncompensatedDevice, isFalse);
     expect(old.stoppedTooSoon, isFalse);
     expect(old.baselineContaminated, isFalse);
     expect(

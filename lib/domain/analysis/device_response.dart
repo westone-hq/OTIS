@@ -11,9 +11,10 @@ import 'package:vibration_checker/domain/dsp/butterworth.dart';
 ///       진동 필터가 아니라 기종 보정이라 오티스폰 기록에는 걸지 않는다.
 abstract final class DeviceResponse {
   /// 작성: 2026-10-22 19:00:00 · 박건준
+  /// 수정: 2026-10-27 12:00:00 · 박건준
   /// 변수: noneLabel
-  /// 목적: 보정하지 않았음을 결과 파일에 남기는 표시. 결과 화면 · 메일은 이
-  ///       값을 보고 "미보정 기종" 을 알린다.
+  /// 목적: 보정하지 않았음을 결과 파일에 남기는 표시. 진단 기록이고 결과
+  ///       화면 · 메일에 "미보정 기종" 을 알리던 것은 2026-10-27 에 없앴다.
   static const String noneLabel = 'none';
 
   /// 작성: 2026-10-22 19:00:00 · 박건준

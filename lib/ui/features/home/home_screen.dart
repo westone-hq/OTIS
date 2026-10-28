@@ -7,7 +7,6 @@ import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/features/home/site_field_messages.dart';
-import 'package:vibration_checker/ui/features/home/widgets/address_fields.dart';
 import 'package:vibration_checker/ui/features/home/widgets/direction_selector.dart';
 import 'package:vibration_checker/ui/features/home/widgets/floor_fields.dart';
 import 'package:vibration_checker/ui/features/home/widgets/labeled_dropdown.dart';
@@ -17,11 +16,11 @@ import 'package:vibration_checker/ui/features/home/widgets/site_text_field.dart'
 import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
-/// 수정: 2026-10-13 14:27:24 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 클래스: HomeScreen
-/// 목적: 이번 측정의 현장 정보(제번, 현장명, 우편번호 · 주소, 층수, 운전
-///       방향, 기종, 하중, 해석 종류, 추가 참고사항)를 입력받고 측정을
-///       시작하는 홈 화면.
+/// 목적: 이번 측정의 현장 정보(제번, 현장명, 층수, 운전 방향, 기종, 하중,
+///       해석 종류, 추가 참고사항)를 입력받고 측정을 시작하는 홈 화면.
+///       주소 · 우편번호는 2026-10-27 사용자 지시로 받지 않는다.
 ///       - 어르신도 쓰기 쉽도록 필드·버튼 높이 64dp, 터치 영역 최소 56dp,
 ///         본문 글자 크기 18 이상으로 맞춘다
 ///       - 입력 오류는 색·아이콘·문구 세 가지를 함께 표시하고, 오류가 난
@@ -44,18 +43,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
-/// 수정: 2026-10-22 23:10:00 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 클래스: _HomeScreenState
 /// 목적: 홈 화면의 입력 상태를 관리한다. 입력이 바뀔 때마다 기기에 저장해,
 ///       다음 측정이나 다음 앱 실행 때 마지막 입력이 그대로 남게 한다.
 ///       추가 참고사항만은 현장마다 달라 저장하지 않고 빈 칸에서 시작한다
 ///       (`SiteInfo.toMap()` 참고).
-///       - 입력 컨트롤러 8개(제번 · 현장명 · 우편번호 · 주소 · 최하층 ·
-///         최상층 · 하중 · 참고사항)와 포커스 노드로 텍스트 필드 값과 포커스
+///       - 입력 컨트롤러 6개(제번 · 현장명 · 최하층 · 최상층 · 하중 ·
+///         참고사항)와 포커스 노드로 텍스트 필드 값과 포커스
 ///         이동을 관리한다
 ///       - 운전 방향 · 기종 · 하중 단위 · 해석 종류는 선택형 값이라 별도
 ///         컨트롤러 없이 상태 필드로만 둔다
-///       - 오류 문구 5개(`_jobNoError` 등)와 스크롤 대상 키 5개로, 검증
+///       - 오류 문구 4개(`_jobNoError` 등)와 스크롤 대상 키 4개로, 검증
 ///         실패 시 표시·스크롤 위치를 잡는다
 ///       - 입력 칸 묶음은 `widgets/` 의 위젯이 그리고, 값 · 저장 · 검사 ·
 ///         시작은 이 상태가 갖는다
@@ -65,12 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// 현장명 입력 필드의 텍스트 컨트롤러
   final _siteNameCtl = TextEditingController();
-
-  /// 우편번호 입력 필드의 텍스트 컨트롤러
-  final _postalCodeCtl = TextEditingController();
-
-  /// 주소 입력 필드의 텍스트 컨트롤러
-  final _addressCtl = TextEditingController();
 
   /// 최하층 입력 필드의 텍스트 컨트롤러
   final _bottomFloorCtl = TextEditingController();
@@ -90,12 +83,6 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 현장명 입력 필드의 포커스 노드
   final _siteNameFocus = FocusNode();
 
-  /// 우편번호 입력 필드의 포커스 노드
-  final _postalCodeFocus = FocusNode();
-
-  /// 주소 입력 필드의 포커스 노드
-  final _addressFocus = FocusNode();
-
   /// 최하층 입력 필드의 포커스 노드
   final _bottomFloorFocus = FocusNode();
 
@@ -110,9 +97,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// 현장명 입력 영역으로 스크롤 이동시킬 때 쓰는 위치 키
   final _siteNameKey = GlobalKey();
-
-  /// 우편번호 · 주소 입력 영역으로 스크롤 이동시킬 때 쓰는 위치 키
-  final _addressKey = GlobalKey();
 
   /// 최하층 · 최상층 입력 영역으로 스크롤 이동시킬 때 쓰는 위치 키
   final _floorKey = GlobalKey();
@@ -134,10 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// 현장명 입력 오류 문구. null이면 오류 없음
   String? _siteNameError;
-
-  /// 우편번호 · 주소 입력 오류 문구. 둘 다 걸리면 두 줄이다. null이면
-  /// 오류 없음
-  String? _addressError;
 
   /// 층수 입력 오류 문구. null이면 오류 없음
   String? _floorError;
@@ -167,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: _loadSavedInputs
   /// 목적: `PrefsStore`(기기에 값을 저장·불러오는 저장소 클래스)에 저장된
   ///       마지막 현장 정보를 불러와 입력 필드를 채운다.
@@ -187,8 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _jobNoCtl.text = site.jobNo;
       _siteNameCtl.text = site.siteName;
-      _postalCodeCtl.text = site.postalCode;
-      _addressCtl.text = site.address;
       _bottomFloorCtl.text = site.bottomFloor;
       _topFloorCtl.text = site.topFloor;
       _loadCtl.text = site.load;
@@ -199,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-10-04 16:44:32 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: _currentSite
   /// 목적: 지금 입력창 · 선택지에 있는 값을 앞뒤 공백을 지워 현장 정보로
   ///       묶는다.
@@ -208,14 +186,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return SiteInfo(
       jobNo: _jobNoCtl.text.trim(),
       siteName: _siteNameCtl.text.trim(),
-      address: _addressCtl.text.trim(),
       bottomFloor: _bottomFloorCtl.text.trim(),
       topFloor: _topFloorCtl.text.trim(),
       direction: _direction,
       model: _model,
       load: _loadCtl.text.trim(),
       analysisType: _analysisType,
-      postalCode: _postalCodeCtl.text.trim(),
       notes: _notesCtl.text.trim(),
     );
   }
@@ -231,26 +207,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-11 17:28:28 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: dispose
   /// 목적: `dispose`(이 화면이 완전히 사라질 때 Flutter가 마지막으로
   ///       한 번 불러주는 생명주기 메서드. `initState`의 반대 시점)다.
-  ///       입력 컨트롤러 8개와 포커스 노드 7개를 정리해, 메모리에 계속
+  ///       입력 컨트롤러 6개와 포커스 노드 5개를 정리해, 메모리에 계속
   ///       남아있지 않게 한다.
   @override
   void dispose() {
     _jobNoCtl.dispose();
     _siteNameCtl.dispose();
-    _postalCodeCtl.dispose();
-    _addressCtl.dispose();
     _bottomFloorCtl.dispose();
     _topFloorCtl.dispose();
     _loadCtl.dispose();
     _notesCtl.dispose();
     _jobNoFocus.dispose();
     _siteNameFocus.dispose();
-    _postalCodeFocus.dispose();
-    _addressFocus.dispose();
     _bottomFloorFocus.dispose();
     _topFloorFocus.dispose();
     _loadFocus.dispose();
@@ -258,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-22 23:10:00 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: _startMeasure
   /// 목적: 입력값을 검증하고, 통과하면 측정을 시작한다.
   ///       - 포커스를 해제하고 입력값을 다듬어 `SiteInfo`(제번 · 현장명 ·
@@ -285,8 +257,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final jobNoError = jobNoErrorMessage(errors); // 제번 오류 문구, 없으면 null
     // → 로직 이동: siteNameErrorMessage()
     final siteNameError = siteNameErrorMessage(errors); // 현장명 오류 문구
-    // → 로직 이동: addressErrorMessage()
-    final addressError = addressErrorMessage(errors); // 우편번호 · 주소 오류
     // → 로직 이동: floorErrorMessage()
     final floorError = floorErrorMessage(errors); // 층수 오류 문구, 없으면 null
     // → 로직 이동: loadErrorMessage()
@@ -295,7 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _jobNoError = jobNoError;
       _siteNameError = siteNameError;
-      _addressError = addressError;
       _floorError = floorError;
       _loadError = loadError;
     });
@@ -310,14 +279,6 @@ class _HomeScreenState extends State<HomeScreen> {
       } else if (siteNameError != null) {
         targetKey = _siteNameKey;
         _siteNameFocus.requestFocus();
-      } else if (addressError != null) {
-        targetKey = _addressKey;
-        if (errors.contains(SiteFieldError.postalCodeMissing) ||
-            errors.contains(SiteFieldError.postalCodeInvalid)) {
-          _postalCodeFocus.requestFocus();
-        } else {
-          _addressFocus.requestFocus();
-        }
       } else if (floorError != null) {
         targetKey = _floorKey;
         if (siteInfo.bottomFloor.isEmpty) {
@@ -389,13 +350,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// 작성: 2026-08-17 12:40:41 · 박건준
-  /// 수정: 2026-10-22 23:10:00 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: build
   /// 목적: 홈 화면(현장 정보 입력) 레이아웃을 구성한다.
   ///       - `appBar` — 화면 제목과, 설정·저장 결과 화면으로 이동하는
   ///         버튼 2개
-  ///       - `body` — 스크롤 가능한 입력 폼. 제번 → 현장명 → 우편번호 ·
-  ///         주소 → 최하층·최상층 → 운전 방향 → 기종 → 하중 · 단위 → 분석
+  ///       - `body` — 스크롤 가능한 입력 폼. 제번 → 현장명 →
+  ///         최하층·최상층 → 운전 방향 → 기종 → 하중 · 단위 → 분석
   ///         내용(해석 종류) → 추가 참고사항 순으로 입력받는다.
   ///         `_startMeasure`가 찾아낸 오류는 각 필드 아래 빨간 오류
   ///         박스로 표시한다
@@ -452,22 +413,9 @@ class _HomeScreenState extends State<HomeScreen> {
             controller: _siteNameCtl,
             focusNode: _siteNameFocus,
             error: _siteNameError,
-            onSubmitted: _postalCodeFocus.requestFocus,
+            onSubmitted: _bottomFloorFocus.requestFocus,
             onChanged: () =>
                 _onEdited(_siteNameError, () => _siteNameError = null),
-          ),
-          const SizedBox(height: AppDims.gap3),
-          // → 로직 이동: AddressFields.build()
-          AddressFields(
-            anchorKey: _addressKey,
-            postalCodeController: _postalCodeCtl,
-            postalCodeFocus: _postalCodeFocus,
-            addressController: _addressCtl,
-            addressFocus: _addressFocus,
-            error: _addressError,
-            onAddressSubmitted: _bottomFloorFocus.requestFocus,
-            onChanged: () =>
-                _onEdited(_addressError, () => _addressError = null),
           ),
           const SizedBox(height: AppDims.gap3),
           // → 로직 이동: FloorFields.build()

@@ -118,15 +118,16 @@ class MeasurementAssembleResult {
 ///       없게 된다.
 class MeasurementAssembler {
   /// 작성: 2026-09-15 13:08:37 · 박건준
-  /// 수정: 2026-10-22 22:40:00 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: assemble
   /// 목적: 격자 환산 결과 한 건을 측정 결과 모델 한 건으로 바꾼다.
   ///       - 환산이 실패했으면 바꾸지 않고 그 사유를 그대로 올린다.
   ///         실패를 빈 결과로 바꿔 삼키지 않는다
   ///       - 격자 행이 `Kinematics.minimumRows` 개보다 적거나 격자 간격이 0 이하면
   ///         변환하지 않고 사유를 올린다
-  ///       - 층수는 현장 정보에 문자열로 들어오므로 숫자로 바꾼다.
-  ///         바꿀 수 없으면 사유를 올린다. 부르는 쪽이 이미 확인하고
+  ///       - 층수는 현장 정보에 층 표기(지하 "B1")로 들어오므로 층 번호로
+  ///         바꾼다(`SiteInfo.parseFloor()`, 지하는 음수). 바꿀 수 없으면
+  ///         사유를 올린다. 부르는 쪽이 이미 확인하고
   ///         있지만, 이 함수만 보고도 잘못된 값이 들어오지 않는다고
   ///         말할 수 있어야 해서 여기서 다시 본다
   ///       - 진동 시계열 세 개와 샘플레이트, 현장 정보를 채운다
@@ -148,7 +149,8 @@ class MeasurementAssembler {
   ///       - `site.model`(기종)도 함께 옮긴다. 비어 있으면 null 로 둔다.
   ///         이걸 실어 두면 리포트가 측정 결과 하나만 받으면 되고
   ///         현장 정보를 따로 들고 다니지 않아도 된다
-  ///       - 하중 · 하중 단위 · 해석 종류 · 우편번호 · 참고사항도 옮긴다.
+  ///       - 하중 · 하중 단위 · 해석 종류 · 참고사항도 옮긴다. 주소 ·
+  ///         우편번호는 받지 않아(2026-10-27) 결과에 싣지 않는다.
   ///         앞뒤 공백을 지우고, 비어 있으면 null 로 둔다(재지 않은 값을
   ///         빈 문자열로 채우지 않는다). 하중은 홈 화면 검사와 같은
   ///         기준(`SiteInfo.parseLoad()`)으로 숫자로 바꾼다. 비어 있지
@@ -211,11 +213,13 @@ class MeasurementAssembler {
       );
     }
 
-    final bottomFloor = int.tryParse(site.bottomFloor.trim()); // 숫자가 아니면 null
-    final topFloor = int.tryParse(site.topFloor.trim()); // 숫자가 아니면 null
+    // → 로직 이동: SiteInfo.parseFloor()
+    final bottomFloor = SiteInfo.parseFloor(site.bottomFloor); // 층 번호
+    // → 로직 이동: SiteInfo.parseFloor()
+    final topFloor = SiteInfo.parseFloor(site.topFloor); // 층 표기가 아니면 null
     if (bottomFloor == null || topFloor == null) {
       return MeasurementAssembleResult.failure(
-        '층수를 숫자로 바꿀 수 없다: '
+        '층수를 층 번호로 바꿀 수 없다: '
         '최하층 "${site.bottomFloor}", 최상층 "${site.topFloor}"',
       );
     }
@@ -228,7 +232,6 @@ class MeasurementAssembler {
         '하중을 0 보다 큰 숫자로 바꿀 수 없다: "${site.load}"',
       );
     }
-    final postalCode = site.postalCode.trim(); // 우편번호. 비었으면 null 로 둔다
     final notes = site.notes.trim(); // 참고사항. 비었으면 null 로 둔다
 
     final xSeries = <double>[]; // X축 진동 시계열 (mg)
@@ -319,7 +322,6 @@ class MeasurementAssembler {
         id: id,
         jobNo: site.jobNo,
         siteName: site.siteName,
-        address: site.address.trim(),
         bottomFloor: bottomFloor,
         topFloor: topFloor,
         direction: site.direction,
@@ -327,7 +329,6 @@ class MeasurementAssembler {
         load: load,
         loadUnit: load == null ? null : SiteInfo.loadUnit,
         analysisType: site.analysisType,
-        postalCode: postalCode.isEmpty ? null : postalCode,
         notes: notes.isEmpty ? null : notes,
         engineerName: worker?.name,
         employeeId: worker?.employeeId,

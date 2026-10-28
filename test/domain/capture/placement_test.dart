@@ -39,15 +39,6 @@ void main() {
       expect(CaptureConfig.placementFaceDownMaxMg, -940.0);
       expect(CaptureConfig.placementFaceUpMinMg, 940.0);
     });
-
-    test('이름 · 표시 글자', () {
-      expect(Placement.fromName('faceUp'), Placement.faceUp);
-      expect(Placement.fromName(null), isNull);
-      expect(Placement.fromName('모름'), isNull);
-      expect(Placement.faceDown.label, '화면 아래');
-      expect(Placement.faceUp.label, '화면 위');
-      expect(Placement.tilted.label, '기울어짐');
-    });
   });
 
   group('PlacementMonitor — 처음 1초', () {

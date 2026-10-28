@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 import 'package:vibration_checker/domain/measurement/result_warnings.dart';
 import 'package:vibration_checker/domain/report/report_metrics.dart';
@@ -17,7 +18,6 @@ import 'package:vibration_checker/ui/core/widgets/app_notice.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 import 'package:vibration_checker/ui/features/measure/mic_permission.dart';
 import 'package:vibration_checker/ui/features/result/compare_sheet.dart';
-import 'package:vibration_checker/ui/features/result/result_charts.dart';
 import 'package:vibration_checker/ui/features/result/send_email_sheet.dart';
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
@@ -64,13 +64,27 @@ class _Metric {
 }
 
 /// 작성: 2026-10-04 18:15:24 · 박건준
+/// 수정: 2026-10-27 14:00:00 · 박건준
 /// 변수: _metrics
 /// 목적: 결과 화면에 보여줄 지표와 그 차례. 적색 기준은 리포트와 같은
 ///       `ReportThresholds` 값을 쓴다 — 화면과 리포트의 판정이 갈라지지
-///       않게 하려는 것이다.
+///       않게 하려는 것이다. 진동은 축마다 평균(A95) · 최대(P2P) 두 줄이고
+///       X · Y 는 수평, Z 는 수직 기준이다(리포트 1쪽 수평 · 수직 행과 같은
+///       값).
+/// 근거: 인용 — 2026-10-27 사용자 지시 "수직진동, 수평진동 표현 삭제 후 X,
+///       Y, Z 의 평균 최대로 각각 변경. 기준치는 동일"(X · Y = 수평, Z = 수직,
+///       사용자 확인)
 final List<_Metric> _metrics = <_Metric>[
   _Metric(
-    label: 'X축 진동 Peak to Peak',
+    label: 'X축 진동 평균',
+    unit: 'mg',
+    read: (r) => r.xA95,
+    exceeded: (r) => r.xA95Exceeded,
+    redLimit: ReportThresholds.horizA95RedMg,
+    decimals: 1,
+  ),
+  _Metric(
+    label: 'X축 진동 최대',
     unit: 'mg',
     read: (r) => r.xPtp,
     exceeded: (r) => r.xExceeded,
@@ -78,7 +92,15 @@ final List<_Metric> _metrics = <_Metric>[
     decimals: 1,
   ),
   _Metric(
-    label: 'Y축 진동 Peak to Peak',
+    label: 'Y축 진동 평균',
+    unit: 'mg',
+    read: (r) => r.yA95,
+    exceeded: (r) => r.yA95Exceeded,
+    redLimit: ReportThresholds.horizA95RedMg,
+    decimals: 1,
+  ),
+  _Metric(
+    label: 'Y축 진동 최대',
     unit: 'mg',
     read: (r) => r.yPtp,
     exceeded: (r) => r.yExceeded,
@@ -86,7 +108,15 @@ final List<_Metric> _metrics = <_Metric>[
     decimals: 1,
   ),
   _Metric(
-    label: 'Z축 진동 Peak to Peak',
+    label: 'Z축 진동 평균',
+    unit: 'mg',
+    read: (r) => r.zA95,
+    exceeded: (r) => r.zA95Exceeded,
+    redLimit: ReportThresholds.zA95RedMg,
+    decimals: 1,
+  ),
+  _Metric(
+    label: 'Z축 진동 최대',
     unit: 'mg',
     read: (r) => r.zPtp,
     exceeded: (r) => r.zExceeded,
@@ -113,13 +143,13 @@ final List<_Metric> _metrics = <_Metric>[
 ];
 
 /// 작성: 2026-07-03 15:21:58 · 박건준
-/// 수정: 2026-10-27 10:00:00 · 박건준
+/// 수정: 2026-10-27 14:00:00 · 박건준
 /// 클래스: ResultScreen
 /// 목적: 저장된 측정 결과 하나를 보여주는 화면. 측정을 마쳤을 때와 저장
 ///       결과 목록에서 하나를 골랐을 때 같은 화면을 쓴다.
-///       - 진동 세 축 · 소음 최대 · 운행 거리 · 최대 속도를 보여주고,
-///         기준을 넘은 값은 붉게 표시한다
-///       - 진동 세 축 · 소음 파형을 리포트 2쪽과 같은 축으로 그린다
+///       - 진동 세 축 평균 · 최대, 소음 최대 · 운행 거리 · 최대 속도를
+///         보여주고, 기준을 넘은 값은 붉게 표시한다
+///       - 진동 세 축 · 소음 파형은 "그래프 보기" 로 따로 연다
 ///       - 다른 저장 결과를 골라 지표마다 나란히 비교한다
 ///       - 메일 발송, 같은 현장 정보로 테스트 재실행
 class ResultScreen extends StatefulWidget {
@@ -231,13 +261,13 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-11 19:09:59 · 박건준
+  /// 수정: 2026-10-27 11:00:00 · 박건준
   /// 함수: _rerun
   /// 목적: 이 결과와 같은 현장 정보로 곧바로 다시 측정한다. 순서대로
   ///       진행한다.
   ///       1. 되살린 현장 정보가 지금 필수 항목을 다 갖췄는지
-  ///          `SiteInfo.validate()` 로 본다. 하중 · 우편번호를 받기 전의
-  ///          예전 결과는 걸린다. 그때는 홈에서 채우라고 안내만 하고
+  ///          `SiteInfo.validate()` 로 본다. 하중을 받기 전의 예전 결과 ·
+  ///          lb 결과는 걸린다. 그때는 홈에서 채우라고 안내만 하고
   ///          멈춘다 — 그대로 재면 측정이 끝난 뒤 저장 검사에서 거절돼
   ///          운행 한 번이 버려진다
   ///       2. 운전 방향을 다시 고르게 한다. 상승 측정 다음은 보통 하강이라
@@ -262,7 +292,7 @@ class _ResultScreenState extends State<ResultScreen> {
           context,
           title: '현장 정보 확인',
           message:
-              '이 측정에는 지금 필요한 현장 정보(주소 · 우편번호 · 하중 등) 중 '
+              '이 측정에는 지금 필요한 현장 정보(하중 등) 중 '
               '빠진 항목이 있습니다.\n홈에서 빠진 항목을 입력한 뒤 측정하세요.',
           confirmLabel: '확인',
           barrierDismissible: true,
@@ -290,16 +320,17 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-05 10:03:35 · 박건준
+  /// 수정: 2026-10-28 10:00:00 · 박건준
   /// 함수: _askDirection
-  /// 목적: 다시 잴 운전 방향을 고르게 한다. 지난 측정과 반대 방향을 주
-  ///       버튼으로 두어 한 번에 고를 수 있게 한다. 바깥을 누르면 취소다.
+  /// 목적: 다시 잴 운전 방향을 고르게 한다. 상승 · 하강 두 버튼을 같은
+  ///       모양 · 같은 폭으로 좌우에 나란히 둔다 — 예전에는 지난 측정의 반대
+  ///       방향만 채운 버튼이 한 줄을 다 차지하고 다른 방향은 글자처럼 보였다
+  ///       (2026-10-28 사용자 지시 "둘 다 버튼처럼, 좌우로, 똑같은 모양").
+  ///       지난 방향은 문구로 알린다. 바깥을 누르면 취소다.
   /// 인자: last — 지난 측정의 운전 방향
   /// 반환: 고른 방향(`SiteInfo.directionUp` 또는 `directionDown`).
   ///       취소했으면 null
   Future<String?> _askDirection(String last) {
-    final suggested = last == SiteInfo.directionUp
-        ? SiteInfo.directionDown
-        : SiteInfo.directionUp; // 주 버튼으로 둘 방향
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -309,15 +340,29 @@ class _ResultScreenState extends State<ResultScreen> {
           style: AppText.body,
         ),
         actions: [
-          for (final option in <String>[
-            SiteInfo.directionUp,
-            SiteInfo.directionDown,
-          ])
-            AppDialogButton(
-              label: option,
-              onPressed: () => Navigator.of(ctx).pop(option),
-              primary: option == suggested,
-            ),
+          Row(
+            // 상승 · 하강을 같은 폭으로 나눈 한 줄
+            children: [
+              for (final option in <String>[
+                SiteInfo.directionUp,
+                SiteInfo.directionDown,
+              ]) ...[
+                if (option != SiteInfo.directionUp)
+                  const SizedBox(width: AppDims.gap),
+                Expanded(
+                  child: OutlinedButton(
+                    // 주 버튼 높이를 직접 준다 — 대화상자 버튼 줄은 앱
+                    // 테마 높이를 따르지 않을 때가 있어 56dp 를 지킨다
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(AppDims.buttonH),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(option),
+                    child: Text(option),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -359,12 +404,14 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-22 23:50:00 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 함수: _buildHeader
-  /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 제번 · 현장명,
-  ///       측정 일시, 운전 방향 · 층 · 기종, 주소(있을 때만)를 보여준다.
+  /// 목적: 어느 측정인지 알려주는 머리 카드를 만든다. 방향 · 제번
+  ///       (`MeasurementNaming.title()`, "up_제번") · 현장명,
+  ///       측정 일시, 운전 방향 · 층 · 기종을 보여준다. 주소는 받지 않아
+  ///       (2026-10-27) 예전 결과에 있어도 보이지 않는다.
   ///       층은 출발층 → 도착층이다(하강이면 최상층 → 최하층, 리포트 1쪽
-  ///       층 정보와 같은 `SiteInfo.startStopFloors()`).
+  ///       층 정보와 같은 `SiteInfo.startStopFloors()`). 지하층은 "B1".
   /// 인자: result — 보여줄 측정 결과
   /// 반환: 머리 카드 위젯
   Widget _buildHeader(MeasurementResult result) {
@@ -381,23 +428,26 @@ class _ResultScreenState extends State<ResultScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${result.jobNo} · ${result.siteName}', style: AppText.bodyBold),
+          Text(
+            // → 로직 이동: MeasurementNaming.title()
+            '${MeasurementNaming.title(result)} · ${result.siteName}',
+            style: AppText.bodyBold,
+          ),
           const SizedBox(height: AppDims.gapHalf),
           Text(when, style: AppText.caption),
           Text(
-            '${result.direction} · $start층 → '
-            '$stop층${model == null ? '' : ' · $model'}',
+            // → 로직 이동: SiteInfo.floorLabel()
+            '${result.direction} · ${SiteInfo.floorLabel(start)}층 → '
+            '${SiteInfo.floorLabel(stop)}층${model == null ? '' : ' · $model'}',
             style: AppText.caption,
           ),
-          if (result.address.isNotEmpty)
-            Text(result.address, style: AppText.caption),
         ],
       ),
     );
   }
 
   /// 작성: 2026-10-04 18:15:24 · 박건준
-  /// 수정: 2026-10-22 23:50:00 · 박건준
+  /// 수정: 2026-10-27 13:00:00 · 박건준
   /// 함수: _buildCompareBanner
   /// 목적: 지금 무엇과 비교하는지 알리고 비교를 끌 수 있는 줄을 만든다.
   /// 인자: compare — 비교 대상 결과
@@ -411,7 +461,8 @@ class _ResultScreenState extends State<ResultScreen> {
         children: [
           Expanded(
             child: Text(
-              '비교: ${compare.jobNo} · $when',
+              // → 로직 이동: MeasurementNaming.title()
+              '비교: ${MeasurementNaming.title(compare)} · $when',
               style: AppText.body,
               overflow: TextOverflow.ellipsis,
             ),
@@ -523,13 +574,14 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-27 10:00:00 · 박건준
+  /// 수정: 2026-10-28 10:00:00 · 박건준
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스
-  ///       - `body` — 머리 카드 → 경고 박스(`resultWarnings()`, 있을 때만)
-  ///         → (비교 중이면 비교 대상 줄) → 지표 여섯 줄 → 측정 그래프
-  ///         (`ResultCharts`, 이번 측정만 그린다)
+  ///       - `body` — 머리 카드 → "그래프 보기" 버튼(그래프는 따로 연다,
+  ///         `ResultChartsScreen`. 2026-10-28 지표 아래에서 머리 카드 아래로
+  ///         올림) → 경고 박스(`resultWarnings()`, 있을 때만) → (비교 중이면
+  ///         비교 대상 줄) → 지표 아홉 줄
   ///       - `bottomNavigationBar` — 결과 비교 · 메일 발송, 그 아래
   ///         테스트 재실행(진행 중에는 막는다). 반 폭 버튼 두 개라 문구를
   ///         다섯 글자로 맞춘다 — "메일 보내기" 는 360dp 폭에서 두 줄로
@@ -558,6 +610,13 @@ class _ResultScreenState extends State<ResultScreen> {
           : AppScrollBody(
               children: [
                 _buildHeader(result), // → 로직 이동: _buildHeader()
+                const SizedBox(height: AppDims.gap),
+                OutlinedButton.icon(
+                  // → 로직 이동: ResultChartsScreen.build()
+                  onPressed: () => context.push('/result/${widget.id}/charts'),
+                  icon: const Icon(Icons.show_chart),
+                  label: const Text('그래프 보기'),
+                ),
                 const SizedBox(height: AppDims.gap2),
                 // → 로직 이동: resultWarnings()
                 for (final warning in resultWarnings(result)) ...[
@@ -578,11 +637,6 @@ class _ResultScreenState extends State<ResultScreen> {
                   _buildMetricRow(metric, result),
                   const SizedBox(height: AppDims.gap),
                 ],
-                const SizedBox(height: AppDims.gap2),
-                Text('측정 그래프', style: AppText.subhead),
-                const SizedBox(height: AppDims.gap),
-                // → 로직 이동: ResultCharts.build()
-                ResultCharts(result: result),
               ],
             ),
       bottomNavigationBar: result == null

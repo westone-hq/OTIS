@@ -17,28 +17,6 @@ enum Placement {
   tilted;
 
   /// 작성: 2026-10-22 09:30:00 · 박건준
-  /// 함수: label
-  /// 목적: 사람이 읽는 이름. 결과 화면 경고와 메일 본문이 쓴다.
-  String get label => switch (this) {
-    Placement.faceDown => '화면 아래',
-    Placement.faceUp => '화면 위',
-    Placement.tilted => '기울어짐',
-  };
-
-  /// 작성: 2026-10-22 09:30:00 · 박건준
-  /// 함수: fromName
-  /// 목적: 결과 파일에 적은 이름(`name`)에서 되살린다.
-  /// 인자: name — 저장된 이름. 없으면 null
-  /// 반환: 거치 방향. 이름이 없거나 모르는 이름이면 null — 판정하지 않은
-  ///       예전 결과를 "화면 아래" 로 채우지 않는다
-  static Placement? fromName(String? name) {
-    for (final value in Placement.values) {
-      if (value.name == name) return value;
-    }
-    return null;
-  }
-
-  /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 함수: of
   /// 목적: 중력 Z 평균으로 거치 방향을 판정한다. 안드로이드 가속도계는
   ///       가만히 있을 때 위쪽으로 1g 를 읽어, 화면(Z 축)이 바닥을 보면 중력
@@ -77,10 +55,12 @@ class PlacementReading {
 }
 
 /// 작성: 2026-10-22 09:30:00 · 박건준
+/// 수정: 2026-10-27 12:00:00 · 박건준
 /// 클래스: PlacementMonitor
 /// 목적: 수집 시작 후 처음 `CaptureConfig.placementWindowMs` 동안의 중력
-///       이벤트로 거치 방향을 한 번 판정한다. 측정 중 경고(`CaptureSession`)와
-///       저장 기록이 같은 판정을 쓴다.
+///       이벤트로 거치 방향을 한 번 판정한다. 판정은 결과 · 진단 기록에만
+///       남긴다 — 측정 중 경고음 · 진동과 결과 화면 · 메일 경고는
+///       2026-10-27 사용자 지시로 없앴다.
 class PlacementMonitor {
   /// 첫 중력 이벤트 시각 (마이크로초). 아직 없으면 null
   int? _startUs;
@@ -98,13 +78,6 @@ class PlacementMonitor {
   /// 함수: reading
   /// 목적: 판정 결과. 창이 다 차기 전(측정이 1초보다 짧음)이면 null.
   PlacementReading? get reading => _reading;
-
-  /// 작성: 2026-10-22 17:10:00 · 박건준
-  /// 함수: startUs
-  /// 목적: 판정 창을 시작한 첫 중력 이벤트 시각 (마이크로초). 거치 경고 시각
-  ///       (`CaptureConfig.placementAlertDelayMs`)을 여기서 잰다. 아직 중력
-  ///       이벤트가 없으면 null.
-  int? get startUs => _startUs;
 
   /// 작성: 2026-10-22 09:30:00 · 박건준
   /// 함수: onEvent

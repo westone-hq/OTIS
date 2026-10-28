@@ -10,45 +10,45 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 SiteInfo _site() => const SiteInfo(
   jobNo: '2025F 1234R01',
   siteName: '시험 현장',
-  address: '서울시 중구 세종대로 110',
   bottomFloor: '1',
   topFloor: '8',
   direction: SiteInfo.directionDown,
   model: '유압',
   load: '4400',
   analysisType: '브레이크 기능',
-  postalCode: '04524',
   notes: '참고',
 );
 
 /// 작성: 2026-10-11 17:28:28 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 함수: _siteWith
 /// 목적: 검사를 통과하는 현장 정보에서 몇 칸만 바꾼 것을 만든다.
-/// 인자: address, postalCode, load, notes — 바꿀 값. 안 주면 통과하는 값
+/// 인자: load, notes, bottomFloor, topFloor — 바꿀 값. 안 주면 통과하는 값
 /// 반환: 시험용 현장 정보
 SiteInfo _siteWith({
-  String address = '서울시 중구 세종대로 110',
-  String postalCode = '04524',
   String load = '2000',
   String notes = '',
+  String bottomFloor = '1',
+  String topFloor = '8',
 }) => SiteInfo(
   jobNo: '2025F 1234R01',
   siteName: '시험 현장',
-  address: address,
-  bottomFloor: '1',
-  topFloor: '8',
+  bottomFloor: bottomFloor,
+  topFloor: topFloor,
   direction: SiteInfo.directionUp,
   model: 'Gen2',
   load: load,
-  postalCode: postalCode,
   notes: notes,
 );
 
 /// 작성: 2026-10-11 16:58:59 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 함수: _result
-/// 목적: 현장 정보만 의미 있는 측정 결과를 만든다.
+/// 목적: 현장 정보만 의미 있는 측정 결과를 만든다. 주소 · 우편번호는
+///       2026-10-27 전 결과처럼 채워 둔다 — 되살릴 때 버리는지 본다.
 /// 인자: load, loadUnit, analysisType, postalCode, notes — 새 항목. 안
 ///       주면 null(예전 측정)
+///       bottomFloor, topFloor — 층 번호. 안 주면 1 · 8
 /// 반환: 시험용 측정 결과
 MeasurementResult _result({
   double? load,
@@ -56,14 +56,16 @@ MeasurementResult _result({
   String? analysisType,
   String? postalCode,
   String? notes,
+  int bottomFloor = 1,
+  int topFloor = 8,
 }) {
   return MeasurementResult(
     id: '20261011-165859',
     jobNo: '2025F 1234R01',
     siteName: '시험 현장',
     address: '서울시',
-    bottomFloor: 1,
-    topFloor: 8,
+    bottomFloor: bottomFloor,
+    topFloor: topFloor,
     direction: SiteInfo.directionUp,
     model: 'Gen2',
     load: load,
@@ -84,12 +86,13 @@ MeasurementResult _result({
 }
 
 /// 작성: 2026-10-11 16:58:59 · 박건준
-/// 수정: 2026-10-13 13:17:56 · 박건준
+/// 수정: 2026-10-27 11:00:00 · 박건준
 /// 함수: main
-/// 목적: 현장 정보의 새 항목(하중 · 해석 종류 · 우편번호 · 참고사항)을
+/// 목적: 현장 정보의 새 항목(하중 · 해석 종류 · 참고사항 · 지하층)을
 ///       시험한다. 기기 저장 표 왕복, 선택지 밖 값의 기본값 처리, kg 고정
-///       뒤 예전 lb 저장 표 · 결과 읽기, 저장된 결과에서 되살리기, 필수
-///       검사, 하중 문자열 만들기, 선택지 목록을 본다.
+///       뒤 예전 lb 저장 표 · 결과 읽기, 주소 · 우편번호를 받지 않게 된 뒤
+///       예전 표 · 결과 읽기, 저장된 결과에서 되살리기, 필수 검사, 층 표기,
+///       하중 문자열 만들기, 선택지 목록을 본다.
 void main() {
   group('SiteInfo 저장 표', () {
     test('toMap → fromMap 왕복에서 새 항목이 그대로 남는다', () {
@@ -97,8 +100,19 @@ void main() {
 
       expect(restored.load, '4400');
       expect(restored.analysisType, '브레이크 기능');
-      expect(restored.postalCode, '04524');
-      expect(restored.address, '서울시 중구 세종대로 110');
+    });
+
+    test('주소 · 우편번호는 저장 표에 넣지 않고 예전 표에 있어도 버린다', () {
+      expect(_site().toMap().containsKey('address'), isFalse);
+      expect(_site().toMap().containsKey('postalCode'), isFalse);
+      final restored = SiteInfo.fromMap(<String, String?>{
+        'jobNo': 'J-1',
+        'address': '서울시',
+        'postalCode': '04524',
+      }); // 2026-10-27 전 빌드가 남긴 표
+
+      expect(restored.jobNo, 'J-1');
+      expect(restored.toMap().containsKey('address'), isFalse);
     });
 
     test('참고사항은 저장 표에 넣지 않아 다음 입력은 빈 칸에서 시작한다', () {
@@ -139,7 +153,6 @@ void main() {
       });
 
       expect(restored.load, '');
-      expect(restored.postalCode, '');
       expect(restored.analysisType, '층간 시험');
     });
   });
@@ -158,15 +171,28 @@ void main() {
 
       expect(site.load, '2000');
       expect(site.analysisType, '일반');
-      expect(site.postalCode, '10575');
       expect(site.notes, '');
+      expect(
+        site.validate(),
+        isEmpty,
+        reason: '주소 · 우편번호가 있던 예전 결과도 그대로 재실행된다',
+      );
+    });
+
+    test('지하층 결과는 B 표기로 되살린다', () {
+      final site = SiteInfo.fromResult(
+        _result(load: 2000.0, loadUnit: 'kg', bottomFloor: -2, topFloor: 5),
+      );
+
+      expect(site.bottomFloor, 'B2');
+      expect(site.topFloor, '5');
+      expect(site.validate(), isEmpty);
     });
 
     test('새 항목이 없는 예전 결과는 빈 칸 · 기본값으로 되살린다', () {
       final site = SiteInfo.fromResult(_result());
 
       expect(site.load, '');
-      expect(site.postalCode, '');
       expect(site.analysisType, SiteInfo.defaultAnalysisType);
     });
 
@@ -187,9 +213,7 @@ void main() {
       expect(changed.direction, SiteInfo.directionUp);
       expect(changed.load, '4400');
       expect(changed.analysisType, '브레이크 기능');
-      expect(changed.postalCode, '04524');
       expect(changed.notes, '참고');
-      expect(changed.address, _site().address);
     });
   });
 
@@ -200,23 +224,28 @@ void main() {
       expect(_site().validate(), isEmpty);
     });
 
-    test('주소가 비면 addressMissing', () {
-      expect(_siteWith(address: '  ').validate(), [
-        SiteFieldError.addressMissing,
+    test('지하층 B1 · B2 를 받고 지하가 지상보다 아래다', () {
+      expect(_siteWith(bottomFloor: 'B2', topFloor: 'B1').validate(), isEmpty);
+      expect(_siteWith(bottomFloor: 'b1', topFloor: '10').validate(), isEmpty);
+      expect(_siteWith(bottomFloor: '1', topFloor: 'B1').validate(), [
+        SiteFieldError.floorNotAscending,
       ]);
+      for (final floor in <String>['0', 'B0', 'B', '1F', 'ㅠ1', '1.5']) {
+        expect(_siteWith(bottomFloor: floor).validate(), [
+          SiteFieldError.floorNotNumber,
+        ], reason: floor);
+      }
     });
 
-    test('우편번호가 비면 postalCodeMissing, 숫자 5자리가 아니면 '
-        'postalCodeInvalid', () {
-      expect(_siteWith(postalCode: '').validate(), [
-        SiteFieldError.postalCodeMissing,
-      ]);
-      for (final code in <String>['1057', '123456', '1057a', '10 57']) {
-        expect(_siteWith(postalCode: code).validate(), [
-          SiteFieldError.postalCodeInvalid,
-        ], reason: code);
-      }
-      expect(_siteWith(postalCode: ' 10575 ').validate(), isEmpty);
+    test('parseFloor · floorLabel 은 B 표기와 음수를 서로 바꾼다', () {
+      expect(SiteInfo.parseFloor(' B1 '), -1);
+      expect(SiteInfo.parseFloor('b12'), -12);
+      expect(SiteInfo.parseFloor('8'), 8);
+      expect(SiteInfo.parseFloor('-1'), -1, reason: '예전 빌드 입력');
+      expect(SiteInfo.parseFloor('0'), isNull);
+      expect(SiteInfo.floorLabel(-1), 'B1');
+      expect(SiteInfo.floorLabel(-12), 'B12');
+      expect(SiteInfo.floorLabel(8), '8');
     });
 
     test('하중이 비면 loadMissing, 0 보다 큰 유한한 수가 아니면 loadNotNumber', () {

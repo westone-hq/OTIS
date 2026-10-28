@@ -51,10 +51,7 @@ void main() {
       expect(find.text(title), findsOneWidget, reason: title);
     }
     expect(find.text('기록된 파형이 없습니다'), findsNothing);
-    expect(
-      find.text('가로: 시간 [s] · 빨간 점: 정속 구간 Peak to Peak 두 지점'),
-      findsOneWidget,
-    );
+    expect(find.text('가로: 시간 [s] · 빨간 점: 정속 구간 최대 두 지점'), findsOneWidget);
     expect(find.text('가로: 시간 [s] · 빨간 점: 운행 구간 소음 최대'), findsOneWidget);
     expect(tester.takeException(), isNull, reason: '그리다 실패하지 않는다');
   });

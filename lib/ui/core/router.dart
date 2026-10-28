@@ -5,11 +5,12 @@ import 'package:vibration_checker/ui/features/home/home_screen.dart';
 import 'package:vibration_checker/ui/features/login/login_screen.dart';
 import 'package:vibration_checker/ui/features/measure/measuring_screen.dart';
 import 'package:vibration_checker/ui/features/measure/start_screen.dart';
+import 'package:vibration_checker/ui/features/result/result_charts_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
 
 /// 작성: 2026-08-17 11:50:18 · 박건준
-/// 수정: 2026-10-18 09:41:12 · 박건준
+/// 수정: 2026-10-27 14:00:00 · 박건준
 /// 변수: appRouter
 /// 목적: 화면 전환을 URL 경로 기반으로 정의하는 앱 라우터. 경로 하나가
 ///       화면 하나에 대응한다. 라우트(route, 경로 하나와 그 경로에서
@@ -21,6 +22,7 @@ import 'package:vibration_checker/ui/features/settings/settings_screen.dart';
 ///       - /measuring  측정 중 라이브
 ///       - /result/:id 측정 결과 (지표 · 결과 비교 · 메일 · 테스트 재실행).
 ///         측정을 마쳤을 때와 저장 결과 목록에서 고를 때 함께 쓴다
+///       - /result/:id/charts 측정 그래프 (결과 화면의 "그래프 보기")
 ///       - /history    저장 결과 목록
 ///       - /settings   설정
 ///       - `initialLocation` — 앱을 켰을 때 처음 보여줄 화면. `/home`으로
@@ -51,6 +53,11 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/result/:id',
       builder: (_, s) => ResultScreen(id: s.pathParameters['id'] ?? 'demo'),
+    ),
+    // → 로직 이동: ResultChartsScreen.build()
+    GoRoute(
+      path: '/result/:id/charts',
+      builder: (_, s) => ResultChartsScreen(id: s.pathParameters['id']!),
     ),
     // → 로직 이동: HistoryScreen.build()
     GoRoute(path: '/history', builder: (_, _) => const HistoryScreen()),

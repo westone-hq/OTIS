@@ -6,16 +6,11 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
-import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.VibrationAttributes
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.KeyEvent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -26,20 +21,21 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * 작성: 2026-10-22 23:30:00 · 박건준
+ * 수정: 2026-10-27 12:00:00 · 박건준
  * 클래스: SensorMethodHandler
  * 목적: 측정 통로의 안드로이드 쪽. Flutter 의 `sensor_channel.dart` 가
  *       부른다. `MainActivity` 가 엔진을 만들 때 `register()` 로 통로를
  *       연결하고, 화면 단위로 오는 신호(권한 응답 · 키 입력 · 종료)를 이
  *       클래스에 넘긴다.
  *       - `MethodChannel`(요청 하나 · 응답 하나짜리 통로)로 센서 확인 ·
- *         마이크 권한 · 측정 시작 · 종료 · 볼륨키 가로채기 · 거치 경고
- *         요청을 받는다
+ *         마이크 권한 · 측정 시작 · 종료 · 볼륨키 가로채기 · 시작 · 종료
+ *         알림음 요청을 받는다
  *       - `EventChannel`(계속 흘려보내는 통로)은 `SensorStreamHandler`
  *         에게 맡겨 센서 원본 데이터를 Flutter 로 흘려보낸다
  *       - 소음(마이크) 캡처는 `NoiseCaptureHandler` 가 한다
  */
 class SensorMethodHandler(
-    /** 권한 창을 띄우고 시스템 서비스(센서 · 진동)를 얻을 화면 */
+    /** 권한 창을 띄우고 시스템 서비스(센서)를 얻을 화면 */
     private val activity: Activity,
 ) {
     /**
@@ -82,23 +78,14 @@ class SensorMethodHandler(
 
         /**
          * 작성: 2026-10-22 09:30:00 · 박건준
-         * 수정: 2026-10-23 11:00:00 · 박건준
-         * 변수: PLACEMENT_BEEP_MS
-         * 목적: 거치 경고음 길이 (밀리초). 짧게 한 번 울린다.
-         * 근거: 미정 — 엎어 둔 휴대폰에서 알아들을 만한 길이로 골랐다.
-         *       경고는 수집 시작 1.7초 뒤(기준선 구간 뒤)이고 이미 운행
-         *       중이면 울리지 않아(`CaptureSession._watchPlacement()`) 지표
-         *       구간 밖이다
+         * 수정: 2026-10-27 12:00:00 · 박건준
+         * 변수: BEEP_MS
+         * 목적: 측정 시작 · 종료 알림음 길이 (밀리초). 짧게 한 번 울린다.
+         * 근거: 미정 — 엎어 둔 휴대폰에서 알아들을 만한 길이로 골랐다
+         *       (2026-10-22 거치 경고음과 같은 길이). 시작음은 수집 0.5초 전에
+         *       울려 수집을 켤 때는 끝나 있다
          */
-        private const val PLACEMENT_BEEP_MS = 200
-
-        /**
-         * 작성: 2026-10-22 09:30:00 · 박건준
-         * 변수: PLACEMENT_VIBRATE_MS
-         * 목적: 거치 경고 진동 길이 (밀리초).
-         * 근거: 미정 — `PLACEMENT_BEEP_MS` 와 같은 이유
-         */
-        private const val PLACEMENT_VIBRATE_MS = 300L
+        private const val BEEP_MS = 200
     }
 
     /** 소음(마이크) 원본 캡처 담당. startCapture/stopCapture·dispose에서 시작·정지한다 */
@@ -309,13 +296,14 @@ class SensorMethodHandler(
                     }
                     /**
                      * 작성: 2026-10-22 09:30:00 · 박건준
-                     * 함수: playPlacementAlert
-                     * 목적: 거치가 화면 아래가 아닐 때 경고음 한 번과 진동을
-                     *       울린다(`playPlacementAlert()`). 측정은 계속한다.
+                     * 수정: 2026-10-27 12:00:00 · 박건준
+                     * 함수: playBeep
+                     * 목적: 측정 시작 · 종료 알림음을 한 번 울린다
+                     *       (`playBeep()`).
                      */
-                    "playPlacementAlert" -> {
-                        // → 로직 이동: playPlacementAlert()
-                        playPlacementAlert()
+                    "playBeep" -> {
+                        // → 로직 이동: playBeep()
+                        playBeep()
                         result.success(null)
                     }
                     /**
@@ -419,67 +407,28 @@ class SensorMethodHandler(
 
     /**
      * 작성: 2026-10-22 09:30:00 · 박건준
-     * 수정: 2026-10-22 23:30:00 · 박건준
-     * 함수: playPlacementAlert
-     * 목적: 경고음(`ToneGenerator`, 알람 소리 통로)을 `PLACEMENT_BEEP_MS` 울리고
-     *       진동을 `PLACEMENT_VIBRATE_MS` 준다. 휴대폰이 엎어져 있어 화면
-     *       안내를 볼 수 없을 때 쓰는 신호다. 소리 · 진동 장치를 못 열어도
-     *       기록만 남기고 넘어간다 — 경고 때문에 측정이 멈추면 안 된다.
-     *       경고음은 소음 마이크와 녹음(noise.m4a)에, 진동은 가속도계에 들어
-     *       가지만 수집 시작 1.7초 뒤(기준선 구간 뒤, 운행 전 정지 구간)라 지표
-     *       구간 밖이다.
-     *       진동은 알람 용도로 낸다(Android 13 부터 `VibrationAttributes`, 그
-     *       전 8 ~ 12 는 `AudioAttributes`). 용도를 주지 않으면 "터치" 용도로
-     *       기록돼(2026-10-22 에뮬레이터 `dumpsys vibrator_manager` 의
-     *       `usage: TOUCH`), 기기의 터치 진동 설정을 끈 휴대폰에서 막힐 수 있다.
+     * 수정: 2026-10-27 12:00:00 · 박건준
+     * 함수: playBeep
+     * 목적: 측정 시작 · 종료 알림음(`ToneGenerator`, 알람 소리 통로)을
+     *       `BEEP_MS` 한 번 울린다. 휴대폰이 엎어져 있어 화면을 볼 수 없을
+     *       때 시작 · 종료를 알리는 신호다. 소리 장치를 못 열어도 기록만
+     *       남기고 넘어간다 — 알림음 때문에 측정이 멈추면 안 된다.
+     *       Flutter 가 수집을 켜기 0.5초 전 · 끈 뒤에만 부른다
+     *       (`CaptureSession.playStartBeep()` · `playEndBeep()`) — 마이크가
+     *       닫혀 있어 소음 값 · 녹음에 들어가지 않는다. 진동은 내지 않는다
+     *       (2026-10-27, 거치 경고 진동을 없앴다).
      */
-    private fun playPlacementAlert() {
+    private fun playBeep() {
         try {
-            val tone = // 경고음 발생기. 울린 뒤 놓는다
+            val tone = // 알림음 발생기. 울린 뒤 놓는다
                 ToneGenerator(AudioManager.STREAM_ALARM, ToneGenerator.MAX_VOLUME)
-            tone.startTone(ToneGenerator.TONE_PROP_BEEP, PLACEMENT_BEEP_MS)
+            tone.startTone(ToneGenerator.TONE_PROP_BEEP, BEEP_MS)
             Handler(Looper.getMainLooper()).postDelayed(
                 { tone.release() },
-                PLACEMENT_BEEP_MS + 100L,
+                BEEP_MS + 100L,
             )
         } catch (e: RuntimeException) {
-            android.util.Log.w("MainActivity", "거치 경고음 실패: $e")
-        }
-        try {
-            val vibrator = // 기기 진동 장치
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    activity.getSystemService(VibratorManager::class.java)
-                        .defaultVibrator
-                } else {
-                    @Suppress("DEPRECATION")
-                    activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val effect = // 한 번 진동
-                    VibrationEffect.createOneShot(
-                        PLACEMENT_VIBRATE_MS,
-                        VibrationEffect.DEFAULT_AMPLITUDE,
-                    )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    vibrator.vibrate(
-                        effect,
-                        VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM),
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    vibrator.vibrate(
-                        effect,
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .build(),
-                    )
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(PLACEMENT_VIBRATE_MS)
-            }
-        } catch (e: RuntimeException) {
-            android.util.Log.w("MainActivity", "거치 경고 진동 실패: $e")
+            android.util.Log.w("MainActivity", "측정 알림음 실패: $e")
         }
     }
 }

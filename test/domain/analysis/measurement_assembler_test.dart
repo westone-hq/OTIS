@@ -309,7 +309,6 @@ void main() {
         RideWeighting.vertical([for (final r in rows) r.zMg], 100),
       );
       expect(result.deviceCompensation, DeviceResponse.noneLabel);
-      expect(result.uncompensatedDevice, isTrue);
     });
 
     test('샘플레이트를 격자 간격에서 구한다', () {
@@ -437,29 +436,28 @@ void main() {
         site: const SiteInfo(
           jobNo: 'T-1001',
           siteName: '서울 본사',
-          address: ' 서울시 중구 ',
-          bottomFloor: '1',
+          bottomFloor: 'B2',
           topFloor: '8',
           direction: '하부 → 상부',
           model: 'Gen2',
           load: ' 1350.5 ',
           analysisType: '문 열림 사이클',
-          postalCode: ' 04524 ',
           notes: '  도어 쪽 소음 큼  ',
         ),
         id: 'id',
         measuredAt: measuredAt,
       ).result!; // 변환된 측정 결과
 
-      expect(model.address, '서울시 중구');
+      expect(model.address, '', reason: '주소는 받지 않는다(2026-10-27)');
+      expect(model.postalCode, isNull);
+      expect(model.bottomFloor, -2, reason: '지하 2층');
       expect(model.load, 1350.5);
       expect(model.loadUnit, 'kg', reason: '하중 단위는 kg 고정이다');
       expect(model.analysisType, '문 열림 사이클');
-      expect(model.postalCode, '04524');
       expect(model.notes, '도어 쪽 소음 큼');
     });
 
-    test('비어 있는 하중 · 우편번호 · 참고사항은 빈 문자열이 아니라 null 이다', () {
+    test('비어 있는 하중 · 참고사항은 빈 문자열이 아니라 null 이다', () {
       final model = MeasurementAssembler.assemble(
         grid: _grid(_shortRows),
         site: const SiteInfo(
@@ -470,7 +468,6 @@ void main() {
           direction: '하부 → 상부',
           model: 'Gen2',
           load: '  ',
-          postalCode: '',
           notes: '   ',
         ),
         id: 'id',
@@ -479,7 +476,6 @@ void main() {
 
       expect(model.load, isNull);
       expect(model.loadUnit, isNull, reason: '하중이 없으면 단위도 뜻이 없다');
-      expect(model.postalCode, isNull);
       expect(model.notes, isNull);
       expect(model.analysisType, SiteInfo.defaultAnalysisType);
     });
@@ -499,13 +495,11 @@ void main() {
         final site = SiteInfo(
           jobNo: 'T-1001',
           siteName: '서울 본사',
-          address: '서울시',
           bottomFloor: '1',
           topFloor: '8',
           direction: '하부 → 상부',
           model: 'Gen2',
           load: load,
-          postalCode: '04524',
         ); // 하중만 바꾼 현장 정보
         final passes = site.validate().isEmpty; // 홈 화면 검사 통과 여부
         final assembled = MeasurementAssembler.assemble(
@@ -565,7 +559,7 @@ void main() {
       expect(result.failureReason, '두 센서의 수신 구간이 겹치지 않는다');
     });
 
-    test('층수를 숫자로 바꿀 수 없으면 사유를 올린다', () {
+    test('층수를 층 번호로 바꿀 수 없으면 사유를 올린다', () {
       final result = MeasurementAssembler.assemble(
         grid: _grid(_shortRows),
         site: const SiteInfo(
@@ -581,7 +575,7 @@ void main() {
       ); // 변환 결과
 
       expect(result.isSuccess, isFalse);
-      expect(result.failureReason, contains('층수를 숫자로 바꿀 수 없다'));
+      expect(result.failureReason, contains('층수를 층 번호로 바꿀 수 없다'));
     });
 
     test('소음을 안 주면 시계열도 최대도 비어 있다', () {

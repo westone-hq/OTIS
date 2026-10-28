@@ -14,6 +14,7 @@ import 'package:vibration_checker/domain/auth/login_session.dart';
 import 'package:vibration_checker/domain/capture/grid_resampler.dart';
 import 'package:vibration_checker/domain/capture/placement.dart';
 import 'package:vibration_checker/domain/config/noise_config.dart';
+import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
@@ -360,7 +361,13 @@ class MeasurementRecorder {
       final audioCopyPath = await _moveNativeFile(
         sourcePath: noiseAudioPath,
         jobDirPath: jobDir.path,
-        fileName: MeasurementRepository.noiseAudioFileName,
+        // → 로직 이동: MeasurementNaming.fileName()
+        fileName: MeasurementNaming.fileName(
+          MeasurementFile.noise,
+          direction: site.direction,
+          jobNo: site.jobNo,
+          id: id,
+        ),
         metaPath: metaPath,
         label: 'noiseAudio',
       ); // 옮겨 둔 현장 소음 녹음 경로, 못 했으면 null
@@ -371,8 +378,14 @@ class MeasurementRecorder {
           grid.failureReason,
         );
       }
-      final valuePath =
-          '${jobDir.path}/${MeasurementRepository.rawFileName}'; // 측정값 파일
+      // → 로직 이동: MeasurementNaming.fileName()
+      final valueName = MeasurementNaming.fileName(
+        MeasurementFile.raw,
+        direction: site.direction,
+        jobNo: site.jobNo,
+        id: id,
+      ); // 측정값 파일 이름 (up_RAW_제번_측정ID.txt)
+      final valuePath = '${jobDir.path}/$valueName'; // 측정값 파일
       // → 로직 이동: EvimpWriter.write()
       await EvimpWriter.write(valuePath, grid);
 
