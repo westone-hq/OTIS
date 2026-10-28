@@ -84,6 +84,7 @@ class ReportMetric {
   static const Map<String, int> _decimalsByUnit = <String, int>{'m/s': 2};
 
   /// 작성: 2026-10-22 15:00:00 · 박건준
+  /// 수정: 2026-10-28 10:30:00 · 박건준
   /// 함수: decimalsFor
   /// 목적: 단위의 값 칸 소수 자리 수를 알려 준다. 리포트 1쪽 표(`display`)와
   ///       결과 화면이 같은 자리로 보이게 같이 쓴다. 최대 속도(m/s)는 반올림
@@ -94,7 +95,7 @@ class ReportMetric {
   ///       표시값과 같았다(1.529 · 1.532 → 1.55, OTIS 1.50). 정속 구간 평균
   ///       속도(`MeasurementResult.steadySpeedMps`)를 0.05 단위로 반올림하면
   ///       7건 모두 맞지만 OTIS 값이 1.50 · 1.75 두 가지뿐이고 경계 여유가
-  ///       0.003 이라 근거가 약해 표시에 쓰지 않는다(docs/pending_checks.md)
+  ///       0.003 이라 근거가 약해 표시에 쓰지 않는다
   static int decimalsFor(String unit) =>
       _decimalsByUnit[unit] ?? _defaultDecimals;
 

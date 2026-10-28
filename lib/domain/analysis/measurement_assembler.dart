@@ -399,6 +399,7 @@ class MeasurementAssembler {
   }
 
   /// 작성: 2026-10-22 15:00:00 · 박건준
+  /// 수정: 2026-10-28 10:30:00 · 박건준
   /// 함수: _steadySpeed
   /// 목적: 정속 구간 평균 속도 크기를 낸다. 표시하지 않고 결과 파일에만 남겨
   ///       다른 현장에서 OTIS 최대 속도 표시 규칙을 견줄 때 쓴다.
@@ -408,7 +409,7 @@ class MeasurementAssembler {
   /// 식: mean(|speed(i)|),  i = 정속 시작 .. 정속 끝
   /// 근거: 측정 — 2026-10-21 비교 7건에서 이 값을 0.05 단위로 반올림하면
   ///       OTIS 표시값(1.50 · 1.75)과 모두 같았다. 다만 OTIS 값이 두 가지뿐이고
-  ///       경계 여유가 0.003 이라 근거가 약하다(docs/pending_checks.md)
+  ///       경계 여유가 0.003 이라 근거가 약하다
   static double _steadySpeed(MotionZones zones, List<double> speed) {
     var sum = 0.0; // 정속 구간 속도 크기 합
     for (var i = zones.steadyStartIndex; i <= zones.steadyEndIndex; i++) {

@@ -69,7 +69,7 @@ class SiteInfo {
   static const String loadUnit = 'kg';
 
   /// 작성: 2026-10-11 16:58:59 · 박건준
-  /// 수정: 2026-10-13 13:17:56 · 박건준
+  /// 수정: 2026-10-28 10:30:00 · 박건준
   /// 변수: loadUnitReportLabels
   /// 목적: 저장된 하중 단위의 리포트 표기. 하중은 환산하지 않고 입력 숫자
   ///       뒤에 이 말을 붙여 찍는다("2000 킬로그램").
@@ -82,7 +82,7 @@ class SiteInfo {
   ///       lb 를 남긴 것은 그 빌드(5a517e5)를 2026-10-13 테스트 폰에
   ///       설치했기 때문이다
   ///       미확인: 그 폰에 lb 로 저장한 결과가 실제로 있는지 — 없으면 `lb`
-  ///       를 지운다(docs/pending_checks.md)
+  ///       를 지운다
   static const Map<String, String> loadUnitReportLabels = <String, String>{
     'kg': '킬로그램',
     'lb': '파운드',
