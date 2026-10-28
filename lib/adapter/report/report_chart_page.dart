@@ -33,7 +33,7 @@ class ReportChartPagePlan {
 }
 
 /// 작성: 2026-09-23 09:40:00 · 박건준
-/// 수정: 2026-10-28 14:45:51 · Codex
+/// 수정: 2026-10-28 17:16:58 · Codex
 /// 클래스: ReportChartPageRenderer
 /// 목적: TUNE 리포트의 차트 쪽을 PDF 로 그린다. 2쪽과 3쪽이 같은 서식을
 ///       쓰고 놓이는 축만 달라, 한 렌더러가 두 쪽을 모두 그린다.
@@ -42,8 +42,8 @@ class ReportChartPagePlan {
 ///       `report_chart_renderer.dart` 가 정해 둔 것을 받아 놓기만 한다 — 여기서
 ///       좌표를 계산하거나 축 범위를 정하지 않는다.
 ///
-///       차트 자리는 서식에서 비어 있다. 상단 로고만 새 원본으로 덮고,
-///       꼬리말 로고와 비어 있는 차트 자리는 서식을 그대로 쓴다.
+///       차트 자리는 서식에서 비어 있다. 상단 · 하단 로고만 새 원본으로
+///       덮고, 비어 있는 차트 자리와 꼬리말의 갈색 띠는 그대로 쓴다.
 class ReportChartPageRenderer {
   /// 작성: 2026-09-23 09:40:00 · 박건준
   /// 수정: 2026-10-21 16:30:00 · 박건준
@@ -89,7 +89,7 @@ class ReportChartPageRenderer {
   /// A4 전면에 깔 차트 쪽 서식 이미지
   final PdfImage background;
 
-  /// 두 차트 쪽이 함께 쓸 상단 로고. 꼬리말은 서식 이미지를 그대로 쓴다
+  /// 두 차트 쪽의 상단 · 하단에서 함께 쓸 로고 원본
   final PdfImage headerLogo;
 
   /// 서식 좌표에 글자를 찍는 도구
@@ -157,10 +157,10 @@ class ReportChartPageRenderer {
   }
 
   /// 작성: 2026-09-23 09:40:00 · 박건준
-  /// 수정: 2026-10-28 14:45:51 · Codex
+  /// 수정: 2026-10-28 17:16:58 · Codex
   /// 함수: draw
   /// 목적: 차트 쪽 한 장을 문서에 더한다. 순서대로 그린다.
-  ///       1. 서식 이미지를 A4 전면에 깔고 상단 로고만 새 원본으로 덮는다
+  ///       1. 서식 이미지를 깔고 상단 · 하단 로고만 새 원본으로 덮는다
   ///       2. 머리말 네 칸과 쪽 제목을 찍는다
   ///       3. 차트 자리 넷에 축을 차례로 그린다
   ///
@@ -200,6 +200,8 @@ class ReportChartPageRenderer {
 
     // → 로직 이동: drawReportHeaderLogo()
     drawReportHeaderLogo(canvas, headerLogo);
+    // → 로직 이동: drawReportFooterLogo()
+    drawReportFooterLogo(canvas, headerLogo);
 
     // → 로직 이동: headerValues()
     final header = headerValues(result, plan.pageNumber); // 머리말에 채울 문구

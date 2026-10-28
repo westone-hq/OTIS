@@ -1,5 +1,5 @@
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-28 14:45:51 · Codex
+/// 수정: 2026-10-28 17:16:58 · Codex
 /// 클래스: ReportLayout
 /// 목적: TUNE 리포트 서식 위에 값을 얹을 자리를 모아 둔다. 리포트의
 ///       좌표 숫자는 전부 이 파일과 쪽별 좌표 파일
@@ -48,37 +48,80 @@ class ReportLayout {
   static const String boldFontAsset = '${assetDirectory}NanumGothic-Bold.ttf';
 
   /// 작성: 2026-10-28 14:45:51 · Codex
+  /// 수정: 2026-10-28 17:16:58 · Codex
   /// 변수: headerLogoAsset
-  /// 목적: 모든 쪽의 머리말에 쓸 새 로고 원본. 꼬리말 로고는 서식 이미지에
-  ///       남겨 두어 같은 자산 변경으로 함께 바뀌지 않게 한다.
-  /// 근거: 인용 — 2026-10-28 사용자 제공 `OTIS 최종로고.png`. 상단 로고만
-  ///       바꾸고 제번 · 구분선 · 하단 로고는 유지한다
+  /// 목적: 모든 쪽의 머리말에 쓸 새 로고 원본. 꼬리말도 같은 원본을 쓰고
+  ///       크기 · 덮을 영역만 따로 정한다.
+  /// 근거: 인용 — 2026-10-28 사용자 제공 `OTIS 최종로고.png`. 상단 교체 후
+  ///       하단도 갈색 띠를 유지하면서 같은 로고로 교체하도록 요청했다
   static const String headerLogoAsset = '${assetDirectory}otis_v_check.png';
 
   /// 작성: 2026-10-28 14:45:51 · Codex
+  /// 수정: 2026-10-28 15:10:01 · Codex
   /// 변수: headerLogoMask
-  /// 목적: 서식에 인쇄된 상단 로고를 덮을 자리 (픽셀). 새 로고의 흰 여백도
-  ///       이 안에서만 그려 오른쪽 금색 구분선과 제번을 지킨다.
-  /// 근거: 측정 — `tem_1.jpg` · `tem_2.jpg` 의 상단 로고는 x 58 ~ 175,
-  ///       y 60 ~ 102 이고 구분선은 x 195 부근이다. 테두리 여유를 포함한다
+  /// 목적: 서식에 인쇄된 상단 로고와 옛 구분선을 덮을 자리 (픽셀). 확대
+  ///       로고와 새 구분선을 이 안에 그리고 제번은 오른쪽에 따로 놓는다.
+  /// 근거: 인용 — 2026-10-28 사용자 지시로 로고를 키우고 제번을 옮긴다.
+  ///       기존 로고 · 구분선과 새 로고 자리를 함께 덮되 제번은 덮지 않는다
   static const LayoutPlotBox headerLogoMask = LayoutPlotBox(
     x: 50,
     y: 53,
-    width: 143,
+    width: 315,
     height: 56,
   );
 
   /// 작성: 2026-10-28 14:45:51 · Codex
+  /// 수정: 2026-10-28 15:10:01 · Codex
   /// 변수: headerLogoBox
   /// 목적: 원본의 흰 여백을 포함한 로고를 놓을 자리 (픽셀). 원본을 자르거나
   ///       늘리지 않고 맞추며, 바깥 여백은 `headerLogoMask` 로 가린다.
-  /// 근거: 측정 — 제공 PNG 는 2172 x 724 이고 실제 문양은 가운데에 있다.
-  ///       제번 시작 x 222 를 옮기지 않고 문양을 기존 로고 영역에 담는다
+  /// 근거: 인용 — 2026-10-28 사용자 비교 이미지의 OTIS 글자 높이에 맞춰
+  ///       이전 출력의 가로 · 세로를 두 배로 키운다. 원본 흰 여백을 포함해
+  ///       가운데를 맞추면 실제 문양은 기존 로고와 같은 높이로 놓인다
   static const LayoutPlotBox headerLogoBox = LayoutPlotBox(
-    x: 42,
-    y: 52,
-    width: 160,
-    height: 54,
+    x: 36,
+    y: 26,
+    width: 320,
+    height: 108,
+  );
+
+  /// 작성: 2026-10-28 15:10:01 · Codex
+  /// 변수: headerLogoDivider
+  /// 목적: 확대 로고와 제번 사이 금색 구분선 자리 (픽셀). 서식의 옛 선은
+  ///       `headerLogoMask` 로 지우므로 새 위치에 그린다.
+  /// 근거: 측정 — 기존 선의 높이 42픽셀과 제번까지의 간격을 유지하며
+  ///       확대 로고 오른쪽으로 옮긴다
+  static const LayoutPlotBox headerLogoDivider = LayoutPlotBox(
+    x: 350,
+    y: 60,
+    width: 4,
+    height: 42,
+  );
+
+  /// 작성: 2026-10-28 17:16:58 · Codex
+  /// 변수: footerLogoMask
+  /// 목적: 꼬리말에서 옛 로고만 덮을 흰 영역 (픽셀). 사선이 가까워지는
+  ///       오른쪽 아래끝까지 흰 영역 안에 두어 갈색 서식을 보호한다.
+  /// 근거: 측정 — `tem_1.jpg` · `tem_2.jpg` 옛 로고는 x 59~175,
+  ///       y 3107~3148 이다. 덮개 오른쪽 끝 x 225 는 사선 왼쪽 끝보다 작다
+  static const LayoutPlotBox footerLogoMask = LayoutPlotBox(
+    x: 12,
+    y: 3097,
+    width: 213,
+    height: 60,
+  );
+
+  /// 작성: 2026-10-28 17:16:58 · Codex
+  /// 변수: footerLogoBox
+  /// 목적: 여백을 포함한 하단 로고의 원본 상자 (픽셀). 원본 비율을 유지해
+  ///       OTIS · 구분선 · V-check 가 흰 영역 안에 함께 들어가게 한다.
+  /// 근거: 측정 — 원본의 문양 범위 x 160~2006, y 216~493 을 240 x 80
+  ///       상자에 놓으면 문양 오른쪽 끝은 x 222, 아래끝은 y 3140 이다
+  static const LayoutPlotBox footerLogoBox = LayoutPlotBox(
+    x: 0,
+    y: 3085,
+    width: 240,
+    height: 80,
   );
 
   /// 작성: 2026-09-25 09:30:00 · 박건준
@@ -275,11 +318,18 @@ class LayoutField {
 }
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-28 15:25:15 · Codex
 /// 클래스: LayoutMetricRow
 /// 목적: Performance Metrics 표의 한 행이 어디에 놓이고 어떤 성질인지 담는다.
 class LayoutMetricRow {
   /// 이 행이 담는 지표 이름. json 의 `key` 와 같다
   final String key;
+
+  /// 카테고리 칸에 찍을 이름. 배경 이미지의 옛 수직 · 수평 이름을 대신한다
+  final String label;
+
+  /// 측정값 오른쪽 설명 열의 문구. 속도 · 거리처럼 설명을 쓰지 않으면 빈 문자열
+  final String description;
 
   /// 행의 세로 좌표 (서식 이미지 픽셀, 글자 수직 중심)
   final int y;
@@ -287,18 +337,23 @@ class LayoutMetricRow {
   /// 기준치가 있어 신호등으로 판정하는 행인지. 속도 · 거리는 기준이 없다
   final bool judge;
 
-  /// 설명 라벨이 서식에 박혀 있는 행인지. 없으면 값을 라벨 자리부터 쓴다
+  /// 설명 열에 기본 문구를 그릴 행인지. 측정값 위치는 모든 행이 같다
   final bool hasLabel;
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-28 16:29:35 · Codex
   /// 함수: LayoutMetricRow
   /// 목적: 표 한 행의 자리와 성질을 그대로 담는 생성자.
   /// 인자: key — 지표 이름
+  ///       label — 카테고리 이름
+  ///       description — 측정값 오른쪽 열의 설명. 없으면 빈 문자열
   ///       y — 행의 세로 좌표 (픽셀)
   ///       judge — 신호등 판정 대상인지
-  ///       hasLabel — 설명 라벨이 서식에 박혀 있는지
+  ///       hasLabel — 설명 열에 기본 문구를 그릴지
   const LayoutMetricRow({
     required this.key,
+    required this.label,
+    required this.description,
     required this.y,
     required this.judge,
     required this.hasLabel,
@@ -306,9 +361,10 @@ class LayoutMetricRow {
 }
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-28 17:39:01 · Codex
 /// 클래스: LayoutPlotBox
-/// 목적: 차트 하나가 놓일 네모난 자리. 축 눈금과 라벨을 뺀, 실제 축 틀이
-///       들어갈 영역이다.
+/// 목적: 차트 · 로고 · 서식 덮개에 쓰는 네모 영역을 담는다. 같은 서식
+///       이미지 픽셀 좌표계를 써야 배경과 덧그린 내용의 위치가 일치한다.
 class LayoutPlotBox {
   /// 왼쪽 가로 좌표 (서식 이미지 픽셀)
   final int x;

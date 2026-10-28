@@ -14,21 +14,17 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 import 'package:vibration_checker/domain/time/korea_time.dart';
 
 /// 작성: 2026-09-16 09:12:40 · 박건준
-/// 수정: 2026-10-28 14:45:51 · Codex
+/// 수정: 2026-10-28 17:39:01 · Codex
 /// 클래스: ReportPage1Renderer
 /// 목적: TUNE 리포트 1쪽을 PDF 로 그린다. 서식 이미지를 A4 전면에 깔고 그
 ///       위에 값을 얹는다. 자리는 `ReportLayout` 이, 값과 판정은
 ///       `ReportMetrics` 가 정해 둔 것을 받아 적기만 한다 — 여기서
 ///       계산하거나 판단하지 않는다.
 ///
-///       서식을 덮어야 하는 자리
-///         서식 이미지에는 예전 리포트의 값이 일부 인쇄된 채로 남아 있다.
-///         그 위에 새 값을 쓰면 두 글자가 겹쳐 보이므로, 쓰기 전에 그 행의
-///         줄무늬 색으로 덮는다.
-///         - 황색 · 적색 기준 칸 전체. 덮은 뒤 지표의 기준을 다시 찍는다
-///           (`ReportThresholds`, 2026-10-15)
-///         - 1행 신호등 자리에 지워지다 만 원
-///         - 황색 · 적색 문구를 적는 행의 설명 라벨 · 값 자리(`_drawRemark()`)
+///       서식 이미지에는 옛 지표 이름 · 분석 자료 · 주소 제목 · 로고가 남아
+///       있다. 해당 영역만 덮어 글자가 겹치지 않게 하고, 지표 본문은 이름 ·
+///       값 · 설명 · 기준 · 줄무늬를 다시 그린다. 하단 갈색 띠와 문구는
+///       덮개 밖에 두어 원래 모양을 유지한다.
 class ReportPage1Renderer {
   /// 그림을 얹을 PDF 문서
   final PdfDocument document;
@@ -36,7 +32,7 @@ class ReportPage1Renderer {
   /// A4 전면에 깔 서식 이미지
   final PdfImage background;
 
-  /// 상단만 교체할 새 로고. 꼬리말 로고는 서식 이미지에 남아 있다
+  /// 상단 · 하단에서 크기를 달리해 함께 쓰는 새 로고
   final PdfImage headerLogo;
 
   /// 서식 좌표에 글자를 찍는 도구
@@ -97,14 +93,13 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · 박건준
-  /// 수정: 2026-10-28 14:45:51 · Codex
+  /// 수정: 2026-10-28 17:16:58 · Codex
   /// 함수: draw
   /// 목적: 1쪽을 문서에 더한다. 순서대로 그린다.
-  ///       1. 서식 이미지를 A4 전면에 깔고 상단 로고만 새 원본으로 덮는다
+  ///       1. 서식 이미지를 깔고 주소 제목을 지운 뒤 상단 · 하단 로고를 그린다
   ///       2. 머리말 11칸을 찍는다
-  ///       3. Performance Metrics 8행을 찍는다. 행마다 서식에 남은 자국을
-  ///          덮고, 신호등 · 값 · 황색 · 적색 기준을 올린다
-  ///       4. 분석 자료 7행의 신호등을 회색으로 찍는다
+  ///       3. 옛 지표 본문과 폐지한 분석 자료를 지운다
+  ///       4. Performance Metrics 10행의 이름 · 값 · 기준 · 신호등을 찍는다
   /// 인자: result — 값을 가져올 측정 결과
   ///       debug — true 면 모든 자리에 십자 표식과 키 이름을 함께 찍는다.
   ///       좌표가 틀어졌는지 눈으로 확인할 때만 켠다. 제품 흐름은 기본값인
@@ -128,11 +123,23 @@ class ReportPage1Renderer {
       ReportLayout.pageHeightPt,
     );
 
+    const addressLabel = ReportPage1Layout.addressLabelEraseBox; // 주소 제목 자리
+    _erase(
+      canvas,
+      xPx: addressLabel.x,
+      yPx: addressLabel.y,
+      widthPx: addressLabel.width,
+      heightPx: addressLabel.height,
+      color: ReportColors.white,
+    );
+
     // → 로직 이동: drawReportHeaderLogo()
     drawReportHeaderLogo(canvas, headerLogo);
+    // → 로직 이동: drawReportFooterLogo()
+    drawReportFooterLogo(canvas, headerLogo);
 
     // → 로직 이동: ReportMetrics.from()
-    final metrics = ReportMetrics.from(result); // 표에 올릴 지표 여덟 개
+    final metrics = ReportMetrics.from(result); // 표에 올릴 지표 열 개
     // → 로직 이동: headerValues()
     final header = headerValues(result); // 머리말 칸마다 채울 문구
 
@@ -153,35 +160,79 @@ class ReportPage1Renderer {
       );
     }
 
+    // → 로직 이동: _prepareTables()
+    _prepareTables(canvas);
     _drawMetricsTable(canvas, metrics, debug: debug);
-    _drawAnalysisTable(canvas, debug: debug);
     return page;
   }
 
+  /// 작성: 2026-10-28 15:25:15 · Codex
+  /// 수정: 2026-10-28 16:37:52 · Codex
+  /// 함수: _prepareTables
+  /// 목적: 지표 본문에 남은 옛 이름과 폐지한 분석 자료 제목 · 표를 지운다.
+  ///       서식 파일은 유지하고 필요한 영역만 흰색으로 덮어 머리말 · 지표
+  ///       표의 머리 · 꼬리말에 영향이 없도록 한다.
+  /// 인자: canvas — 서식과 머리말을 그린 PDF 그리기 도구
+  void _prepareTables(PdfGraphics canvas) {
+    const erase = ReportPage1Layout.tablesEraseBox; // 옛 본문과 분석 자료를 지울 영역
+    _erase(
+      canvas,
+      xPx: erase.x,
+      yPx: erase.y,
+      widthPx: erase.width,
+      heightPx: erase.height,
+      color: ReportColors.white,
+    );
+  }
+
   /// 작성: 2026-09-16 09:12:40 · 박건준
-  /// 수정: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-28 16:19:26 · Codex
   /// 함수: _drawMetricsTable
-  /// 목적: Performance Metrics 여덟 행을 찍는다. 행마다 이렇게 한다.
-  ///       1. 신호등 자리를 그 행의 줄무늬 색으로 덮는다. 서식 1행에
-  ///          지워지다 만 원이 흐리게 남아 있어서다
+  /// 목적: Performance Metrics 열 행을 찍는다. 행마다 이렇게 한다.
+  ///       1. 행 높이에 맞는 줄무늬와 카테고리 이름을 그린다
   ///       2. 판정이 "판정없음" 이 아니면 맨 왼쪽에 신호등 원(초록 · 노랑 ·
-  ///          빨강, 값이 없으면 회색)을 그린다. 소음 2행과 진동 4행이
+  ///          빨강, 값이 없으면 회색)을 그린다. 소음 2행과 진동 6행이
   ///          해당하고, 최대 속도 · 운행 거리는 원이 없다
-  ///       3. 값을 찍는다. 설명 라벨이 서식에 박힌 행은 라벨이 끝나는
-  ///          자리 뒤에서, 라벨이 없는 마지막 두 행은 더 왼쪽에서 시작한다.
-  ///          황색 · 적색 문구가 있는 행(`ReportMetric.remarkLines`)은 라벨 ·
-  ///          값 대신 문구를 적는다(`_drawRemark()`)
+  ///       3. 모든 측정값을 같은 열에 찍고 오른쪽 열에 설명을 적는다.
+  ///          황색 · 적색 문구가 있는 행(`ReportMetric.remarkLines`)도 값은
+  ///          남겨 두고 설명 열에 문구를 적는다(`_drawRemark()`)
   ///       4. 서식에 인쇄된 황색 칸과 적색 칸을 덮은 뒤 지표의 황색 · 적색
   ///          기준을 다시 찍는다 — 서식 값과 판정 기준이 어긋나지 않게
   ///          `ReportThresholds` 의 값을 쓴다
   /// 인자: canvas — 그리기 도구
-  ///       metrics — 표에 올릴 지표 여덟 개
+  ///       metrics — 표에 올릴 지표 열 개
   ///       debug — 표식을 함께 찍을지
   void _drawMetricsTable(
     PdfGraphics canvas,
     ReportMetrics metrics, {
     required bool debug,
   }) {
+    const header = ReportPage1Layout.metricHeaderEraseBox; // 옛 설명 제목 자리
+    _erase(
+      canvas,
+      xPx: header.x,
+      yPx: header.y,
+      widthPx: header.width,
+      heightPx: header.height,
+      color: ReportPage1Layout.metricHeaderBackground,
+    );
+    for (final (x, label) in [
+      (ReportPage1Layout.colValueX, '측정값'),
+      (ReportPage1Layout.colDescriptionX, '설명'),
+    ]) {
+      _text(
+        canvas,
+        xPx: x,
+        yPx: ReportPage1Layout.metricHeaderY,
+        text: label,
+        sizePx: ReportPage1Layout.metricHeaderSize,
+        align: LayoutAlign.left,
+        weight: LayoutWeight.bold,
+        color: ReportColors.white,
+        key: 'metrics.header.$label',
+        debug: debug,
+      );
+    }
     final rows = ReportPage1Layout.metricRows; // 서식에 놓인 행 자리
     for (var index = 0; index < rows.length; index++) {
       final row = rows[index]; // 이번에 그릴 행의 자리
@@ -189,6 +240,29 @@ class ReportPage1Renderer {
       final stripe = index.isEven
           ? ReportColors.stripeOdd
           : ReportColors.stripeEven; // 이 행의 줄무늬 색
+
+      _erase(
+        canvas,
+        xPx: ReportPage1Layout.metricBodyX,
+        yPx:
+            ReportPage1Layout.metricBodyTop +
+            index * ReportPage1Layout.metricRowHeight,
+        widthPx: ReportPage1Layout.metricBodyWidth,
+        heightPx: ReportPage1Layout.metricRowHeight,
+        color: stripe,
+      );
+      _text(
+        canvas,
+        xPx: ReportPage1Layout.colCategoryX,
+        yPx: row.y,
+        text: row.label,
+        sizePx: ReportPage1Layout.metricCategorySize,
+        align: ReportPage1Layout.colCategoryAlign,
+        weight: LayoutWeight.bold,
+        color: ReportColors.text,
+        key: '${row.key}.category',
+        debug: debug,
+      );
 
       const diameter = ReportPage1Layout.dotDiameter; // 신호등 지름 (픽셀)
       _erase(
@@ -210,22 +284,39 @@ class ReportPage1Renderer {
         );
       }
 
+      _text(
+        canvas,
+        xPx: ReportPage1Layout.colValueX,
+        yPx: row.y,
+        text: metric.display,
+        sizePx: ReportPage1Layout.valueSize,
+        align: ReportPage1Layout.colValueAlign,
+        weight: LayoutWeight.regular,
+        color: ReportColors.text,
+        key: row.key,
+        debug: debug,
+        maxWidthPx:
+            ReportPage1Layout.colValueRightX - ReportPage1Layout.colValueX,
+      );
       final remark = metric.remarkLines; // 황색 · 적색 문구, 없으면 null
       if (remark == null) {
-        _text(
-          canvas,
-          xPx: row.hasLabel
-              ? ReportPage1Layout.colValueX
-              : ReportPage1Layout.colValueNoLabelX,
-          yPx: row.y,
-          text: metric.display,
-          sizePx: ReportPage1Layout.valueSize,
-          align: ReportPage1Layout.colValueAlign,
-          weight: LayoutWeight.regular,
-          color: ReportColors.text,
-          key: row.key,
-          debug: debug,
-        );
+        if (row.hasLabel) {
+          _text(
+            canvas,
+            xPx: ReportPage1Layout.colDescriptionX,
+            yPx: row.y,
+            text: row.description,
+            sizePx: ReportPage1Layout.valueSize,
+            align: ReportPage1Layout.colValueAlign,
+            weight: LayoutWeight.regular,
+            color: ReportColors.text,
+            key: '${row.key}.description',
+            debug: debug,
+            maxWidthPx:
+                ReportPage1Layout.colDescriptionRightX -
+                ReportPage1Layout.colDescriptionX,
+          );
+        }
       } else {
         // → 로직 이동: _drawRemark()
         _drawRemark(canvas, row.y, remark, stripe, row.key, debug: debug);
@@ -272,10 +363,11 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-28 16:19:26 · Codex
   /// 함수: _drawRemark
-  /// 목적: 황색 · 적색 행의 설명 칸에 OTIS 문구를 적는다. 서식에 박힌 설명
-  ///       라벨과 값 자리를 줄무늬 색으로 덮은 뒤, 행 가운데를 사이에 두고
-  ///       줄을 위아래로 놓는다. 줄이 덮은 폭을 넘으면 글자를 줄인다.
+  /// 목적: 황색 · 적색 행의 설명 칸에 OTIS 문구를 적는다. 측정값 열은
+  ///       남기고 설명 칸만 줄무늬 색으로 덮는다. 행 가운데를 사이에 두고
+  ///       줄을 위아래로 놓으며 폭을 넘으면 글자를 줄인다.
   /// 인자: canvas — 그리기 도구
   ///       rowY — 행 가운데 세로 좌표 (픽셀)
   ///       lines — 적을 줄
@@ -322,91 +414,12 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · 박건준
-  /// 수정: 2026-10-23 11:00:00 · 박건준
-  /// 함수: _drawAnalysisTable
-  /// 목적: 분석 자료 일곱 행의 신호등을 찍는다. 일곱 개 모두 회색이고
-  ///       설명 칸은 비운다. 이것이 완성된 모습이며 나중에 채울 자리가
-  ///       아니다 — 회색 점은 "아직 안 그렸다" 가 아니라 "판정하지
-  ///       않는다" 를 뜻한다.
-  ///       서식에 박힌 구분 이름 가운데 `ReportPage1Layout.analysisRelabels` 에
-  ///       있는 행("Machine으로 부터 진동" · "Belts")은 줄무늬 색으로 덮고
-  ///       새 이름("권상기 머신으로 부터 진동" · "로우프")을 찍는다.
-  ///       Performance Metrics 행이 값이 없을 때 회색인 것(아직 재지 못함)과는
-  ///       사정이 다르다 — 이 일곱 행은 기다릴 값이 없다.
-  /// 인자: canvas — 그리기 도구
-  ///       debug — 표식을 함께 찍을지
-  /// 근거: 인용 — 리포트 프로토타입 문서(2026-10-23 저장소에서 지움, 커밋
-  ///       6bd171a 의 `pdf_report_dev/README.md`)가 이 일곱 항목을 회색으로
-  ///       두기로 확정했다. 요구사항서에 이 항목들의 판정 기준이 없고,
-  ///       앱이 잰 값 중에도 이것들을 가릴 수 있는 것이 없다. 녹색으로
-  ///       찍으면 "이상 없음을 확인했다" 로 읽히는데 확인한 적이 없으므로,
-  ///       판정하지 않았다는 사실을 회색으로 그대로 드러낸다
-  void _drawAnalysisTable(PdfGraphics canvas, {required bool debug}) {
-    final keys = ReportPage1Layout.analysisRowKeys; // 행 이름
-    final ys = ReportPage1Layout.analysisRowYs; // 행 세로 자리
-    for (var index = 0; index < ys.length; index++) {
-      final stripe = index.isEven
-          ? ReportColors.stripeOdd
-          : ReportColors.stripeEven; // 이 행의 줄무늬 색
-
-      const diameter = ReportPage1Layout.dotDiameter; // 신호등 지름 (픽셀)
-      _erase(
-        canvas,
-        xPx: ReportPage1Layout.dotCenterX - diameter,
-        yPx: ys[index] - diameter,
-        widthPx: diameter * 2,
-        heightPx: diameter * 2,
-        color: stripe,
-      );
-      _dot(
-        canvas,
-        centerXPx: ReportPage1Layout.dotCenterX,
-        centerYPx: ys[index],
-        diameterPx: diameter,
-        color: ReportColors.judgeUnknown,
-      );
-      final relabel =
-          ReportPage1Layout.analysisRelabels[keys[index]]; // 새 이름, 그대로 두면 null
-      if (relabel != null) {
-        _erase(
-          canvas,
-          xPx: ReportPage1Layout.eraseAnalysisLabelX,
-          yPx: ys[index] - ReportPage1Layout.eraseAnalysisLabelHeight / 2,
-          widthPx: ReportPage1Layout.eraseAnalysisLabelWidth,
-          heightPx: ReportPage1Layout.eraseAnalysisLabelHeight,
-          color: stripe,
-        );
-        _text(
-          canvas,
-          xPx: ReportPage1Layout.analysisCategoryX,
-          yPx: ys[index],
-          text: relabel,
-          sizePx: ReportPage1Layout.analysisCategorySize,
-          align: ReportPage1Layout.analysisCategoryAlign,
-          weight: ReportPage1Layout.analysisCategoryWeight,
-          color: ReportColors.text,
-          key: '${keys[index]}.category',
-          debug: debug,
-        );
-      }
-      if (debug) {
-        _debugMark(
-          canvas,
-          xPx: ReportPage1Layout.analysisDescriptionX,
-          yPx: ys[index],
-          label: keys[index],
-        );
-      }
-    }
-  }
-
-  /// 작성: 2026-09-16 09:12:40 · 박건준
-  /// 수정: 2026-10-27 11:00:00 · 박건준
+  /// 수정: 2026-10-28 17:39:01 · Codex
   /// 함수: headerValues
   /// 목적: 머리말 열한 칸에 채울 문구를 만든다. 값이 없는 칸은 비우지 않고
   ///       자리 표시 문구(`ReportPage1Layout.placeholder`, "미입력")를 찍는다.
   ///       주소 칸만 예외로 비운다 — 주소 · 우편번호를 받지 않는다
-  ///       (2026-10-27). 서식의 "주소:" 라벨은 2차 서식 작업에서 지운다.
+  ///       (2026-10-27). 서식의 주소 제목도 `draw()` 에서 지운다.
   ///       - 제번 → 측정 ID, 현장명 → 건물명, 최하층·최상층 → 층 정보
   ///       - 엔지니어 → 저장 시점 로그인 작업자 성명(2026-10-18)
   ///       - 제품 → "엘리베이터, 기종". 기종의 쉼표는 이 표기에서만
@@ -431,11 +444,9 @@ class ReportPage1Renderer {
   ///       시험이 칸마다 문구를 확인할 수 있게 공개해 둔다.
   /// 인자: result — 값을 가져올 측정 결과
   /// 반환: 서식 칸 이름을 열쇠로 하는 문구 표
-  /// 근거: 인용 — 리포트 프로토타입 문서(2026-10-23 저장소에서 지움, 커밋
-  ///       6bd171a 의 `pdf_report_dev/README.md`)의 헤더 대응표. 그 표는
-  ///       요구사항서 "현장 정보" 를 우선 배치하도록 정하고 있다.
-  ///       제품 · 하중 · 주소 표기는 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
-  ///       현장 리포트) 1쪽 머리말
+  /// 근거: 인용 — `docs/spec/report.md` 의 1쪽 머리말 대응과 주소 제거
+  ///       규칙. 엔지니어명 · 측정 시각은 `MeasurementAssembler.assemble()`
+  ///       이 결과에 저장한 값을 읽는다
   static Map<String, String> headerValues(MeasurementResult result) {
     final stamp = DateFormat(
       ReportLayout.datetimePattern,

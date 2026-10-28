@@ -636,7 +636,7 @@ class ReportChartRenderer {
   }
 
   /// 작성: 2026-09-26 14:10:00 · 박건준
-  /// 수정: 2026-10-20 15:02:44 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · Codex
   /// 함수: _drawAnnotations
   /// 목적: 원본 리포트가 소음 차트에 붙이는 표시 둘을 그린다.
   ///       - 평균 자리에 가로로 긋는 붉은 점선 한 줄. 평균을 낸 운행
@@ -667,7 +667,7 @@ class ReportChartRenderer {
     if (meanKey == null && peakKey == null) return;
 
     // → 로직 이동: ReportMetrics.from()
-    final metrics = ReportMetrics.from(result); // 표에 올리는 지표 여덟 개
+    final metrics = ReportMetrics.from(result); // 표에 올리는 지표 열 개
 
     canvas
       ..saveContext()

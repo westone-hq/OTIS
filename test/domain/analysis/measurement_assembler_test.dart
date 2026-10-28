@@ -206,7 +206,7 @@ Map<String, dynamic> _expectedReference() =>
         as Map<String, dynamic>;
 
 /// 작성: 2026-09-15 13:08:37 · 박건준
-/// 수정: 2026-10-15 16:50:04 · 박건준
+/// 수정: 2026-10-28 15:25:15 · Codex
 /// 함수: main
 /// 목적: 캡처 결과를 측정 결과 모델로 바꾸는 변환을 시험한다.
 ///       - 진동 시계열과 샘플레이트가 제대로 옮겨지는지
@@ -864,18 +864,24 @@ void main() {
         // 수직 최대는 2026-10-21 2차 ~ 10-22 에 모든 기록에 건 20Hz 저역
         // 때문에 −14% 로 경계에 붙어 빼 두었다. 이 기록은 오티스폰 기록이라
         // 기종 응답 보정(2026-10-22)이 걸리지 않아 다시 −9% 다
-        const vibration = <String, double>{
-          'vert_max': 6.1,
-          'vert_avg': 3.6,
-          'horiz_avg': 4.8,
-          'horiz_max': 11.3,
-        }; // 원본 진동 (milli-G)
+        final vibration = <String, (double, double)>{
+          'z_max': (metrics.zMax.value!, 6.1),
+          'z_avg': (metrics.zAvg.value!, 3.6),
+          'horizontal_avg': (
+            math.max(metrics.xAvg.value!, metrics.yAvg.value!),
+            4.8,
+          ),
+          'horizontal_max': (
+            math.max(metrics.xMax.value!, metrics.yMax.value!),
+            11.3,
+          ),
+        }; // 원본은 수평 한 값이라 비교할 때만 X · Y 큰 쪽을 고른다
         for (final entry in vibration.entries) {
-          final value = metrics.byKey(entry.key)!.value!; // 앱 값
+          final (value, reference) = entry.value; // 앱 값 · 원본 값 (milli-G)
           expect(
-            (value - entry.value).abs() / entry.value,
+            (value - reference).abs() / reference,
             lessThanOrEqualTo(0.15),
-            reason: '${entry.key}: 앱 $value / 원본 ${entry.value}',
+            reason: '${entry.key}: 앱 $value / 원본 $reference',
           );
         }
         expect(metrics.noiseAvg.value!, closeTo(45.5, 1.5));
@@ -884,13 +890,13 @@ void main() {
         expect(metrics.travelDistance.value!, closeTo(57.3, 57.3 * 0.01));
       });
 
-      test('신호등이 원본 리포트와 같다 (초록 6, 원 없음 2)', () {
+      test('축별로 나눈 뒤도 정상 기준 기록은 초록 8, 원 없음 2다', () {
         final verdicts = ReportMetrics.from(
           _conditionedReference(),
         ).rows.map((metric) => metric.verdict).toList(); // 행마다 신호등
 
         expect(verdicts, <ReportVerdict>[
-          ...List<ReportVerdict>.filled(6, ReportVerdict.green),
+          ...List<ReportVerdict>.filled(8, ReportVerdict.green),
           ReportVerdict.none,
           ReportVerdict.none,
         ]);

@@ -113,7 +113,7 @@ MeasurementResult _result() {
 }
 
 /// 작성: 2026-09-17 10:05:00 · 박건준
-/// 수정: 2026-10-22 23:40:00 · 박건준
+/// 수정: 2026-10-28 15:25:15 · Codex
 /// 함수: main
 /// 목적: 차트 렌더러를 시험한다. 실제 PDF 를 그려 그리기 과정이 끝까지
 ///       도는지, 표시점 · 점선 · 글자 상자가 제자리에 놓이는지 본다. 축
@@ -321,7 +321,7 @@ void main() {
       expect(ReportChartRenderer.ptpLabel(14.2125), 'ptp 14.2milli-G');
       expect(ReportChartRenderer.ptpLabel(108.3677), 'ptp 108milli-G');
       expect(
-        metrics.vertMax.display,
+        metrics.zMax.display,
         ReportChartRenderer.ptpLabel(108.3677).substring(4),
       );
     });

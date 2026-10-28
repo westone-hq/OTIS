@@ -83,14 +83,14 @@ List<double> _fixtureNoise([String path = _fixturePath]) {
 }
 
 /// 작성: 2026-09-15 21:14:33 · 박건준
-/// 수정: 2026-10-15 15:53:26 · 박건준
+/// 수정: 2026-10-28 15:25:15 · Codex
 /// 함수: main
-/// 목적: 측정 결과에서 리포트 표 여덟 행을 만드는 산출 계층을 시험한다.
+/// 목적: 측정 결과에서 리포트 표 열 행을 만드는 산출 계층을 시험한다.
 ///       - 지금 낼 수 있는 두 값이 나오는지
 ///       - 아직 못 내는 값이 0 이 아니라 비어 있는지, 그 표시가 `—` 인지
 ///       - 소음이 격자를 타고 들어오면 이 계층이 값을 내는지
 ///       - 진동 필터가 정해지면 마찬가지로 채워지는지
-///       - 수평 행이 큰 쪽 값을 싣고 두 축을 함께 적는지
+///       - X · Y · Z 가 각 축 값과 기준으로 독립적으로 나오는지
 ///       - 판정이 `ReportThresholds` 를 따르는지
 void main() {
   group('지금 낼 수 있는 값', () {
@@ -138,35 +138,38 @@ void main() {
   });
 
   group('아직 못 내는 값', () {
-    test('여섯 행이 0 이 아니라 비어 있다', () {
+    test('판정하는 여덟 행이 0 이 아니라 비어 있다', () {
       final metrics = ReportMetrics.from(_result()); // 아무것도 못 잰 결과
 
       for (final metric in [
         metrics.noiseAvg,
         metrics.noiseMax,
-        metrics.vertAvg,
-        metrics.vertMax,
-        metrics.horizAvg,
-        metrics.horizMax,
+        metrics.zAvg,
+        metrics.zMax,
+        metrics.xAvg,
+        metrics.xMax,
+        metrics.yAvg,
+        metrics.yMax,
       ]) {
         expect(metric.value, isNull, reason: metric.key);
         expect(metric.display, '—', reason: metric.key);
       }
     });
 
-    test('판정하는 여섯 행은 값이 없으면 미확정이다', () {
+    test('판정하는 여덟 행은 값이 없으면 미확정이다', () {
       final metrics = ReportMetrics.from(_result()); // 아무것도 못 잰 결과
 
-      for (final metric in metrics.rows.take(6)) {
+      for (final metric in metrics.rows.take(8)) {
         expect(metric.verdict, ReportVerdict.unknown, reason: metric.key);
       }
     });
 
-    test('평균 진동 두 행에 A95 꼬리표가 붙어 있다', () {
+    test('평균 진동 세 행에 A95 꼬리표가 붙어 있다', () {
       final metrics = ReportMetrics.from(_result());
 
-      expect(metrics.vertAvg.suffix, 'A95');
-      expect(metrics.horizAvg.suffix, 'A95');
+      expect(metrics.zAvg.suffix, 'A95');
+      expect(metrics.xAvg.suffix, 'A95');
+      expect(metrics.yAvg.suffix, 'A95');
     });
   });
 
@@ -318,50 +321,55 @@ void main() {
         _result(xPtp: 8.2, yPtp: 12.9, zPtp: 11.0),
       ); // 산출된 지표
 
-      expect(metrics.vertMax.value, closeTo(11.0, 1e-9));
-      expect(metrics.horizMax.value, closeTo(12.9, 1e-9));
-      expect(metrics.vertMax.display, '11.0milli-G');
+      expect(metrics.zMax.value, closeTo(11.0, 1e-9));
+      expect(metrics.xMax.value, closeTo(8.2, 1e-9));
+      expect(metrics.yMax.value, closeTo(12.9, 1e-9));
+      expect(metrics.zMax.display, '11.0milli-G');
     });
 
-    test('평균 행은 A95 를 싣고 수평은 큰 쪽만 적는다', () {
+    test('평균 행은 X · Y · Z 의 A95 를 각각 싣는다', () {
       final metrics = ReportMetrics.from(
         _result().copyWith(xA95: 10.4, yA95: 12.4, zA95: 4.9),
       ); // 산출된 지표
 
-      expect(metrics.vertAvg.value, closeTo(4.9, 1e-9));
-      expect(metrics.vertAvg.display, '4.9milli-G A95');
-      expect(metrics.horizAvg.value, closeTo(12.4, 1e-9));
-      expect(metrics.horizAvg.display, '12.4milli-G A95');
-      expect(metrics.vertAvg.yellowDisplay, '14');
-      expect(metrics.vertAvg.redDisplay, '21');
-      expect(metrics.horizAvg.yellowDisplay, '9');
-      expect(metrics.horizAvg.redDisplay, '13.5');
+      expect(metrics.zAvg.value, closeTo(4.9, 1e-9));
+      expect(metrics.zAvg.display, '4.9milli-G A95');
+      expect(metrics.xAvg.value, closeTo(10.4, 1e-9));
+      expect(metrics.xAvg.display, '10.4milli-G A95');
+      expect(metrics.yAvg.value, closeTo(12.4, 1e-9));
+      expect(metrics.yAvg.display, '12.4milli-G A95');
+      expect(metrics.zAvg.yellowDisplay, '14');
+      expect(metrics.zAvg.redDisplay, '21');
+      expect(metrics.xAvg.yellowDisplay, '9');
+      expect(metrics.xAvg.redDisplay, '13.5');
     });
 
-    test('수평 최대 행에 X · Y 내역을 붙이지 않는다', () {
-      // 2026-10-15 사용자 지시. 원본 리포트도 큰 쪽 값 하나만 적는다
+    test('X · Y 최대를 합치지 않고 각 행에 적는다', () {
       final metrics = ReportMetrics.from(
         _result(xPtp: 8.2, yPtp: 12.9),
       ); // 산출된 지표
 
-      expect(metrics.horizMax.value, closeTo(12.9, 1e-9));
-      expect(metrics.horizMax.display, '12.9milli-G');
+      expect(metrics.xMax.value, closeTo(8.2, 1e-9));
+      expect(metrics.xMax.display, '8.2milli-G');
+      expect(metrics.yMax.display, '12.9milli-G');
     });
 
-    test('한 축만 재면 그 축 값을 싣는다', () {
+    test('한 축만 재면 다른 축을 채우지 않는다', () {
       final metrics = ReportMetrics.from(_result(xPtp: 8.2));
 
-      expect(metrics.horizMax.value, closeTo(8.2, 1e-9));
-      expect(metrics.horizMax.display, '8.2milli-G');
+      expect(metrics.xMax.value, closeTo(8.2, 1e-9));
+      expect(metrics.xMax.display, '8.2milli-G');
+      expect(metrics.yMax.value, isNull);
+      expect(metrics.yMax.verdict, ReportVerdict.unknown);
     });
 
-    test('수평은 두 축 중 더 나쁜 쪽을 따른다', () {
+    test('X · Y 최대는 각 축을 수평 기준으로 판정한다', () {
       expect(
-        ReportMetrics.from(_result(xPtp: 18.0, yPtp: 3.0)).horizMax.verdict,
+        ReportMetrics.from(_result(xPtp: 18.0, yPtp: 3.0)).xMax.verdict,
         ReportVerdict.yellow,
       );
       expect(
-        ReportMetrics.from(_result(xPtp: 3.0, yPtp: 26.0)).horizMax.verdict,
+        ReportMetrics.from(_result(xPtp: 3.0, yPtp: 26.0)).yMax.verdict,
         ReportVerdict.red,
       );
     });
@@ -370,28 +378,28 @@ void main() {
       expect(
         ReportMetrics.from(
           _result().copyWith(xA95: 4.0, yA95: 8.9),
-        ).horizAvg.verdict,
+        ).xAvg.verdict,
         ReportVerdict.green,
       );
       expect(
         ReportMetrics.from(
           _result().copyWith(xA95: 9.5, yA95: 3.0),
-        ).horizAvg.verdict,
+        ).xAvg.verdict,
         ReportVerdict.yellow,
       );
       expect(
         ReportMetrics.from(
           _result().copyWith(xA95: 3.0, yA95: 14.0),
-        ).horizAvg.verdict,
+        ).yAvg.verdict,
         ReportVerdict.red,
       );
     });
 
-    test('못 잰 축이 있고 넘은 축이 없으면 미확정이다', () {
-      // 한 축만 보고 "정상"이라고 할 수 없다
+    test('Y 가 비어 있어도 측정된 X 는 독립적으로 판정한다', () {
       final metrics = ReportMetrics.from(_result(xPtp: 3.0));
 
-      expect(metrics.horizMax.verdict, ReportVerdict.unknown);
+      expect(metrics.xMax.verdict, ReportVerdict.green);
+      expect(metrics.yMax.verdict, ReportVerdict.unknown);
     });
 
     test('수직 최대는 20 을 넘으면 황색, 30 을 넘으면 적색이다', () {
@@ -399,24 +407,24 @@ void main() {
       final yellow = ReportMetrics.from(_result(zPtp: 21.0)); // 황색
       final red = ReportMetrics.from(_result(zPtp: 31.0)); // 적색
 
-      expect(inside.vertMax.verdict, ReportVerdict.green);
-      expect(yellow.vertMax.verdict, ReportVerdict.yellow);
-      expect(red.vertMax.verdict, ReportVerdict.red);
-      expect(inside.vertMax.yellowDisplay, '20');
-      expect(inside.vertMax.redDisplay, '30');
+      expect(inside.zMax.verdict, ReportVerdict.green);
+      expect(yellow.zMax.verdict, ReportVerdict.yellow);
+      expect(red.zMax.verdict, ReportVerdict.red);
+      expect(inside.zMax.yellowDisplay, '20');
+      expect(inside.zMax.redDisplay, '30');
     });
 
     test('수직 평균은 14 를 넘으면 황색, 21 을 넘으면 적색이다', () {
       expect(
-        ReportMetrics.from(_result().copyWith(zA95: 14.0)).vertAvg.verdict,
+        ReportMetrics.from(_result().copyWith(zA95: 14.0)).zAvg.verdict,
         ReportVerdict.green,
       );
       expect(
-        ReportMetrics.from(_result().copyWith(zA95: 15.0)).vertAvg.verdict,
+        ReportMetrics.from(_result().copyWith(zA95: 15.0)).zAvg.verdict,
         ReportVerdict.yellow,
       );
       expect(
-        ReportMetrics.from(_result().copyWith(zA95: 22.0)).vertAvg.verdict,
+        ReportMetrics.from(_result().copyWith(zA95: 22.0)).zAvg.verdict,
         ReportVerdict.red,
       );
     });
@@ -427,14 +435,14 @@ void main() {
       final metrics = ReportMetrics.from(
         _result(zPtp: 12.0).copyWith(zA95: 5.0),
       ); // 초록
-      expect(metrics.vertMax.remarkLines, isNull);
-      expect(metrics.vertAvg.remarkLines, isNull);
-      expect(ReportMetrics.from(_result()).vertMax.remarkLines, isNull);
+      expect(metrics.zMax.remarkLines, isNull);
+      expect(metrics.zAvg.remarkLines, isNull);
+      expect(ReportMetrics.from(_result()).zMax.remarkLines, isNull);
     });
 
     test('평균 행은 A95 값을 넣은 두 줄이다', () {
       final metrics = ReportMetrics.from(_result().copyWith(zA95: 15.4));
-      expect(metrics.vertAvg.remarkLines, <String>[
+      expect(metrics.zAvg.remarkLines, <String>[
         '진동측정결과가 15.4milli-G A95 로',
         '일관되게 높게 측정되었습니다',
       ]);
@@ -444,20 +452,20 @@ void main() {
       final metrics = ReportMetrics.from(
         _result(zPtp: 22.04).copyWith(zPtpPositionM: 5.46),
       ); // 황색
-      expect(metrics.vertMax.remarkLines, <String>[
+      expect(metrics.zMax.remarkLines, <String>[
         '최대의 진동 22.0milli-G 가 하부층 정지레벨로부터',
         '5.5m 에서 측정되었습니다.',
       ]);
       final red = ReportMetrics.from(
         _result(zPtp: 31.0).copyWith(zPtpPositionM: 12.0),
       ); // 적색
-      expect(red.vertMax.verdict, ReportVerdict.red);
-      expect(red.vertMax.remarkLines, isNotNull);
+      expect(red.zMax.verdict, ReportVerdict.red);
+      expect(red.zMax.remarkLines, isNotNull);
     });
 
     test('위치가 없는 예전 결과는 위치 없이 적는다', () {
       final metrics = ReportMetrics.from(_result(zPtp: 22.0));
-      expect(metrics.vertMax.remarkLines, <String>[
+      expect(metrics.zMax.remarkLines, <String>[
         '최대의 진동 22.0milli-G 가',
         '측정되었습니다.',
       ]);
@@ -467,23 +475,25 @@ void main() {
       final metrics = ReportMetrics.from(
         _result(xPtp: 20.0, yPtp: 5.0, noiseMax: 73.0),
       ); // 수평 · 소음 황색
-      expect(metrics.horizMax.verdict, ReportVerdict.yellow);
-      expect(metrics.horizMax.remarkLines, isNull);
+      expect(metrics.xMax.verdict, ReportVerdict.yellow);
+      expect(metrics.xMax.remarkLines, isNull);
       expect(metrics.noiseMax.remarkLines, isNull);
     });
   });
 
   group('표 짜임새', () {
-    test('여덟 행이 서식 순서대로 나온다', () {
+    test('열 행이 소음 · X · Y · Z · 속도 · 거리 순서다', () {
       final metrics = ReportMetrics.from(_result()); // 산출된 지표
 
       expect(metrics.rows.map((metric) => metric.key).toList(), [
         'noise_avg',
         'noise_max',
-        'vert_avg',
-        'vert_max',
-        'horiz_avg',
-        'horiz_max',
+        'x_avg',
+        'x_max',
+        'y_avg',
+        'y_max',
+        'z_avg',
+        'z_max',
         'max_speed',
         'travel_distance',
       ]);
@@ -503,14 +513,18 @@ void main() {
       expect(metrics.noiseAvg.redLimit, ReportThresholds.noiseAvgRedDba);
       expect(metrics.noiseMax.yellowLimit, ReportThresholds.noiseMaxYellowDba);
       expect(metrics.noiseMax.redLimit, ReportThresholds.noiseMaxRedDba);
-      expect(metrics.vertAvg.yellowLimit, ReportThresholds.zA95YellowMg);
-      expect(metrics.vertAvg.redLimit, ReportThresholds.zA95RedMg);
-      expect(metrics.vertMax.yellowLimit, ReportThresholds.zPtpYellowMg);
-      expect(metrics.vertMax.redLimit, ReportThresholds.zPtpRedMg);
-      expect(metrics.horizAvg.yellowLimit, ReportThresholds.horizA95YellowMg);
-      expect(metrics.horizAvg.redLimit, ReportThresholds.horizA95RedMg);
-      expect(metrics.horizMax.yellowLimit, ReportThresholds.horizPtpYellowMg);
-      expect(metrics.horizMax.redLimit, ReportThresholds.xPtpRedMg);
+      expect(metrics.zAvg.yellowLimit, ReportThresholds.zA95YellowMg);
+      expect(metrics.zAvg.redLimit, ReportThresholds.zA95RedMg);
+      expect(metrics.zMax.yellowLimit, ReportThresholds.zPtpYellowMg);
+      expect(metrics.zMax.redLimit, ReportThresholds.zPtpRedMg);
+      expect(metrics.xAvg.yellowLimit, ReportThresholds.horizA95YellowMg);
+      expect(metrics.xAvg.redLimit, ReportThresholds.horizA95RedMg);
+      expect(metrics.xMax.yellowLimit, ReportThresholds.horizPtpYellowMg);
+      expect(metrics.xMax.redLimit, ReportThresholds.xPtpRedMg);
+      expect(metrics.yAvg.yellowLimit, ReportThresholds.horizA95YellowMg);
+      expect(metrics.yAvg.redLimit, ReportThresholds.horizA95RedMg);
+      expect(metrics.yMax.yellowLimit, ReportThresholds.horizPtpYellowMg);
+      expect(metrics.yMax.redLimit, ReportThresholds.yPtpRedMg);
     });
   });
 
