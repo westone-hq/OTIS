@@ -12,18 +12,16 @@
 enum ReportVerdict { green, yellow, red, unknown, none }
 
 /// 작성: 2026-09-15 20:13:49 · 박건준
-/// 수정: 2026-10-15 16:50:04 · 박건준
+/// 수정: 2026-10-28 23:30:00 · 박건준
 /// 클래스: ReportThresholds
 /// 목적: 리포트 판정 기준치를 한곳에 모으고, 값을 견주는 일까지 맡는다.
 ///       저장소 안에서 기준 숫자가 적힌 곳은 여기뿐이다.
 ///
-///       Performance Metrics 여섯 행마다 황색 · 적색 두 단계를 둔다. 값이
+///       Performance Metrics 여덟 행마다 황색 · 적색 두 단계를 둔다. 값이
 ///       황색 기준을 넘으면 황색, 적색 기준을 넘으면 적색이다.
 ///
-///       수평 두 행은 X 와 Y 를 한 행으로 내지만 기준은 축마다 같은 값을
-///       쓴다. `judgeHorizontal()` 이 X 와 Y 를 각각 이 기준으로 보고 더
-///       나쁜 쪽을 돌려준다. 측정 결과의 축별 판정 게터(`xExceeded` 등)도
-///       같은 적색 기준을 쓴다.
+///       X · Y 는 각각 수평 기준, Z 는 수직 기준으로 `judge()` 한다.
+///       측정 결과의 축별 판정 게터(`xExceeded` 등)도 같은 적색 기준을 쓴다.
 ///
 ///       이 기준은 원본 리포트처럼 가중 · 운행 구간으로 낸 지표
 ///       (`MeasurementAssembler`, 2026-10-15)와 견주는 값이다. 그 전 결과
@@ -151,35 +149,6 @@ class ReportThresholds {
     if (value == null) return ReportVerdict.unknown;
     if (value > redLimit) return ReportVerdict.red;
     if (value > yellowLimit) return ReportVerdict.yellow;
-    return ReportVerdict.green;
-  }
-
-  /// 작성: 2026-09-15 20:13:49 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · 박건준
-  /// 함수: judgeHorizontal
-  /// 목적: 리포트의 수평 진동 행 하나를 판정한다. 그 행은 X 와 Y 를 묶어
-  ///       내보내지만 두 축을 각각 같은 기준으로 보고 합친다.
-  ///       - 하나라도 적색이면 적색이다
-  ///       - 적색이 없고 아직 재지 못한 축이 있으면 미확정이다. 한 축만
-  ///         보고 "정상" · "황색" 이라고 할 수 없다
-  ///       - 두 축 다 쟀으면 더 나쁜 쪽(황색 > 녹색)이다
-  /// 인자: x — X축 값 (mg). 아직 재지 못했으면 null
-  ///       y — Y축 값 (mg). 아직 재지 못했으면 null
-  ///       yellowLimit, redLimit — 그 행의 황색 · 적색 기준치 (mg)
-  /// 반환: 두 축을 합친 신호등 색
-  static ReportVerdict judgeHorizontal(
-    double? x,
-    double? y,
-    double yellowLimit,
-    double redLimit,
-  ) {
-    final both = <ReportVerdict>[
-      judge(x, yellowLimit, redLimit),
-      judge(y, yellowLimit, redLimit),
-    ]; // 축마다 본 결과
-    if (both.contains(ReportVerdict.red)) return ReportVerdict.red;
-    if (both.contains(ReportVerdict.unknown)) return ReportVerdict.unknown;
-    if (both.contains(ReportVerdict.yellow)) return ReportVerdict.yellow;
     return ReportVerdict.green;
   }
 }

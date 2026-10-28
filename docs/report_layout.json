@@ -9,6 +9,28 @@
     "pt_per_px_y": 0.263915361,
     "_comment": "서식 이미지 비율 1.414007 이 A4 1.414285 와 미세하게 달라 하나의 환산 계수로는 두 축을 동시에 맞출 수 없다. 배경을 A4 전면에 늘려 깔기 때문에, 좌표도 축별 계수를 써야 배경의 늘어남과 일치한다. 단일 계수를 쓰면 페이지 아래쪽에서 0.16pt 어긋난다."
   },
+  "header_logo": {
+    "asset": "otis_v_check.png",
+    "mask": {
+      "x": 50,
+      "y": 53,
+      "w": 315,
+      "h": 56
+    },
+    "image_box": {
+      "x": 36,
+      "y": 26,
+      "w": 320,
+      "h": 108
+    },
+    "divider": {
+      "x": 350,
+      "y": 60,
+      "w": 4,
+      "h": 42
+    },
+    "_comment": "2026-10-28 사용자 지시로 로고를 이전 출력의 가로·세로 두 배로 확대한다. 옛 구분선은 덮고 x350에 다시 그리며, 제번은 x378로 옮긴다. 하단 로고는 같은 원본을 footer_logo 영역에 따로 그린다."
+  },
   "colors": {
     "navy": "#0D2B52",
     "gold": "#C09B54",
@@ -30,7 +52,7 @@
     "fields": [
       {
         "key": "measurement_id",
-        "x": 222,
+        "x": 378,
         "y": 79,
         "size": 30,
         "align": "left",
@@ -134,66 +156,98 @@
       }
     ],
     "metrics_table": {
-      "_comment": "행 y 는 텍스트 수직 중심. 마지막 두 행은 위 6행보다 행간이 좁으므로 균등 피치로 계산하지 말 것.",
+      "_comment": "행 y 는 텍스트 수직 중심. 열 행을 108픽셀 간격으로 놓고, 측정값 다음에 설명 열을 따로 둔다.",
       "dot": {
         "cx": 243,
         "diameter": 30
       },
       "col": {
         "category": 313,
-        "desc_label_start": 741,
-        "desc_label_end": 1004,
-        "value": 1016,
-        "value_no_label": 742,
+        "value": 735,
+        "value_right": 985,
+        "description": 1016,
+        "description_right": 1447,
         "yellow": 1531,
         "red": 1855
       },
       "rows": [
         {
           "key": "noise_avg",
-          "y": 995,
+          "label": "소음, 평균",
+          "description": "평균 소음 측정 수치",
+          "y": 999,
           "judge": true,
           "has_label": true
         },
         {
           "key": "noise_max",
-          "y": 1101,
+          "label": "소음, 최대",
+          "description": "최대 소음 측정 수치",
+          "y": 1107,
           "judge": true,
           "has_label": true
         },
         {
-          "key": "vert_avg",
-          "y": 1210,
+          "key": "x_avg",
+          "label": "X진동 평균",
+          "description": "평균 진동 측정 수치",
+          "y": 1215,
           "judge": true,
           "has_label": true
         },
         {
-          "key": "vert_max",
-          "y": 1320,
+          "key": "x_max",
+          "label": "X진동 최대",
+          "description": "최대 진동 측정 수치",
+          "y": 1323,
           "judge": true,
           "has_label": true
         },
         {
-          "key": "horiz_avg",
-          "y": 1429,
+          "key": "y_avg",
+          "label": "Y진동 평균",
+          "description": "평균 진동 측정 수치",
+          "y": 1431,
           "judge": true,
           "has_label": true
         },
         {
-          "key": "horiz_max",
-          "y": 1538,
+          "key": "y_max",
+          "label": "Y진동 최대",
+          "description": "최대 진동 측정 수치",
+          "y": 1539,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "z_avg",
+          "label": "Z진동 평균",
+          "description": "평균 진동 측정 수치",
+          "y": 1647,
+          "judge": true,
+          "has_label": true
+        },
+        {
+          "key": "z_max",
+          "label": "Z진동 최대",
+          "description": "최대 진동 측정 수치",
+          "y": 1755,
           "judge": true,
           "has_label": true
         },
         {
           "key": "max_speed",
-          "y": 1648,
+          "label": "최대 속도",
+          "description": "",
+          "y": 1863,
           "judge": false,
           "has_label": false
         },
         {
           "key": "travel_distance",
-          "y": 1743,
+          "label": "운행 거리",
+          "description": "",
+          "y": 1971,
           "judge": false,
           "has_label": false
         }
@@ -209,9 +263,9 @@
         "h": 46
       },
       "remark": {
-        "x": 742,
-        "erase_x": 735,
-        "erase_w": 712,
+        "x": 1016,
+        "erase_x": 1004,
+        "erase_w": 443,
         "erase_h": 86,
         "size": 28,
         "line_gap": 36
@@ -219,70 +273,45 @@
       "col_align": {
         "category": "left",
         "value": "left",
-        "value_no_label": "left",
         "yellow": "center",
         "red": "center"
+      },
+      "body": {
+        "x": 189,
+        "w": 1828,
+        "top": 945,
+        "row_height": 108,
+        "category_size": 28
+      },
+      "header": {
+        "y": 890,
+        "size": 30,
+        "background": 269889,
+        "erase_box": {
+          "x": 720,
+          "y": 860,
+          "w": 727,
+          "h": 70
+        }
       }
     },
-    "analysis_table": {
-      "dot": {
-        "cx": 243,
-        "diameter": 30
-      },
-      "col": {
-        "category": 313,
-        "description": 1172
-      },
-      "rows": [
-        {
-          "key": "car_noise",
-          "y": 2098
-        },
-        {
-          "key": "machine",
-          "y": 2199
-        },
-        {
-          "key": "belts",
-          "y": 2300
-        },
-        {
-          "key": "guide_rail",
-          "y": 2401
-        },
-        {
-          "key": "transient_noise",
-          "y": 2504
-        },
-        {
-          "key": "idler_sheave",
-          "y": 2606
-        },
-        {
-          "key": "guide",
-          "y": 2707
-        }
-      ],
-      "description_size": 28,
-      "category_size": 28,
-      "_relabel_comment": "서식에 박힌 구분 이름 중 바꿔 쓸 행. erase_label 네모(x 는 왼쪽 끝, 행 y 를 세로 가운데로)를 줄무늬 색으로 덮고 col.category 에 새 이름을 찍는다. 2026-10-15 사용자 지시",
-      "erase_label": {
-        "x": 300,
-        "w": 360,
-        "h": 52
-      },
-      "relabel": {
-        "machine": "권상기 머신으로 부터 진동",
-        "belts": "로우프"
-      },
-      "stripes": [
-        "stripe_odd",
-        "stripe_even"
-      ],
-      "col_align": {
-        "category": "left",
-        "description": "left"
-      }
+    "tables_erase": {
+      "x": 0,
+      "y": 945,
+      "w": 2256,
+      "h": 2055
+    },
+    "body_erase_box": {
+      "x": 0,
+      "y": 945,
+      "w": 2256,
+      "h": 2055
+    },
+    "address_label_erase_box": {
+      "x": 980,
+      "y": 620,
+      "w": 80,
+      "h": 48
     }
   },
   "chart_page": {
@@ -298,7 +327,7 @@
     "fields": [
       {
         "key": "measurement_id",
-        "x": 222,
+        "x": 378,
         "y": 79,
         "size": 30,
         "align": "left",
@@ -373,5 +402,21 @@
       }
     ]
   },
-  "_background_note": "background 는 파일 이름만 둔다. 놓이는 디렉터리는 구현마다 다르다 — 프로토타입은 assets/, Flutter 는 assets/report/."
+  "_background_note": "background 는 파일 이름만 둔다. 놓이는 디렉터리는 구현마다 다르다 — 프로토타입은 assets/, Flutter 는 assets/report/.",
+  "footer_logo": {
+    "asset": "otis_v_check.png",
+    "mask": {
+      "x": 12,
+      "y": 3097,
+      "w": 213,
+      "h": 60
+    },
+    "image_box": {
+      "x": 0,
+      "y": 3085,
+      "w": 240,
+      "h": 80
+    },
+    "_comment": "왼쪽 흰 영역의 로고만 교체한다. 갈색 띠 · 사선 · 문구 · 페이지 번호는 JPEG 서식 그대로 유지한다."
+  }
 }

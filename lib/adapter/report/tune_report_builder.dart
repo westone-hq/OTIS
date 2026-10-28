@@ -46,10 +46,11 @@ class TuneReportBuilder {
   });
 
   /// 작성: 2026-09-26 09:30:00 · 박건준
-  /// 수정: 2026-10-15 15:53:26 · 박건준
+  /// 수정: 2026-10-28 17:16:58 · 박희정
   /// 함수: load
-  /// 목적: 글꼴 두 벌과 서식 이미지 두 장을 자산에서 한 번에 읽어, 한
-  ///       문서를 함께 쓰는 렌더러 둘을 만든다.
+  /// 목적: 글꼴 두 벌과 서식 이미지 두 장, 공통 로고를 자산에서 한 번에
+  ///       읽어 한 문서를 함께 쓰는 렌더러 둘을 만든다. 로고도 문서 안에서
+  ///       공유해 세 쪽에 같은 원본이 중복으로 들어가지 않게 한다.
   /// 반환: 바로 그릴 수 있는 빌더
   static Future<TuneReportBuilder> load() async {
     final regularBytes = await rootBundle.load(
@@ -64,8 +65,15 @@ class TuneReportBuilder {
     final chartBytes = await rootBundle.load(
       ReportChartPageLayout.background,
     ); // 차트 쪽 서식 이미지 원본
+    final logoBytes = await rootBundle.load(
+      ReportLayout.headerLogoAsset,
+    ); // 모든 쪽의 상단 · 하단 로고 원본
 
     final document = PdfDocument(); // 두 렌더러가 함께 쓸 문서
+    final headerLogo = PdfImage.file(
+      document,
+      bytes: logoBytes.buffer.asUint8List(),
+    ); // 두 렌더러의 상단 · 하단에서 함께 쓸 로고
     final regular = PdfTtfFont(document, regularBytes); // 본문 글꼴
     final writer = ReportTextWriter(
       regular: regular,
@@ -76,6 +84,7 @@ class TuneReportBuilder {
       document: document,
       page1: ReportPage1Renderer(
         document: document,
+        headerLogo: headerLogo,
         background: PdfImage.file(
           document,
           bytes: page1Bytes.buffer.asUint8List(),
@@ -84,6 +93,7 @@ class TuneReportBuilder {
       ),
       chartPages: ReportChartPageRenderer(
         document: document,
+        headerLogo: headerLogo,
         background: PdfImage.file(
           document,
           bytes: chartBytes.buffer.asUint8List(),

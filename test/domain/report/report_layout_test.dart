@@ -14,7 +14,7 @@ import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 const _layoutJsonPath = 'docs/report_layout.json';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-15 15:53:26 · 박건준
+/// 수정: 2026-10-28 17:16:58 · 박희정
 /// 변수: _layoutJsonMd5
 /// 목적: 옮길 때 본 정본 기록의 md5. 정본이 바뀌면 이 값이 달라져,
 ///       사본을 함께 고쳐야 한다는 사실이 시험 실패로 드러난다.
@@ -25,7 +25,14 @@ const _layoutJsonPath = 'docs/report_layout.json';
 ///       2026-10-21 수직 행 황색 · 적색 문구 자리(`remark`)를 더하며 다시
 ///       갱신했다. 2026-10-22 그 글자 크기 · 줄 간격(28 · 36)을 바꾸며 다시
 ///       갱신했다.
-const _layoutJsonMd5 = 'c6e6d6981e94f6003bda5196dae43945';
+///       2026-10-28 상단 로고 자리와 덮을 영역을 더하며 다시 갱신했다.
+///       같은 날 로고를 키우고 구분선 · 제번을 옮기며 다시 갱신했다.
+///       축별 열 행과 분석 자료를 옮길 영역을 더하며 다시 갱신했다.
+///       측정값 · 설명 열과 두 제목을 나누며 다시 갱신했다.
+///       분석 자료 표를 폐지하고 본문을 덮을 영역을 기록하며 갱신했다.
+///       서식의 주소 제목만 지울 영역을 더하며 다시 갱신했다.
+///       하단 로고를 덮을 흰 영역과 원본 상자를 더하며 다시 갱신했다.
+const _layoutJsonMd5 = '021d49f77af6b0da246c51bc1fb61a46';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
 /// 함수: _layout
@@ -65,6 +72,7 @@ void _expectField(LayoutField actual, Map<String, dynamic> expected) {
 }
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
+/// 수정: 2026-10-28 17:16:58 · 박희정
 /// 함수: main
 /// 목적: `report_layout.dart` 의 좌표가 정본 `docs/report_layout.json` 과
 ///       같은지 대조한다. 사람이 손으로 옮기는 과정에서 숫자 하나가
@@ -102,6 +110,43 @@ void main() {
       );
     });
 
+    test('상단 로고 자산과 덮을 영역이 정본과 같다', () {
+      final logo = _layout()['header_logo'] as Map<String, dynamic>; // 로고 사양
+      expect(
+        ReportLayout.headerLogoAsset,
+        '${ReportLayout.assetDirectory}${logo['asset']}',
+      );
+      for (final entry in <String, LayoutPlotBox>{
+        'mask': ReportLayout.headerLogoMask,
+        'image_box': ReportLayout.headerLogoBox,
+        'divider': ReportLayout.headerLogoDivider,
+      }.entries) {
+        final expected = logo[entry.key] as Map<String, dynamic>; // 정본 자리
+        expect(entry.value.x, expected['x']);
+        expect(entry.value.y, expected['y']);
+        expect(entry.value.width, expected['w']);
+        expect(entry.value.height, expected['h']);
+      }
+    });
+
+    test('하단 로고는 상단 원본을 쓰고 흰 영역 안에 놓인다', () {
+      final logo = _layout()['footer_logo'] as Map<String, dynamic>; // 하단 사양
+      expect(
+        ReportLayout.headerLogoAsset,
+        '${ReportLayout.assetDirectory}${logo['asset']}',
+      );
+      for (final entry in <String, LayoutPlotBox>{
+        'mask': ReportLayout.footerLogoMask,
+        'image_box': ReportLayout.footerLogoBox,
+      }.entries) {
+        final expected = logo[entry.key] as Map<String, dynamic>; // 정본 영역
+        expect(entry.value.x, expected['x']);
+        expect(entry.value.y, expected['y']);
+        expect(entry.value.width, expected['w']);
+        expect(entry.value.height, expected['h']);
+      }
+    });
+
     test('두 축의 환산 계수가 서로 다르다', () {
       // 서식 비율과 A4 비율이 달라 한 계수로는 두 축을 못 맞춘다
       expect(ReportLayout.ptPerPxX, isNot(ReportLayout.ptPerPxY));
@@ -137,13 +182,21 @@ void main() {
       final page1 = _layout()['page1'] as Map<String, dynamic>; // json 의 1쪽
       final fields = page1['fields'] as List<dynamic>; // json 의 칸 목록
 
+      final erase =
+          page1['address_label_erase_box'] as Map<String, dynamic>; // 지울 영역
+      const box = ReportPage1Layout.addressLabelEraseBox; // 주소 제목 덮개
+      expect(box.x, erase['x']);
+      expect(box.y, erase['y']);
+      expect(box.width, erase['w']);
+      expect(box.height, erase['h']);
+
       expect(ReportPage1Layout.fields.length, fields.length);
       for (final moved in ReportPage1Layout.fields) {
         _expectField(moved, _fieldByKey(fields, moved.key));
       }
     });
 
-    test('Performance Metrics 표 8행이 같다', () {
+    test('Performance Metrics 표 10행이 같다', () {
       final page1 = _layout()['page1'] as Map<String, dynamic>; // json 의 1쪽
       final table =
           page1['metrics_table'] as Map<String, dynamic>; // json 의 지표 표
@@ -156,6 +209,8 @@ void main() {
         final expected = rows[i] as Map<String, dynamic>; // json 의 그 행
         final moved = ReportPage1Layout.metricRows[i]; // 옮겨 적은 그 행
         expect(moved.key, expected['key'], reason: '$i번째 행 이름');
+        expect(moved.label, expected['label']);
+        expect(moved.description, expected['description']);
         expect(moved.y, expected['y'], reason: '${moved.key} y');
         expect(moved.judge, expected['judge'], reason: '${moved.key} judge');
         expect(
@@ -165,17 +220,33 @@ void main() {
         );
       }
 
+      final body = table['body'] as Map<String, dynamic>; // 본문 배치 정본
+      expect(ReportPage1Layout.metricBodyX, body['x']);
+      expect(ReportPage1Layout.metricBodyWidth, body['w']);
+      expect(ReportPage1Layout.metricBodyTop, body['top']);
+      expect(ReportPage1Layout.metricRowHeight, body['row_height']);
+      expect(ReportPage1Layout.metricCategorySize, body['category_size']);
+
       expect(ReportPage1Layout.dotCenterX, dot['cx']);
       expect(ReportPage1Layout.dotDiameter, dot['diameter']);
       expect(ReportPage1Layout.colCategoryX, col['category']);
-      expect(ReportPage1Layout.colDescLabelStartX, col['desc_label_start']);
-      expect(ReportPage1Layout.colDescLabelEndX, col['desc_label_end']);
       expect(ReportPage1Layout.colValueX, col['value']);
-      expect(ReportPage1Layout.colValueNoLabelX, col['value_no_label']);
+      expect(ReportPage1Layout.colValueRightX, col['value_right']);
+      expect(ReportPage1Layout.colDescriptionX, col['description']);
+      expect(ReportPage1Layout.colDescriptionRightX, col['description_right']);
       expect(ReportPage1Layout.colYellowX, col['yellow']);
       expect(ReportPage1Layout.colRedX, col['red']);
       expect(ReportPage1Layout.valueSize, table['value_size']);
       expect(ReportPage1Layout.thresholdSize, table['threshold_size']);
+      final header = table['header'] as Map<String, dynamic>; // 나눈 두 열의 제목
+      final erase = header['erase_box'] as Map<String, dynamic>; // 옛 제목 덮개
+      expect(ReportPage1Layout.metricHeaderY, header['y']);
+      expect(ReportPage1Layout.metricHeaderSize, header['size']);
+      expect(ReportPage1Layout.metricHeaderBackground, header['background']);
+      expect(ReportPage1Layout.metricHeaderEraseBox.x, erase['x']);
+      expect(ReportPage1Layout.metricHeaderEraseBox.y, erase['y']);
+      expect(ReportPage1Layout.metricHeaderEraseBox.width, erase['w']);
+      expect(ReportPage1Layout.metricHeaderEraseBox.height, erase['h']);
       expect(
         ReportPage1Layout.eraseRedWidth,
         (table['erase_red'] as Map<String, dynamic>)['w'],
@@ -196,86 +267,32 @@ void main() {
       final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
       expect(ReportPage1Layout.colCategoryAlign.name, align['category']);
       expect(ReportPage1Layout.colValueAlign.name, align['value']);
-      expect(
-        ReportPage1Layout.colValueNoLabelAlign.name,
-        align['value_no_label'],
-      );
       expect(ReportPage1Layout.colYellowAlign.name, align['yellow']);
       expect(ReportPage1Layout.colRedAlign.name, align['red']);
     });
 
-    test('마지막 행은 균등 피치로 계산하면 어긋난다', () {
-      // 실측 간격은 106 109 110 109 109 110 95 다. 마지막 한 칸만
-      // 뚜렷하게 좁아서, 위 여섯 행의 평균 간격으로 넘겨짚으면 마지막
-      // 행이 12픽셀 넘게 밀린다. 계산으로 구하면 안 된다는 사실을
-      // 시험으로 남긴다
-      const pitch =
-          (ReportPage1Layout.horizMaxY - ReportPage1Layout.noiseAvgY) /
-          5; // 1~6행 평균 간격
-      const guessedLast = ReportPage1Layout.horizMaxY + 2 * pitch; // 넘겨짚은 8행 자리
-
-      expect(
-        (guessedLast - ReportPage1Layout.travelDistanceY).abs(),
-        greaterThan(10),
-        reason: '균등 피치로는 마지막 행을 맞힐 수 없다',
-      );
-      expect(
-        ReportPage1Layout.travelDistanceY - ReportPage1Layout.maxSpeedY,
-        lessThan(ReportPage1Layout.maxSpeedY - ReportPage1Layout.horizMaxY),
-        reason: '마지막 칸이 그 앞 칸보다 좁다',
-      );
-    });
-
-    test('분석 자료 표 7행이 같다', () {
-      final table =
-          (_layout()['page1'] as Map<String, dynamic>)['analysis_table']
-              as Map<String, dynamic>;
-      final rows = table['rows'] as List<dynamic>; // json 의 행 목록
-
-      expect(ReportPage1Layout.analysisRowYs.length, rows.length);
-      expect(ReportPage1Layout.analysisRowKeys.length, rows.length);
+    test('열 행이 본문 영역 안에 들어간다', () {
+      final rows = ReportPage1Layout.metricRows; // 새로 그릴 열 행
       for (var i = 0; i < rows.length; i++) {
-        final expected = rows[i] as Map<String, dynamic>; // json 의 그 행
         expect(
-          ReportPage1Layout.analysisRowKeys[i],
-          expected['key'],
-          reason: '$i',
+          rows[i].y,
+          ReportPage1Layout.metricBodyTop +
+              ReportPage1Layout.metricRowHeight * i +
+              ReportPage1Layout.metricRowHeight ~/ 2,
         );
-        expect(ReportPage1Layout.analysisRowYs[i], expected['y'], reason: '$i');
       }
-
-      expect(
-        ReportPage1Layout.analysisDescriptionX,
-        (table['col'] as Map<String, dynamic>)['description'],
-      );
-      expect(
-        ReportPage1Layout.analysisDescriptionSize,
-        table['description_size'],
-      );
-      expect(
-        ReportPage1Layout.analysisCategoryX,
-        (table['col'] as Map<String, dynamic>)['category'],
-      );
-      expect(ReportPage1Layout.analysisCategorySize, table['category_size']);
-      final erase =
-          table['erase_label'] as Map<String, dynamic>; // json 의 덮을 네모
-      expect(ReportPage1Layout.eraseAnalysisLabelX, erase['x']);
-      expect(ReportPage1Layout.eraseAnalysisLabelWidth, erase['w']);
-      expect(ReportPage1Layout.eraseAnalysisLabelHeight, erase['h']);
-      expect(
-        ReportPage1Layout.analysisRelabels,
-        Map<String, String>.from(table['relabel'] as Map<String, dynamic>),
-      );
-      for (final key in ReportPage1Layout.analysisRelabels.keys) {
-        expect(ReportPage1Layout.analysisRowKeys, contains(key), reason: key);
-      }
-
-      final align = table['col_align'] as Map<String, dynamic>; // json 의 열 정렬
-      expect(ReportPage1Layout.analysisCategoryAlign.name, align['category']);
-      expect(
-        ReportPage1Layout.analysisDescriptionAlign.name,
-        align['description'],
-      );
+      final bottom =
+          ReportPage1Layout.metricBodyTop +
+          rows.length * ReportPage1Layout.metricRowHeight; // 지표 표 아래끝
+      const erase = ReportPage1Layout.tablesEraseBox; // 옛 본문을 덮을 영역
+      final page1 = _layout()['page1'] as Map<String, dynamic>; // 1쪽 정본
+      final box = page1['body_erase_box'] as Map<String, dynamic>; // 지울 영역
+      expect(erase.x, box['x']);
+      expect(erase.y, box['y']);
+      expect(erase.width, box['w']);
+      expect(erase.height, box['h']);
+      expect(bottom, lessThan(erase.y + erase.height));
+      expect(erase.y + erase.height, lessThan(3050));
     });
 
     test('차트 쪽 머리말 4칸과 제목이 같다', () {

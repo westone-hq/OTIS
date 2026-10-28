@@ -46,8 +46,8 @@ class ReportMetric {
   /// 신호등 색. `ReportThresholds` 가 정한다
   final ReportVerdict verdict;
 
-  /// 황색 · 적색일 때 설명 칸에 라벨 · 값 대신 적는 OTIS 문구 (줄마다 한
-  /// 항목). 문구를 쓰지 않는 행 · 초록 · 값 없음이면 null
+  /// Z진동의 판정 · 위치 설명 (줄마다 한 항목). 진동값 · 단위는 넣지 않는다.
+  /// 문구를 쓰지 않는 행 · 값 없음이면 null. 측정값은 별도 열에 남는다.
   final List<String>? remarkLines;
 
   /// 작성: 2026-09-15 21:14:33 · 박건준
@@ -61,7 +61,7 @@ class ReportMetric {
   ///       suffix — 꼬리표. 기본 빈 문자열
   ///       yellowLimit, redLimit — 황색 · 적색 칸 기준치. 칸을 비우면
   ///       null
-  ///       remarkLines — 황색 · 적색 문구. 없으면 null
+  ///       remarkLines — 판정 · 위치 문구. 없으면 null
   const ReportMetric({
     required this.key,
     required this.value,
@@ -105,13 +105,12 @@ class ReportMetric {
   static const int _defaultDecimals = 1;
 
   /// 작성: 2026-09-15 21:14:33 · 박건준
-  /// 수정: 2026-10-22 15:00:00 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 함수: display
   /// 목적: 표의 값 칸에 그대로 찍을 문자열을 만든다. 값이 100 이상이면
   ///       소수점을 떼고, 그보다 작으면 단위별 자리(`_decimalsByUnit`,
   ///       최대 속도 둘째 자리 · 나머지 첫째 자리)만 남긴다. 꼬리표가
-  ///       있으면 뒤에 붙인다. 수평 행에 X · Y 내역을 덧붙이지 않는다
-  ///       (2026-10-15 사용자 지시) — 원본 리포트도 큰 쪽 값 하나만 적는다.
+  ///       있으면 뒤에 붙인다. 각 축은 별도 행이라 다른 축 값을 붙이지 않는다.
   /// 반환: 값 칸 문자열. 값이 없으면 `—`
   String get display {
     final amount = value; // 지역으로 옮겨야 null 검사가 이어진다
@@ -152,24 +151,24 @@ class ReportMetric {
 }
 
 /// 작성: 2026-09-15 21:14:33 · 박건준
-/// 수정: 2026-10-15 15:53:26 · 박건준
+/// 수정: 2026-10-28 15:25:15 · 박희정
 /// 클래스: ReportMetrics
-/// 목적: 측정 결과 하나에서 Performance Metrics 표 여덟 행을 만든다.
+/// 목적: 측정 결과 하나에서 Performance Metrics 표 열 행을 만든다.
 ///       임계값은 여기 적지 않고 `ReportThresholds` 에서 가져온다.
 ///
 ///       지금 값이 나오는 것
 ///         - 최대 속도 · 운행 거리
 ///         - 소음 평균 · 최대
-///         - 수직 · 수평 진동 최대: 신호 처리 후 100Hz 시계열의 P2P
-///         - 수직 · 수평 진동 평균: 같은 시계열의 A95
+///         - X · Y · Z 진동 최대: 신호 처리 후 100Hz 시계열의 P2P
+///         - X · Y · Z 진동 평균: 같은 시계열의 A95
 ///           (둘 다 `MeasurementAssembler` 참고. 처리 전 예전 측정은 원시
 ///           256Hz 시계열에서 낸 값이다). 수직 최대는 2026-10-21 부터
 ///           정속 구간 안 최대다
 ///
-///       수직 두 행이 황색 · 적색이면 설명 칸에 OTIS 문구를 적는다
+///       Z 두 행의 판정 · 위치에 따라 설명 칸에 문구를 적는다
 ///       (`remarkLines`, `_verticalRemark()`). 다른 행은 문구가 없다
 ///
-///       값이 비는 것은 그 값을 계산하지 않은 예전 측정뿐이다
+///       구간을 정하지 못했거나 지표를 저장하기 전의 예전 측정은 값이 빈다
 ///
 ///       임시값을 만들어 채우지 않는다. 재지 못한 자리는 표에 `—` 로
 ///       나오고 신호등은 회색이 된다.
@@ -189,17 +188,23 @@ class ReportMetrics {
   /// 최대 소음 (dBA)
   final ReportMetric noiseMax;
 
-  /// 평균 수직 진동 (mg, A95)
-  final ReportMetric vertAvg;
+  /// X축 평균 진동 (mg, A95)
+  final ReportMetric xAvg;
 
-  /// 최대 수직 진동 (mg)
-  final ReportMetric vertMax;
+  /// X축 최대 진동 (mg, 반주기 P2P)
+  final ReportMetric xMax;
 
-  /// 평균 수평 진동 (mg, A95)
-  final ReportMetric horizAvg;
+  /// Y축 평균 진동 (mg, A95)
+  final ReportMetric yAvg;
 
-  /// 최대 수평 진동 (mg). X·Y 중 큰 값
-  final ReportMetric horizMax;
+  /// Y축 최대 진동 (mg, 반주기 P2P)
+  final ReportMetric yMax;
+
+  /// Z축 평균 진동 (mg, A95)
+  final ReportMetric zAvg;
+
+  /// Z축 정속 구간 최대 진동 (mg, 반주기 P2P)
+  final ReportMetric zMax;
 
   /// 최대 속도 (m/s)
   final ReportMetric maxSpeed;
@@ -208,35 +213,40 @@ class ReportMetrics {
   final ReportMetric travelDistance;
 
   /// 작성: 2026-09-15 21:14:33 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 함수: ReportMetrics
-  /// 목적: 표 여덟 행을 그대로 담는 생성자.
+  /// 목적: 표 열 행을 그대로 담는 생성자.
   /// 인자: noiseAvg, noiseMax — 소음 평균 · 최대
-  ///       vertAvg, vertMax — 수직 진동 평균 · 최대
-  ///       horizAvg, horizMax — 수평 진동 평균 · 최대
+  ///       xAvg, xMax, yAvg, yMax, zAvg, zMax — 축별 진동 평균 · 최대
   ///       maxSpeed, travelDistance — 최대 속도 · 운행 거리
   const ReportMetrics({
     required this.noiseAvg,
     required this.noiseMax,
-    required this.vertAvg,
-    required this.vertMax,
-    required this.horizAvg,
-    required this.horizMax,
+    required this.xAvg,
+    required this.xMax,
+    required this.yAvg,
+    required this.yMax,
+    required this.zAvg,
+    required this.zMax,
     required this.maxSpeed,
     required this.travelDistance,
   });
 
   /// 작성: 2026-09-15 21:14:33 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 함수: rows
-  /// 목적: 여덟 행을 서식에 놓인 차례대로 돌려준다. `ReportPage1Layout.metricRows`
+  /// 목적: 열 행을 서식에 놓인 차례대로 돌려준다. `ReportPage1Layout.metricRows`
   ///       와 같은 순서라, 그리는 쪽이 둘을 나란히 짝지어 쓸 수 있다.
   /// 반환: 서식 순서대로 늘어놓은 지표 목록
   List<ReportMetric> get rows => <ReportMetric>[
     noiseAvg,
     noiseMax,
-    vertAvg,
-    vertMax,
-    horizAvg,
-    horizMax,
+    xAvg,
+    xMax,
+    yAvg,
+    yMax,
+    zAvg,
+    zMax,
     maxSpeed,
     travelDistance,
   ];
@@ -254,15 +264,15 @@ class ReportMetrics {
   }
 
   /// 작성: 2026-09-15 21:14:33 · 박건준
-  /// 수정: 2026-10-15 16:50:04 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 함수: from
-  /// 목적: 측정 결과 하나에서 표 여덟 행을 만든다. 값을 낼 수 있는 항목만
+  /// 목적: 측정 결과 하나에서 표 열 행을 만든다. 값을 낼 수 있는 항목만
   ///       채우고 나머지는 비운 채로 둔다. 소음 평균은 진동 · 소음 최대와
   ///       같은 운행 구간(`MeasurementResult.travelWindow`)에서 낸다.
   ///       구간을 정하지 못한 결과는 비우고, 구간이 들어가기 전 예전 결과는
   ///       예전처럼 측정 전체에서 낸다.
   /// 인자: result — 변환이 끝난 측정 결과
-  /// 반환: 채울 수 있는 만큼 채운 지표 여덟 개
+  /// 반환: 채울 수 있는 만큼 채운 지표 열 개
   static ReportMetrics from(MeasurementResult result) {
     // → 로직 이동: _noiseInTravel()
     final noiseRange = _noiseInTravel(result); // 평균 낼 소음, 못 내면 null
@@ -272,21 +282,6 @@ class ReportMetrics {
         : _average(_withoutWarmupZeros(noiseRange)); // 소음 평균 (dBA)
     final noisePeak = result.noiseMax; // 소음 최대 (dBA). 시계열에서 다시 세지 않는다
 
-    // 수평 최대 행의 적색 칸은 하나뿐이다. X 와 Y 기준이 갈라지면 그 칸으로
-    // 둘을 다 보여줄 수 없고, 조용히 X 기준만 나가 틀린 표가 된다. 방어
-    // 분기로 받아내는 대신 가정을 여기 박아 둔다 — 갈라지는 날 디버그
-    // 실행에서 곧바로 터지고, 릴리스 빌드에서는 지워져 비용이 없다
-    assert(
-      ReportThresholds.xPtpRedMg == ReportThresholds.yPtpRedMg,
-      '수평 행의 적색 기준 칸은 하나뿐이라 X 와 Y 기준이 같아야 한다: '
-      'X ${ReportThresholds.xPtpRedMg}, Y ${ReportThresholds.yPtpRedMg}',
-    );
-    final horizontal = _larger(result.xPtp, result.yPtp); // 수평 중 큰 값 (mg)
-    final horizontalA95 = _larger(
-      result.xA95,
-      result.yA95,
-    ); // 수평 A95 중 큰 값 (mg)
-    const vibration = ReportMetric.vibrationUnit; // 진동 단위 표기
     const unjudged = ReportThresholds.unjudgedLimit; // 판정 없는 행의 칸 값
 
     return ReportMetrics(
@@ -316,68 +311,57 @@ class ReportMetrics {
           ReportThresholds.noiseMaxRedDba,
         ),
       ),
-      vertAvg: _verticalRemark(
-        ReportMetric(
-          key: 'vert_avg',
+      // → 로직 이동: _vibrationMetric()
+      xAvg: _vibrationMetric(
+        key: 'x_avg',
+        value: result.xA95,
+        yellowLimit: ReportThresholds.horizA95YellowMg,
+        redLimit: ReportThresholds.horizA95RedMg,
+        average: true,
+      ),
+      // → 로직 이동: _vibrationMetric()
+      xMax: _vibrationMetric(
+        key: 'x_max',
+        value: result.xPtp,
+        yellowLimit: ReportThresholds.horizPtpYellowMg,
+        redLimit: ReportThresholds.xPtpRedMg,
+      ),
+      // → 로직 이동: _vibrationMetric()
+      yAvg: _vibrationMetric(
+        key: 'y_avg',
+        value: result.yA95,
+        yellowLimit: ReportThresholds.horizA95YellowMg,
+        redLimit: ReportThresholds.horizA95RedMg,
+        average: true,
+      ),
+      // → 로직 이동: _vibrationMetric()
+      yMax: _vibrationMetric(
+        key: 'y_max',
+        value: result.yPtp,
+        yellowLimit: ReportThresholds.horizPtpYellowMg,
+        redLimit: ReportThresholds.yPtpRedMg,
+      ),
+      zAvg: _verticalRemark(
+        // → 로직 이동: _vibrationMetric()
+        _vibrationMetric(
+          key: 'z_avg',
           value: result.zA95,
-          unit: vibration,
-          suffix: 'A95',
           yellowLimit: ReportThresholds.zA95YellowMg,
           redLimit: ReportThresholds.zA95RedMg,
-          // → 로직 이동: ReportThresholds.judge()
-          verdict: ReportThresholds.judge(
-            result.zA95,
-            ReportThresholds.zA95YellowMg,
-            ReportThresholds.zA95RedMg,
-          ),
+          average: true,
         ),
         null,
       ), // → 로직 이동: _verticalRemark()
-      vertMax: _verticalRemark(
-        ReportMetric(
-          key: 'vert_max',
+      zMax: _verticalRemark(
+        // → 로직 이동: _vibrationMetric()
+        _vibrationMetric(
+          key: 'z_max',
           value: result.zPtp,
-          unit: vibration,
           yellowLimit: ReportThresholds.zPtpYellowMg,
           redLimit: ReportThresholds.zPtpRedMg,
-          // → 로직 이동: ReportThresholds.judge()
-          verdict: ReportThresholds.judge(
-            result.zPtp,
-            ReportThresholds.zPtpYellowMg,
-            ReportThresholds.zPtpRedMg,
-          ),
         ),
         result.zPtpPositionM,
       ), // → 로직 이동: _verticalRemark()
-      horizAvg: ReportMetric(
-        key: 'horiz_avg',
-        value: horizontalA95,
-        unit: vibration,
-        suffix: 'A95',
-        yellowLimit: ReportThresholds.horizA95YellowMg,
-        redLimit: ReportThresholds.horizA95RedMg,
-        // → 로직 이동: ReportThresholds.judgeHorizontal()
-        verdict: ReportThresholds.judgeHorizontal(
-          result.xA95,
-          result.yA95,
-          ReportThresholds.horizA95YellowMg,
-          ReportThresholds.horizA95RedMg,
-        ),
-      ),
-      horizMax: ReportMetric(
-        key: 'horiz_max',
-        value: horizontal,
-        unit: vibration,
-        yellowLimit: ReportThresholds.horizPtpYellowMg,
-        redLimit: ReportThresholds.xPtpRedMg,
-        // → 로직 이동: ReportThresholds.judgeHorizontal()
-        verdict: ReportThresholds.judgeHorizontal(
-          result.xPtp,
-          result.yPtp,
-          ReportThresholds.horizPtpYellowMg,
-          ReportThresholds.xPtpRedMg,
-        ),
-      ),
       maxSpeed: ReportMetric(
         key: 'max_speed',
         value: result.maxSpeed,
@@ -397,36 +381,63 @@ class ReportMetrics {
     );
   }
 
+  /// 작성: 2026-10-28 15:25:15 · 박희정
+  /// 함수: _vibrationMetric
+  /// 목적: 축 하나의 값으로 표시와 판정을 함께 만든다. 다른 축의 큰 값이나
+  ///       미측정 상태가 이 행의 값 · 색에 섞이지 않게 한다.
+  /// 인자: key — 축과 지표를 구분할 행 이름
+  ///       value — 저장된 축별 값 (mg). 없으면 null
+  ///       yellowLimit, redLimit — 해당 축의 황색 · 적색 기준 (mg)
+  ///       average — A95 꼬리표를 붙일 평균 행인지
+  /// 반환: 해당 축 값과 기준으로 판정한 지표
+  static ReportMetric _vibrationMetric({
+    required String key,
+    required double? value,
+    required double yellowLimit,
+    required double redLimit,
+    bool average = false,
+  }) => ReportMetric(
+    key: key,
+    value: value,
+    unit: ReportMetric.vibrationUnit,
+    suffix: average ? 'A95' : '',
+    yellowLimit: yellowLimit,
+    redLimit: redLimit,
+    // → 로직 이동: ReportThresholds.judge()
+    verdict: ReportThresholds.judge(value, yellowLimit, redLimit),
+  );
+
   /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-28 22:54:57 · 박희정
   /// 함수: _verticalRemark
-  /// 목적: 수직 행이 황색 · 적색이면 OTIS 문구를 붙인 지표로 바꾼다. 초록 ·
-  ///       회색이면 그대로 돌려준다(서식 라벨 · 값을 그대로 찍는다).
-  ///       - 평균 행: "진동측정결과가 {값} 로" / "일관되게 높게
-  ///         측정되었습니다" ({값}은 표 값 그대로, 예 "14.8milli-G A95")
-  ///       - 최대 행: "최대의 진동 {값} 가 하부층 정지레벨로부터" / "{위치}m
-  ///         에서 측정되었습니다." 위치는 소수 첫째 자리. 위치가 없는
-  ///         2026-10-21 전 결과는 "최대의 진동 {값} 가" / "측정되었습니다."
-  ///       두 줄로 나눠 두는 것은 한 행 높이에 글자 크기를 지키며 넣기
-  ///       위해서다.
+  /// 목적: Z평균은 기존 판정으로 낮음 · 보통 · 높음 문구를 정하고, Z최대는
+  ///       저장된 하부층 기준 위치를 소수 첫째 자리로 적는다. 진동값 · 단위는
+  ///       설명에 반복하지 않는다. 미측정이면 문구를 붙이지 않고, 위치가 없는
+  ///       결과에는 위치 정보가 없다고 적는다. 값 · 판정 · 기준치는 유지한다.
   /// 인자: metric — 수직 행 지표
   ///       positionM — 최대가 나온 위치 (m, 하부층 기준). 평균 행 · 없으면 null
   /// 반환: 문구를 붙인 지표, 또는 받은 지표 그대로
-  /// 근거: 인용 — 2026-10-21 점검 지시. OTIS 리포트 1쪽 황색 · 적색 행 문구
+  /// 근거: 인용 — 2026-10-28 사용자 지시. 중복 진동값 없이 판정 · 위치 설명
   static ReportMetric _verticalRemark(ReportMetric metric, double? positionM) {
-    if (metric.verdict != ReportVerdict.yellow &&
-        metric.verdict != ReportVerdict.red) {
+    if (metric.value == null) {
       return metric;
     }
-    final value = metric.display; // 표 값 그대로 (단위 · 꼬리표 포함)
     final List<String> lines; // 적을 문구
-    if (metric.key == 'vert_avg') {
-      lines = <String>['진동측정결과가 $value 로', '일관되게 높게 측정되었습니다'];
-    } else if (positionM == null) {
-      lines = <String>['최대의 진동 $value 가', '측정되었습니다.'];
+    if (metric.key == 'z_avg') {
+      final level = switch (metric.verdict) {
+        ReportVerdict.red => '일관되게 높게',
+        ReportVerdict.yellow => '보통 수준으로',
+        ReportVerdict.green => '낮게',
+        _ => null,
+      }; // 수치 판정과 설명을 같은 기준으로 유지한다
+      if (level == null) return metric;
+      lines = <String>['진동측정결과가 $level', '측정되었습니다.'];
+    } else if (positionM == null || !positionM.isFinite || positionM < 0) {
+      lines = <String>['최대 진동 측정 위치 정보가', '없습니다.'];
     } else {
       lines = <String>[
-        '최대의 진동 $value 가 하부층 정지레벨로부터',
-        '${positionM.toStringAsFixed(1)}m 에서 측정되었습니다.',
+        '최대진동이 하부층 정지레벨로부터',
+        '${positionM.toStringAsFixed(1)}m에서 측정되었습니다.',
       ];
     }
     return ReportMetric(
@@ -500,18 +511,5 @@ class ReportMetrics {
       sum += value;
     }
     return sum / series.length;
-  }
-
-  /// 작성: 2026-09-15 21:14:33 · 박건준
-  /// 함수: _larger
-  /// 목적: 두 축 값 중 큰 쪽을 고른다. 리포트의 수평 진동 행이 X 와 Y 를
-  ///       한 행으로 내보내기 때문이다.
-  /// 인자: xPtp — X축 진동 P2P (mg). 없으면 null
-  ///       yPtp — Y축 진동 P2P (mg). 없으면 null
-  /// 반환: 큰 쪽 값. 한쪽만 있으면 그 값, 둘 다 없으면 null
-  static double? _larger(double? xPtp, double? yPtp) {
-    if (xPtp == null) return yPtp;
-    if (yPtp == null) return xPtp;
-    return xPtp > yPtp ? xPtp : yPtp;
   }
 }

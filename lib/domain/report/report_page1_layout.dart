@@ -1,15 +1,12 @@
 import 'package:vibration_checker/domain/report/report_layout.dart';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-23 00:40:00 · 박건준
+/// 수정: 2026-10-28 16:41:21 · 박희정
 /// 클래스: ReportPage1Layout
 /// 목적: 리포트 1쪽의 자리들을 담는다. 머리말 11칸, Performance Metrics
-///       표 8행, 분석 자료 표 7행이 있다.
-///
-///       Performance Metrics 행 여덟 개의 세로 좌표는 계산하지 않고 값을
-///       그대로 박아 둔다. 행 간격이 106 109 110 109 109 110 95 로 고르지
-///       않고, 특히 마지막 한 칸이 뚜렷하게 좁다. 첫 행에서 일정 간격을
-///       더해 가면 마지막 행이 12픽셀 넘게 어긋난다.
+///       표 10행이 있다. 좌표 단위는 서식 이미지 픽셀이고 원점은
+///       좌상단이다. 폐지한 분석 자료의 제목 · 표는 본문과 함께 덮고
+///       지표 표 아래는 여백으로 남긴다.
 class ReportPage1Layout {
   /// 작성: 2026-09-15 19:43:50 · 박건준
   /// 수정: 2026-10-22 11:10:00 · 박건준
@@ -22,10 +19,10 @@ class ReportPage1Layout {
   ///       — 줄무늬 안 얼룩을 흰색으로 바꾸면 오히려 흰 점이 생긴다.
   static const String background = '${ReportLayout.assetDirectory}tem_1.jpg';
 
-  /// 측정 식별자 (제번)
+  /// 측정 식별자 (제번). 확대 로고 오른쪽 구분선 뒤에 놓는다
   static const LayoutField measurementId = LayoutField(
     key: 'measurement_id',
-    x: 222,
+    x: 378,
     y: 79,
     size: 30,
     align: LayoutAlign.left,
@@ -168,11 +165,10 @@ class ReportPage1Layout {
   );
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
-  /// 수정: 2026-10-12 02:13:59 · 박건준
+  /// 수정: 2026-10-28 16:41:21 · 박희정
   /// 변수: address
-  /// 목적: 주소. "주소, 우편번호" 다. 둘 다 없는 예전 결과는
-  ///       `placeholder`. "주소:" 라벨과 같은 줄, 라벨 바로 뒤에서
-  ///       시작한다.
+  /// 목적: 예전 주소 칸의 자리다. 저장 결과에 주소가 있어도 출력 값은
+  ///       비우고 서식의 제목은 `addressLabelEraseBox` 로 지운다.
   /// 근거: 인용 — 원본 TUNE 리포트 H6N1AP65.pdf(저장소 밖 보관, 실제
   ///       현장 리포트) 1쪽 머리말 "…, 경기도, 10575".
   ///       측정 — 같은 쪽을 300dpi 로 잘라 잰 자리: 글자 왼쪽 끝 x 1057,
@@ -188,9 +184,23 @@ class ReportPage1Layout {
     color: ReportColors.text,
   );
 
+  /// 작성: 2026-10-28 16:41:21 · 박희정
+  /// 변수: addressLabelEraseBox
+  /// 목적: 1쪽 서식에 남은 주소 제목만 지울 영역 (픽셀). 금색 건물명 띠와
+  ///       위쪽 사진 · 오른쪽 여백은 그대로 유지한다.
+  /// 근거: 측정 — `tem_1.jpg` 제목 글자 범위 x 989~1044, y 631~654 에
+  ///       가장자리 여유를 둔다. 주소 · 우편번호는 2026-10-27 부터 출력하지 않는다
+  static const LayoutPlotBox addressLabelEraseBox = LayoutPlotBox(
+    x: 980,
+    y: 620,
+    width: 80,
+    height: 48,
+  );
+
   /// 작성: 2026-10-11 19:15:25 · 박건준
+  /// 수정: 2026-10-28 16:41:21 · 박희정
   /// 변수: placeholder
-  /// 목적: 값이 없는 머리말 칸(엔지니어 · 하중 · 주소)에 찍는 자리 표시
+  /// 목적: 값이 없는 머리말 칸(엔지니어 · 하중)에 찍는 자리 표시
   ///       문구. 칸을 비우면 빠뜨린 것처럼 보인다. 0 이나 지어낸 값은 찍지
   ///       않는다(관통 원칙 1).
   /// 근거: 인용 — 2026-10-11 사용자 결정
@@ -267,6 +277,29 @@ class ReportPage1Layout {
     address,
   ];
 
+  /// 작성: 2026-10-28 15:25:15 · 박희정
+  /// 수정: 2026-10-28 16:37:52 · 박희정
+  /// 변수: tablesEraseBox
+  /// 목적: 옛 지표 본문과 분석 자료를 지울 영역 (픽셀). 머리말 · 지표 표의
+  ///       제목과 열 이름 · 꼬리말은 지우지 않는다.
+  /// 근거: 측정 — `tem_1.jpg` 지표 표 머리의 아래끝 y 945 부터
+  ///       꼬리말 위 여백 y 3000 까지다. 분석 자료를 다시 그리지 않는다
+  static const LayoutPlotBox tablesEraseBox = LayoutPlotBox(
+    x: 0,
+    y: 945,
+    width: ReportLayout.pageWidthPx,
+    height: 2055,
+  );
+
+  /// 지표 본문 왼쪽 · 너비 · 첫 행 위끝 · 행 높이 (픽셀). 기존 표 머리와 맞춘다
+  static const int metricBodyX = 189;
+  static const int metricBodyWidth = 1828;
+  static const int metricBodyTop = 945;
+  static const int metricRowHeight = 108;
+
+  /// 카테고리 이름 글자 크기 (픽셀). 값과 같은 높이로 맞춘다
+  static const int metricCategorySize = 28;
+
   /// 신호등 원의 중심 가로 좌표 (픽셀)
   static const int dotCenterX = 243;
 
@@ -276,17 +309,29 @@ class ReportPage1Layout {
   /// 구분 이름이 시작하는 가로 좌표 (픽셀)
   static const int colCategoryX = 313;
 
-  /// 서식에 박힌 설명 라벨이 시작하는 가로 좌표 (픽셀)
-  static const int colDescLabelStartX = 741;
+  /// 측정값 · 설명 열의 왼쪽과 오른쪽 경계 (픽셀). 측정값은 6px 왼쪽으로
+  /// 옮기고 기존 폭 250px를 유지한다(2026-10-28 사용자 요청).
+  static const int colValueX = 735;
+  static const int colValueRightX = 985;
+  static const int colDescriptionX = 1016;
+  static const int colDescriptionRightX = 1447;
 
-  /// 서식에 박힌 설명 라벨이 끝나는 가로 좌표 (픽셀)
-  static const int colDescLabelEndX = 1004;
+  /// 작성: 2026-10-28 16:19:26 · 박희정
+  /// 변수: metricHeaderEraseBox
+  /// 목적: 서식의 옛 설명 제목을 지울 영역 (픽셀). 카테고리 · 황색 · 적색
+  ///       제목은 남기고 측정값 · 설명 제목만 본문 열에 맞춰 다시 쓴다.
+  /// 근거: 측정 — `tem_1.jpg` 표 머리의 단색 안쪽이며 색은 RGB(4, 30, 65)다
+  static const LayoutPlotBox metricHeaderEraseBox = LayoutPlotBox(
+    x: 720,
+    y: 860,
+    width: 727,
+    height: 70,
+  );
 
-  /// 값을 쓰기 시작하는 가로 좌표 (픽셀). 라벨이 있는 1~6행에서 쓴다
-  static const int colValueX = 1016;
-
-  /// 라벨이 없는 7~8행에서 값을 쓰기 시작하는 가로 좌표 (픽셀)
-  static const int colValueNoLabelX = 742;
+  /// 표 머리 제목의 세로 중심 · 글자 크기 (픽셀)와 서식의 남색 (0xRRGGBB)
+  static const int metricHeaderY = 890;
+  static const int metricHeaderSize = 30;
+  static const int metricHeaderBackground = 0x041E41;
 
   /// 황색 기준치 칸의 가로 좌표 (픽셀)
   static const int colYellowX = 1531;
@@ -300,15 +345,13 @@ class ReportPage1Layout {
   /// 값을 칸의 어느 쪽에 붙일지
   static const LayoutAlign colValueAlign = LayoutAlign.left;
 
-  /// 라벨 없는 7~8행의 값을 칸의 어느 쪽에 붙일지
-  static const LayoutAlign colValueNoLabelAlign = LayoutAlign.left;
-
   /// 황색 기준치를 칸의 어느 쪽에 붙일지
   static const LayoutAlign colYellowAlign = LayoutAlign.center;
 
   /// 작성: 2026-09-15 20:13:49 · 박건준
+  /// 수정: 2026-10-28 17:39:01 · 박희정
   /// 변수: colRedAlign
-  /// 목적: 적색 기준치를 칸의 어느 쪽에 붙일지. 이 칸만 가운데로 모은다.
+  /// 목적: 적색 기준치를 칸 가운데로 맞춘다. 황색 기준 열과 같은 정렬이다.
   /// 근거: 인용 — `docs/report_layout.json` 의
   ///       `page1.metrics_table.col_align.red`
   static const LayoutAlign colRedAlign = LayoutAlign.center;
@@ -326,23 +369,23 @@ class ReportPage1Layout {
   static const int eraseRedHeight = 46;
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-28 16:19:26 · 박희정
   /// 변수: remarkX
   /// 목적: 황색 · 적색 행의 OTIS 문구(`ReportMetric.remarkLines`)를 쓰기
-  ///       시작하는 가로 좌표 (픽셀). 서식 설명 라벨 자리(`colValueNoLabelX`
-  ///       와 같은 열)다.
-  /// 근거: 인용 — 2026-10-21 점검 지시. OTIS 리포트는 황색 · 적색 행의
-  ///       설명 칸에 라벨 · 값 대신 문장을 적는다
-  static const int remarkX = 742;
+  ///       시작하는 가로 좌표 (픽셀). 측정값을 가리지 않도록 설명 열에 둔다.
+  /// 근거: 인용 — 2026-10-28 사용자 지시로 측정값 뒤에 설명 열을 놓는다
+  static const int remarkX = colDescriptionX;
 
-  /// 문구를 쓰기 전에 서식 설명 라벨 · 값 자리를 덮을 네모의 왼쪽 끝 (픽셀)
-  static const int remarkEraseX = 735;
+  /// 문구를 쓸 설명 칸만 덮을 네모의 왼쪽 끝 (픽셀)
+  static const int remarkEraseX = 1004;
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
+  /// 수정: 2026-10-28 16:19:26 · 박희정
   /// 변수: remarkEraseWidth
   /// 목적: 문구 자리를 덮을 네모의 가로 길이 (픽셀). 오른쪽 끝(1447)이 황색
   ///       칸 덮개 왼쪽 끝(`colYellowX` − `eraseRedWidth` / 2 = 1456)에 닿지
   ///       않는다. 문구가 이 폭을 넘으면 글자를 줄인다.
-  static const int remarkEraseWidth = 712;
+  static const int remarkEraseWidth = 443;
 
   /// 문구 자리를 덮을 네모의 세로 길이 (픽셀). 행 줄무늬 안이다
   static const int remarkEraseHeight = 86;
@@ -365,175 +408,122 @@ class ReportPage1Layout {
   static const int remarkLineGap = 36;
 
   /// 평균 소음 행의 세로 좌표 (픽셀)
-  static const int noiseAvgY = 995;
+  static const int noiseAvgY = 999;
 
   /// 최대 소음 행의 세로 좌표 (픽셀)
-  static const int noiseMaxY = 1101;
+  static const int noiseMaxY = 1107;
 
-  /// 평균 수직 진동 행의 세로 좌표 (픽셀)
-  static const int vertAvgY = 1210;
+  /// X 평균 · 최대 행의 세로 좌표 (픽셀)
+  static const int xAvgY = 1215;
+  static const int xMaxY = 1323;
 
-  /// 최대 수직 진동 행의 세로 좌표 (픽셀)
-  static const int vertMaxY = 1320;
+  /// Y 평균 · 최대 행의 세로 좌표 (픽셀)
+  static const int yAvgY = 1431;
+  static const int yMaxY = 1539;
 
-  /// 평균 수평 진동 행의 세로 좌표 (픽셀)
-  static const int horizAvgY = 1429;
-
-  /// 최대 수평 진동 행의 세로 좌표 (픽셀)
-  static const int horizMaxY = 1538;
+  /// Z 평균 · 최대 행의 세로 좌표 (픽셀)
+  static const int zAvgY = 1647;
+  static const int zMaxY = 1755;
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 변수: maxSpeedY
   /// 목적: 최대 속도 행의 세로 좌표 (픽셀).
-  /// 근거: 인용 — 원본 리포트에서 잰 값이다. 앞 행과의 간격은 110으로
-  ///       위 여섯 행과 비슷하지만, 표 전체 간격이 고르지 않아 계산으로
-  ///       구하지 않는다. 이 값을 그대로 쓴다
-  static const int maxSpeedY = 1648;
+  /// 근거: 인용 — 2026-10-28 사용자 지시로 축별 여섯 행 뒤에 놓는다
+  static const int maxSpeedY = 1863;
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 변수: travelDistanceY
   /// 목적: 운행 거리 행의 세로 좌표 (픽셀).
-  /// 근거: 인용 — 원본 리포트에서 잰 값이다. 앞 행과의 간격이 95로 표에서
-  ///       가장 좁다. 위 여섯 행의 평균 간격(108.6)으로 넘겨짚으면 1755가
-  ///       나와 12픽셀 넘게 어긋난다. 계산하지 말고 이 값을 그대로 쓴다
-  static const int travelDistanceY = 1743;
+  /// 근거: 인용 — 2026-10-28 사용자 지시로 열 번째 행에 놓고 행 높이를 맞춘다
+  static const int travelDistanceY = 1971;
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 변수: metricRows
-  /// 목적: Performance Metrics 표 여덟 행을 서식에 놓인 차례대로 모아
-  ///       둔 것. 세로 좌표는 위 낱개 상수와 같은 값이다.
+  /// 목적: Performance Metrics 표 열 행의 이름 · 설명 · 자리를 묶는다.
+  ///       배경에 옛 수직 · 수평 이름이 남지 않게 본문을 코드로 다시 그린다.
   static const List<LayoutMetricRow> metricRows = <LayoutMetricRow>[
     LayoutMetricRow(
       key: 'noise_avg',
+      label: '소음, 평균',
+      description: '평균 소음 측정 수치',
       y: noiseAvgY,
       judge: true,
       hasLabel: true,
     ),
     LayoutMetricRow(
       key: 'noise_max',
+      label: '소음, 최대',
+      description: '최대 소음 측정 수치',
       y: noiseMaxY,
       judge: true,
       hasLabel: true,
     ),
-    LayoutMetricRow(key: 'vert_avg', y: vertAvgY, judge: true, hasLabel: true),
-    LayoutMetricRow(key: 'vert_max', y: vertMaxY, judge: true, hasLabel: true),
     LayoutMetricRow(
-      key: 'horiz_avg',
-      y: horizAvgY,
+      key: 'x_avg',
+      label: 'X진동 평균',
+      description: '평균 진동 측정 수치',
+      y: xAvgY,
       judge: true,
       hasLabel: true,
     ),
     LayoutMetricRow(
-      key: 'horiz_max',
-      y: horizMaxY,
+      key: 'x_max',
+      label: 'X진동 최대',
+      description: '최대 진동 측정 수치',
+      y: xMaxY,
+      judge: true,
+      hasLabel: true,
+    ),
+    LayoutMetricRow(
+      key: 'y_avg',
+      label: 'Y진동 평균',
+      description: '평균 진동 측정 수치',
+      y: yAvgY,
+      judge: true,
+      hasLabel: true,
+    ),
+    LayoutMetricRow(
+      key: 'y_max',
+      label: 'Y진동 최대',
+      description: '최대 진동 측정 수치',
+      y: yMaxY,
+      judge: true,
+      hasLabel: true,
+    ),
+    LayoutMetricRow(
+      key: 'z_avg',
+      label: 'Z진동 평균',
+      description: '평균 진동 측정 수치',
+      y: zAvgY,
+      judge: true,
+      hasLabel: true,
+    ),
+    LayoutMetricRow(
+      key: 'z_max',
+      label: 'Z진동 최대',
+      description: '최대 진동 측정 수치',
+      y: zMaxY,
       judge: true,
       hasLabel: true,
     ),
     LayoutMetricRow(
       key: 'max_speed',
+      label: '최대 속도',
+      description: '',
       y: maxSpeedY,
       judge: false,
       hasLabel: false,
     ),
     LayoutMetricRow(
       key: 'travel_distance',
+      label: '운행 거리',
+      description: '',
       y: travelDistanceY,
       judge: false,
       hasLabel: false,
     ),
-  ];
-
-  /// 분석 자료 표의 구분 이름을 칸의 어느 쪽에 붙일지
-  static const LayoutAlign analysisCategoryAlign = LayoutAlign.left;
-
-  /// 분석 자료 표의 구분 이름이 시작하는 가로 좌표 (픽셀)
-  static const int analysisCategoryX = 313;
-
-  /// 작성: 2026-10-15 15:53:26 · 박건준
-  /// 변수: analysisCategorySize
-  /// 목적: 분석 자료 표의 구분 이름을 새로 찍을 때 글자 크기 (픽셀).
-  /// 근거: 측정 — 서식 tem_1.jpg 에서 "Machine으로 부터 진동" 글자 높이가
-  ///       y 2185~2212(27 픽셀)다. 1쪽 표의 값 글자 크기(28)와 같게 둔다
-  static const int analysisCategorySize = 28;
-
-  /// 작성: 2026-10-15 15:53:26 · 박건준
-  /// 변수: analysisCategoryWeight
-  /// 목적: 분석 자료 표의 구분 이름을 새로 찍을 때 글자 굵기.
-  /// 근거: 측정 — 서식 tem_1.jpg 의 구분 이름은 본문 글자보다 굵다. 보통
-  ///       굵기로 찍으면 이웃 행 이름보다 가늘고 흐리게 보였다(2026-10-15
-  ///       270dpi 비교)
-  static const LayoutWeight analysisCategoryWeight = LayoutWeight.bold;
-
-  /// 작성: 2026-10-15 15:53:26 · 박건준
-  /// 변수: eraseAnalysisLabelX
-  /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 왼쪽 끝 가로 좌표 (픽셀).
-  ///       신호등 원(오른쪽 끝 x 258)에 닿지 않는다.
-  /// 근거: 측정 — 서식 tem_1.jpg 에서 구분 이름 글자가 x 311 에서
-  ///       시작한다
-  static const int eraseAnalysisLabelX = 300;
-
-  /// 작성: 2026-10-15 15:53:26 · 박건준
-  /// 변수: eraseAnalysisLabelWidth
-  /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 가로 길이 (픽셀).
-  /// 근거: 측정 — 가장 긴 "Machine으로 부터 진동" 이 x 620 에서 끝난다.
-  ///       설명 칸(x 1172)보다 한참 앞에서 멈춘다
-  static const int eraseAnalysisLabelWidth = 360;
-
-  /// 작성: 2026-10-15 15:53:26 · 박건준
-  /// 변수: eraseAnalysisLabelHeight
-  /// 목적: 서식에 박힌 구분 이름을 덮을 네모의 세로 길이 (픽셀). 행
-  ///       세로 좌표를 가운데로 둔다.
-  /// 근거: 측정 — 글자 높이 27 픽셀에 위아래 여유를 둔 값. 행 간격(약
-  ///       101)의 절반을 넘지 않아 이웃 행을 덮지 않는다
-  static const int eraseAnalysisLabelHeight = 52;
-
-  /// 작성: 2026-10-15 15:53:26 · 박건준
-  /// 변수: analysisRelabels
-  /// 목적: 서식에 박힌 분석 자료 구분 이름 가운데 바꿔 찍을 행과 새 이름.
-  ///       열쇠는 `analysisRowKeys` 의 행 이름이다. 서식 글자를 덮고 이
-  ///       이름을 찍는다.
-  /// 근거: 인용 — 2026-10-15 사용자 지시 "Machine 대신 권상기 머신,
-  ///       Belts 대신 로우프"
-  static const Map<String, String> analysisRelabels = <String, String>{
-    'machine': '권상기 머신으로 부터 진동',
-    'belts': '로우프',
-  };
-
-  /// 분석 자료 표의 설명이 시작하는 가로 좌표 (픽셀)
-  static const int analysisDescriptionX = 1172;
-
-  /// 분석 자료 표의 설명을 칸의 어느 쪽에 붙일지
-  static const LayoutAlign analysisDescriptionAlign = LayoutAlign.left;
-
-  /// 분석 자료 표의 설명 글자 크기 (픽셀)
-  static const int analysisDescriptionSize = 28;
-
-  /// 작성: 2026-09-15 19:43:50 · 박건준
-  /// 변수: analysisRowYs
-  /// 목적: 분석 자료 표 일곱 행의 세로 좌표 (픽셀)를 서식에 놓인
-  ///       차례대로 모아 둔 것. 행 이름은 `analysisRowKeys` 와 짝이다.
-  /// 근거: 인용 — 원본 리포트에서 잰 값이다
-  static const List<int> analysisRowYs = <int>[
-    2098,
-    2199,
-    2300,
-    2401,
-    2504,
-    2606,
-    2707,
-  ];
-
-  /// 작성: 2026-09-15 19:43:50 · 박건준
-  /// 변수: analysisRowKeys
-  /// 목적: 분석 자료 표 일곱 행의 이름. `analysisRowYs` 와 같은 차례다.
-  ///       일곱 항목 모두 판정 근거가 없어 지금은 회색으로 비워 둔다.
-  static const List<String> analysisRowKeys = <String>[
-    'car_noise',
-    'machine',
-    'belts',
-    'guide_rail',
-    'transient_noise',
-    'idler_sheave',
-    'guide',
   ];
 }

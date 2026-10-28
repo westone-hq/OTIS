@@ -2,7 +2,7 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-23 00:40:00 · 박건준
+/// 수정: 2026-10-28 15:10:01 · 박희정
 /// 클래스: ReportChartPageLayout
 /// 목적: 차트 쪽의 자리들을 담는다. 머리말 네 칸과 차트 네 자리가 있다.
 ///       1쪽과 달리 쪽 번호 칸이 있고, 쪽 제목이 금색으로 들어간다.
@@ -28,16 +28,8 @@ class ReportChartPageLayout {
     color: ReportColors.gold,
   );
 
-  /// 측정 식별자 (제번). 1쪽과 같은 자리다
-  static const LayoutField measurementId = LayoutField(
-    key: 'measurement_id',
-    x: 222,
-    y: 79,
-    size: 30,
-    align: LayoutAlign.left,
-    weight: LayoutWeight.bold,
-    color: ReportColors.navy,
-  );
+  /// 측정 식별자 (제번). 확대 로고를 피하는 자리를 1쪽과 함께 쓴다
+  static const LayoutField measurementId = ReportPage1Layout.measurementId;
 
   /// 엔지니어명. 1쪽과 같은 칸을 그대로 쓴다 — 자리를 두 곳에 적으면 한쪽만
   /// 고쳐져 어긋난다
