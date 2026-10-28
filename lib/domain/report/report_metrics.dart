@@ -46,8 +46,8 @@ class ReportMetric {
   /// 신호등 색. `ReportThresholds` 가 정한다
   final ReportVerdict verdict;
 
-  /// 황색 · 적색일 때 기본 설명 대신 적는 OTIS 문구 (줄마다 한 항목).
-  /// 측정값은 별도 열에 남는다. 문구를 쓰지 않는 행 · 초록 · 값 없음이면 null
+  /// Z진동의 판정 · 위치 설명 (줄마다 한 항목). 진동값 · 단위는 넣지 않는다.
+  /// 문구를 쓰지 않는 행 · 값 없음이면 null. 측정값은 별도 열에 남는다.
   final List<String>? remarkLines;
 
   /// 작성: 2026-09-15 21:14:33 · 박건준
@@ -61,7 +61,7 @@ class ReportMetric {
   ///       suffix — 꼬리표. 기본 빈 문자열
   ///       yellowLimit, redLimit — 황색 · 적색 칸 기준치. 칸을 비우면
   ///       null
-  ///       remarkLines — 황색 · 적색 문구. 없으면 null
+  ///       remarkLines — 판정 · 위치 문구. 없으면 null
   const ReportMetric({
     required this.key,
     required this.value,
@@ -165,7 +165,7 @@ class ReportMetric {
 ///           256Hz 시계열에서 낸 값이다). 수직 최대는 2026-10-21 부터
 ///           정속 구간 안 최대다
 ///
-///       Z 두 행이 황색 · 적색이면 설명 칸에 OTIS 문구를 적는다
+///       Z 두 행의 판정 · 위치에 따라 설명 칸에 문구를 적는다
 ///       (`remarkLines`, `_verticalRemark()`). 다른 행은 문구가 없다
 ///
 ///       구간을 정하지 못했거나 지표를 저장하기 전의 예전 측정은 값이 빈다
@@ -408,36 +408,36 @@ class ReportMetrics {
   );
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
-  /// 수정: 2026-10-28 16:29:35 · Codex
+  /// 수정: 2026-10-28 22:54:57 · Codex
   /// 함수: _verticalRemark
-  /// 목적: 수직 행이 황색 · 적색이면 OTIS 문구를 붙인 지표로 바꾼다. 초록 ·
-  ///       회색이면 그대로 돌려준다. 문구는 설명 열에 쓰고 측정값 열은 유지한다.
-  ///       - 평균 행: "진동측정결과가 {값} 로" / "일관되게 높게
-  ///         측정되었습니다" ({값}은 표 값 그대로, 예 "14.8milli-G A95")
-  ///       - 최대 행: "최대의 진동 {값} 가 하부층 정지레벨로부터" / "{위치}m
-  ///         에서 측정되었습니다." 위치는 소수 첫째 자리. 위치가 없는
-  ///         2026-10-21 전 결과는 "최대의 진동 {값} 가" / "측정되었습니다."
-  ///       두 줄로 나눠 두는 것은 한 행 높이에 글자 크기를 지키며 넣기
-  ///       위해서다.
+  /// 목적: Z평균은 기존 판정으로 낮음 · 보통 · 높음 문구를 정하고, Z최대는
+  ///       저장된 하부층 기준 위치를 소수 첫째 자리로 적는다. 진동값 · 단위는
+  ///       설명에 반복하지 않는다. 미측정이면 문구를 붙이지 않고, 위치가 없는
+  ///       결과에는 위치 정보가 없다고 적는다. 값 · 판정 · 기준치는 유지한다.
   /// 인자: metric — 수직 행 지표
   ///       positionM — 최대가 나온 위치 (m, 하부층 기준). 평균 행 · 없으면 null
   /// 반환: 문구를 붙인 지표, 또는 받은 지표 그대로
-  /// 근거: 인용 — 2026-10-21 점검 지시. OTIS 리포트 1쪽 황색 · 적색 행 문구
+  /// 근거: 인용 — 2026-10-28 사용자 지시. 중복 진동값 없이 판정 · 위치 설명
   static ReportMetric _verticalRemark(ReportMetric metric, double? positionM) {
-    if (metric.verdict != ReportVerdict.yellow &&
-        metric.verdict != ReportVerdict.red) {
+    if (metric.value == null) {
       return metric;
     }
-    final value = metric.display; // 표 값 그대로 (단위 · 꼬리표 포함)
     final List<String> lines; // 적을 문구
     if (metric.key == 'z_avg') {
-      lines = <String>['진동측정결과가 $value 로', '일관되게 높게 측정되었습니다'];
-    } else if (positionM == null) {
-      lines = <String>['최대의 진동 $value 가', '측정되었습니다.'];
+      final level = switch (metric.verdict) {
+        ReportVerdict.red => '일관되게 높게',
+        ReportVerdict.yellow => '보통 수준으로',
+        ReportVerdict.green => '낮게',
+        _ => null,
+      }; // 수치 판정과 설명을 같은 기준으로 유지한다
+      if (level == null) return metric;
+      lines = <String>['진동측정결과가 $level', '측정되었습니다.'];
+    } else if (positionM == null || !positionM.isFinite || positionM < 0) {
+      lines = <String>['최대 진동 측정 위치 정보가', '없습니다.'];
     } else {
       lines = <String>[
-        '최대의 진동 $value 가 하부층 정지레벨로부터',
-        '${positionM.toStringAsFixed(1)}m 에서 측정되었습니다.',
+        '최대진동이 하부층 정지레벨로부터',
+        '${positionM.toStringAsFixed(1)}m에서 측정되었습니다.',
       ];
     }
     return ReportMetric(

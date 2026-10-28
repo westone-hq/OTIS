@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_page1.dart';
+import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
+import 'package:vibration_checker/domain/report/report_layout.dart';
+import 'package:vibration_checker/domain/report/report_metrics.dart';
 import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 import 'package:vibration_checker/domain/session/site_info.dart';
 
@@ -12,6 +17,46 @@ import 'package:vibration_checker/domain/session/site_info.dart';
 ///       얹혔는지는 숫자로 재기 어려워 눈으로 열어 봐야 한다. 시험이
 ///       끝나도 지우지 않는 이유가 그것이다.
 const _outputPath = 'build/report_page1_test.pdf';
+
+/// 클래스: _RecordingTextWriter
+/// 목적: 실제 PDF를 그리면서 설명 문구와 글자 크기를 함께 기록한다.
+class _RecordingTextWriter extends ReportTextWriter {
+  /// 그린 문구와 설계 좌표 · 글자 크기.
+  final calls = <({String text, num x, num y, num size})>[];
+
+  /// 함수: _RecordingTextWriter
+  /// 목적: 제품과 같은 글꼴로 그리는 기록기를 만든다.
+  _RecordingTextWriter(ReportTextWriter source)
+    : super(regular: source.regular, bold: source.bold);
+
+  /// 함수: drawAt
+  /// 목적: 실제 출력 요청을 보존하고 제품 글자 출력에도 그대로 전달한다.
+  @override
+  void drawAt(
+    PdfGraphics canvas, {
+    required num xPx,
+    required num yPx,
+    required String text,
+    required num sizePx,
+    required LayoutAlign align,
+    required LayoutWeight weight,
+    required int color,
+    num? maxWidthPx,
+  }) {
+    calls.add((text: text, x: xPx, y: yPx, size: sizePx));
+    super.drawAt(
+      canvas,
+      xPx: xPx,
+      yPx: yPx,
+      text: text,
+      sizePx: sizePx,
+      align: align,
+      weight: weight,
+      color: color,
+      maxWidthPx: maxWidthPx,
+    );
+  }
+}
 
 /// 작성: 2026-09-16 09:12:40 · 박건준
 /// 함수: _result
@@ -74,6 +119,73 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ReportPage1Renderer', () {
+    for (final entry in <String, (double?, double?)>{
+      '미측정': (null, null),
+      '초록': (5, 12),
+      '황색': (15, 22),
+      '적색': (22, 31),
+      '큰 값': (6754, 6754),
+    }.entries) {
+      test('Z 설명은 ${entry.key} 결과를 따르고 진동값을 중복하지 않는다', () async {
+        final result = _result().copyWith(
+          zA95: entry.value.$1,
+          zPtp: entry.value.$2,
+          zPtpPositionM: 1.5,
+        );
+        final before = jsonEncode(result.toMap()); // 렌더링 전 데이터 정본
+        final document = PdfDocument();
+        final loaded = await ReportPage1Renderer.load(document);
+        final writer = _RecordingTextWriter(loaded.textWriter);
+        ReportPage1Renderer(
+          document: document,
+          background: loaded.background,
+          headerLogo: loaded.headerLogo,
+          textWriter: writer,
+        ).draw(result: result);
+
+        final metrics = ReportMetrics.from(result);
+        final sizes = <num>[];
+        for (final (y, metric, fallback) in [
+          (ReportPage1Layout.zAvgY, metrics.zAvg, '평균 진동 측정 수치'),
+          (ReportPage1Layout.zMaxY, metrics.zMax, '최대 진동 측정 수치'),
+        ]) {
+          final description = writer.calls
+              .where(
+                (c) =>
+                    c.x == ReportPage1Layout.colDescriptionX &&
+                    (c.y - y).abs() < 40,
+              )
+              .toList();
+          expect(
+            description.map((c) => c.text).toList(),
+            metric.remarkLines ?? [fallback],
+          );
+          for (final call in description) {
+            expect(call.text, isNot(contains('milli-G')));
+            expect(call.text, isNot(contains('A95')));
+            expect(call.text, isNot(contains('6754')));
+            final width =
+                writer.regular.stringMetrics(call.text).advanceWidth *
+                call.size;
+            expect(
+              width,
+              lessThanOrEqualTo(
+                ReportPage1Layout.colDescriptionRightX -
+                    ReportPage1Layout.colDescriptionX +
+                    .001,
+              ),
+            );
+            sizes.add(call.size);
+          }
+        }
+        expect(sizes.toSet(), hasLength(1));
+        expect(writer.calls.any((c) => c.text == metrics.zAvg.display), isTrue);
+        expect(writer.calls.any((c) => c.text == metrics.zMax.display), isTrue);
+        expect(jsonEncode(result.toMap()), before);
+        expect((await document.save()).length, greaterThan(1000));
+      });
+    }
+
     test('1쪽 PDF 를 만들어 낸다', () async {
       final bytes = await renderReportPage1(result: _result()); // 만든 PDF
 

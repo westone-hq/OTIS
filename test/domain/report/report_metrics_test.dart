@@ -430,31 +430,44 @@ void main() {
     });
   });
 
-  group('수직 행 황색 · 적색 문구 (2026-10-21 OTIS)', () {
-    test('초록 · 값 없음은 문구가 없다', () {
-      final metrics = ReportMetrics.from(
-        _result(zPtp: 12.0).copyWith(zA95: 5.0),
-      ); // 초록
+  group('수직 행 판정 · 위치 설명', () {
+    test('값 없음은 판정 · 위치 문구가 없다', () {
+      final metrics = ReportMetrics.from(_result());
       expect(metrics.zMax.remarkLines, isNull);
       expect(metrics.zAvg.remarkLines, isNull);
       expect(ReportMetrics.from(_result()).zMax.remarkLines, isNull);
     });
 
-    test('평균 행은 A95 값을 넣은 두 줄이다', () {
-      final metrics = ReportMetrics.from(_result().copyWith(zA95: 15.4));
-      expect(metrics.zAvg.remarkLines, <String>[
-        '진동측정결과가 15.4milli-G A95 로',
-        '일관되게 높게 측정되었습니다',
-      ]);
-    });
+    for (final entry in <double, String>{
+      5: '낮게',
+      14: '낮게',
+      14.0001: '보통 수준으로',
+      21: '보통 수준으로',
+      21.0001: '일관되게 높게',
+      9145: '일관되게 높게',
+    }.entries) {
+      test('평균 ${entry.key}의 판정 문구에는 진동값을 반복하지 않는다', () {
+        final result = _result().copyWith(zA95: entry.key);
+        final before = jsonEncode(result.toMap());
+        final metric = ReportMetrics.from(result).zAvg;
+        expect(metric.remarkLines, <String>[
+          '진동측정결과가 ${entry.value}',
+          '측정되었습니다.',
+        ]);
+        expect(metric.value, entry.key);
+        expect(metric.remarkLines!.join(), isNot(contains('milli-G')));
+        expect(metric.remarkLines!.join(), isNot(contains('A95')));
+        expect(jsonEncode(result.toMap()), before);
+      });
+    }
 
     test('최대 행은 하부층 기준 위치를 소수 첫째 자리로 적는다', () {
       final metrics = ReportMetrics.from(
         _result(zPtp: 22.04).copyWith(zPtpPositionM: 5.46),
       ); // 황색
       expect(metrics.zMax.remarkLines, <String>[
-        '최대의 진동 22.0milli-G 가 하부층 정지레벨로부터',
-        '5.5m 에서 측정되었습니다.',
+        '최대진동이 하부층 정지레벨로부터',
+        '5.5m에서 측정되었습니다.',
       ]);
       final red = ReportMetrics.from(
         _result(zPtp: 31.0).copyWith(zPtpPositionM: 12.0),
@@ -465,10 +478,32 @@ void main() {
 
     test('위치가 없는 예전 결과는 위치 없이 적는다', () {
       final metrics = ReportMetrics.from(_result(zPtp: 22.0));
-      expect(metrics.zMax.remarkLines, <String>[
-        '최대의 진동 22.0milli-G 가',
-        '측정되었습니다.',
-      ]);
+      expect(metrics.zMax.remarkLines, <String>['최대 진동 측정 위치 정보가', '없습니다.']);
+    });
+
+    for (final peak in [12.0, 20.0, 20.0001, 30.0, 30.0001]) {
+      test('최대 $peak는 색과 무관하게 저장된 하부층 위치를 쓴다', () {
+        for (final direction in ['하부 → 상부', '상부 → 하부']) {
+          final metrics = ReportMetrics.from(
+            _result(
+              zPtp: peak,
+            ).copyWith(zPtpPositionM: 0, direction: direction),
+          );
+          expect(metrics.zMax.remarkLines, <String>[
+            '최대진동이 하부층 정지레벨로부터',
+            '0.0m에서 측정되었습니다.',
+          ]);
+        }
+      });
+    }
+
+    test('잘못된 위치를 실제 측정 거리처럼 출력하지 않는다', () {
+      for (final position in [-1.0, double.nan, double.infinity]) {
+        final metrics = ReportMetrics.from(
+          _result(zPtp: 22).copyWith(zPtpPositionM: position),
+        );
+        expect(metrics.zMax.remarkLines!.join(' '), '최대 진동 측정 위치 정보가 없습니다.');
+      }
     });
 
     test('수평 · 소음 행은 황색이어도 문구가 없다', () {

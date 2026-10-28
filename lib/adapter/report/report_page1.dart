@@ -186,7 +186,7 @@ class ReportPage1Renderer {
   }
 
   /// 작성: 2026-09-16 09:12:40 · 박건준
-  /// 수정: 2026-10-28 16:19:26 · Codex
+  /// 수정: 2026-10-28 22:54:57 · Codex
   /// 함수: _drawMetricsTable
   /// 목적: Performance Metrics 열 행을 찍는다. 행마다 이렇게 한다.
   ///       1. 행 높이에 맞는 줄무늬와 카테고리 이름을 그린다
@@ -194,8 +194,8 @@ class ReportPage1Renderer {
   ///          빨강, 값이 없으면 회색)을 그린다. 소음 2행과 진동 6행이
   ///          해당하고, 최대 속도 · 운행 거리는 원이 없다
   ///       3. 모든 측정값을 같은 열에 찍고 오른쪽 열에 설명을 적는다.
-  ///          황색 · 적색 문구가 있는 행(`ReportMetric.remarkLines`)도 값은
-  ///          남겨 두고 설명 열에 문구를 적는다(`_drawRemark()`)
+  ///          Z 평균 · 최대는 진동값 반복 없이 판정 · 위치 설명을 두 줄로
+  ///          쓴다. 두 행 · 모든 줄은 같은 크기로 맞춘다. 값 · 판정은 유지한다
   ///       4. 서식에 인쇄된 황색 칸과 적색 칸을 덮은 뒤 지표의 황색 · 적색
   ///          기준을 다시 찍는다 — 서식 값과 판정 기준이 어긋나지 않게
   ///          `ReportThresholds` 의 값을 쓴다
@@ -234,6 +234,18 @@ class ReportPage1Renderer {
       );
     }
     final rows = ReportPage1Layout.metricRows; // 서식에 놓인 행 자리
+    final descriptionWidth =
+        ReportPage1Layout.colDescriptionRightX -
+        ReportPage1Layout.colDescriptionX; // 설명 열에서 쓸 수 있는 폭 (픽셀)
+    var remarkSize = ReportPage1Layout.remarkSize.toDouble(); // Z 두 행 공통 크기
+    for (final metric in [metrics.zAvg, metrics.zMax]) {
+      for (final line in metric.remarkLines ?? const <String>[]) {
+        final width = textWriter.regular.stringMetrics(line).advanceWidth;
+        if (width * remarkSize > descriptionWidth) {
+          remarkSize = descriptionWidth / width;
+        }
+      }
+    }
     for (var index = 0; index < rows.length; index++) {
       final row = rows[index]; // 이번에 그릴 행의 자리
       final metric = metrics.rows[index]; // 그 행에 올릴 지표
@@ -298,28 +310,41 @@ class ReportPage1Renderer {
         maxWidthPx:
             ReportPage1Layout.colValueRightX - ReportPage1Layout.colValueX,
       );
-      final remark = metric.remarkLines; // 황색 · 적색 문구, 없으면 null
-      if (remark == null) {
-        if (row.hasLabel) {
+      final remarks = metric.remarkLines; // 값 없음이면 기본 설명을 쓴다
+      if (remarks != null) {
+        for (var line = 0; line < remarks.length; line++) {
           _text(
             canvas,
             xPx: ReportPage1Layout.colDescriptionX,
-            yPx: row.y,
-            text: row.description,
-            sizePx: ReportPage1Layout.valueSize,
+            yPx:
+                row.y +
+                (line - (remarks.length - 1) / 2) *
+                    ReportPage1Layout.remarkLineGap,
+            text: remarks[line],
+            sizePx: remarkSize,
             align: ReportPage1Layout.colValueAlign,
             weight: LayoutWeight.regular,
             color: ReportColors.text,
-            key: '${row.key}.description',
+            key: '${row.key}.remark.$line',
             debug: debug,
-            maxWidthPx:
-                ReportPage1Layout.colDescriptionRightX -
-                ReportPage1Layout.colDescriptionX,
           );
         }
-      } else {
-        // → 로직 이동: _drawRemark()
-        _drawRemark(canvas, row.y, remark, stripe, row.key, debug: debug);
+      } else if (row.hasLabel) {
+        _text(
+          canvas,
+          xPx: ReportPage1Layout.colDescriptionX,
+          yPx: row.y,
+          text: row.description,
+          sizePx: ReportPage1Layout.valueSize,
+          align: ReportPage1Layout.colValueAlign,
+          weight: LayoutWeight.regular,
+          color: ReportColors.text,
+          key: '${row.key}.description',
+          debug: debug,
+          maxWidthPx:
+              ReportPage1Layout.colDescriptionRightX -
+              ReportPage1Layout.colDescriptionX,
+        );
       }
 
       for (final columnX in [
@@ -358,57 +383,6 @@ class ReportPage1Renderer {
         color: ReportColors.text,
         key: '${row.key}.red',
         debug: debug,
-      );
-    }
-  }
-
-  /// 작성: 2026-10-21 13:10:00 · 박건준
-  /// 수정: 2026-10-28 16:19:26 · Codex
-  /// 함수: _drawRemark
-  /// 목적: 황색 · 적색 행의 설명 칸에 OTIS 문구를 적는다. 측정값 열은
-  ///       남기고 설명 칸만 줄무늬 색으로 덮는다. 행 가운데를 사이에 두고
-  ///       줄을 위아래로 놓으며 폭을 넘으면 글자를 줄인다.
-  /// 인자: canvas — 그리기 도구
-  ///       rowY — 행 가운데 세로 좌표 (픽셀)
-  ///       lines — 적을 줄
-  ///       stripe — 이 행의 줄무늬 색
-  ///       key — 디버그 표식에 쓸 행 이름
-  ///       debug — 표식을 함께 찍을지
-  void _drawRemark(
-    PdfGraphics canvas,
-    int rowY,
-    List<String> lines,
-    int stripe,
-    String key, {
-    required bool debug,
-  }) {
-    _erase(
-      canvas,
-      xPx: ReportPage1Layout.remarkEraseX,
-      yPx: rowY - ReportPage1Layout.remarkEraseHeight / 2,
-      widthPx: ReportPage1Layout.remarkEraseWidth,
-      heightPx: ReportPage1Layout.remarkEraseHeight,
-      color: stripe,
-    );
-    final firstY =
-        rowY -
-        ReportPage1Layout.remarkLineGap * (lines.length - 1) / 2; // 첫 줄 자리
-    for (var i = 0; i < lines.length; i++) {
-      _text(
-        canvas,
-        xPx: ReportPage1Layout.remarkX,
-        yPx: firstY + ReportPage1Layout.remarkLineGap * i,
-        text: lines[i],
-        sizePx: ReportPage1Layout.remarkSize,
-        align: ReportPage1Layout.colValueAlign,
-        weight: LayoutWeight.regular,
-        color: ReportColors.text,
-        key: '$key.remark$i',
-        debug: debug,
-        maxWidthPx:
-            ReportPage1Layout.remarkEraseX +
-            ReportPage1Layout.remarkEraseWidth -
-            ReportPage1Layout.remarkX,
       );
     }
   }

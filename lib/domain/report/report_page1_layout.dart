@@ -309,9 +309,10 @@ class ReportPage1Layout {
   /// 구분 이름이 시작하는 가로 좌표 (픽셀)
   static const int colCategoryX = 313;
 
-  /// 측정값 · 설명 열의 왼쪽과 오른쪽 경계 (픽셀). 열 행을 같은 위치에 맞춘다
-  static const int colValueX = 741;
-  static const int colValueRightX = 991;
+  /// 측정값 · 설명 열의 왼쪽과 오른쪽 경계 (픽셀). 측정값은 6px 왼쪽으로
+  /// 옮기고 기존 폭 250px를 유지한다(2026-10-28 사용자 요청).
+  static const int colValueX = 735;
+  static const int colValueRightX = 985;
   static const int colDescriptionX = 1016;
   static const int colDescriptionRightX = 1447;
 

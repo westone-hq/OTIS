@@ -32,7 +32,7 @@ const _layoutJsonPath = 'docs/report_layout.json';
 ///       분석 자료 표를 폐지하고 본문을 덮을 영역을 기록하며 갱신했다.
 ///       서식의 주소 제목만 지울 영역을 더하며 다시 갱신했다.
 ///       하단 로고를 덮을 흰 영역과 원본 상자를 더하며 다시 갱신했다.
-const _layoutJsonMd5 = '39faea4d62227d4f9edc3a95dd5d9519';
+const _layoutJsonMd5 = '021d49f77af6b0da246c51bc1fb61a46';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
 /// 함수: _layout
