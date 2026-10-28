@@ -227,7 +227,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(_startScreenText), findsNothing);
-    expect(find.text('층수는 1 이상 숫자로, 지하층은 B1 처럼 입력하세요'), findsOneWidget);
+    expect(
+      find.text('층수는 1 이상 숫자로,\n지하층은 B1 처럼 입력하세요'),
+      findsOneWidget,
+      reason: '쉼표에서 줄을 바꾼다',
+    );
     expect(find.text('하중은 0 보다 큰 숫자로 입력하세요'), findsOneWidget);
   });
 

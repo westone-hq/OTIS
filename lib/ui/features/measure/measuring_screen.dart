@@ -420,11 +420,12 @@ class _MeasuringScreenState extends State<MeasuringScreen>
   }
 
   /// 작성: 2026-08-18 18:17:48 · 박건준
-  /// 수정: 2026-10-27 12:00:00 · 박건준
+  /// 수정: 2026-10-28 10:00:00 · 박건준
   /// 함수: build
-  /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자와 시작 · 종료
-  ///       안내(`measureGuideLines`)가 있는 카운트다운 화면을, 아니면 경과 시간 · 현재 속도와 "테스트 완료" 버튼이 있는
-  ///       실제 측정 진행 화면을 보여준다. 현재 속도는 측정 중 어림값
+  /// 목적: 측정 화면을 그린다. 카운트다운 중이면 큰 숫자와 "잠시 후 측정이
+  ///       시작됩니다..." 가 있는 카운트다운 화면을(2026-10-28 안내 세 줄을
+  ///       빼고 되돌림), 아니면 경과 시간 · 현재 속도와 "테스트 완료" 버튼이
+  ///       있는 실제 측정 진행 화면을 보여준다. 현재 속도는 측정 중 어림값
   ///       (`CaptureSession.liveSpeedMps`)이고 소수 첫째 자리까지 적는다.
   ///       기준선을 모으는 첫 1초 동안은 값 대신 "—" 를 적는다. 저장하는
   ///       최대 속도는 측정이 끝난 뒤 따로 계산하므로 다를 수 있다.
@@ -440,16 +441,9 @@ class _MeasuringScreenState extends State<MeasuringScreen>
               children: [
                 Text('$_countdownSec', style: AppText.countdown),
                 const SizedBox(height: AppDims.gap3),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDims.screenPad,
-                  ),
-                  child: Text(
-                    // → 로직 이동: measureGuideLines
-                    measureGuideLines.join('\n'),
-                    textAlign: TextAlign.center,
-                    style: AppText.subhead.copyWith(color: AppColors.onDark),
-                  ),
+                Text(
+                  '잠시 후 측정이 시작됩니다...',
+                  style: AppText.subhead.copyWith(color: AppColors.onDark),
                 ),
                 const SizedBox(height: AppDims.gap6),
                 ElevatedButton(
@@ -596,7 +590,7 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                   message: <String>[
                     '측정 중입니다. 휴대폰을 움직이지 마세요.',
                     measureEndGuide, // → 로직 이동: measureEndGuide
-                    measureWaitGuide, // → 로직 이동: measureWaitGuide
+                    measureIdleGuide, // → 로직 이동: measureIdleGuide
                   ].join('\n'),
                   tone: NoticeTone.alert,
                 ),

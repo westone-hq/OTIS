@@ -96,7 +96,7 @@ class PlacementSheet extends StatelessWidget {
   }
 
   /// 작성: 2026-08-17 18:55:14 · 박건준
-  /// 수정: 2026-10-27 12:00:00 · 박건준
+  /// 수정: 2026-10-28 10:00:00 · 박건준
   /// 함수: build
   /// 목적: 거치 안내 바텀 시트의 레이아웃을 구성한다. 3 · 4단계는 시작 ·
   ///       종료 알림음 안내(`measure_guide.dart`)를 그대로 쓴다.
@@ -161,17 +161,17 @@ class PlacementSheet extends StatelessWidget {
                     _buildStepItem(
                       2,
                       '휴대폰을 뒤집어 그림과 같은 방향으로 놓으세요. '
-                      '출입구를 바라보고 섰을 때 휴대폰 위쪽이 왼쪽입니다',
+                      '출입구를 바라보고 섰을 때 휴대폰 위쪽이 왼쪽을 향하도록 합니다.',
                     ),
                     _buildStepItem(
                       3,
-                      // → 로직 이동: measureStartGuide
-                      '$measureStartGuide. 시작되면 엘리베이터를 움직이세요',
+                      // → 로직 이동: measureBeepGuide
+                      '$measureBeepGuide 시작되면 엘리베이터를 움직이세요',
                     ),
                     _buildStepItem(
                       4,
                       // → 로직 이동: measureEndGuide
-                      '$measureEndGuide $measureWaitGuide',
+                      '$measureEndGuide $measureIdleGuide',
                     ),
                     const SizedBox(height: AppDims.gap),
 

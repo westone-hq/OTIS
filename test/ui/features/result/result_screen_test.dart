@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
-import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/features/result/result_charts_screen.dart';
 import 'package:vibration_checker/ui/features/result/result_screen.dart';
 
@@ -281,7 +280,7 @@ void main() {
     expect(find.text('비교 해제'), findsOneWidget);
   });
 
-  testWidgets('테스트 재실행은 운전 방향부터 묻고 반대 방향을 권한다', (tester) async {
+  testWidgets('테스트 재실행은 운전 방향부터 묻고 상승 · 하강을 같은 모양으로 나란히 둔다', (tester) async {
     await tester.runAsync(
       () => MeasurementRepository.instance.save(
         _result('20260114-110359', DateTime(2026, 1, 14, 11, 3, 59), 20.0),
@@ -296,10 +295,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('운전 방향 확인'), findsOneWidget);
-    final down = tester.widget<AppDialogButton>(
-      find.widgetWithText(AppDialogButton, '하강'),
-    ); // 지난 측정(상승)의 반대 방향 버튼
-    expect(down.primary, isTrue);
+    final up = find.widgetWithText(OutlinedButton, '상승'); // 상승 버튼
+    final down = find.widgetWithText(OutlinedButton, '하강'); // 하강 버튼
+    expect(up, findsOneWidget);
+    expect(down, findsOneWidget, reason: '둘 다 같은 테두리 버튼이다');
+    final upRect = tester.getRect(up); // 상승 버튼 자리
+    final downRect = tester.getRect(down); // 하강 버튼 자리
+    expect(upRect.center.dy, closeTo(downRect.center.dy, 0.5), reason: '한 줄');
+    expect(upRect.right, lessThan(downRect.left), reason: '상승이 왼쪽');
+    expect(upRect.width, closeTo(downRect.width, 0.5), reason: '같은 폭');
+    expect(upRect.height, greaterThanOrEqualTo(56));
+
+    await tester.tap(down);
+    await tester.pumpAndSettle();
+    expect(find.text('운전 방향 확인'), findsNothing, reason: '고르면 닫힌다');
   });
 
   testWidgets('필수 항목이 빠진 예전 결과는 재실행하지 않고 홈 입력을 안내한다', (tester) async {

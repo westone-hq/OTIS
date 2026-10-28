@@ -320,16 +320,17 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-10-05 10:03:35 · 박건준
+  /// 수정: 2026-10-28 10:00:00 · 박건준
   /// 함수: _askDirection
-  /// 목적: 다시 잴 운전 방향을 고르게 한다. 지난 측정과 반대 방향을 주
-  ///       버튼으로 두어 한 번에 고를 수 있게 한다. 바깥을 누르면 취소다.
+  /// 목적: 다시 잴 운전 방향을 고르게 한다. 상승 · 하강 두 버튼을 같은
+  ///       모양 · 같은 폭으로 좌우에 나란히 둔다 — 예전에는 지난 측정의 반대
+  ///       방향만 채운 버튼이 한 줄을 다 차지하고 다른 방향은 글자처럼 보였다
+  ///       (2026-10-28 사용자 지시 "둘 다 버튼처럼, 좌우로, 똑같은 모양").
+  ///       지난 방향은 문구로 알린다. 바깥을 누르면 취소다.
   /// 인자: last — 지난 측정의 운전 방향
   /// 반환: 고른 방향(`SiteInfo.directionUp` 또는 `directionDown`).
   ///       취소했으면 null
   Future<String?> _askDirection(String last) {
-    final suggested = last == SiteInfo.directionUp
-        ? SiteInfo.directionDown
-        : SiteInfo.directionUp; // 주 버튼으로 둘 방향
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -339,15 +340,29 @@ class _ResultScreenState extends State<ResultScreen> {
           style: AppText.body,
         ),
         actions: [
-          for (final option in <String>[
-            SiteInfo.directionUp,
-            SiteInfo.directionDown,
-          ])
-            AppDialogButton(
-              label: option,
-              onPressed: () => Navigator.of(ctx).pop(option),
-              primary: option == suggested,
-            ),
+          Row(
+            // 상승 · 하강을 같은 폭으로 나눈 한 줄
+            children: [
+              for (final option in <String>[
+                SiteInfo.directionUp,
+                SiteInfo.directionDown,
+              ]) ...[
+                if (option != SiteInfo.directionUp)
+                  const SizedBox(width: AppDims.gap),
+                Expanded(
+                  child: OutlinedButton(
+                    // 주 버튼 높이를 직접 준다 — 대화상자 버튼 줄은 앱
+                    // 테마 높이를 따르지 않을 때가 있어 56dp 를 지킨다
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(AppDims.buttonH),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(option),
+                    child: Text(option),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -559,13 +574,14 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   /// 작성: 2026-07-03 15:21:58 · 박건준
-  /// 수정: 2026-10-27 14:00:00 · 박건준
+  /// 수정: 2026-10-28 10:00:00 · 박건준
   /// 함수: build
   /// 목적: 결과 화면을 그린다.
   ///       - 읽는 중이면 진행 표시, 못 찾았으면 안내 박스
-  ///       - `body` — 머리 카드 → 경고 박스(`resultWarnings()`, 있을 때만)
-  ///         → (비교 중이면 비교 대상 줄) → 지표 아홉 줄 → "그래프 보기"
-  ///         버튼(그래프는 따로 연다, `ResultChartsScreen`, 2026-10-27)
+  ///       - `body` — 머리 카드 → "그래프 보기" 버튼(그래프는 따로 연다,
+  ///         `ResultChartsScreen`. 2026-10-28 지표 아래에서 머리 카드 아래로
+  ///         올림) → 경고 박스(`resultWarnings()`, 있을 때만) → (비교 중이면
+  ///         비교 대상 줄) → 지표 아홉 줄
   ///       - `bottomNavigationBar` — 결과 비교 · 메일 발송, 그 아래
   ///         테스트 재실행(진행 중에는 막는다). 반 폭 버튼 두 개라 문구를
   ///         다섯 글자로 맞춘다 — "메일 보내기" 는 360dp 폭에서 두 줄로
@@ -594,6 +610,13 @@ class _ResultScreenState extends State<ResultScreen> {
           : AppScrollBody(
               children: [
                 _buildHeader(result), // → 로직 이동: _buildHeader()
+                const SizedBox(height: AppDims.gap),
+                OutlinedButton.icon(
+                  // → 로직 이동: ResultChartsScreen.build()
+                  onPressed: () => context.push('/result/${widget.id}/charts'),
+                  icon: const Icon(Icons.show_chart),
+                  label: const Text('그래프 보기'),
+                ),
                 const SizedBox(height: AppDims.gap2),
                 // → 로직 이동: resultWarnings()
                 for (final warning in resultWarnings(result)) ...[
@@ -614,13 +637,6 @@ class _ResultScreenState extends State<ResultScreen> {
                   _buildMetricRow(metric, result),
                   const SizedBox(height: AppDims.gap),
                 ],
-                const SizedBox(height: AppDims.gap),
-                OutlinedButton.icon(
-                  // → 로직 이동: ResultChartsScreen.build()
-                  onPressed: () => context.push('/result/${widget.id}/charts'),
-                  icon: const Icon(Icons.show_chart),
-                  label: const Text('그래프 보기'),
-                ),
               ],
             ),
       bottomNavigationBar: result == null
