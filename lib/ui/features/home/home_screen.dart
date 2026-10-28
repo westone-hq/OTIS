@@ -16,7 +16,7 @@ import 'package:vibration_checker/ui/features/home/widgets/site_text_field.dart'
 import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
 /// 작성: 2026-08-17 12:40:41 · 박건준
-/// 수정: 2026-10-27 11:00:00 · 박건준
+/// 수정: 2026-10-28 10:50:00 · 박건준
 /// 클래스: HomeScreen
 /// 목적: 이번 측정의 현장 정보(제번, 현장명, 층수, 운전 방향, 기종, 하중,
 ///       해석 종류, 추가 참고사항)를 입력받고 측정을 시작하는 홈 화면.
@@ -25,8 +25,8 @@ import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 ///         본문 글자 크기 18 이상으로 맞춘다
 ///       - 입력 오류는 색·아이콘·문구 세 가지를 함께 표시하고, 오류가 난
 ///         위치로 자동 스크롤한다
-///       - 앱이 켜져 처음 뜰 때 한 번 업데이트를 확인한다
-///         (`UpdatePrompt.checkAtLaunch()`)
+///       - 앱이 켜져 처음 뜰 때 업데이트를 확인한다. 로그인 화면에서 이미
+///         안내했으면 다시 띄우지 않는다(`UpdatePrompt.checkAtLaunch()`)
 class HomeScreen extends StatefulWidget {
   /// 작성: 2026-10-13 14:27:24 · 박건준
   /// 함수: HomeScreen
