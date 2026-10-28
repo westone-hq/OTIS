@@ -10,10 +10,13 @@ import 'package:vibration_checker/ui/core/widgets/app_dialog.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
 
 /// 작성: 2026-10-13 14:18:51 · 박건준
+/// 수정: 2026-10-28 10:50:00 · 박건준
 /// 클래스: UpdatePrompt
 /// 목적: 앱 안 업데이트 안내의 화면 흐름. 확인(`UpdateChecker`)과 설치
 ///       (`UpdateInstaller`) 결과를 받아 창과 문구만 고른다.
-///       - 앱 시작 때 한 번: 홈 화면이 `checkAtLaunch()` 를 부른다
+///       - 앱 시작 때 한 번: 로그인 화면과 홈 화면이 `checkAtLaunch()` 를
+///         부른다. 로그인하지 않아도 업데이트 창이 떠야 한다(2026-10-28
+///         사용자 지시) — 필수 업데이트가 로그인 앞에서 막히면 안 된다
 ///       - 수동 확인: 설정 화면 "업데이트 확인" 이 `checkManually()` 를
 ///         부른다
 ///       측정 · 결과 화면에서는 부르지 않는다. 확인이 끝났을 때 홈 화면이
@@ -34,21 +37,30 @@ class UpdatePrompt {
   /// 내려받기 · 설치 통로
   final UpdateInstaller _installer;
 
-  /// 이번 앱 실행에서 시작 확인을 이미 했는지. 홈 화면이 다시 만들어져도
-  /// 한 번만 확인하려고 실행 전체에 하나만 둔다. 앱을 다시 켜면 false
-  static bool _launchChecked = false;
+  /// 이번 앱 실행에서 시작 확인 결과를 화면에 넘겼는지. 로그인 화면 · 홈
+  /// 화면이 다시 만들어져도 한 번만 안내하려고 실행 전체에 하나만 둔다.
+  /// 확인이 끝났을 때 부른 화면이 맨 위가 아니었으면 false 로 남겨 다음에
+  /// 뜨는 화면이 다시 확인한다. 앱을 다시 켜면 false
+  static bool _launchHandled = false;
 
   /// 작성: 2026-10-13 14:18:51 · 박건준
+  /// 수정: 2026-10-28 10:50:00 · 박건준
   /// 함수: checkAtLaunch
   /// 목적: 앱 시작 때 한 번 업데이트를 확인하고, 있으면 안내한다. 확인하지
-  ///       못하면(인터넷 없음 등) 아무것도 띄우지 않는다. 확인하는 동안
-  ///       사용자가 측정으로 넘어갔으면 창을 띄우지 않는다.
-  /// 인자: context — 홈 화면의 위치 정보
+  ///       못하면(인터넷 없음 등) 아무것도 띄우지 않는다.
+  ///       - 확인하는 동안 부른 화면을 떠났으면(로그인해 홈으로 갔거나 측정을
+  ///         시작했으면) 그 화면에는 창을 띄우지 않고, 다음에 이 함수를 부르는
+  ///         화면에 맡긴다. 확인을 시작할 때 "했다" 고 적으면 로그인 도중
+  ///         확인이 끝난 실행은 홈에서도 창이 뜨지 않는다
+  ///       - 로그인 화면과 홈 화면이 동시에 확인 중일 수 있어, 결과를 넘기기
+  ///         직전에 한 번 더 본다. 맨 위 화면은 하나라 창은 한 번만 뜬다
+  /// 인자: context — 부른 화면(로그인 · 홈)의 위치 정보
   Future<void> checkAtLaunch(BuildContext context) async {
-    if (_launchChecked) return;
-    _launchChecked = true;
+    if (_launchHandled) return;
     final check = await _checker.check(); // → 로직 이동: UpdateChecker.check()
+    if (_launchHandled) return;
     if (!context.mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    _launchHandled = true;
     await offer(context, check); // → 로직 이동: offer()
   }
 

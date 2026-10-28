@@ -5,23 +5,34 @@ import 'package:vibration_checker/domain/auth/worker_directory.dart';
 import 'package:vibration_checker/ui/core/theme.dart';
 import 'package:vibration_checker/ui/core/widgets/app_layout.dart';
 import 'package:vibration_checker/ui/core/widgets/app_snack_bar.dart';
+import 'package:vibration_checker/ui/features/update/update_prompt.dart';
 
 /// 작성: 2026-10-18 09:41:12 · 박건준
+/// 수정: 2026-10-28 10:50:00 · 박건준
 /// 클래스: LoginScreen
 /// 목적: 로그인 화면. 사번 · 비밀번호를 받아 `LoginStore.login()` 에 넘기고,
 ///       받아 주면 홈으로 간다. 로그인 전에는 라우터(router.dart)가 모든
 ///       화면을 이 화면으로 돌린다. 판정은 `WorkerDirectory` 가 하고 이
 ///       화면은 사유에 맞는 문구와 옮겨 갈 입력칸만 고른다.
+///       앱이 켜져 로그인 화면이 먼저 뜨면 여기서 업데이트를 확인한다
+///       (`UpdatePrompt.checkAtLaunch()`) — 로그인하지 않아도 업데이트 창이
+///       떠야 한다(2026-10-28 사용자 지시).
 class LoginScreen extends StatefulWidget {
   /// 작성: 2026-10-18 09:41:12 · 박건준
+  /// 수정: 2026-10-28 10:50:00 · 박건준
   /// 함수: LoginScreen
   /// 목적: 로그인 화면을 만든다.
   /// 인자: store — 로그인을 맡길 저장소. 안 주면 `LoginStore.instance`.
   ///       시험은 가짜 명단을 읽는 저장소를 준다
-  const LoginScreen({super.key, this.store});
+  ///       updatePrompt — 시작 때 쓸 업데이트 안내 흐름. 안 주면 실제
+  ///       서버 · 안드로이드 설치 통로로 만든다
+  const LoginScreen({super.key, this.store, this.updatePrompt});
 
   /// 로그인을 맡길 저장소. null 이면 `LoginStore.instance`
   final LoginStore? store;
+
+  /// 시작 때 쓸 업데이트 안내 흐름. null 이면 기본 흐름
+  final UpdatePrompt? updatePrompt;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -48,6 +59,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// 로그인 판정을 기다리는 중인지. 그동안 버튼을 꺼 두 번 누르지 않게 한다
   bool _busy = false;
+
+  /// 작성: 2026-10-28 10:50:00 · 박건준
+  /// 함수: initState
+  /// 목적: 첫 화면을 그린 뒤 업데이트를 확인한다 — 창을 띄우려면 화면이
+  ///       먼저 그려져 있어야 한다.
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final prompt = widget.updatePrompt ?? UpdatePrompt(); // 업데이트 안내 흐름
+      // → 로직 이동: UpdatePrompt.checkAtLaunch()
+      prompt.checkAtLaunch(context);
+    });
+  }
 
   /// 작성: 2026-10-18 09:41:12 · 박건준
   /// 함수: dispose
