@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-11 앱 업데이트 — 시퀀스 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px}
+  .head rect{fill:var(--card);stroke:var(--ink2);stroke-width:1.4}
+  .head text{font-size:13.5px;font-weight:700;fill:var(--ink);text-anchor:middle}
+  .head .fig{stroke:var(--ink);stroke-width:1.6;fill:none;stroke-linecap:round}
+  .head .hd{fill:var(--card)}
+  .life{stroke:var(--rule);stroke-width:1.2;stroke-dasharray:5 5}
+  .bar{fill:var(--card);stroke:var(--ink2);stroke-width:1.2}
+  a.ms{text-decoration:none;cursor:pointer}
+  a.ms .ln{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  a.ms .ln.reply{stroke-dasharray:6 4}
+  a.ms .hit{stroke:transparent;stroke-width:14;fill:none}
+  a.ms .tx{font-size:13px;fill:var(--ink)}
+  a.ms .tx .cond{fill:var(--extend);font-weight:700}
+  a.ms .no{font-size:10px;fill:var(--ink3);font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.ms:hover .ln,a.ms:focus .ln{stroke:var(--signal);stroke-width:2}
+  a.ms:hover .tx,a.ms:focus .tx{fill:var(--signal);font-weight:700}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-11 앱 업데이트</span><span class="tabs"><a href="otis_act_UC11.html">액티비티</a><span class="on">시퀀스</span></span><span class="right"><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 1277 854" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-11 앱 업데이트 — 시퀀스 다이어그램">
+<defs>
+<marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0.5,0.8 L9,5 L0.5,9.2" fill="none" stroke="context-stroke" stroke-width="1.4"/></marker>
+</defs>
+<g id="rep"></g><g id="lifelines"></g><g id="bars"></g><g id="msgs"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const D={"L": [{"k": "작업자", "n": "작업자", "x": 75.0, "actor": true}, {"k": "HomeScreen", "n": ":HomeScreen", "x": 206.9, "actor": false}, {"k": "UpdatePrompt", "n": ":UpdatePrompt", "x": 396.4, "actor": false}, {"k": "UpdateChecker", "n": ":UpdateChecker", "x": 574.0, "actor": false}, {"k": "PrefsStore", "n": ":PrefsStore", "x": 863.6, "actor": false}, {"k": "UpdateInstaller", "n": ":UpdateInstaller", "x": 1038.0, "actor": false}, {"k": "배포 저장소", "n": "배포 저장소", "x": 1194.3, "actor": true}], "M": [[1, "작업자", "HomeScreen", "sync", 140, "앱을 켠다", null, "설정의 ‘업데이트 확인’도 같은 흐름이다(나중에 기록은 보지 않는다).", [{"n": "initState()", "p": "lib/ui/features/home/home_screen.dart", "a": 148, "b": 167}, {"n": "_checkUpdate()", "p": "lib/ui/features/settings/settings_screen.dart", "a": 99, "b": 109}], [141.0, 131, "middle", 0]], [2, "HomeScreen", "UpdatePrompt", "sync", 178, "업데이트를 확인한다", null, "이번 실행에서 한 번만.", [{"n": "checkAtLaunch()", "p": "lib/ui/features/update/update_prompt.dart", "a": 41, "b": 53}, {"n": "checkManually()", "p": "lib/ui/features/update/update_prompt.dart", "a": 55, "b": 80}], [301.7, 169, "middle", 0]], [3, "UpdatePrompt", "UpdateChecker", "sync", 216, "새 버전이 있는지 묻는다", null, "", [{"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}], [485.2, 207, "middle", 0]], [4, "UpdateChecker", "배포 저장소", "sync", 254, "version.json을 받는다", null, "3초 한도.", [{"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}], [718.8, 245, "middle", 0]], [5, "배포 저장소", "UpdateChecker", "reply", 292, "최신 · 최소 빌드", null, "", [{"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}, {"n": "UpdateInfo", "p": "lib/domain/update/update_info.dart", "a": 64, "b": 201}], [718.8, 283, "middle", 0]], [6, "UpdateChecker", "PrefsStore", "sync", 330, "‘나중에’ 기록을 읽는다", "선택 · 시작 확인", "", [{"n": "loadUpdateSnooze()", "p": "lib/adapter/storage/prefs_store.dart", "a": 129, "b": 142}, {"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}], [718.8, 321, "middle", 0]], [7, "UpdateChecker", "UpdatePrompt", "reply", 368, "필수 · 선택 · 없음", null, "못 받았으면 없음과 사유.", [{"n": "check()", "p": "lib/adapter/update/update_checker.dart", "a": 99, "b": 162}, {"n": "decide()", "p": "lib/domain/update/update_decision.dart", "a": 15, "b": 27}], [485.2, 359, "middle", 0]], [8, "UpdatePrompt", "작업자", "sync", 406, "새 버전 창을 띄운다", null, "필수면 닫을 수 없다.", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}], [301.7, 397, "middle", 0]], [9, "작업자", "UpdatePrompt", "reply", 444, "‘업데이트’ 또는 ‘나중에’", null, "", [{"n": "offer()", "p": "lib/ui/features/update/update_prompt.dart", "a": 82, "b": 119}], [301.7, 435, "middle", 0]], [10, "UpdatePrompt", "PrefsStore", "sync", 482, "하루 동안 묻지 않게 남긴다", "나중에", "", [{"n": "snooze()", "p": "lib/adapter/update/update_checker.dart", "a": 164, "b": 172}, {"n": "saveUpdateSnooze()", "p": "lib/adapter/storage/prefs_store.dart", "a": 144, "b": 154}], [718.8, 473, "middle", 0]], [11, "UpdatePrompt", "UpdateInstaller", "sync", 520, "설치가 허용됐는지 묻는다", "업데이트", "꺼져 있으면 설정 화면을 연다.", [{"n": "_ensureInstallAllowed()", "p": "lib/ui/features/update/update_prompt.dart", "a": 202, "b": 232}, {"n": "canInstall()", "p": "lib/adapter/update/update_installer.dart", "a": 90, "b": 96}], [718.8, 511, "middle", 0]], [12, "UpdatePrompt", "UpdateInstaller", "sync", 558, "APK를 내려받는다", null, "", [{"n": "_download()", "p": "lib/ui/features/update/update_prompt.dart", "a": 310, "b": 324}, {"n": "download()", "p": "lib/adapter/update/update_installer.dart", "a": 118, "b": 138}], [718.8, 549, "middle", 0]], [13, "UpdateInstaller", "배포 저장소", "sync", 596, "APK를 받는다", null, "", [{"n": "startDownload()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 275, "b": 358}], [1116.2, 587, "middle", 0]], [14, "UpdateInstaller", "UpdatePrompt", "async", 634, "진행률", null, "", [{"n": "progress()", "p": "lib/adapter/update/update_installer.dart", "a": 107, "b": 116}, {"n": "sendProgress()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 374, "b": 385}], [718.8, 625, "middle", 0]], [15, "UpdateInstaller", "UpdatePrompt", "reply", 672, "받은 파일", null, "SHA-256이 다르면 지우고 실패.", [{"n": "download()", "p": "lib/adapter/update/update_installer.dart", "a": 118, "b": 138}, {"n": "startDownload()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 275, "b": 358}], [718.8, 663, "middle", 0]], [16, "UpdatePrompt", "UpdateInstaller", "sync", 710, "설치를 넘긴다", null, "", [{"n": "install()", "p": "lib/adapter/update/update_installer.dart", "a": 148, "b": 171}, {"n": "startInstall()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/update/UpdateInstaller.kt", "a": 387, "b": 428}], [718.8, 701, "middle", 0]], [17, "UpdateInstaller", "UpdatePrompt", "reply", 748, "설치 결과", null, "성공 · 취소 · 서명 다름 · 실패.", [{"n": "install()", "p": "lib/adapter/update/update_installer.dart", "a": 148, "b": 171}], [718.8, 739, "middle", 0]], [18, "UpdatePrompt", "작업자", "reply", 786, "실패를 알린다", "실패", "필수면 창을 다시 띄운다.", [{"n": "_runUpdate()", "p": "lib/ui/features/update/update_prompt.dart", "a": 136, "b": 200}], [301.7, 777, "middle", 0]]], "R": [], "BOT": 834};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const LX={}; D.L.forEach(l=>LX[l.k]=l.x);
+// 활성 막대: 메시지에서 자동 계산
+function computeBars(){
+  const GAP=200, PAD=10, touch={};
+  const add=(k,v)=>{(touch[k]=touch[k]||[]).push(v);};
+  D.M.forEach(m=>{const [,from,to,kind,y]=m;
+    if(kind==="self"){add(from,y);add(from,y+30);} else {add(from,y);add(to,y);}});
+  const bars=[];
+  for(const k in touch){
+    const lf=D.L.find(l=>l.k===k);
+    if(!lf||lf.actor) continue;
+    const ys=[...new Set(touch[k])].sort((a,b)=>a-b);
+    let s=ys[0],p=ys[0];
+    for(let i=1;i<ys.length;i++){
+      if(ys[i]-p>GAP){bars.push([k,s-PAD,p+PAD]);s=ys[i];}
+      p=ys[i];
+    }
+    bars.push([k,s-PAD,p+PAD]);
+  }
+  return bars;
+}
+const KIND={sync:"동기",reply:"반환",self:"자기호출",async:"비동기"};
+const gl=document.getElementById('lifelines'),gb=document.getElementById('bars'),
+      gr=document.getElementById('rep'),gm=document.getElementById('msgs');
+D.L.forEach(l=>{
+  const g=el("g",{class:"head dim"}); g.dataset.key=l.k;
+  if(l.actor){
+    g.appendChild(el("circle",{class:"fig hd",cx:l.x,cy:26,r:11}));
+    g.appendChild(el("path",{class:"fig",d:`M${l.x},37 L${l.x},63 M${l.x-16},48 L${l.x+16},48 M${l.x},63 L${l.x-12},84 M${l.x},63 L${l.x+12},84`}));
+    const t=el("text",{x:l.x,y:102}); t.textContent=l.n; g.appendChild(t);
+  }else{
+    const t=el("text",{x:l.x,y:65}); t.textContent=l.n; g.appendChild(t);
+    gl.appendChild(g);
+    const w=Math.max(110,t.getBBox().width+28);
+    g.insertBefore(el("rect",{x:l.x-w/2,y:38,width:w,height:44,rx:2}),t);
+  }
+  gl.appendChild(g);
+  gl.appendChild(el("line",{class:"life dim",x1:l.x,y1:l.actor?110:82,x2:l.x,y2:D.BOT}));
+});
+computeBars().forEach(([k,a,b])=>gb.appendChild(el("rect",{class:"bar dim",x:LX[k]-6,y:a,width:12,height:b-a})));
+D.R.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.lx,y:r.y+17}); t.textContent=r.label; gr.appendChild(t);
+});
+D.M.forEach(m=>{
+  const [no,from,to,kind,y,label,cond,desc,fns,[tx,ty,anch,side]]=m;
+  const a=el("a",{class:"ms dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=no; a.dataset.from=from; a.dataset.to=to;
+  const nm=k=>{const l=D.L.find(z=>z.k===k);return l.actor?l.n:":"+l.k;};
+  const ti=el("title");
+  ti.textContent=no+". "+label+(cond?"  [조건: "+cond+"]":"")+"\n"+nm(from)+" → "+nm(to)+" · "+KIND[kind]+"\n"+desc+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  const x1=LX[from],x2=LX[to];
+  let d;
+  if(kind==="self"){
+    if(side>0){ const s=x1+6; d=`M${s},${y} L${s+52},${y} L${s+52},${y+30} L${s+7},${y+30}`; }
+    else { const s=x1-6; d=`M${s},${y} L${s-52},${y} L${s-52},${y+30} L${s-7},${y+30}`; }
+  } else {
+    const dir=x2>x1?1:-1;
+    d=`M${x1+6*dir},${y} L${x2-6*dir},${y}`;
+  }
+  a.appendChild(el("path",{class:"hit",d:d}));
+  a.appendChild(el("path",{class:"ln"+(kind==="reply"||kind==="async"?" reply":""),d:d,
+    "marker-end":(kind==="reply"||kind==="async")?"url(#ao)":"url(#af)"}));
+  const t=el("text",{class:"tx",x:tx,y:ty,"text-anchor":anch});
+  if(cond){const c=el("tspan",{class:"cond"});c.textContent="["+cond+"] ";t.appendChild(c);}
+  t.appendChild(document.createTextNode(label)); a.appendChild(t);
+  const n=el("text",{class:"no",x:(kind==="self"?(side>0?x1+10:x1-22):Math.min(x1,x2)+10),
+                     y:y+(kind==="self"?-6:14),"text-anchor":"start"});
+  n.textContent=no; a.appendChild(n);
+  gm.appendChild(a);
+});
+const svg=document.getElementById('dg');
+const msgs=[...gm.querySelectorAll('a.ms')];
+function iso(no){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!no){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const m=D.M.find(z=>z[0]===no);
+  msgs.forEach(a=>{if(+a.dataset.key===no)a.classList.add('lit');});
+  svg.querySelectorAll('.head').forEach(h=>{if(h.dataset.key===m[1]||h.dataset.key===m[2])h.classList.add('lit');});
+}
+msgs.forEach(a=>{
+  const k=+a.dataset.key;
+  a.addEventListener('mouseenter',()=>iso(k));
+  a.addEventListener('mouseleave',()=>iso(null));
+  a.addEventListener('focus',()=>iso(k));
+  a.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-03 진동 · 소음 측정 — 시퀀스 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px}
+  .head rect{fill:var(--card);stroke:var(--ink2);stroke-width:1.4}
+  .head text{font-size:13.5px;font-weight:700;fill:var(--ink);text-anchor:middle}
+  .head .fig{stroke:var(--ink);stroke-width:1.6;fill:none;stroke-linecap:round}
+  .head .hd{fill:var(--card)}
+  .life{stroke:var(--rule);stroke-width:1.2;stroke-dasharray:5 5}
+  .bar{fill:var(--card);stroke:var(--ink2);stroke-width:1.2}
+  a.ms{text-decoration:none;cursor:pointer}
+  a.ms .ln{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  a.ms .ln.reply{stroke-dasharray:6 4}
+  a.ms .hit{stroke:transparent;stroke-width:14;fill:none}
+  a.ms .tx{font-size:13px;fill:var(--ink)}
+  a.ms .tx .cond{fill:var(--extend);font-weight:700}
+  a.ms .no{font-size:10px;fill:var(--ink3);font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.ms:hover .ln,a.ms:focus .ln{stroke:var(--signal);stroke-width:2}
+  a.ms:hover .tx,a.ms:focus .tx{fill:var(--signal);font-weight:700}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-03 진동 · 소음 측정</span><span class="tabs"><a href="otis_act_UC03.html">액티비티</a><span class="on">시퀀스</span></span><span class="right"><a href="otis_seq_UCI4.html">소음 측정</a><a href="otis_seq_UC04.html">측정 결과 저장</a><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 2330 1406" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-03 진동 · 소음 측정 — 시퀀스 다이어그램">
+<defs>
+<marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0.5,0.8 L9,5 L0.5,9.2" fill="none" stroke="context-stroke" stroke-width="1.4"/></marker>
+</defs>
+<g id="rep"></g><g id="lifelines"></g><g id="bars"></g><g id="msgs"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const D={"L": [{"k": "작업자", "n": "작업자", "x": 75.0, "actor": true}, {"k": "MeasuringScreen", "n": ":MeasuringScreen", "x": 391.4, "actor": false}, {"k": "CaptureSession", "n": ":CaptureSession", "x": 691.9, "actor": false}, {"k": "GridResampler", "n": ":GridResampler", "x": 933.3, "actor": false}, {"k": "PlacementMonitor", "n": ":PlacementMonitor", "x": 1121.7, "actor": false}, {"k": "SensorChannelManager", "n": ":SensorChannelManager", "x": 1340.8, "actor": false}, {"k": "MainActivity", "n": ":MainActivity", "x": 1540.6, "actor": false}, {"k": "SensorMethodHandler", "n": ":SensorMethodHandler", "x": 1736.3, "actor": false}, {"k": "NoiseCaptureHandler", "n": ":NoiseCaptureHandler", "x": 1963.7, "actor": false}, {"k": "SensorStreamHandler", "n": ":SensorStreamHandler", "x": 2192.1, "actor": false}], "M": [[1, "작업자", "MeasuringScreen", "sync", 140, "측정 화면에 들어온다", null, "", [{"n": "initState()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 92, "b": 113}], [233.2, 131, "middle", 0]], [2, "MeasuringScreen", "MeasuringScreen", "self", 178, "남은 초를 센다", "대기 시간 있음", "“건너뛰기 / 즉시 시작”으로 바로 넘어간다.", [{"n": "_startCountdown()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 115, "b": 137}], [459.4, 196, "start", 1]], [3, "MeasuringScreen", "CaptureSession", "sync", 238, "수집을 시작한다", null, "볼륨키 · 무응답 때 부를 함수를 함께 넘긴다.", [{"n": "_initCaptureAndTimers()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 139, "b": 161}, {"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}], [541.6, 229, "middle", 0]], [4, "CaptureSession", "CaptureSession", "self", 276, "화면 꺼짐 방지를 켠다", null, "", [{"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}], [759.9, 294, "start", 1]], [5, "CaptureSession", "SensorChannelManager", "sync", 336, "센서가 있는지 묻는다", null, "", [{"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}, {"n": "checkSensorsAvailable()", "p": "lib/adapter/sensor/sensor_channel.dart", "a": 184, "b": 212}], [812.6, 327, "middle", 0]], [6, "SensorChannelManager", "CaptureSession", "reply", 374, "쓸 수 있는지", null, "", [{"n": "checkSensorsAvailable()", "p": "lib/adapter/sensor/sensor_channel.dart", "a": 184, "b": 212}], [812.6, 365, "middle", 0]], [7, "CaptureSession", "SensorChannelManager", "sync", 412, "수집 시작을 부탁한다", "센서 있음", "", [{"n": "startCapture()", "p": "lib/adapter/sensor/sensor_channel.dart", "a": 239, "b": 271}, {"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}], [812.6, 403, "middle", 0]], [8, "SensorChannelManager", "SensorMethodHandler", "sync", 450, "수집 시작을 요청한다", null, "", [{"n": "startCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 201, "b": 258}], [1440.7, 441, "middle", 0]], [9, "SensorMethodHandler", "NoiseCaptureHandler", "sync", 488, "소음 측정을 시작한다", null, "소음 측정(UC-I4).", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/noise/NoiseCaptureHandler.kt", "a": 227, "b": 438}, {"n": "startCapture()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 201, "b": 258}], [1850.0, 479, "middle", 0]], [10, "SensorMethodHandler", "SensorStreamHandler", "sync", 526, "센서를 가장 빠른 주기로 켠다", null, "원본 기록 파일도 연다.", [{"n": "start()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorStreamHandler.kt", "a": 138, "b": 181}], [2077.9, 517, "middle", 0]], [11, "CaptureSession", "SensorChannelManager", "sync", 564, "볼륨키를 가로채게 한다", "센서 있음", "", [{"n": "setVolumeKeyCaptureEnabled()", "p": "lib/adapter/sensor/sensor_channel.dart", "a": 328, "b": 351}, {"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}], [812.6, 555, "middle", 0]], [12, "CaptureSession", "CaptureSession", "self", 602, "3초 무응답 감시를 건다", null, "", [{"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}], [759.9, 620, "start", 1]], [13, "SensorStreamHandler", "SensorChannelManager", "async", 708, "센서 값 묶음을 보낸다", null, "", [{"n": "onSensorChanged()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorStreamHandler.kt", "a": 266, "b": 328}], [2077.9, 699, "middle", 0]], [14, "SensorChannelManager", "CaptureSession", "async", 746, "원본 이벤트를 넘긴다", null, "", [{"n": "nativeEventStream()", "p": "lib/adapter/sensor/sensor_channel.dart", "a": 148, "b": 182}], [812.6, 737, "middle", 0]], [15, "CaptureSession", "GridResampler", "sync", 784, "격자 환산용으로 쌓는다", null, "", [{"n": "onEvent()", "p": "lib/domain/capture/grid_resampler.dart", "a": 248, "b": 269}, {"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}], [812.6, 775, "middle", 0]], [16, "CaptureSession", "PlacementMonitor", "sync", 822, "거치 판정에 넣는다", null, "거치 방향 판정(UC-I5).", [{"n": "_watchPlacement()", "p": "lib/service/capture_session.dart", "a": 288, "b": 325}, {"n": "onEvent()", "p": "lib/domain/capture/placement.dart", "a": 109, "b": 133}], [812.6, 813, "middle", 0]], [17, "CaptureSession", "CaptureSession", "self", 860, "현재 속도를 어림한다", null, "", [{"n": "_publishSpeed()", "p": "lib/service/capture_session.dart", "a": 271, "b": 286}], [759.9, 878, "start", 1]], [18, "CaptureSession", "MeasuringScreen", "async", 920, "현재 속도를 알린다", null, "0.25초마다. 표시 전용이다.", [{"n": "_publishSpeed()", "p": "lib/service/capture_session.dart", "a": 271, "b": 286}, {"n": "build()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 381, "b": 569}], [541.6, 911, "middle", 0]], [19, "작업자", "MainActivity", "sync", 974, "볼륨키를 누른다", null, "측정 중에는 휴대폰이 뒤집혀 있다. ‘테스트 완료’ 버튼도 같은 일을 한다.", [{"n": "dispatchKeyEvent()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/MainActivity.kt", "a": 53, "b": 70}], [233.2, 965, "middle", 0]], [20, "MainActivity", "SensorMethodHandler", "sync", 1012, "키를 넘긴다", null, "가로채는 동안은 소리 크기가 바뀌지 않게 모두 소비한다.", [{"n": "handleKeyEvent()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 334, "b": 362}], [1638.4, 1003, "middle", 0]], [21, "SensorMethodHandler", "SensorChannelManager", "async", 1050, "볼륨키 눌림을 알린다", null, "처음 누를 때 한 번만.", [{"n": "handleKeyEvent()", "p": "android/app/src/main/kotlin/com/otis/vibration_checker/sensor/SensorMethodHandler.kt", "a": 334, "b": 362}, {"n": "_installMethodCallHandler()", "p": "lib/adapter/sensor/sensor_channel.dart", "a": 90, "b": 104}], [1440.7, 1041, "middle", 0]], [22, "SensorChannelManager", "CaptureSession", "async", 1088, "볼륨키 눌림", null, "", [{"n": "volumeKeyPresses()", "p": "lib/adapter/sensor/sensor_channel.dart", "a": 140, "b": 146}], [812.6, 1079, "middle", 0]], [23, "CaptureSession", "MeasuringScreen", "sync", 1126, "측정을 끝내라고 알린다", null, "대기 중 · 마무리 중이면 무시한다.", [{"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}, {"n": "_initCaptureAndTimers()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 139, "b": 161}], [541.6, 1117, "middle", 0]], [24, "MeasuringScreen", "MeasuringScreen", "self", 1164, "측정 결과를 저장한다", null, "측정 결과 저장(UC-04).", [{"n": "_finishMeasurement()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 296, "b": 347}], [459.4, 1182, "start", 1]], [25, "CaptureSession", "MeasuringScreen", "async", 1224, "센서 응답이 없다고 알린다", "3초 무응답", "", [{"n": "start()", "p": "lib/service/capture_session.dart", "a": 211, "b": 269}, {"n": "_onNoResponse()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 163, "b": 177}], [541.6, 1215, "middle", 0]], [26, "작업자", "MeasuringScreen", "sync", 1262, "뒤로가기를 누르고 ‘중단하기’를 고른다", "중단", "", [{"n": "_confirmAndExit()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 349, "b": 379}], [233.2, 1253, "middle", 0]], [27, "MeasuringScreen", "CaptureSession", "sync", 1300, "수집을 멈추고 기록을 지운다", "무응답 · 중단", "수집 정리(UC-I3). 무응답 · 앱 전환 중단도 같다.", [{"n": "_cleanup()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 179, "b": 201}, {"n": "discard()", "p": "lib/service/capture_session.dart", "a": 337, "b": 358}], [541.6, 1291, "middle", 0]], [28, "MeasuringScreen", "작업자", "reply", 1338, "실패 · 중단을 알리고 돌아간다", "무응답 · 중단", "앱 전환이면 앱으로 돌아왔을 때 알린다.", [{"n": "_showMeasureFailDialog()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 276, "b": 294}, {"n": "_showAbortedDialog()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 252, "b": 274}], [233.2, 1329, "middle", 0]]], "R": [{"x": 357.36, "y": 658, "w": 1868.7502999999997, "h": 274, "label": "반복 · 측정을 끝낼 때까지 센서 값 묶음마다", "lx": 401.36}], "BOT": 1386};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const LX={}; D.L.forEach(l=>LX[l.k]=l.x);
+// 활성 막대: 메시지에서 자동 계산
+function computeBars(){
+  const GAP=200, PAD=10, touch={};
+  const add=(k,v)=>{(touch[k]=touch[k]||[]).push(v);};
+  D.M.forEach(m=>{const [,from,to,kind,y]=m;
+    if(kind==="self"){add(from,y);add(from,y+30);} else {add(from,y);add(to,y);}});
+  const bars=[];
+  for(const k in touch){
+    const lf=D.L.find(l=>l.k===k);
+    if(!lf||lf.actor) continue;
+    const ys=[...new Set(touch[k])].sort((a,b)=>a-b);
+    let s=ys[0],p=ys[0];
+    for(let i=1;i<ys.length;i++){
+      if(ys[i]-p>GAP){bars.push([k,s-PAD,p+PAD]);s=ys[i];}
+      p=ys[i];
+    }
+    bars.push([k,s-PAD,p+PAD]);
+  }
+  return bars;
+}
+const KIND={sync:"동기",reply:"반환",self:"자기호출",async:"비동기"};
+const gl=document.getElementById('lifelines'),gb=document.getElementById('bars'),
+      gr=document.getElementById('rep'),gm=document.getElementById('msgs');
+D.L.forEach(l=>{
+  const g=el("g",{class:"head dim"}); g.dataset.key=l.k;
+  if(l.actor){
+    g.appendChild(el("circle",{class:"fig hd",cx:l.x,cy:26,r:11}));
+    g.appendChild(el("path",{class:"fig",d:`M${l.x},37 L${l.x},63 M${l.x-16},48 L${l.x+16},48 M${l.x},63 L${l.x-12},84 M${l.x},63 L${l.x+12},84`}));
+    const t=el("text",{x:l.x,y:102}); t.textContent=l.n; g.appendChild(t);
+  }else{
+    const t=el("text",{x:l.x,y:65}); t.textContent=l.n; g.appendChild(t);
+    gl.appendChild(g);
+    const w=Math.max(110,t.getBBox().width+28);
+    g.insertBefore(el("rect",{x:l.x-w/2,y:38,width:w,height:44,rx:2}),t);
+  }
+  gl.appendChild(g);
+  gl.appendChild(el("line",{class:"life dim",x1:l.x,y1:l.actor?110:82,x2:l.x,y2:D.BOT}));
+});
+computeBars().forEach(([k,a,b])=>gb.appendChild(el("rect",{class:"bar dim",x:LX[k]-6,y:a,width:12,height:b-a})));
+D.R.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.lx,y:r.y+17}); t.textContent=r.label; gr.appendChild(t);
+});
+D.M.forEach(m=>{
+  const [no,from,to,kind,y,label,cond,desc,fns,[tx,ty,anch,side]]=m;
+  const a=el("a",{class:"ms dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=no; a.dataset.from=from; a.dataset.to=to;
+  const nm=k=>{const l=D.L.find(z=>z.k===k);return l.actor?l.n:":"+l.k;};
+  const ti=el("title");
+  ti.textContent=no+". "+label+(cond?"  [조건: "+cond+"]":"")+"\n"+nm(from)+" → "+nm(to)+" · "+KIND[kind]+"\n"+desc+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  const x1=LX[from],x2=LX[to];
+  let d;
+  if(kind==="self"){
+    if(side>0){ const s=x1+6; d=`M${s},${y} L${s+52},${y} L${s+52},${y+30} L${s+7},${y+30}`; }
+    else { const s=x1-6; d=`M${s},${y} L${s-52},${y} L${s-52},${y+30} L${s-7},${y+30}`; }
+  } else {
+    const dir=x2>x1?1:-1;
+    d=`M${x1+6*dir},${y} L${x2-6*dir},${y}`;
+  }
+  a.appendChild(el("path",{class:"hit",d:d}));
+  a.appendChild(el("path",{class:"ln"+(kind==="reply"||kind==="async"?" reply":""),d:d,
+    "marker-end":(kind==="reply"||kind==="async")?"url(#ao)":"url(#af)"}));
+  const t=el("text",{class:"tx",x:tx,y:ty,"text-anchor":anch});
+  if(cond){const c=el("tspan",{class:"cond"});c.textContent="["+cond+"] ";t.appendChild(c);}
+  t.appendChild(document.createTextNode(label)); a.appendChild(t);
+  const n=el("text",{class:"no",x:(kind==="self"?(side>0?x1+10:x1-22):Math.min(x1,x2)+10),
+                     y:y+(kind==="self"?-6:14),"text-anchor":"start"});
+  n.textContent=no; a.appendChild(n);
+  gm.appendChild(a);
+});
+const svg=document.getElementById('dg');
+const msgs=[...gm.querySelectorAll('a.ms')];
+function iso(no){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!no){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const m=D.M.find(z=>z[0]===no);
+  msgs.forEach(a=>{if(+a.dataset.key===no)a.classList.add('lit');});
+  svg.querySelectorAll('.head').forEach(h=>{if(h.dataset.key===m[1]||h.dataset.key===m[2])h.classList.add('lit');});
+}
+msgs.forEach(a=>{
+  const k=+a.dataset.key;
+  a.addEventListener('mouseenter',()=>iso(k));
+  a.addEventListener('mouseleave',()=>iso(null));
+  a.addEventListener('focus',()=>iso(k));
+  a.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

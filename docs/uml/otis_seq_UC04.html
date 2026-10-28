@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-04 측정 결과 저장 — 시퀀스 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px}
+  .head rect{fill:var(--card);stroke:var(--ink2);stroke-width:1.4}
+  .head text{font-size:13.5px;font-weight:700;fill:var(--ink);text-anchor:middle}
+  .head .fig{stroke:var(--ink);stroke-width:1.6;fill:none;stroke-linecap:round}
+  .head .hd{fill:var(--card)}
+  .life{stroke:var(--rule);stroke-width:1.2;stroke-dasharray:5 5}
+  .bar{fill:var(--card);stroke:var(--ink2);stroke-width:1.2}
+  a.ms{text-decoration:none;cursor:pointer}
+  a.ms .ln{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  a.ms .ln.reply{stroke-dasharray:6 4}
+  a.ms .hit{stroke:transparent;stroke-width:14;fill:none}
+  a.ms .tx{font-size:13px;fill:var(--ink)}
+  a.ms .tx .cond{fill:var(--extend);font-weight:700}
+  a.ms .no{font-size:10px;fill:var(--ink3);font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.ms:hover .ln,a.ms:focus .ln{stroke:var(--signal);stroke-width:2}
+  a.ms:hover .tx,a.ms:focus .tx{fill:var(--signal);font-weight:700}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-04 측정 결과 저장</span><span class="tabs"><a href="otis_act_UC04.html">액티비티</a><span class="on">시퀀스</span></span><span class="right"><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 2317 1072" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-04 측정 결과 저장 — 시퀀스 다이어그램">
+<defs>
+<marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0.5,0.8 L9,5 L0.5,9.2" fill="none" stroke="context-stroke" stroke-width="1.4"/></marker>
+</defs>
+<g id="rep"></g><g id="lifelines"></g><g id="bars"></g><g id="msgs"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const D={"L": [{"k": "작업자", "n": "작업자", "x": 75.0, "actor": true}, {"k": "MeasuringScreen", "n": ":MeasuringScreen", "x": 316.5, "actor": false}, {"k": "CaptureSession", "n": ":CaptureSession", "x": 549.6, "actor": false}, {"k": "MeasurementRecorder", "n": ":MeasurementRecorder", "x": 758.7, "actor": false}, {"k": "GridResampler", "n": ":GridResampler", "x": 1041.2, "actor": false}, {"k": "MetaWriter", "n": ":MetaWriter", "x": 1205.4, "actor": false}, {"k": "EvimpWriter", "n": ":EvimpWriter", "x": 1361.2, "actor": false}, {"k": "SignalConditioner", "n": ":SignalConditioner", "x": 1541.0, "actor": false}, {"k": "MeasurementAssembler", "n": ":MeasurementAssembler", "x": 1760.8, "actor": false}, {"k": "MeasurementRepository", "n": ":MeasurementRepository", "x": 2003.4, "actor": false}, {"k": "ResultScreen", "n": ":ResultScreen", "x": 2210.8, "actor": false}], "M": [[1, "작업자", "MeasuringScreen", "sync", 140, "‘테스트 완료’를 누른다", null, "볼륨키도 같다.", [{"n": "build()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 381, "b": 569}, {"n": "_finishMeasurement()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 296, "b": 347}], [195.7, 131, "middle", 0]], [2, "MeasuringScreen", "MeasuringScreen", "self", 178, "‘종료 중…’으로 바꾼다", null, "이미 마무리 중이면 다시 하지 않는다.", [{"n": "_finishMeasurement()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 296, "b": 347}], [384.5, 196, "start", 1]], [3, "MeasuringScreen", "CaptureSession", "sync", 238, "수집을 멈춘다", null, "수집 정리(UC-I3). 저장할 것이라 파일은 지우지 않는다.", [{"n": "_cleanup()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 179, "b": 201}, {"n": "stop()", "p": "lib/service/capture_session.dart", "a": 327, "b": 335}], [433.0, 229, "middle", 0]], [4, "MeasuringScreen", "MeasurementRecorder", "sync", 276, "측정을 저장한다", null, "거치 판정 · 녹음 경로 · 기종을 함께 넘긴다.", [{"n": "_finishMeasurement()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 296, "b": 347}, {"n": "record()", "p": "lib/service/measurement_recorder.dart", "a": 260, "b": 491}], [433.0, 267, "middle", 0]], [5, "MeasurementRecorder", "MeasurementRecorder", "self", 314, "현장 정보 · 표본 수를 확인한다", null, "모자라면 파일을 만들기 전에 멈춘다.", [{"n": "record()", "p": "lib/service/measurement_recorder.dart", "a": 260, "b": 491}], [826.7, 332, "start", 1]], [6, "MeasurementRecorder", "GridResampler", "sync", 374, "256Hz 격자로 환산한다", null, "", [{"n": "resample()", "p": "lib/domain/capture/grid_resampler.dart", "a": 345, "b": 492}], [899.9, 365, "middle", 0]], [7, "GridResampler", "MeasurementRecorder", "reply", 412, "격자", null, "실패면 사유가 있다.", [{"n": "resample()", "p": "lib/domain/capture/grid_resampler.dart", "a": 345, "b": 492}], [899.9, 403, "middle", 0]], [8, "MeasurementRecorder", "MeasurementRepository", "sync", 450, "측정 폴더를 만든다", null, "", [{"n": "jobDirectory()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 189, "b": 201}], [899.9, 441, "middle", 0]], [9, "MeasurementRecorder", "MetaWriter", "sync", 488, "집계 파일을 쓴다", null, "", [{"n": "writeMeta()", "p": "lib/adapter/storage/meta_writer.dart", "a": 102, "b": 126}], [899.9, 479, "middle", 0]], [10, "MeasurementRecorder", "MeasurementRecorder", "self", 526, "원본 · 녹음을 폴더로 옮긴다", null, "", [{"n": "_moveNativeFile()", "p": "lib/service/measurement_recorder.dart", "a": 123, "b": 173}], [826.7, 544, "start", 1]], [11, "MeasurementRecorder", "EvimpWriter", "sync", 586, "raw.txt를 쓴다", "환산 성공", "", [{"n": "write()", "p": "lib/adapter/storage/evimp_writer.dart", "a": 136, "b": 153}], [899.9, 577, "middle", 0]], [12, "MeasurementRecorder", "SignalConditioner", "sync", 624, "신호를 처리한다", null, "지표 계산(UC-I6) 앞부분.", [{"n": "_condition()", "p": "lib/service/measurement_recorder.dart", "a": 175, "b": 236}, {"n": "condition()", "p": "lib/domain/analysis/signal_conditioner.dart", "a": 181, "b": 356}], [899.9, 615, "middle", 0]], [13, "SignalConditioner", "MeasurementRecorder", "reply", 662, "처리한 격자", null, "", [{"n": "condition()", "p": "lib/domain/analysis/signal_conditioner.dart", "a": 181, "b": 356}], [899.9, 653, "middle", 0]], [14, "MeasurementRecorder", "MeasurementAssembler", "sync", 700, "지표를 계산한다", "처리 성공", "지표 계산(UC-I6) 뒷부분.", [{"n": "assemble()", "p": "lib/domain/analysis/measurement_assembler.dart", "a": 120, "b": 379}], [899.9, 691, "middle", 0]], [15, "MeasurementAssembler", "MeasurementRecorder", "reply", 738, "측정 결과", null, "", [{"n": "assemble()", "p": "lib/domain/analysis/measurement_assembler.dart", "a": 120, "b": 379}], [899.9, 729, "middle", 0]], [16, "MeasurementRecorder", "MetaWriter", "sync", 776, "집계를 덧붙인다", null, "운행 · 운동 · 거치 · 소음.", [{"n": "_appendMeta()", "p": "lib/service/measurement_recorder.dart", "a": 238, "b": 251}, {"n": "appendMeta()", "p": "lib/adapter/storage/meta_writer.dart", "a": 378, "b": 386}], [899.9, 767, "middle", 0]], [17, "MeasurementRecorder", "MeasurementRepository", "sync", 814, "결과를 저장한다", "변환 성공", "", [{"n": "save()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 203, "b": 221}], [899.9, 805, "middle", 0]], [18, "MeasurementRecorder", "MeasurementRepository", "sync", 852, "리포트 PDF를 미리 만든다", null, "리포트 PDF 생성(UC-I7). 실패해도 멈추지 않는다.", [{"n": "ensureReportPdf()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 433, "b": 455}], [899.9, 843, "middle", 0]], [19, "MeasurementRecorder", "MeasurementRepository", "sync", 890, "오래된 측정을 정리한다", null, "100건 초과분.", [{"n": "pruneOldest()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 373, "b": 414}], [899.9, 881, "middle", 0]], [20, "MeasurementRecorder", "MeasuringScreen", "reply", 928, "저장 결과", null, "성공이면 측정 ID, 실패면 사유.", [{"n": "record()", "p": "lib/service/measurement_recorder.dart", "a": 260, "b": 491}], [433.0, 919, "middle", 0]], [21, "MeasuringScreen", "작업자", "reply", 966, "실패 사유를 알리고 돌아간다", "실패", "측정 실패 안내(«extend» ②).", [{"n": "_showMeasureFailDialog()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 276, "b": 294}, {"n": "recordFailureMessage()", "p": "lib/ui/features/measure/record_failure_message.dart", "a": 4, "b": 38}], [195.7, 957, "middle", 0]], [22, "MeasuringScreen", "ResultScreen", "sync", 1004, "결과 화면으로 바꾼다", "성공", "", [{"n": "_finishMeasurement()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 296, "b": 347}, {"n": "initState()", "p": "lib/ui/features/result/result_screen.dart", "a": 167, "b": 174}], [899.9, 995, "middle", 0]]], "R": [], "BOT": 1052};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const LX={}; D.L.forEach(l=>LX[l.k]=l.x);
+// 활성 막대: 메시지에서 자동 계산
+function computeBars(){
+  const GAP=200, PAD=10, touch={};
+  const add=(k,v)=>{(touch[k]=touch[k]||[]).push(v);};
+  D.M.forEach(m=>{const [,from,to,kind,y]=m;
+    if(kind==="self"){add(from,y);add(from,y+30);} else {add(from,y);add(to,y);}});
+  const bars=[];
+  for(const k in touch){
+    const lf=D.L.find(l=>l.k===k);
+    if(!lf||lf.actor) continue;
+    const ys=[...new Set(touch[k])].sort((a,b)=>a-b);
+    let s=ys[0],p=ys[0];
+    for(let i=1;i<ys.length;i++){
+      if(ys[i]-p>GAP){bars.push([k,s-PAD,p+PAD]);s=ys[i];}
+      p=ys[i];
+    }
+    bars.push([k,s-PAD,p+PAD]);
+  }
+  return bars;
+}
+const KIND={sync:"동기",reply:"반환",self:"자기호출",async:"비동기"};
+const gl=document.getElementById('lifelines'),gb=document.getElementById('bars'),
+      gr=document.getElementById('rep'),gm=document.getElementById('msgs');
+D.L.forEach(l=>{
+  const g=el("g",{class:"head dim"}); g.dataset.key=l.k;
+  if(l.actor){
+    g.appendChild(el("circle",{class:"fig hd",cx:l.x,cy:26,r:11}));
+    g.appendChild(el("path",{class:"fig",d:`M${l.x},37 L${l.x},63 M${l.x-16},48 L${l.x+16},48 M${l.x},63 L${l.x-12},84 M${l.x},63 L${l.x+12},84`}));
+    const t=el("text",{x:l.x,y:102}); t.textContent=l.n; g.appendChild(t);
+  }else{
+    const t=el("text",{x:l.x,y:65}); t.textContent=l.n; g.appendChild(t);
+    gl.appendChild(g);
+    const w=Math.max(110,t.getBBox().width+28);
+    g.insertBefore(el("rect",{x:l.x-w/2,y:38,width:w,height:44,rx:2}),t);
+  }
+  gl.appendChild(g);
+  gl.appendChild(el("line",{class:"life dim",x1:l.x,y1:l.actor?110:82,x2:l.x,y2:D.BOT}));
+});
+computeBars().forEach(([k,a,b])=>gb.appendChild(el("rect",{class:"bar dim",x:LX[k]-6,y:a,width:12,height:b-a})));
+D.R.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.lx,y:r.y+17}); t.textContent=r.label; gr.appendChild(t);
+});
+D.M.forEach(m=>{
+  const [no,from,to,kind,y,label,cond,desc,fns,[tx,ty,anch,side]]=m;
+  const a=el("a",{class:"ms dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=no; a.dataset.from=from; a.dataset.to=to;
+  const nm=k=>{const l=D.L.find(z=>z.k===k);return l.actor?l.n:":"+l.k;};
+  const ti=el("title");
+  ti.textContent=no+". "+label+(cond?"  [조건: "+cond+"]":"")+"\n"+nm(from)+" → "+nm(to)+" · "+KIND[kind]+"\n"+desc+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  const x1=LX[from],x2=LX[to];
+  let d;
+  if(kind==="self"){
+    if(side>0){ const s=x1+6; d=`M${s},${y} L${s+52},${y} L${s+52},${y+30} L${s+7},${y+30}`; }
+    else { const s=x1-6; d=`M${s},${y} L${s-52},${y} L${s-52},${y+30} L${s-7},${y+30}`; }
+  } else {
+    const dir=x2>x1?1:-1;
+    d=`M${x1+6*dir},${y} L${x2-6*dir},${y}`;
+  }
+  a.appendChild(el("path",{class:"hit",d:d}));
+  a.appendChild(el("path",{class:"ln"+(kind==="reply"||kind==="async"?" reply":""),d:d,
+    "marker-end":(kind==="reply"||kind==="async")?"url(#ao)":"url(#af)"}));
+  const t=el("text",{class:"tx",x:tx,y:ty,"text-anchor":anch});
+  if(cond){const c=el("tspan",{class:"cond"});c.textContent="["+cond+"] ";t.appendChild(c);}
+  t.appendChild(document.createTextNode(label)); a.appendChild(t);
+  const n=el("text",{class:"no",x:(kind==="self"?(side>0?x1+10:x1-22):Math.min(x1,x2)+10),
+                     y:y+(kind==="self"?-6:14),"text-anchor":"start"});
+  n.textContent=no; a.appendChild(n);
+  gm.appendChild(a);
+});
+const svg=document.getElementById('dg');
+const msgs=[...gm.querySelectorAll('a.ms')];
+function iso(no){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!no){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const m=D.M.find(z=>z[0]===no);
+  msgs.forEach(a=>{if(+a.dataset.key===no)a.classList.add('lit');});
+  svg.querySelectorAll('.head').forEach(h=>{if(h.dataset.key===m[1]||h.dataset.key===m[2])h.classList.add('lit');});
+}
+msgs.forEach(a=>{
+  const k=+a.dataset.key;
+  a.addEventListener('mouseenter',()=>iso(k));
+  a.addEventListener('mouseleave',()=>iso(null));
+  a.addEventListener('focus',()=>iso(k));
+  a.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-07 저장 결과 목록 관리 — 액티비티 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px;max-width:1180px;margin:0 auto}
+  a.nd{text-decoration:none;cursor:pointer}
+  a.nd .shape{fill:var(--card);stroke:var(--ink2);stroke-width:1.4;transition:fill .15s,stroke .15s}
+  a.nd .rake{fill:none;stroke:var(--ink2);stroke-width:1.4}
+  a.nd .lb{font-size:13px;fill:var(--ink);text-anchor:middle;pointer-events:none}
+  a.nd .num{font-size:10.5px;fill:var(--ink3);text-anchor:end;pointer-events:none;
+            font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.nd:hover .shape,a.nd:focus .shape{fill:var(--signal-soft);stroke:var(--signal);stroke-width:2}
+  a.nd:hover .lb,a.nd:focus .lb{fill:var(--signal);font-weight:700}
+  a.nd .cnd{font-size:12px;fill:var(--ink);font-weight:700;pointer-events:none}
+  a.nd:hover .cnd,a.nd:focus .cnd{fill:var(--signal)}
+  a.nd .cndbg{fill:var(--card);stroke:none;pointer-events:none}
+  a.nd .term{fill:var(--ink);stroke:none}
+  a.nd .termring{fill:var(--card);stroke:var(--ink);stroke-width:1.6}
+  .flow{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  .flow.back{stroke:var(--extend)}
+  .g{font-size:11.5px;font-weight:600;fill:var(--ink2)}
+  .g.t{fill:var(--signal)}
+  .g.f{fill:var(--ink2)}
+  .g.back{fill:var(--extend)}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-07 저장 결과 목록 관리</span><span class="tabs"><span class="on">액티비티</span><a href="otis_seq_UC07.html">시퀀스</a></span><span class="right"><a href="otis_act_UC05.html">결과 확인</a><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 1056 1023" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-07 저장 결과 목록 관리 — 액티비티 다이어그램">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker></defs>
+<g id="rep"></g><g id="edges"></g><g id="glabels"></g><g id="nodes"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const C=560,BW=212,BH=50,DW=26,DH=19;
+const D={"N": [[1, "initial", "", 560, 44, "홈에서 ‘저장 결과 목록’을 누른다.", [{"n": "build()", "p": "lib/ui/features/home/home_screen.dart", "a": 391, "b": 545}, {"n": "initState()", "p": "lib/ui/features/history/history_screen.dart", "a": 62, "b": 74}], null], [2, "action", "저장소 변경 알림을\n듣기 시작한다", 560, 106.0, "저장 · 삭제 · 정리로 측정 폴더가 바뀔 때마다 목록을 다시 읽는다. 재실행으로 생긴 새 결과도 들어온다.", [{"n": "initState()", "p": "lib/ui/features/history/history_screen.dart", "a": 62, "b": 74}], null], [3, "merge", "", 560, 170.0, "", [{"n": "_loadItems()", "p": "lib/ui/features/history/history_screen.dart", "a": 86, "b": 111}], null], [4, "action", "측정 폴더를 모두 읽는다", 560, 234.0, "요약 파일을 읽고, 없거나 깨졌으면 정본에서 다시 만든다. 정본까지 못 읽으면 “읽을 수 없는 결과”로 따로 모은다.", [{"n": "_loadItems()", "p": "lib/ui/features/history/history_screen.dart", "a": 86, "b": 111}, {"n": "listEntries()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 253, "b": 297}, {"n": "_readListEntry()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 299, "b": 352}], null], [5, "decision", "", 560, 304.0, "", [{"n": "_loadItems()", "p": "lib/ui/features/history/history_screen.dart", "a": 86, "b": 111}], null], [6, "action", "‘다시 시도’를 보인다", 220, 304.0, "", [{"n": "_buildEmptyState()", "p": "lib/ui/features/history/history_screen.dart", "a": 230, "b": 273}], null], [7, "decision", "", 560, 376.0, "", [{"n": "build()", "p": "lib/ui/features/history/history_screen.dart", "a": 418, "b": 457}], null], [8, "action", "‘측정하러 가기’를 보인다", 900, 376.0, "홈으로 돌아간다.", [{"n": "_buildEmptyState()", "p": "lib/ui/features/history/history_screen.dart", "a": 230, "b": 273}], null], [9, "final", "", 900, 445.0, "", [{"n": "_buildEmptyState()", "p": "lib/ui/features/history/history_screen.dart", "a": 230, "b": 273}], null], [10, "action", "최근 것부터 판정과 함께\n보이고 깨진 건은 끝에 둔다", 560, 454.0, "줄마다 제번 · 현장명 · 측정 일시 · 소음 최대 · 판정(색 · 아이콘 · 글자).", [{"n": "_buildListItem()", "p": "lib/ui/features/history/history_screen.dart", "a": 301, "b": 365}, {"n": "_buildUnreadableItem()", "p": "lib/ui/features/history/history_screen.dart", "a": 367, "b": 416}, {"n": "_statusOf()", "p": "lib/ui/features/history/history_screen.dart", "a": 179, "b": 195}], null], [11, "decision", "", 560, 524.0, "그 밖에는 줄의 ‘삭제’를 누른 경우다.", [{"n": "_buildListItem()", "p": "lib/ui/features/history/history_screen.dart", "a": 301, "b": 365}], null], [12, "call", "결과 확인", 900, 524.0, "그 측정의 결과 화면을 연다.", [{"n": "_open()", "p": "lib/ui/features/history/history_screen.dart", "a": 113, "b": 123}], "otis_act_UC05.html"], [13, "final", "", 900, 593.0, "", [{"n": "_open()", "p": "lib/ui/features/history/history_screen.dart", "a": 113, "b": 123}], null], [14, "action", "‘측정 결과 삭제’ 확인\n창을 띄운다", 560, 602.0, "“이 작업은 되돌릴 수 없습니다”.", [{"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null], [15, "decision", "", 560, 672.0, "", [{"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null], [16, "final", "", 220, 672.0, "목록에 머문다.", [{"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null], [17, "action", "측정 폴더를 통째로 지운다", 560, 750.0, "리포트 · 원본 · 녹음까지 함께 사라진다.", [{"n": "delete()", "p": "lib/adapter/storage/measurement_repository.dart", "a": 416, "b": 431}, {"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null], [18, "decision", "", 560, 820.0, "", [{"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null], [19, "action", "알리고 목록을\n새로 읽는다", 900, 820.0, "", [{"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null], [20, "action", "목록에서 빼고\n삭제됐다고 알린다", 560, 898.0, "", [{"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null], [21, "final", "", 560, 961.0, "", [{"n": "_confirmDelete()", "p": "lib/ui/features/history/history_screen.dart", "a": 125, "b": 167}], null]], "E": [[1, 2, "M560,55 L560,81.0", null, null, [[569, 69, "start"], [551, 69, "end"]], false], [2, 3, "M560,131.0 L560,157.0", null, null, [[569, 145.0, "start"], [551, 145.0, "end"]], false], [3, 4, "M560,183.0 L560,209.0", null, null, [[569, 197.0, "start"], [551, 197.0, "end"]], false], [4, 5, "M560,259.0 L560,285.0", null, null, [[569, 273.0, "start"], [551, 273.0, "end"]], false], [5, 6, "M534,304.0 L326.0,304.0", "참", "t", [[430.0, 296.0, "middle"], [430.0, 321.0, "middle"]], false], [5, 7, "M560,323.0 L560,357.0", "거짓", "f", [[569, 337.0, "start"], [551, 337.0, "end"]], false], [7, 8, "M586,376.0 L794.0,376.0", "참", "t", [[690.0, 368.0, "middle"], [690.0, 393.0, "middle"]], false], [8, 9, "M900,401.0 L900,433.0", null, null, [], false], [7, 10, "M560,395.0 L560,429.0", "거짓", "f", [[569, 409.0, "start"], [551, 409.0, "end"]], false], [10, 11, "M560,479.0 L560,505.0", null, null, [[569, 493.0, "start"], [551, 493.0, "end"]], false], [11, 12, "M586,524.0 L794.0,524.0", "참", "t", [[690.0, 516.0, "middle"], [690.0, 541.0, "middle"]], false], [12, 13, "M900,549.0 L900,581.0", null, null, [], false], [11, 14, "M560,543.0 L560,577.0", "거짓", "f", [[569, 557.0, "start"], [551, 557.0, "end"]], false], [14, 15, "M560,627.0 L560,653.0", null, null, [[569, 641.0, "start"], [551, 641.0, "end"]], false], [15, 16, "M534,672.0 L232,672.0", "참", "t", [[383.0, 664.0, "middle"], [383.0, 689.0, "middle"]], false], [15, 17, "M560,691.0 L560,725.0", "거짓", "f", [[569, 705.0, "start"], [551, 705.0, "end"]], false], [17, 18, "M560,775.0 L560,801.0", null, null, [[569, 789.0, "start"], [551, 789.0, "end"]], false], [18, 19, "M586,820.0 L794.0,820.0", "참", "t", [[690.0, 812.0, "middle"], [690.0, 837.0, "middle"]], false], [18, 20, "M560,839.0 L560,873.0", "거짓", "f", [[569, 853.0, "start"], [551, 853.0, "end"]], false], [20, 21, "M560,923.0 L560,949.0", null, null, [[569, 937.0, "start"], [551, 937.0, "end"]], false], [6, 3, "M114.0,304.0 L86.0,304.0 L86.0,170.0 L542,170.0", "다시 시도", "back", [[100.0, 297.0, "middle"], [100.0, 321.0, "middle"], [95.8, 297.0, "middle"], [95.8, 321.0, "middle"], [104.2, 297.0, "middle"], [104.2, 321.0, "middle"], [94.0, 241.0, "start"], [78.0, 241.0, "end"], [94.0, 220.9, "start"], [78.0, 220.9, "end"], [94.0, 261.1, "start"], [78.0, 261.1, "end"], [94.0, 200.8, "start"], [78.0, 200.8, "end"], [94.0, 281.2, "start"], [78.0, 281.2, "end"]], true], [19, 3, "M1006.0,820.0 L1034.0,820.0 L1034.0,170.0 L578,170.0", "새로 읽는다", "back", [[1020.0, 813.0, "middle"], [1020.0, 837.0, "middle"], [1024.2, 813.0, "middle"], [1024.2, 837.0, "middle"], [1015.8, 813.0, "middle"], [1015.8, 837.0, "middle"], [1026.0, 499.0, "end"], [1042.0, 499.0, "start"], [1026.0, 401.5, "end"], [1042.0, 401.5, "start"], [1026.0, 596.5, "end"], [1042.0, 596.5, "start"], [1026.0, 304.0, "end"], [1042.0, 304.0, "start"], [1026.0, 694.0, "end"], [1042.0, 694.0, "start"]], true]], "COND": {"5": "목록 읽기가 실패했나", "7": "저장된 결과가 없나", "11": "줄을 눌렀나", "15": "취소했나", "18": "이미 지워진 기록인가"}, "REP": []};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const KIND={initial:"시작",merge:"병합",action:"액션",decision:"분기",call:"호출 액션",final:"종료"};
+const gr=document.getElementById('rep'),eg=document.getElementById('edges'),
+      gl=document.getElementById('glabels'),ng=document.getElementById('nodes');
+const svg=document.getElementById('dg'), VB=svg.viewBox.baseVal;
+
+// 반복 구간
+D.REP.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.x+12,y:r.y+19}); t.textContent=r.label; gr.appendChild(t);
+});
+// 흐름선
+const SEGS=[];
+D.E.forEach(([a,b,d,lab,kd])=>{
+  const p=el("path",{class:"flow dim"+(kd==="back"?" back":""),d:d,"marker-end":"url(#a)"});
+  p.dataset.e=a+"|"+b; eg.appendChild(p);
+  const pts=d.replace(/[ML]/g,"").trim().split(/\s+/).map(s=>s.split(",").map(Number));
+  for(let i=0;i+1<pts.length;i++) SEGS.push({e:a+"|"+b,s:[pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]]});
+});
+// 노드
+D.N.forEach(([id,k,name,x,y,desc,fns,doc])=>{
+  const a=el("a",doc?{class:"nd dim",href:doc}:{class:"nd dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=id;
+  const ti=el("title");
+  ti.textContent=(id+". "+(name?name.replace(/\n/g," "):KIND[k]))+(D.COND[id]?"  ["+D.COND[id]+"]":"")+"\n"+desc+
+    (doc?"\n(누르면 그 흐름의 액티비티 다이어그램으로 이동)":"")+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  let l,t2;
+  if(k==="initial"){ a.appendChild(el("circle",{class:"term shape",cx:x,cy:y,r:11})); l=x-11; t2=y-11; }
+  else if(k==="final"){ a.appendChild(el("circle",{class:"termring shape",cx:x,cy:y,r:12}));
+                        a.appendChild(el("circle",{class:"term",cx:x,cy:y,r:6.5})); l=x-12; t2=y-12; }
+  else if(k==="decision"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-DH} L${x+DW},${y} L${x},${y+DH} L${x-DW},${y} Z`})); l=x-DW; t2=y-DH; }
+  else if(k==="merge"){ a.appendChild(el("path",{class:"shape",d:`M${x},${y-13} L${x+18},${y} L${x},${y+13} L${x-18},${y} Z`})); l=x-18; t2=y-13; }
+  else{
+    a.appendChild(el("rect",{class:"shape",x:x-BW/2,y:y-BH/2,width:BW,height:BH,rx:k==="call"?3:14}));
+    if(k==="call"){ const bx=x+BW/2-16, by=y+BH/2-15;
+      a.appendChild(el("path",{class:"rake",d:`M${bx-7},${by} h14 M${bx-7},${by} v9 M${bx},${by} v9 M${bx+7},${by} v9`})); }
+    l=x-BW/2; t2=y-BH/2;
+  }
+  if(name){
+    const lines=name.split("\n");
+    lines.forEach((ln,i)=>{
+      const tt=el("text",{class:"lb",x:k==="call"?x-6:x,y:y+(lines.length===1?4.5:(i===0?-4:15))});
+      tt.textContent=ln; a.appendChild(tt);
+    });
+  }
+  const nm=el("text",{class:"num",x:l-4,y:t2+2}); nm.textContent=id; a.appendChild(nm);
+  ng.appendChild(a);
+});
+
+// 글자 자리: 노드 · 선 · 다른 글자 · 반복 구간 테두리와 겹치지 않는 첫 후보
+function nodeBox(n){
+  const [,k,,x,y]=n;
+  if(k==="decision") return {x:x-DW,y:y-DH,w:DW*2,h:DH*2};
+  if(k==="merge")    return {x:x-18,y:y-13,w:36,h:26};
+  if(k==="initial"||k==="final") return {x:x-13,y:y-13,w:26,h:26};
+  return {x:x-BW/2,y:y-BH/2,w:BW,h:BH};
+}
+const BOXES=D.N.map(n=>Object.assign({id:String(n[0])},nodeBox(n)));
+const TXT=[...gr.querySelectorAll('text'),...ng.querySelectorAll('text.num')].map(t=>{const b=t.getBBox();return {x:b.x,y:b.y,w:b.width,h:b.height};});
+const REPSEG=[];
+D.REP.forEach(r=>{REPSEG.push([r.x,r.y,r.x+r.w,r.y],[r.x,r.y+r.h,r.x+r.w,r.y+r.h],[r.x,r.y,r.x,r.y+r.h],[r.x+r.w,r.y,r.x+r.w,r.y+r.h]);});
+function free(r,selfId,selfEdge){
+  if(r.x<2||r.y<2||r.x+r.w>VB.width-2||r.y+r.h>VB.height-2) return false;
+  if(BOXES.some(b=>b.id!==selfId&&boxHit(r,b))) return false;
+  if(TXT.some(b=>boxHit(r,b))) return false;
+  if(SEGS.some(s=>s.e!==selfEdge&&segHit(r,s.s))) return false;
+  if(REPSEG.some(s=>segHit(r,s))) return false;
+  return true;
+}
+const MISS=[];
+// 흐름선 라벨
+D.E.forEach(([a,b,d,lab,kd,cands,opt])=>{
+  if(!lab) return;
+  const t=el("text",{class:"g dim "+(kd||""),x:0,y:0});
+  t.textContent=lab; t.dataset.e=a+"|"+b; gl.appendChild(t);
+  let ok=null;
+  for(const [x,y,an] of cands){
+    t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(), r={x:bb.x-2,y:bb.y-1,w:bb.width+4,h:bb.height+2};
+    if(free(r,null,a+"|"+b)){ok=r;break;}
+  }
+  if(!ok&&opt){ t.remove(); return; }
+  if(!ok){ const [x,y,an]=cands[0]; t.setAttribute("x",x); t.setAttribute("y",y); t.setAttribute("text-anchor",an);
+    const bb=t.getBBox(); ok={x:bb.x,y:bb.y,w:bb.width,h:bb.height}; MISS.push("선라벨 "+a+"→"+b); }
+  TXT.push(ok);
+});
+// 분기 조건 문구
+D.N.forEach(([id,k,,x,y])=>{
+  if(k!=="decision"||!D.COND[id]) return;
+  const a=ng.querySelector('[data-key="'+id+'"]');
+  const cands=[
+    [x+DW+10, y-DH-4,  "start"],
+    [x-DW-10, y-DH-4,  "end"],
+    [x+DW+12, y+4,     "start"],
+    [x-DW-12, y+4,     "end"],
+    [x,       y-DH-14, "middle"],
+    [x+DW+10, y+DH+14, "start"],
+    [x-DW-10, y+DH+14, "end"],
+    [x+DW+10, y-DH-22, "start"],
+    [x-DW-10, y-DH-22, "end"]
+  ];
+  const ct=el("text",{class:"cnd",x:0,y:0,"text-anchor":"middle"});
+  ct.textContent="["+D.COND[id]+"]";
+  a.appendChild(ct);
+  let placed=null;
+  for(const [cx,cy,an] of cands){
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox();
+    const r={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    if(free(r,String(id),null)){ placed=r; break; }
+  }
+  if(!placed){
+    const [cx,cy,an]=cands[0];
+    ct.setAttribute("x",cx); ct.setAttribute("y",cy); ct.setAttribute("text-anchor",an);
+    const b=ct.getBBox(); placed={x:b.x-6,y:b.y-2,w:b.width+12,h:b.height+4};
+    MISS.push("조건 "+id);
+  }
+  const bg=el("rect",{class:"cndbg",x:placed.x,y:placed.y,width:placed.w,height:placed.h,rx:2});
+  a.insertBefore(bg,ct);
+  TXT.push(placed);
+});
+window.__LABEL_MISS=MISS;
+if(MISS.length) console.warn("글자 자리 없음: "+MISS.join(", "));
+
+const nodes=[...ng.querySelectorAll('[data-key]')];
+const edges=[...svg.querySelectorAll('[data-e]')];
+function iso(id){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!id){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const keep=new Set([String(id)]);
+  edges.forEach(e=>{const p=e.dataset.e.split('|');
+    if(p[0]===String(id)||p[1]===String(id)){e.classList.add('lit');keep.add(p[0]);keep.add(p[1]);}});
+  nodes.forEach(n=>{if(keep.has(n.dataset.key))n.classList.add('lit');});
+}
+nodes.forEach(n=>{
+  const k=+n.dataset.key;
+  n.addEventListener('mouseenter',()=>iso(k));
+  n.addEventListener('mouseleave',()=>iso(null));
+  n.addEventListener('focus',()=>iso(k));
+  n.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>

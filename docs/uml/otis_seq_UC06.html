@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UC-06 테스트 재실행 — 시퀀스 다이어그램</title>
+<style>
+  :root{--paper:#E9EDF0;--card:#FFF;--ink:#13202A;--ink2:#4C5D6A;--ink3:#7C8C99;
+        --rule:#A3B1BC;--signal:#0E6E8C;--signal-soft:#D5E7EE;--extend:#A65510;--grid:#DCE3E8}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+       linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,var(--paper);
+       color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;height:auto;display:block}
+  svg.iso .dim{opacity:.13;transition:opacity .18s}
+  svg .dim{transition:opacity .18s}
+  svg.iso .lit{opacity:1}
+  .nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+       padding:11px 24px;background:rgba(255,255,255,.86);
+       border-bottom:1px solid var(--rule);font-size:13px;
+       position:sticky;top:0;z-index:20;backdrop-filter:blur(4px)}
+  .nav a{color:var(--signal);text-decoration:none;font-weight:600}
+  .nav a:hover{text-decoration:underline}
+  .nav .sep{color:var(--ink3)}
+  .nav .cur{font-weight:800;color:var(--ink)}
+  .nav .tabs{display:flex;gap:0;margin-left:6px;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+  .nav .tabs a,.nav .tabs span{padding:3px 12px;font-weight:600;font-size:12.5px;
+       background:var(--card);color:var(--signal);text-decoration:none}
+  .nav .tabs a:hover{background:var(--signal-soft);text-decoration:none}
+  .nav .tabs .on{background:var(--signal);color:#fff}
+  .nav .tabs .off{color:var(--ink3);background:#F2F5F7;cursor:default}
+  .nav .right{margin-left:auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .nav .right a{font-weight:600;font-size:12.5px}
+
+  .stage{padding:24px}
+  .head rect{fill:var(--card);stroke:var(--ink2);stroke-width:1.4}
+  .head text{font-size:13.5px;font-weight:700;fill:var(--ink);text-anchor:middle}
+  .head .fig{stroke:var(--ink);stroke-width:1.6;fill:none;stroke-linecap:round}
+  .head .hd{fill:var(--card)}
+  .life{stroke:var(--rule);stroke-width:1.2;stroke-dasharray:5 5}
+  .bar{fill:var(--card);stroke:var(--ink2);stroke-width:1.2}
+  a.ms{text-decoration:none;cursor:pointer}
+  a.ms .ln{stroke:var(--ink2);stroke-width:1.3;fill:none}
+  a.ms .ln.reply{stroke-dasharray:6 4}
+  a.ms .hit{stroke:transparent;stroke-width:14;fill:none}
+  a.ms .tx{font-size:13px;fill:var(--ink)}
+  a.ms .tx .cond{fill:var(--extend);font-weight:700}
+  a.ms .no{font-size:10px;fill:var(--ink3);font-family:ui-monospace,Menlo,Consolas,monospace}
+  a.ms:hover .ln,a.ms:focus .ln{stroke:var(--signal);stroke-width:2}
+  a.ms:hover .tx,a.ms:focus .tx{fill:var(--signal);font-weight:700}
+  .rep{fill:none;stroke:var(--extend);stroke-width:1.2;stroke-dasharray:6 4}
+  .repl{font-size:11.5px;fill:var(--extend);font-weight:700}
+</style>
+</head>
+<body>
+<nav class="nav"><a href="otis_usecase.html">유즈케이스</a><span class="sep">›</span><span class="cur">UC-06 테스트 재실행</span><span class="tabs"><a href="otis_act_UC06.html">액티비티</a><span class="on">시퀀스</span></span><span class="right"><a href="otis_seq_UCI2.html">마이크 권한 확보</a><a href="https://github.com/westone-hq/OTIS/tree/1c9d689a9802fe6703929b632845bce648b1cef6" target="_blank" rel="noopener">저장소</a></span></nav>
+<div class="stage">
+<svg id="dg" viewBox="0 0 1335 550" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="UC-06 테스트 재실행 — 시퀀스 다이어그램">
+<defs>
+<marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="context-stroke"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0.5,0.8 L9,5 L0.5,9.2" fill="none" stroke="context-stroke" stroke-width="1.4"/></marker>
+</defs>
+<g id="rep"></g><g id="lifelines"></g><g id="bars"></g><g id="msgs"></g>
+</svg>
+</div>
+<script>
+const B="https://github.com/westone-hq/OTIS/blob/1c9d689a9802fe6703929b632845bce648b1cef6/";
+const D={"L": [{"k": "작업자", "n": "작업자", "x": 75.0, "actor": true}, {"k": "ResultScreen", "n": ":ResultScreen", "x": 329.5, "actor": false}, {"k": "SiteInfo", "n": ":SiteInfo", "x": 545.0, "actor": false}, {"k": "MeasurementSession", "n": ":MeasurementSession", "x": 728.4, "actor": false}, {"k": "SensorChannelManager", "n": ":SensorChannelManager", "x": 1000.0, "actor": false}, {"k": "MeasuringScreen", "n": ":MeasuringScreen", "x": 1215.7, "actor": false}], "M": [[1, "작업자", "ResultScreen", "sync", 140, "‘테스트 재실행’을 누른다", null, "진행하는 동안 버튼을 막는다.", [{"n": "_rerun()", "p": "lib/ui/features/result/result_screen.dart", "a": 231, "b": 288}], [202.2, 131, "middle", 0]], [2, "ResultScreen", "SiteInfo", "sync", 178, "결과에서 현장 정보를 되살린다", null, "참고사항은 넘기지 않는다.", [{"n": "SiteInfo.fromResult", "p": "lib/domain/session/site_info.dart", "a": 223, "b": 256}], [437.2, 169, "middle", 0]], [3, "ResultScreen", "SiteInfo", "sync", 216, "필수 항목을 검사한다", null, "", [{"n": "validate()", "p": "lib/domain/session/site_info.dart", "a": 404, "b": 449}, {"n": "_rerun()", "p": "lib/ui/features/result/result_screen.dart", "a": 231, "b": 288}], [437.2, 207, "middle", 0]], [4, "ResultScreen", "작업자", "reply", 254, "홈에서 채우라고 안내한다", "빠진 항목", "", [{"n": "_rerun()", "p": "lib/ui/features/result/result_screen.dart", "a": 231, "b": 288}], [202.2, 245, "middle", 0]], [5, "ResultScreen", "작업자", "sync", 292, "운전 방향을 묻는다", null, "지난 측정과 반대 방향이 주 버튼이다.", [{"n": "_askDirection()", "p": "lib/ui/features/result/result_screen.dart", "a": 290, "b": 322}], [202.2, 283, "middle", 0]], [6, "작업자", "ResultScreen", "reply", 330, "고른 방향", null, "닫으면 그만둔다.", [{"n": "_askDirection()", "p": "lib/ui/features/result/result_screen.dart", "a": 290, "b": 322}], [202.2, 321, "middle", 0]], [7, "ResultScreen", "MeasurementSession", "sync", 368, "그 방향의 현장 정보를 싣는다", null, "", [{"n": "copyWith()", "p": "lib/domain/session/site_info.dart", "a": 258, "b": 292}, {"n": "_rerun()", "p": "lib/ui/features/result/result_screen.dart", "a": 231, "b": 288}], [437.2, 359, "middle", 0]], [8, "ResultScreen", "SensorChannelManager", "sync", 406, "마이크 권한을 받는다", null, "마이크 권한 확보(UC-I2).", [{"n": "ensureMicPermission()", "p": "lib/ui/features/measure/mic_permission.dart", "a": 5, "b": 34}], [864.2, 397, "middle", 0]], [9, "SensorChannelManager", "ResultScreen", "reply", 444, "진행해도 되는지", null, "", [{"n": "ensureMicPermission()", "p": "lib/ui/features/measure/mic_permission.dart", "a": 5, "b": 34}], [864.2, 435, "middle", 0]], [10, "ResultScreen", "MeasuringScreen", "sync", 482, "결과 화면을 측정 화면으로 바꾼다", "진행", "대기 시간은 기본 5초.", [{"n": "_rerun()", "p": "lib/ui/features/result/result_screen.dart", "a": 231, "b": 288}, {"n": "initState()", "p": "lib/ui/features/measure/measuring_screen.dart", "a": 92, "b": 113}], [864.2, 473, "middle", 0]]], "R": [], "BOT": 530};
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+const url=x=>B+x.p+"#L"+x.a+"-L"+x.b;
+const fnl=fns=>fns.map(z=>z.n+"  "+z.p.split("/").pop()+" L"+z.a+"–L"+z.b).join("\n");
+// 선분 목록과 사각형이 겹치는가 (글자 자리 찾기용)
+function segHit(r,s){
+  const [x1,y1,x2,y2]=s;
+  if(Math.abs(x1-x2)<.5){ if(!(r.x<x1&&x1<r.x+r.w))return false;
+    return Math.max(Math.min(y1,y2),r.y)<Math.min(Math.max(y1,y2),r.y+r.h); }
+  if(Math.abs(y1-y2)<.5){ if(!(r.y<y1&&y1<r.y+r.h))return false;
+    return Math.max(Math.min(x1,x2),r.x)<Math.min(Math.max(x1,x2),r.x+r.w); }
+  // 비스듬한 선: 잘게 나눠 점으로 본다
+  for(let i=0;i<=40;i++){const t=i/40,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    if(r.x<x&&x<r.x+r.w&&r.y<y&&y<r.y+r.h)return true;}
+  return false;
+}
+function boxHit(a,b){return !(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+
+const LX={}; D.L.forEach(l=>LX[l.k]=l.x);
+// 활성 막대: 메시지에서 자동 계산
+function computeBars(){
+  const GAP=200, PAD=10, touch={};
+  const add=(k,v)=>{(touch[k]=touch[k]||[]).push(v);};
+  D.M.forEach(m=>{const [,from,to,kind,y]=m;
+    if(kind==="self"){add(from,y);add(from,y+30);} else {add(from,y);add(to,y);}});
+  const bars=[];
+  for(const k in touch){
+    const lf=D.L.find(l=>l.k===k);
+    if(!lf||lf.actor) continue;
+    const ys=[...new Set(touch[k])].sort((a,b)=>a-b);
+    let s=ys[0],p=ys[0];
+    for(let i=1;i<ys.length;i++){
+      if(ys[i]-p>GAP){bars.push([k,s-PAD,p+PAD]);s=ys[i];}
+      p=ys[i];
+    }
+    bars.push([k,s-PAD,p+PAD]);
+  }
+  return bars;
+}
+const KIND={sync:"동기",reply:"반환",self:"자기호출",async:"비동기"};
+const gl=document.getElementById('lifelines'),gb=document.getElementById('bars'),
+      gr=document.getElementById('rep'),gm=document.getElementById('msgs');
+D.L.forEach(l=>{
+  const g=el("g",{class:"head dim"}); g.dataset.key=l.k;
+  if(l.actor){
+    g.appendChild(el("circle",{class:"fig hd",cx:l.x,cy:26,r:11}));
+    g.appendChild(el("path",{class:"fig",d:`M${l.x},37 L${l.x},63 M${l.x-16},48 L${l.x+16},48 M${l.x},63 L${l.x-12},84 M${l.x},63 L${l.x+12},84`}));
+    const t=el("text",{x:l.x,y:102}); t.textContent=l.n; g.appendChild(t);
+  }else{
+    const t=el("text",{x:l.x,y:65}); t.textContent=l.n; g.appendChild(t);
+    gl.appendChild(g);
+    const w=Math.max(110,t.getBBox().width+28);
+    g.insertBefore(el("rect",{x:l.x-w/2,y:38,width:w,height:44,rx:2}),t);
+  }
+  gl.appendChild(g);
+  gl.appendChild(el("line",{class:"life dim",x1:l.x,y1:l.actor?110:82,x2:l.x,y2:D.BOT}));
+});
+computeBars().forEach(([k,a,b])=>gb.appendChild(el("rect",{class:"bar dim",x:LX[k]-6,y:a,width:12,height:b-a})));
+D.R.forEach(r=>{
+  gr.appendChild(el("rect",{class:"rep dim",x:r.x,y:r.y,width:r.w,height:r.h,rx:3}));
+  const t=el("text",{class:"repl dim",x:r.lx,y:r.y+17}); t.textContent=r.label; gr.appendChild(t);
+});
+D.M.forEach(m=>{
+  const [no,from,to,kind,y,label,cond,desc,fns,[tx,ty,anch,side]]=m;
+  const a=el("a",{class:"ms dim",href:url(fns[0]),target:"_blank",rel:"noopener"});
+  a.dataset.key=no; a.dataset.from=from; a.dataset.to=to;
+  const nm=k=>{const l=D.L.find(z=>z.k===k);return l.actor?l.n:":"+l.k;};
+  const ti=el("title");
+  ti.textContent=no+". "+label+(cond?"  [조건: "+cond+"]":"")+"\n"+nm(from)+" → "+nm(to)+" · "+KIND[kind]+"\n"+desc+"\n\n"+fnl(fns);
+  a.appendChild(ti);
+  const x1=LX[from],x2=LX[to];
+  let d;
+  if(kind==="self"){
+    if(side>0){ const s=x1+6; d=`M${s},${y} L${s+52},${y} L${s+52},${y+30} L${s+7},${y+30}`; }
+    else { const s=x1-6; d=`M${s},${y} L${s-52},${y} L${s-52},${y+30} L${s-7},${y+30}`; }
+  } else {
+    const dir=x2>x1?1:-1;
+    d=`M${x1+6*dir},${y} L${x2-6*dir},${y}`;
+  }
+  a.appendChild(el("path",{class:"hit",d:d}));
+  a.appendChild(el("path",{class:"ln"+(kind==="reply"||kind==="async"?" reply":""),d:d,
+    "marker-end":(kind==="reply"||kind==="async")?"url(#ao)":"url(#af)"}));
+  const t=el("text",{class:"tx",x:tx,y:ty,"text-anchor":anch});
+  if(cond){const c=el("tspan",{class:"cond"});c.textContent="["+cond+"] ";t.appendChild(c);}
+  t.appendChild(document.createTextNode(label)); a.appendChild(t);
+  const n=el("text",{class:"no",x:(kind==="self"?(side>0?x1+10:x1-22):Math.min(x1,x2)+10),
+                     y:y+(kind==="self"?-6:14),"text-anchor":"start"});
+  n.textContent=no; a.appendChild(n);
+  gm.appendChild(a);
+});
+const svg=document.getElementById('dg');
+const msgs=[...gm.querySelectorAll('a.ms')];
+function iso(no){
+  svg.querySelectorAll('.lit').forEach(e=>e.classList.remove('lit'));
+  if(!no){svg.classList.remove('iso');return;}
+  svg.classList.add('iso');
+  const m=D.M.find(z=>z[0]===no);
+  msgs.forEach(a=>{if(+a.dataset.key===no)a.classList.add('lit');});
+  svg.querySelectorAll('.head').forEach(h=>{if(h.dataset.key===m[1]||h.dataset.key===m[2])h.classList.add('lit');});
+}
+msgs.forEach(a=>{
+  const k=+a.dataset.key;
+  a.addEventListener('mouseenter',()=>iso(k));
+  a.addEventListener('mouseleave',()=>iso(null));
+  a.addEventListener('focus',()=>iso(k));
+  a.addEventListener('blur',()=>iso(null));
+});
+
+</script>
+</body>
+</html>
