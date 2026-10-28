@@ -59,6 +59,7 @@ SciPy 정본 픽스처는 `tool/fixtures/gen_conditioning_fixtures.py` 가 만�
 | `tool/` | `import_workers.py`(작업자 명단), `fixtures/gen_conditioning_fixtures.py`(SciPy 정본 픽스처) |
 | `assets/` | 리포트 서식 이미지 · 한글 폰트(`report/`), 로그인 작업자 명단(`workers/workers.json`, OTIS 명단 엑셀 `설치 업체 List_*.xlsx`(저장소 밖 · `.gitignore`)에서 `tool/import_workers.py` 로 만든다. 실명이 평문으로 공개 저장소 · APK 에 들어간다, 2026-10-18 사용자 결정) |
 | `design/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
+| `design/report_logo/` | 리포트 로고 원본(2172 x 724). 앱 자산 `assets/report/otis_v_check.png` 는 이것을 960 x 320 으로 줄인 것이다 |
 
 ## 층 규칙
 

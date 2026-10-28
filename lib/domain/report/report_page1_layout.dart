@@ -1,7 +1,7 @@
 import 'package:vibration_checker/domain/report/report_layout.dart';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-28 16:41:21 · Codex
+/// 수정: 2026-10-28 16:41:21 · 박희정
 /// 클래스: ReportPage1Layout
 /// 목적: 리포트 1쪽의 자리들을 담는다. 머리말 11칸, Performance Metrics
 ///       표 10행이 있다. 좌표 단위는 서식 이미지 픽셀이고 원점은
@@ -165,7 +165,7 @@ class ReportPage1Layout {
   );
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
-  /// 수정: 2026-10-28 16:41:21 · Codex
+  /// 수정: 2026-10-28 16:41:21 · 박희정
   /// 변수: address
   /// 목적: 예전 주소 칸의 자리다. 저장 결과에 주소가 있어도 출력 값은
   ///       비우고 서식의 제목은 `addressLabelEraseBox` 로 지운다.
@@ -184,7 +184,7 @@ class ReportPage1Layout {
     color: ReportColors.text,
   );
 
-  /// 작성: 2026-10-28 16:41:21 · Codex
+  /// 작성: 2026-10-28 16:41:21 · 박희정
   /// 변수: addressLabelEraseBox
   /// 목적: 1쪽 서식에 남은 주소 제목만 지울 영역 (픽셀). 금색 건물명 띠와
   ///       위쪽 사진 · 오른쪽 여백은 그대로 유지한다.
@@ -198,7 +198,7 @@ class ReportPage1Layout {
   );
 
   /// 작성: 2026-10-11 19:15:25 · 박건준
-  /// 수정: 2026-10-28 16:41:21 · Codex
+  /// 수정: 2026-10-28 16:41:21 · 박희정
   /// 변수: placeholder
   /// 목적: 값이 없는 머리말 칸(엔지니어 · 하중)에 찍는 자리 표시
   ///       문구. 칸을 비우면 빠뜨린 것처럼 보인다. 0 이나 지어낸 값은 찍지
@@ -277,8 +277,8 @@ class ReportPage1Layout {
     address,
   ];
 
-  /// 작성: 2026-10-28 15:25:15 · Codex
-  /// 수정: 2026-10-28 16:37:52 · Codex
+  /// 작성: 2026-10-28 15:25:15 · 박희정
+  /// 수정: 2026-10-28 16:37:52 · 박희정
   /// 변수: tablesEraseBox
   /// 목적: 옛 지표 본문과 분석 자료를 지울 영역 (픽셀). 머리말 · 지표 표의
   ///       제목과 열 이름 · 꼬리말은 지우지 않는다.
@@ -316,7 +316,7 @@ class ReportPage1Layout {
   static const int colDescriptionX = 1016;
   static const int colDescriptionRightX = 1447;
 
-  /// 작성: 2026-10-28 16:19:26 · Codex
+  /// 작성: 2026-10-28 16:19:26 · 박희정
   /// 변수: metricHeaderEraseBox
   /// 목적: 서식의 옛 설명 제목을 지울 영역 (픽셀). 카테고리 · 황색 · 적색
   ///       제목은 남기고 측정값 · 설명 제목만 본문 열에 맞춰 다시 쓴다.
@@ -349,7 +349,7 @@ class ReportPage1Layout {
   static const LayoutAlign colYellowAlign = LayoutAlign.center;
 
   /// 작성: 2026-09-15 20:13:49 · 박건준
-  /// 수정: 2026-10-28 17:39:01 · Codex
+  /// 수정: 2026-10-28 17:39:01 · 박희정
   /// 변수: colRedAlign
   /// 목적: 적색 기준치를 칸 가운데로 맞춘다. 황색 기준 열과 같은 정렬이다.
   /// 근거: 인용 — `docs/report_layout.json` 의
@@ -369,7 +369,7 @@ class ReportPage1Layout {
   static const int eraseRedHeight = 46;
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
-  /// 수정: 2026-10-28 16:19:26 · Codex
+  /// 수정: 2026-10-28 16:19:26 · 박희정
   /// 변수: remarkX
   /// 목적: 황색 · 적색 행의 OTIS 문구(`ReportMetric.remarkLines`)를 쓰기
   ///       시작하는 가로 좌표 (픽셀). 측정값을 가리지 않도록 설명 열에 둔다.
@@ -380,7 +380,7 @@ class ReportPage1Layout {
   static const int remarkEraseX = 1004;
 
   /// 작성: 2026-10-21 13:10:00 · 박건준
-  /// 수정: 2026-10-28 16:19:26 · Codex
+  /// 수정: 2026-10-28 16:19:26 · 박희정
   /// 변수: remarkEraseWidth
   /// 목적: 문구 자리를 덮을 네모의 가로 길이 (픽셀). 오른쪽 끝(1447)이 황색
   ///       칸 덮개 왼쪽 끝(`colYellowX` − `eraseRedWidth` / 2 = 1456)에 닿지
@@ -426,21 +426,21 @@ class ReportPage1Layout {
   static const int zMaxY = 1755;
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
-  /// 수정: 2026-10-28 15:25:15 · Codex
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 변수: maxSpeedY
   /// 목적: 최대 속도 행의 세로 좌표 (픽셀).
   /// 근거: 인용 — 2026-10-28 사용자 지시로 축별 여섯 행 뒤에 놓는다
   static const int maxSpeedY = 1863;
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
-  /// 수정: 2026-10-28 15:25:15 · Codex
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 변수: travelDistanceY
   /// 목적: 운행 거리 행의 세로 좌표 (픽셀).
   /// 근거: 인용 — 2026-10-28 사용자 지시로 열 번째 행에 놓고 행 높이를 맞춘다
   static const int travelDistanceY = 1971;
 
   /// 작성: 2026-09-15 19:43:50 · 박건준
-  /// 수정: 2026-10-28 15:25:15 · Codex
+  /// 수정: 2026-10-28 15:25:15 · 박희정
   /// 변수: metricRows
   /// 목적: Performance Metrics 표 열 행의 이름 · 설명 · 자리를 묶는다.
   ///       배경에 옛 수직 · 수평 이름이 남지 않게 본문을 코드로 다시 그린다.

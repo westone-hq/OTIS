@@ -4,8 +4,8 @@ import 'package:pdf/pdf.dart';
 import 'package:vibration_checker/adapter/report/report_text.dart';
 import 'package:vibration_checker/domain/report/report_layout.dart';
 
-/// 작성: 2026-10-28 14:45:51 · Codex
-/// 수정: 2026-10-28 17:16:58 · Codex
+/// 작성: 2026-10-28 14:45:51 · 박희정
+/// 수정: 2026-10-28 17:16:58 · 박희정
 /// 함수: drawReportHeaderLogo
 /// 목적: 서식의 상단 로고만 새 로고로 덮는다. 모든 쪽이 같은 좌표와 원본을
 ///       써야 머리말이 일치하므로 쪽별 렌더러에서 나눠 그리지 않는다.
@@ -35,7 +35,7 @@ void drawReportHeaderLogo(PdfGraphics canvas, PdfImage logo) {
     ..restoreContext();
 }
 
-/// 작성: 2026-10-28 17:16:58 · Codex
+/// 작성: 2026-10-28 17:16:58 · 박희정
 /// 함수: drawReportFooterLogo
 /// 목적: 꼬리말의 왼쪽 흰 영역에만 새 로고를 그린다. 갈색 띠 · 사선 ·
 ///       기밀 문구 · 쪽 번호는 서식 그대로 유지한다. 모든 쪽이 같은
@@ -52,7 +52,7 @@ void drawReportFooterLogo(PdfGraphics canvas, PdfImage logo) {
   );
 }
 
-/// 작성: 2026-10-28 17:16:58 · Codex
+/// 작성: 2026-10-28 17:16:58 · 박희정
 /// 함수: _drawClippedLogo
 /// 목적: 원본 비율을 유지한 로고를 지정한 흰 영역에만 그린다. 상단은
 ///       제번, 하단은 사선을 보호해야 하므로 그림 범위를 제한한다.

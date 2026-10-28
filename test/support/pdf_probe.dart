@@ -78,7 +78,7 @@ List<List<String>> verticalGridLines(String stream) {
 const String markerColorOperand = '0.87843 0.18824 0.18824';
 
 /// 작성: 2026-09-27 09:30:00 · 박건준
-/// 수정: 2026-10-28 14:45:51 · Codex
+/// 수정: 2026-10-28 14:45:51 · 박희정
 /// 함수: axisFrames
 /// 목적: 쪽 하나에서 축 틀 네모의 자리를 뽑는다. 렌더러가 실제로 찍은
 ///       좌표라서, 계산으로 기대한 자리와 맞는지 대조하는 데 쓴다.

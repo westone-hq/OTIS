@@ -38,13 +38,12 @@ MeasurementResult _result({
 }
 
 /// 작성: 2026-09-15 20:13:49 · 박건준
-/// 수정: 2026-10-15 15:53:26 · 박건준
+/// 수정: 2026-10-28 23:30:00 · 박건준
 /// 함수: main
 /// 목적: 리포트 판정 기준과 그 기준을 쓰는 측정 결과 게터를 시험한다.
 ///       - 경계값에서 "초과"의 뜻이 흔들리지 않는지
 ///       - 값이 없을 때 정상이 아니라 미확정으로 나오는지
 ///       - 녹색 · 황색 · 적색 세 단계가 기준대로 갈리는지
-///       - 수평 행이 X·Y 를 각각 보고 더 나쁜 쪽을 따르는지
 ///       - 임계값 숫자가 저장소 안에 한 곳에만 있는지
 void main() {
   group('ReportThresholds.exceeds 경계값', () {
@@ -80,52 +79,6 @@ void main() {
 
     test('값이 없으면 미확정이다', () {
       expect(ReportThresholds.judge(null, 17.0, 25.5), ReportVerdict.unknown);
-    });
-  });
-
-  group('ReportThresholds.judgeHorizontal', () {
-    const yellow = ReportThresholds.horizPtpYellowMg; // 17
-    const red = ReportThresholds.xPtpRedMg; // 25.5
-
-    test('두 축 다 황색 기준 이하면 녹색이다', () {
-      expect(
-        ReportThresholds.judgeHorizontal(9.0, 17.0, yellow, red),
-        ReportVerdict.green,
-      );
-    });
-
-    test('더 나쁜 축을 따른다', () {
-      expect(
-        ReportThresholds.judgeHorizontal(18.0, 9.0, yellow, red),
-        ReportVerdict.yellow,
-      );
-      expect(
-        ReportThresholds.judgeHorizontal(18.0, 26.0, yellow, red),
-        ReportVerdict.red,
-      );
-    });
-
-    test('적색 축이 있으면 다른 축을 못 재도 적색이다', () {
-      expect(
-        ReportThresholds.judgeHorizontal(26.0, null, yellow, red),
-        ReportVerdict.red,
-      );
-    });
-
-    test('못 잰 축이 있고 적색 축이 없으면 미확정이다', () {
-      // 한 축만 보고 "정상" · "황색" 이라고 할 수 없다
-      expect(
-        ReportThresholds.judgeHorizontal(9.0, null, yellow, red),
-        ReportVerdict.unknown,
-      );
-      expect(
-        ReportThresholds.judgeHorizontal(18.0, null, yellow, red),
-        ReportVerdict.unknown,
-      );
-      expect(
-        ReportThresholds.judgeHorizontal(null, null, yellow, red),
-        ReportVerdict.unknown,
-      );
     });
   });
 

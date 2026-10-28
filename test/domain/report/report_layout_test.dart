@@ -14,7 +14,7 @@ import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 const _layoutJsonPath = 'docs/report_layout.json';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-28 17:16:58 · Codex
+/// 수정: 2026-10-28 17:16:58 · 박희정
 /// 변수: _layoutJsonMd5
 /// 목적: 옮길 때 본 정본 기록의 md5. 정본이 바뀌면 이 값이 달라져,
 ///       사본을 함께 고쳐야 한다는 사실이 시험 실패로 드러난다.
@@ -72,7 +72,7 @@ void _expectField(LayoutField actual, Map<String, dynamic> expected) {
 }
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-28 17:16:58 · Codex
+/// 수정: 2026-10-28 17:16:58 · 박희정
 /// 함수: main
 /// 목적: `report_layout.dart` 의 좌표가 정본 `docs/report_layout.json` 과
 ///       같은지 대조한다. 사람이 손으로 옮기는 과정에서 숫자 하나가

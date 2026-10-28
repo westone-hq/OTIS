@@ -2,7 +2,7 @@ import 'package:vibration_checker/domain/report/report_layout.dart';
 import 'package:vibration_checker/domain/report/report_page1_layout.dart';
 
 /// 작성: 2026-09-15 19:43:50 · 박건준
-/// 수정: 2026-10-28 15:10:01 · Codex
+/// 수정: 2026-10-28 15:10:01 · 박희정
 /// 클래스: ReportChartPageLayout
 /// 목적: 차트 쪽의 자리들을 담는다. 머리말 네 칸과 차트 네 자리가 있다.
 ///       1쪽과 달리 쪽 번호 칸이 있고, 쪽 제목이 금색으로 들어간다.

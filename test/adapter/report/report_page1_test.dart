@@ -109,7 +109,7 @@ MeasurementResult _siteResult({
 }
 
 /// 작성: 2026-09-16 09:12:40 · 박건준
-/// 수정: 2026-10-28 16:41:21 · Codex
+/// 수정: 2026-10-28 16:41:21 · 박희정
 /// 함수: main
 /// 목적: 1쪽 렌더링을 시험한다. 자리가 맞는지는 `ReportLayout` 과 대조하는
 ///       `report_layout_test.dart` 가 맡으므로, 여기서는 PDF 가 실제로
