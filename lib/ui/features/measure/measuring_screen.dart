@@ -578,20 +578,27 @@ class _MeasuringScreenState extends State<MeasuringScreen>
                 ),
               ),
 
-              // 경고 배너 (빨간 배경 + 손 모양 아이콘 + 안내 문구)
+              // 경고 배너 (빨간 배경 + 안내 문구)
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDims.screenPad,
-                ),
+                // 좌우 바깥 여백을 화면 여백보다 좁게 둔다 — 가장 긴 문장
+                // (18sp 에서 약 360dp)이 411dp 폭 폰에서 한 줄에 들게 한다
+                padding: const EdgeInsets.symmetric(horizontal: AppDims.gap),
                 child: AppNotice(
-                  icon: Icons.front_hand_outlined,
+                  // 문장마다 한 줄이다. 손바닥 아이콘은 뺐다 — 그 폭만큼 줄이
+                  // 모자라 문장 중간에서 꺾였다(2026-10-28 사용자 지시).
+                  // 더 좁은 폰에서 꺾이면 낱말 중간이 아니라 띄어쓰기에서
+                  // 꺾는다(`keepWordsTogether()`).
                   // 정지 직후에 끝내면 끝부분 값이 부정확해진다(2026-10-22,
                   // `MeasurementResult.stoppedTooSoon`)
-                  message: <String>[
-                    '측정 중입니다. 휴대폰을 움직이지 마세요.',
-                    measureEndGuide, // → 로직 이동: measureEndGuide
-                    measureIdleGuide, // → 로직 이동: measureIdleGuide
-                  ].join('\n'),
+                  message:
+                      <String>[
+                            '측정 중입니다.',
+                            '휴대폰을 움직이지 마세요.',
+                            measureEndGuide, // → 로직 이동: measureEndGuide
+                            measureIdleGuide, // → 로직 이동: measureIdleGuide
+                          ]
+                          .map(keepWordsTogether)
+                          .join('\n'), // → 로직 이동: keepWordsTogether()
                   tone: NoticeTone.alert,
                 ),
               ),

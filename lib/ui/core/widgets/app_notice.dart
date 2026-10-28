@@ -13,13 +13,16 @@ import 'package:vibration_checker/ui/core/theme.dart';
 enum NoticeTone { danger, caution, alert }
 
 /// 작성: 2026-10-04 13:37:23 · 박건준
+/// 수정: 2026-10-28 11:00:00 · 박건준
 /// 클래스: AppNotice
-/// 목적: 아이콘 하나와 안내 문구 한 덩이를 담은 박스. 홈 화면 입력 오류,
+/// 목적: 아이콘 하나와 안내 문구 한 덩이를 담은 박스. 아이콘은 뺄 수 있다 —
+///       문구가 길어 한 줄이 아이콘 폭만큼 모자란 곳(측정 중 안내)은 빼서
+///       글자 자리를 넓힌다. 홈 화면 입력 오류,
 ///       시작 화면 센서 미지원, 거치 안내 주의 문구, 측정 화면 경고처럼
 ///       화면마다 따로 그리던 박스를 한 모양으로 모은다.
 class AppNotice extends StatelessWidget {
-  /// 박스 앞에 놓을 아이콘
-  final IconData icon;
+  /// 박스 앞에 놓을 아이콘. null 이면 아이콘 없이 문구만 둔다
+  final IconData? icon;
 
   /// 안내 문구. 줄바꿈 문자로 여러 줄을 쓸 수 있다
   final String message;
@@ -28,22 +31,24 @@ class AppNotice extends StatelessWidget {
   final NoticeTone tone;
 
   /// 작성: 2026-10-04 13:37:23 · 박건준
+  /// 수정: 2026-10-28 11:00:00 · 박건준
   /// 함수: AppNotice
   /// 목적: 안내 박스에 넣을 아이콘 · 문구 · 색 조합을 받는다.
-  /// 인자: icon — 박스 앞 아이콘
+  /// 인자: icon — 박스 앞 아이콘. null 이면 없다
   ///       message — 안내 문구
   ///       tone — 색 조합
   const AppNotice({
     super.key,
-    required this.icon,
+    this.icon,
     required this.message,
     required this.tone,
   });
 
   /// 작성: 2026-10-04 13:37:23 · 박건준
+  /// 수정: 2026-10-28 11:00:00 · 박건준
   /// 함수: build
   /// 목적: 색 조합에 맞춰 바탕 · 테두리 · 아이콘 · 글자색을 정해 박스를
-  ///       그린다.
+  ///       그린다. 아이콘이 없으면 문구가 박스 안쪽 폭을 다 쓴다.
   @override
   Widget build(BuildContext context) {
     final (background, accent, textColor) = switch (tone) {
@@ -69,8 +74,10 @@ class AppNotice extends StatelessWidget {
         // 아이콘 + 문구
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: accent, size: AppDims.iconM),
-          const SizedBox(width: AppDims.gap2),
+          if (icon != null) ...[
+            Icon(icon, color: accent, size: AppDims.iconM),
+            const SizedBox(width: AppDims.gap2),
+          ],
           Expanded(
             child: Text(
               message,
