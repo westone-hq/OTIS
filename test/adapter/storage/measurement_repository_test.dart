@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/adapter/storage/storage_file_access.dart';
 import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
@@ -68,6 +69,7 @@ MeasurementResult _result(String id, DateTime measuredAt) {
 }
 
 /// 작성: 2026-09-26 09:30:00 · 박건준
+/// 수정: 2026-10-29 16:15:04 · Codex
 /// 함수: main
 /// 목적: 저장소를 시험한다. 측정 한 건이 폴더 하나로 저장되는지, 목록이
 ///       요약만 읽는지, 지울 때 폴더째 사라지는지를 본다.
@@ -83,7 +85,9 @@ void main() {
   });
 
   tearDown(() async {
-    if (await temp.exists()) await temp.delete(recursive: true);
+    if (await temp.exists()) {
+      await StorageFileAccess.retry(() => temp.delete(recursive: true));
+    }
   });
 
   group('MeasurementRepository 저장과 조회', () {

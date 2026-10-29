@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:vibration_checker/adapter/storage/evimp_writer.dart';
+import 'package:vibration_checker/adapter/storage/text_file_writer.dart';
 import 'package:vibration_checker/domain/analysis/kinematics.dart';
 import 'package:vibration_checker/domain/analysis/motion_zones.dart';
 import 'package:vibration_checker/domain/analysis/ride_weighting.dart';
@@ -100,7 +101,7 @@ class MetaWriter {
   }
 
   /// 작성: 2026-08-18 23:43:06 · 박건준
-  /// 수정: 2026-10-23 00:50:00 · 박건준
+  /// 수정: 2026-10-29 16:06:38 · Codex
   /// 함수: writeMeta
   /// 목적: 집계 파일을 기록한다. 격자 환산이 실패하면 `result`에는
   ///       표본 없이 실패 사유(`failureReason`)만 담겨 오는데, 이때도
@@ -121,7 +122,8 @@ class MetaWriter {
       body.write('failureReason: ${result.failureReason}');
       body.write(lineEnding);
     }
-    await file.writeAsString(body.toString());
+    // → 로직 이동: TextFileWriter.write()
+    await TextFileWriter.write(file, body.toString());
     return file;
   }
 
@@ -376,6 +378,7 @@ class MetaWriter {
   }
 
   /// 작성: 2026-10-07 02:10:57 · 박건준
+  /// 수정: 2026-10-29 16:06:38 · Codex
   /// 함수: appendMeta
   /// 목적: 이미 쓴 집계 파일 끝에 문자열을 덧붙인다. 집계는 격자 환산
   ///       직후에 먼저 쓰고, 신호 처리 결과는 그 뒤에 알 수 있기 때문이다.
@@ -383,5 +386,6 @@ class MetaWriter {
   ///       text — 덧붙일 문자열 (`encodeConditioningMeta()` 등)
   /// 반환: 덧붙인 파일
   static Future<File> appendMeta(String path, String text) =>
-      File(path).writeAsString(text, mode: FileMode.append);
+      // → 로직 이동: TextFileWriter.write()
+      TextFileWriter.write(File(path), text, mode: FileMode.append);
 }

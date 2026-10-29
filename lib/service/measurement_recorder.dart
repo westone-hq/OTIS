@@ -122,7 +122,7 @@ class MeasurementRecorder {
   MeasurementRecorder._();
 
   /// 작성: 2026-10-05 10:03:35 · 박건준
-  /// 수정: 2026-10-23 13:00:00 · 박건준
+  /// 수정: 2026-10-29 16:06:38 · Codex
   /// 함수: _moveNativeFile
   /// 목적: 안드로이드가 앱 저장 공간 맨 위에 따로 남긴 파일(원본 기록,
   ///       현장 소음 녹음)을 이번 측정 폴더로 옮긴다.
@@ -145,12 +145,19 @@ class MeasurementRecorder {
     required String metaPath,
     required String label,
   }) async {
-    // 집계 파일 끝에 한 줄을 덧붙인다. 예외 문구 안 줄바꿈은 빈칸으로 바꿔
-    // 한 줄로 남긴다
-    Future<void> note(String text) => File(metaPath).writeAsString(
-      '${text.replaceAll(RegExp(r'[\r\n]+'), ' ')}${MetaWriter.lineEnding}',
-      mode: FileMode.append,
-    );
+    /// 수정: 2026-10-29 16:06:38 · Codex
+    /// 함수: note
+    /// 목적: 예외 문구 안 줄바꿈을 빈칸으로 바꿔 집계에 한 줄을 덧붙인다.
+    ///       Windows 파일 열기의 일시적인 공유 위반도 공통 기록기를 거친다.
+    /// 인자: text — 집계 파일에 남길 내용
+    /// 반환: 기록 완료 Future
+    Future<void> note(String text) async {
+      // → 로직 이동: MetaWriter.appendMeta()
+      await MetaWriter.appendMeta(
+        metaPath,
+        '${text.replaceAll(RegExp(r'[\r\n]+'), ' ')}${MetaWriter.lineEnding}',
+      );
+    }
 
     if (sourcePath == null) {
       await note('${label}Path: null');
