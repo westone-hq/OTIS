@@ -45,6 +45,8 @@ jobs:
       RELEASE_VERSION: ${{ inputs.version || '0.0.4' }}
       RELEASE_NOTES: ${{ inputs.notes || '사번 명단 업데이트' }}
       PYTHONUTF8: '1'
+      # 기존 검사의 현지 시각 입력은 한국 시간을 기준으로 작성되어 있다.
+      TZ: Asia/Seoul
       ANDROID_BUILD_TOOLS: '36.0.0'
     steps:
       - name: 실행 브랜치와 요청 확인
