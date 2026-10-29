@@ -142,8 +142,9 @@ def write_json(path, value):
 
 def prepare(args):
     """작성: 2026-10-29 15:17:49 · Codex
+    수정: 2026-10-29 17:05:27 · Codex
     함수: prepare
-    목적: main의 엑셀을 변환하고 기존 배포 정보로 새 빌드 계획을 만든다.
+    목적: 선택한 커밋의 `설치업체.xlsx`를 변환하고 기존 배포 정보로 빌드 계획을 만든다.
     인자: args — 저장소·버전·원본 커밋·작업 경로
     반환: 없음. 계획 파일과 GitHub 출력값을 기록한다
     """
@@ -175,7 +176,7 @@ def prepare(args):
     if any(ref['ref'] == f'refs/tags/v{args.version}' for ref in tag_refs):
         raise ValueError('같은 태그가 이미 있다. 새 버전을 입력한다.')
     plan = release_plan(args.version, (root / 'pubspec.yaml').read_text(encoding='utf-8'), releases, manifests, latest_manifest)
-    source = root / 'admin/workers.xlsx'
+    source = root / 'admin/설치업체.xlsx'
     target = root / 'assets/workers/workers.json'
     import_workers(str(source), str(target))
     workers = json.loads(target.read_text(encoding='utf-8'))['workers']

@@ -7,7 +7,7 @@ on:
     branches: [feat/admin-release-workflow]
     paths:
       - .github/workflows/prepare-release.yml
-      - admin/workers.xlsx
+      - admin/설치업체.xlsx
       - assets/workers/workers.json
       - tool/**
       - lib/**

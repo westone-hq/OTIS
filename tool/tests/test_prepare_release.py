@@ -89,7 +89,7 @@ class ExcelPreparationTest(unittest.TestCase):
         book.active.append(import_workers.EXPECTED_HEADER)
         for row in rows:
             book.active.append(row)
-        book.save(self.root / 'admin/workers.xlsx')
+        book.save(self.root / 'admin/설치업체.xlsx')
         book.close()
 
     def args(self):
@@ -108,14 +108,14 @@ class ExcelPreparationTest(unittest.TestCase):
 
     def test_workbook_conversion_keeps_zero_and_four_fields(self):
         self.workbook([['010613', '작업자', '업체', '관리팀']])
-        before = (self.root / 'admin/workers.xlsx').read_bytes()
+        before = (self.root / 'admin/설치업체.xlsx').read_bytes()
         with patch.object(release, 'github_api', side_effect=self.api), patch.dict(os.environ, {'RELEASE_NOTES': '명단 갱신'}), contextlib.redirect_stdout(io.StringIO()):
             release.prepare(self.args())
         worker = json.loads(self.target.read_text(encoding='utf-8'))['workers'][0]
         self.assertEqual(worker, {'id': '010613', 'name': '작업자', 'company': '업체', 'team': '관리팀'})
         plan = json.loads(self.args().plan.read_text(encoding='utf-8'))
         self.assertEqual((plan['build'], plan['worker_count']), (4, 1))
-        self.assertEqual(before, (self.root / 'admin/workers.xlsx').read_bytes())
+        self.assertEqual(before, (self.root / 'admin/설치업체.xlsx').read_bytes())
 
     def test_duplicate_ids_fail_before_replacing_old_json(self):
         self.workbook([['t00001', '갑', None, None], ['T00001', '을', None, None]])

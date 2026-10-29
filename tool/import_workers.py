@@ -1,7 +1,7 @@
 """작업자 명단 엑셀을 앱 자산(assets/workers/workers.json)으로 바꾼다.
 
 OTIS 명단 엑셀의 첫 시트를 읽는다. 열 차례는 사번 · 성명 · 업체명 · 관리팀이다.
-관리자 배포 입력은 admin/workers.xlsx 이다. GitHub Actions 가 변환한 JSON 을
+관리자 배포 입력은 admin/설치업체.xlsx 이다. GitHub Actions 가 변환한 JSON 을
 APK 에 넣는다. 로컬 빌드도 명단을 바꿨으면 먼저 이 스크립트를 실행한다.
 
     python tool/import_workers.py "설치 업체 List_261012.xlsx" assets/workers/workers.json

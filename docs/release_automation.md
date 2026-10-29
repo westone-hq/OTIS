@@ -4,7 +4,7 @@
 
 `.github/workflows/prepare-release.yml`의 **새 버전 준비**를 `main`에서 수동 실행한다. 운영자는 버전 이름과 변경 내용만 입력한다. 운영자 PC에는 Git·Python·Flutter·Android Studio가 필요 없다.
 
-1. 실행을 시작한 `main` 커밋의 `admin/workers.xlsx`를 읽는다.
+1. 실행을 시작한 `main` 커밋의 `admin/설치업체.xlsx`를 읽는다.
 2. `tool/import_workers.py`로 `assets/workers/workers.json`을 만든다.
 3. `tool/prepare_release.py`가 버전·빌드·최소 허용 빌드 번호를 정한다.
 4. Flutter 정적 분석·서식·테스트를 통과한 뒤 고정 릴리스 키로 APK를 만든다.
@@ -23,7 +23,9 @@
 
 main 반영 전 검증은 `feat/admin-release-workflow` 브랜치에 관련 파일을 push해서 실행한다. GitHub의 `push` 이벤트는 기본 브랜치에 워크플로가 없어도 해당 커밋으로 실행된다. 이 경로는 검증용 버전 `0.0.4`로 동일한 엑셀 변환·앱 검사·서명 빌드·APK 검사까지 수행하고, APK와 version.json을 Actions 아티팩트로 보관한다. 릴리스 초안 생성 단계는 main의 수동 실행에만 허용한다. 검증용 버전이 기존 배포본·초안과 겹치면 운영 준비와 같이 중단한다.
 
-기존 루트의 `설치 업체 List_*.xlsx` 제외 규칙은 유지한다. 관리자가 올릴 입력은 **admin/workers.xlsx**로 고정한다. 현재 이 파일은 사용자가 수정한 엑셀에서 복사했고, 978명 중 추가한 한 명은 사번 `010613`이다.
+기존 루트의 `설치 업체 List_*.xlsx` 제외 규칙은 유지한다. 관리자가 올릴 입력은 **admin/설치업체.xlsx**로 고정한다. 현재 이 파일은 사용자가 수정한 엑셀에서 복사했고, 978명 중 추가한 한 명은 사번 `010613`이다.
+
+파일 이름은 사용자 요청에 따라 `설치업체.xlsx`로 통일한다. Excel 통합 문서의 확장자는 `.xlsx`이며, `.xlxs`로 바꾸지 않는다.
 
 ### 2. GitHub Actions와 Secrets
 
@@ -51,7 +53,7 @@ main 반영 전 검증은 `feat/admin-release-workflow` 브랜치에 관련 파�
 - 빌드 번호는 소스의 `+` 뒤 번호와 기존 `version.json`들 중 최댓값에 1을 더한다. 아직 게시하지 않은 초안도 포함해 충돌을 막는다.
 - `minimum`은 현재 Latest의 값을 그대로 이어받는다. 이 자동화에서 필수 업데이트로 바꾸지 않는다.
 - `pubspec.yaml`은 커밋하지 않고 `flutter build apk --build-name ... --build-number ...`로 새 값을 적용한다.
-- 엑셀 변환 결과 역시 빌드 작업 폴더에서만 생성한다. 후속 로컬 빌드는 `python tool/import_workers.py admin/workers.xlsx assets/workers/workers.json`을 먼저 실행한다.
+- 엑셀 변환 결과 역시 빌드 작업 폴더에서만 생성한다. 후속 로컬 빌드는 `python tool/import_workers.py admin/설치업체.xlsx assets/workers/workers.json`을 먼저 실행한다.
 - 여러 실행은 같은 concurrency 그룹에서 순서대로 진행한다. GitHub의 동시 실행 제한에 따라 대기 중인 이전 요청이 취소될 수 있으므로 운영자는 한 번에 한 버전만 실행하고 완료를 기다린다.
 
 ## 검증과 실패
