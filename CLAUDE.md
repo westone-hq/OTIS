@@ -17,6 +17,7 @@
 | `docs/spec/signal_processing.md` | 진동 처리 순서, 설정 상수, result.json · meta.txt 형식, SciPy 정본과 픽스처 |
 | `docs/spec/report.md` | 리포트 1쪽 머리말 · 지표 표, 2 · 3쪽 차트 축 · 표시점, 서식 이미지 |
 | `docs/release.md` | 릴리스 서명 키 보관 · `android/key.properties` · 서명 확인 |
+| `docs/release_automation.md` · `admin/` | 관리자 엑셀 입력 · Actions의 새 버전 준비 · Secrets 최초 설정 · 릴리스 초안 |
 | `docs/report_layout.json` | 리포트 좌표 정본. `report_layout_test` 가 Dart 상수와 대조한다 |
 | `docs/reference/` · `docs/test_up/` · `docs/test_dn/` · `every_set_compare.png` | OTIS 원본 리포트 · 원시 기록과 우리 앱 결과 비교 자료. 원본 리포트(엔지니어명 · 현장명 포함)까지 공개 저장소에 올린다(2026-10-28 사용자 결정) |
 | `docs/uml/` | 유스케이스 · 액티비티 · 시퀀스 다이어그램(HTML) |
@@ -57,7 +58,7 @@ SciPy 정본 픽스처는 `tool/fixtures/gen_conditioning_fixtures.py` 가 만�
 | `android/…/vibration_checker/` | `MainActivity`(패키지 루트, 매니페스트) · `sensor/`(`SensorMethodHandler` 측정 통로 · `SensorStreamHandler`) · `noise/`(`NoiseCaptureHandler` · `NoiseAudioEncoder` M4A) · `update/`(`UpdateInstaller`) |
 | `test/` | lib 와 같은 모양 + `architecture/`(층 규칙) · `screenshots/` · `support/` · `fixtures/records`(실측 EVIMP1) · `fixtures/scipy`(SciPy 생성물) |
 | `tool/` | `import_workers.py`(작업자 명단), `fixtures/gen_conditioning_fixtures.py`(SciPy 정본 픽스처) |
-| `assets/` | 리포트 서식 이미지 · 한글 폰트(`report/`), 로그인 작업자 명단(`workers/workers.json`, OTIS 명단 엑셀 `설치 업체 List_*.xlsx`(저장소 밖 · `.gitignore`)에서 `tool/import_workers.py` 로 만든다. 실명이 평문으로 공개 저장소 · APK 에 들어간다, 2026-10-18 사용자 결정) |
+| `assets/` | 리포트 서식 이미지 · 한글 폰트(`report/`), 로그인 작업자 명단(`workers/workers.json`, `admin/설치업체.xlsx`에서 `tool/import_workers.py` 로 만든다. 루트에 받은 원본 엑셀은 `.gitignore`. 실명이 평문으로 공개 저장소 · APK 에 들어간다, 2026-10-18 사용자 결정) |
 | `design/icon/` | 앱 아이콘 원본 · OTIS 시안. `dart run flutter_launcher_icons` 로 `mipmap-*` 를 만든다. 앱 자산 목록에는 넣지 않는다 |
 | `design/report_logo/` | 리포트 로고 원본(2172 x 724). 앱 자산 `assets/report/otis_v_check.png` 는 이것을 960 x 320 으로 줄인 것이다 |
 

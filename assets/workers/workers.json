@@ -1,4 +1,4 @@
-{"source": "설치 업체 List_261012.xlsx", "workers": [
+{"source": "설치업체.xlsx", "workers": [
 {"id": "213508", "name": "권기현", "company": null, "team": null},
 {"id": "213164", "name": "김동현", "company": null, "team": null},
 {"id": "213645", "name": "김민재", "company": null, "team": null},
@@ -975,5 +975,6 @@
 {"id": "T81423", "name": "김태성", "company": "주식회사 진엘리베이터", "team": "QTO 설치팀"},
 {"id": "T81435", "name": "안광원", "company": "주식회사 진엘리베이터", "team": "QTO 설치팀"},
 {"id": "T82104", "name": "이웅", "company": "주식회사 진엘리베이터", "team": "QTO 설치팀"},
-{"id": "T82136", "name": "이진수", "company": "주식회사 진엘리베이터", "team": "QTO 설치팀"}
+{"id": "T82136", "name": "이진수", "company": "주식회사 진엘리베이터", "team": "QTO 설치팀"},
+{"id": "010613", "name": "박건준", "company": "서일대학교", "team": "개발팀"}
 ]}

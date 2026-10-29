@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vibration_checker/adapter/report/tune_report_builder.dart';
+import 'package:vibration_checker/adapter/storage/storage_file_access.dart';
 import 'package:vibration_checker/domain/measurement/measurement_naming.dart';
 import 'package:vibration_checker/domain/measurement/measurement_result.dart';
 
@@ -355,7 +356,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-10-15 22:22:45 · 박건준
-  /// 수정: 2026-10-22 12:20:00 · 박건준
+  /// 수정: 2026-10-29 16:15:04 · Codex
   /// 함수: pruneOldest
   /// 목적: 측정 결과가 `maxStoredMeasurements` 개를 넘으면 오래된 것부터
   ///       폴더째 지운다. 폴더 이름(측정 ID, `yyyyMMdd-HHmmss` 한국 시간)을
@@ -390,7 +391,8 @@ class MeasurementRepository {
         if (hasResult) kept++;
         continue;
       }
-      await dir.delete(recursive: true);
+      // → 로직 이동: StorageFileAccess.retry()
+      await StorageFileAccess.retry(() => dir.delete(recursive: true));
       deleted.add(id);
     }
     if (deleted.isNotEmpty) changes.value++;
@@ -398,7 +400,7 @@ class MeasurementRepository {
   }
 
   /// 작성: 2026-08-18 23:29:46 · 박건준
-  /// 수정: 2026-10-22 12:20:00 · 박건준
+  /// 수정: 2026-10-29 16:15:04 · Codex
   /// 함수: delete
   /// 목적: 특정 ID의 측정 결과를 기기에서 완전히 삭제한다. 측정 한 건이
   ///       폴더 하나이므로 폴더째 지운다 — 리포트와 원본까지 함께 사라진다.
@@ -409,7 +411,8 @@ class MeasurementRepository {
     final base = await getBaseDirectory(); // 산출물 기준 폴더
     final dir = Directory('${base.path}/$id'); // 지울 폴더
     if (!await dir.exists()) return false;
-    await dir.delete(recursive: true);
+    // → 로직 이동: StorageFileAccess.retry()
+    await StorageFileAccess.retry(() => dir.delete(recursive: true));
     changes.value++;
     return true;
   }

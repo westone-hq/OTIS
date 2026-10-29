@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:vibration_checker/adapter/sensor/sensor_channel.dart';
 import 'package:vibration_checker/adapter/storage/measurement_repository.dart';
+import 'package:vibration_checker/adapter/storage/storage_file_access.dart';
 import 'package:vibration_checker/domain/analysis/signal_conditioner.dart';
 import 'package:vibration_checker/domain/auth/login_session.dart';
 import 'package:vibration_checker/domain/auth/worker.dart';
@@ -133,6 +134,10 @@ GridResampler _filledResampler({
   return resampler;
 }
 
+/// 수정: 2026-10-29 16:15:04 · Codex
+/// 함수: main
+/// 목적: 측정 저장 결과와 원본 이동·실패 사유를 검사한다. Windows에서 시험
+///       파일을 잠깐 잡은 경우 정리도 공통 파일 접근 정책으로 처리한다.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -145,7 +150,9 @@ void main() {
   });
 
   tearDown(() async {
-    if (await temp.exists()) await temp.delete(recursive: true);
+    if (await temp.exists()) {
+      await StorageFileAccess.retry(() => temp.delete(recursive: true));
+    }
   });
 
   group('MeasurementRecorder.record 저장 전 확인', () {
