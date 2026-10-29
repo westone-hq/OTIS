@@ -1,7 +1,19 @@
 name: 새 버전 준비
-run-name: 새 버전 준비 — ${{ inputs.version }}
+run-name: ${{ github.event_name == 'push' && '브랜치 검증' || '새 버전 준비' }} — ${{ inputs.version || '0.0.4' }}
 
 on:
+  # main 병합 전에도 같은 빌드 절차를 검증한다. 초안은 main 수동 실행만 만든다.
+  push:
+    branches: [feat/admin-release-workflow]
+    paths:
+      - .github/workflows/prepare-release.yml
+      - admin/workers.xlsx
+      - assets/workers/workers.json
+      - tool/**
+      - lib/**
+      - test/**
+      - android/**
+      - pubspec.*
   workflow_dispatch:
     inputs:
       version:
@@ -30,20 +42,21 @@ jobs:
     permissions:
       contents: write
     env:
-      RELEASE_VERSION: ${{ inputs.version }}
-      RELEASE_NOTES: ${{ inputs.notes }}
+      RELEASE_VERSION: ${{ inputs.version || '0.0.4' }}
+      RELEASE_NOTES: ${{ inputs.notes || '사번 명단 업데이트' }}
       PYTHONUTF8: '1'
       ANDROID_BUILD_TOOLS: '36.0.0'
     steps:
-      - name: main에서 실행했는지 확인
+      - name: 실행 브랜치와 요청 확인
         shell: bash
         run: |
-          if [ "$GITHUB_REF" != refs/heads/main ]; then
-            echo '::error::Use workflow from에서 main을 선택합니다.'
-            exit 1
-          fi
+          case "$GITHUB_EVENT_NAME:$GITHUB_REF" in
+            workflow_dispatch:refs/heads/main) ;;
+            push:refs/heads/feat/admin-release-workflow) ;;
+            *) echo '::error::운영 준비는 main 수동 실행, 검증은 작업 브랜치 push로 실행합니다.'; exit 1 ;;
+          esac
 
-      - name: main의 실행 시점 소스 받기
+      - name: 실행 시점의 소스 받기
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -127,7 +140,7 @@ jobs:
       - name: 검증된 배포 파일 보관
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: vcheck-${{ inputs.version }}
+          name: vcheck-${{ steps.release.outputs.version }}
           path: |
             build/release/*.apk
             build/release/version.json
@@ -136,6 +149,7 @@ jobs:
 
       # 공개 게시와 Latest 지정은 운영자가 Releases에서 직접 한다.
       - name: 릴리스 초안 만들기
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
@@ -152,6 +166,20 @@ jobs:
             echo "- 제목: $RELEASE_VERSION / 태그: $RELEASE_TAG"
             echo '- Releases에서 첨부 파일을 확인한 뒤 Latest로 게시합니다.'
             echo "- [Releases 열기](https://github.com/$GITHUB_REPOSITORY/releases)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 브랜치 검증 결과 안내
+        if: github.event_name == 'push'
+        env:
+          WORKER_COUNT: ${{ steps.release.outputs.worker_count }}
+        shell: bash
+        run: |
+          {
+            echo '## 브랜치 검증 완료'
+            echo
+            echo "- 명단: $WORKER_COUNT명 / 버전: $RELEASE_VERSION"
+            echo '- 같은 실행의 Artifacts에서 서명 APK와 version.json을 받습니다.'
+            echo '- 브랜치 검증은 릴리스 초안과 Latest를 만들거나 변경하지 않습니다.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 임시 서명 설정 정리
