@@ -54,6 +54,7 @@ H6N1AP65.pdf
 # 루트에 받은 OTIS 명단 원본은 제외한다. 관리자 배포 입력은
 # admin/설치업체.xlsx 한 파일로 관리한다 (2026-10-29)
 /설치 업체 List_*.xlsx
+/설치업체.xlsx
 
 # Noise analysis output and Kotlin build cache
 tool/__pycache__/
