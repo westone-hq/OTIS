@@ -102,8 +102,9 @@ jobs:
       - name: Android 빌드 도구 준비
         shell: bash
         run: |
-          python -c "import subprocess; subprocess.run(['sdkmanager', '--licenses'], input='y\n' * 100, text=True, check=True)"
-          sdkmanager "platforms;android-36" "build-tools;$ANDROID_BUILD_TOOLS" 'ndk;28.2.13676358'
+          # Ubuntu 실행 환경의 SDK 도구는 PATH에 없으므로 설치 경로로 호출한다.
+          python -c "import os, subprocess; subprocess.run([os.environ['ANDROID_HOME'] + '/cmdline-tools/latest/bin/sdkmanager', '--licenses'], input='y\n' * 100, text=True, check=True)"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;$ANDROID_BUILD_TOOLS" 'ndk;28.2.13676358'
           flutter config --no-analytics
           flutter pub get --enforce-lockfile
 
