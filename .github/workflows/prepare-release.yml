@@ -1,0 +1,161 @@
+name: 새 버전 준비
+run-name: 새 버전 준비 — ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '새 버전 이름 (예: 0.0.4, v 제외)'
+        required: true
+        type: string
+      notes:
+        description: 사용자에게 보여 줄 변경 내용
+        default: 사번 명단 업데이트
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+# 초안도 빌드 번호를 예약한다. 동시에 시작한 작업은 순서대로 준비한다.
+concurrency:
+  group: otis-release-preparation
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: 엑셀 변환 · APK 빌드 · 릴리스 초안
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_NOTES: ${{ inputs.notes }}
+      PYTHONUTF8: '1'
+      ANDROID_BUILD_TOOLS: '36.0.0'
+    steps:
+      - name: main에서 실행했는지 확인
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo '::error::Use workflow from에서 main을 선택합니다.'
+            exit 1
+          fi
+
+      - name: main의 실행 시점 소스 받기
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Python 준비
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: 엑셀 읽기 도구 설치
+        run: python -m pip install --disable-pip-version-check openpyxl==3.1.5
+
+      - name: 배포 도구 검사
+        run: python -m unittest discover -s tool/tests -p 'test_*.py' -v
+
+      - name: 버전 확인과 엑셀 명단 변환
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python tool/prepare_release.py prepare
+          --version "$RELEASE_VERSION"
+          --repository "$GITHUB_REPOSITORY"
+          --source-sha "$GITHUB_SHA"
+          --plan "$RUNNER_TEMP/release-plan.json"
+
+      - name: Java 준비
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 로컬에서 사용 중인 Flutter 3.44.4와 같은 커밋을 사용한다.
+      - name: Flutter 준비
+        shell: bash
+        run: |
+          git init "$RUNNER_TEMP/flutter"
+          git -C "$RUNNER_TEMP/flutter" remote add origin https://github.com/flutter/flutter.git
+          git -C "$RUNNER_TEMP/flutter" fetch --depth 1 origin ad70ec4617166f1c38e5d2bfd388af71fda14f06
+          git -C "$RUNNER_TEMP/flutter" checkout --detach FETCH_HEAD
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Android 빌드 도구 준비
+        shell: bash
+        run: |
+          python -c "import subprocess; subprocess.run(['sdkmanager', '--licenses'], input='y\n' * 100, text=True, check=True)"
+          sdkmanager "platforms;android-36" "build-tools;$ANDROID_BUILD_TOOLS" 'ndk;28.2.13676358'
+          flutter config --no-analytics
+          flutter pub get --enforce-lockfile
+
+      - name: 앱 검사
+        shell: bash
+        run: |
+          flutter analyze
+          dart format --output=none --set-exit-if-changed lib test
+          flutter test
+
+      - name: 기존 릴리스 서명키 확인과 임시 설정
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: python tool/prepare_release.py signing --keystore "$RUNNER_TEMP/vcheck-release.jks"
+
+      - name: 새 명단을 포함한 릴리스 APK 빌드
+        env:
+          RELEASE_BUILD: ${{ steps.release.outputs.build }}
+        run: flutter build apk --release --build-name "$RELEASE_VERSION" --build-number "$RELEASE_BUILD"
+
+      - name: APK 검증과 version.json 생성
+        run: >-
+          python tool/prepare_release.py finalize
+          --plan "$RUNNER_TEMP/release-plan.json"
+          --apk build/app/outputs/flutter-apk/app-release.apk
+          --apksigner "$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS/apksigner"
+          --apkanalyzer "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
+          --output build/release
+          --notes "$RUNNER_TEMP/release-notes.md"
+
+      - name: 검증된 배포 파일 보관
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vcheck-${{ inputs.version }}
+          path: |
+            build/release/*.apk
+            build/release/version.json
+          if-no-files-found: error
+          retention-days: 14
+
+      # 공개 게시와 Latest 지정은 운영자가 Releases에서 직접 한다.
+      - name: 릴리스 초안 만들기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          APK_NAME: ${{ steps.release.outputs.apk_name }}
+        shell: bash
+        run: |
+          gh release create "$RELEASE_TAG" \
+            "build/release/$APK_NAME" build/release/version.json \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$RELEASE_VERSION" --draft --notes-file "$RUNNER_TEMP/release-notes.md"
+          {
+            echo '## 릴리스 초안 준비 완료'
+            echo
+            echo "- 제목: $RELEASE_VERSION / 태그: $RELEASE_TAG"
+            echo '- Releases에서 첨부 파일을 확인한 뒤 Latest로 게시합니다.'
+            echo "- [Releases 열기](https://github.com/$GITHUB_REPOSITORY/releases)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 임시 서명 설정 정리
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- android/key.properties "$RUNNER_TEMP/vcheck-release.jks"

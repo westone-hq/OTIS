@@ -69,6 +69,11 @@ flutter build apk --release
 
 ## 배포 (앱 안 업데이트, GitHub Releases)
 
+관리자용 자동 준비 절차는 [release_automation.md](release_automation.md)를 따른다.
+`admin/workers.xlsx`를 갱신한 뒤 Actions의 **새 버전 준비**를 실행하면 변환·서명
+APK 빌드·version.json 생성·릴리스 초안까지 준비한다. 게시와 Latest 지정은 사람이
+한다. 아래 명령은 개발 담당자가 로컬에서 같은 과정을 수행할 때 참고한다.
+
 구글 플레이 없이 배포 전용 공개 저장소의 릴리스로 배포한다. 앱은 켜질 때
 그 저장소의 최신 릴리스 `version.json` 을 받아 새 버전이 있으면
 "업데이트하세요" 창을 띄우고, 누르면 APK 를 받아 안드로이드 설치 화면을

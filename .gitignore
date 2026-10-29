@@ -51,8 +51,8 @@ script_explanations/
 # 어디에 두든 저장소에 올리지 않는다
 H6N1AP65.pdf
 
-# OTIS 작업자 명단 엑셀 원본. 앱은 tool/import_workers.py 가 만든
-# assets/workers/workers.json 만 읽는다 (2026-10-18)
+# 루트에 받은 OTIS 명단 원본은 제외한다. 관리자 배포 입력은
+# admin/workers.xlsx 한 파일로 관리한다 (2026-10-29)
 /설치 업체 List_*.xlsx
 
 # Noise analysis output and Kotlin build cache
